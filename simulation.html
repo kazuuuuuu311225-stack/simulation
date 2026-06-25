@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>斜方投射シミュレーション</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+    }
+
+    h2 {
+      margin-top: 20px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    #shootBtn {
+      margin-top: 10px;
+      padding: 12px 20px;
+      font-size: 18px;
+      background: #00aaff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #66d0ff;
+      cursor: pointer;
+    }
+
+    canvas {
+      border-radius: 12px;
+      margin-top: 10px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <h2>斜方投射シミュレーション</h2>
+  <a id="back" href="index.html">← メニューへ戻る</a>
+
+  <div id="ui">
+    <label>
+      初速度 v₀ (m/s):
+      <input id="v0Slider" type="range" min="10" max="200" step="1" value="120">
+      <span id="v0Value">120</span>
+    </label>
+
+    <label>
+      発射角度 θ (度):
+      <input id="angleSlider" type="range" min="5" max="85" step="1" value="45">
+      <span id="angleValue">45</span>
+    </label>
+
+    <label>
+      重力 g (m/s²):
+      <input id="gravitySlider" type="range" min="0" max="20" step="0.1" value="9.8">
+      <span id="gravityValue">9.8</span>
+    </label>
+
+    <button id="shootBtn" type="button">発射</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const GROUND_OFFSET = 20;
+    const LAUNCH_X = 50;
+
+    function groundY() {
+      return canvas.height - GROUND_OFFSET;
+    }
+
+    function launchY() {
+      return canvas.height - 40;
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * 0.95;
+      canvas.height = window.innerHeight * 0.55;
+      if (!projectile.isFlying) {
+        resetProjectilePosition();
+      }
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const v0Slider = document.getElementById("v0Slider");
+    const angleSlider = document.getElementById("angleSlider");
+    const gravitySlider = document.getElementById("gravitySlider");
+
+    const v0Value = document.getElementById("v0Value");
+    const angleValue = document.getElementById("angleValue");
+    const gravityValue = document.getElementById("gravityValue");
+
+    let v0 = parseFloat(v0Slider.value);
+    let angle = parseFloat(angleSlider.value) * Math.PI / 180;
+    let g = parseFloat(gravitySlider.value);
+
+    v0Slider.oninput = () => {
+      v0 = parseFloat(v0Slider.value);
+      v0Value.textContent = v0;
+    };
+    angleSlider.oninput = () => {
+      angle = parseFloat(angleSlider.value) * Math.PI / 180;
+      angleValue.textContent = angleSlider.value;
+    };
+    gravitySlider.oninput = () => {
+      g = parseFloat(gravitySlider.value);
+      gravityValue.textContent = g.toFixed(1);
+    };
+
+    const projectile = {
+      x0: LAUNCH_X,
+      y0: launchY(),
+      x: LAUNCH_X,
+      y: launchY(),
+      vx: 0,
+      vy: 0,
+      t: 0,
+      isFlying: false,
+      path: []
+    };
+
+    function resetProjectilePosition() {
+      projectile.x0 = LAUNCH_X;
+      projectile.y0 = launchY();
+      projectile.x = projectile.x0;
+      projectile.y = projectile.y0;
+    }
+
+    function startProjectile() {
+      resetProjectilePosition();
+      projectile.vx = v0 * Math.cos(angle);
+      projectile.vy = -v0 * Math.sin(angle);
+      projectile.t = 0;
+      projectile.isFlying = true;
+      projectile.path = [];
+    }
+
+    document.getElementById("shootBtn").onclick = startProjectile;
+
+    function update(dt) {
+      if (!projectile.isFlying) return;
+
+      projectile.t += dt;
+      projectile.x = projectile.x0 + projectile.vx * projectile.t;
+      projectile.y =
+        projectile.y0 +
+        projectile.vy * projectile.t +
+        0.5 * g * projectile.t * projectile.t;
+
+      projectile.path.push({ x: projectile.x, y: projectile.y });
+
+      if (projectile.y >= groundY() || projectile.x > canvas.width) {
+        projectile.y = Math.min(projectile.y, groundY());
+        projectile.isFlying = false;
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "#d0e8ff";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#66bfff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY());
+      ctx.lineTo(canvas.width, groundY());
+      ctx.stroke();
+
+      ctx.strokeStyle = "#00bfff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      projectile.path.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = "#00e0ff";
+      ctx.beginPath();
+      ctx.arc(projectile.x, projectile.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      const vx = projectile.vx;
+      const vy = projectile.vy + g * projectile.t;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      const KE = 0.5 * speed * speed;
+      const PE = g * (groundY() - projectile.y);
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "16px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(`運動エネルギー: ${KE.toFixed(1)}`, 10, 20);
+      ctx.fillText(`位置エネルギー: ${PE.toFixed(1)}`, 10, 40);
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
