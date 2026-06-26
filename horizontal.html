@@ -129,6 +129,32 @@
       color: #004c99;
     }
 
+    .concept {
+      margin: 0 0 14px;
+      font-size: 0.92rem;
+      color: #4a7099;
+    }
+
+    .formula-block {
+      margin-bottom: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 140, 220, 0.15);
+    }
+
+    .formula-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .formula-label {
+      margin: 0 0 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #2a7fd4;
+      letter-spacing: 0.04em;
+    }
+
     .formula-line {
       margin: 4px 0;
       font-size: 0.95rem;
@@ -136,8 +162,21 @@
     }
 
     .formula-line.sub {
+      margin-left: 0.5rem;
       font-size: 0.88rem;
       color: #4a7099;
+    }
+
+    .formula-line .num {
+      font-weight: 600;
+      color: #0066aa;
+    }
+
+    .formula-line .note {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.8rem;
+      color: #7a9fbf;
     }
   </style>
 </head>
@@ -155,23 +194,63 @@
     </label>
 
     <label>
+      高さ H (m):
+      <input id="heightSlider" type="range" min="20" max="100" step="1" value="60">
+      <span id="heightValue">60</span>
+    </label>
+
+    <label>
       重力 g (m/s²):
       <input id="gravitySlider" type="range" min="0" max="20" step="0.1" value="9.8">
       <span id="gravityValue">9.8</span>
     </label>
 
-    <p class="hint">角度は 0° 固定。高さ 30 m の台から水平に投げ出します。</p>
+    <p class="hint">角度は 0° 固定。点線は式④から求めた予測軌道です。</p>
     <button id="shootBtn" type="button">発射</button>
   </div>
 
   <canvas id="canvas"></canvas>
 
   <section id="formulaPanel" aria-label="水平投射の式">
-    <h3>水平投射の式</h3>
-    <p class="formula-line">x = v₀ t = <span id="fX">—</span> · t</p>
-    <p class="formula-line">y = ½gt² （落下方向の変位）</p>
-    <p class="formula-line sub">落下時間 T = √(2H/g) = <span id="fT">—</span> s</p>
-    <p class="formula-line sub">飛距離 R = v₀T = <span id="fR">—</span> m</p>
+    <h3>水平投射の式（高校物理）</h3>
+    <p class="concept">台の端から水平に v₀ で投げ出します。水平方向は等速、鉛直方向は自由落下（初速度 0）です。</p>
+
+    <div class="formula-block">
+      <p class="formula-label">① 初速度（角度 0°）</p>
+      <p class="formula-line">v₀x = v₀ = <span id="fV0x" class="num">—</span> m/s</p>
+      <p class="formula-line">v₀y = 0 m/s</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">② 位置の式（時間 t で表す）</p>
+      <p class="formula-line">x = v₀ t</p>
+      <p class="formula-line sub">→ x = <span id="fXsub" class="num">—</span> · t</p>
+      <p class="formula-line">y = H − ½gt² （y は地面からの高さ）</p>
+      <p class="formula-line sub">→ y = <span id="fHsub" class="num">—</span> − ½ × <span id="fGsub" class="num">—</span> · t²</p>
+      <p class="formula-line sub">落下変位　s = ½gt²</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">③ 速度の式</p>
+      <p class="formula-line">v_x = v₀ （一定）</p>
+      <p class="formula-line">v_y = gt （下向き）</p>
+      <p class="formula-line sub">今の v_x = <span id="fVxNow" class="num">—</span> m/s、v_y = <span id="fVyNow" class="num">—</span> m/s</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">④ 軌道の式（x について表す）</p>
+      <p class="formula-line">t = x / v₀ を y = H − ½gt² に代入すると</p>
+      <p class="formula-line">y = H − gx² / (2v₀²)</p>
+      <p class="formula-line sub">→ y = <span id="fTrackH" class="num">—</span> − <span id="fTrackB" class="num">—</span> x²</p>
+      <span class="note formula-line sub">x の2乗の式なので、軌道は放物線になります。</span>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">⑤ 求まる量</p>
+      <p class="formula-line">台の高さ　H = <span id="fH" class="num">—</span> m</p>
+      <p class="formula-line">落下時間　T = √(2H/g) = <span id="fT" class="num">—</span> s</p>
+      <p class="formula-line">飛距離　R = v₀T = <span id="fR" class="num">—</span> m</p>
+    </div>
   </section>
 
   <script>
@@ -179,16 +258,18 @@
     const ctx = canvas.getContext("2d");
     const shootBtn = document.getElementById("shootBtn");
     const v0Slider = document.getElementById("v0Slider");
+    const heightSlider = document.getElementById("heightSlider");
     const gravitySlider = document.getElementById("gravitySlider");
     const v0Value = document.getElementById("v0Value");
+    const heightValue = document.getElementById("heightValue");
     const gravityValue = document.getElementById("gravityValue");
 
-    const LAUNCH_HEIGHT = 30;
     const MAX_DT = 1 / 30;
     const MARGIN = { left: 44, right: 24, top: 36, bottom: 28 };
     const PATH_SAMPLES = 80;
 
     let v0 = parseFloat(v0Slider.value);
+    let launchHeight = parseFloat(heightSlider.value);
     let g = parseFloat(gravitySlider.value);
     let scale = 1;
 
@@ -201,8 +282,10 @@
 
     function syncSliders() {
       v0 = parseFloat(v0Slider.value);
+      launchHeight = parseFloat(heightSlider.value);
       g = parseFloat(gravitySlider.value);
       v0Value.textContent = v0;
+      heightValue.textContent = launchHeight;
       gravityValue.textContent = g.toFixed(1);
       updateFormulaPanel();
     }
@@ -216,7 +299,7 @@
           tShow
         };
       }
-      const tLand = Math.sqrt((2 * LAUNCH_HEIGHT) / g);
+      const tLand = Math.sqrt((2 * launchHeight) / g);
       return {
         tLand,
         range: v0 * tLand,
@@ -228,17 +311,27 @@
       const fall = 0.5 * g * t * t;
       return {
         x: v0 * t,
-        y: Math.max(0, LAUNCH_HEIGHT - fall)
+        y: Math.max(0, launchHeight - fall)
       };
     }
 
     function updateFormulaPanel() {
       const info = flightInfo();
       const tText = Number.isFinite(info.tLand) ? info.tLand.toFixed(2) : "—";
-      const rText = info.range.toFixed(1);
-      document.getElementById("fX").textContent = v0;
+      const trackB = g > 0 ? g / (2 * v0 * v0) : 0;
+      const vyNow = g * projectile.t;
+
+      document.getElementById("fV0x").textContent = v0;
+      document.getElementById("fXsub").textContent = v0;
+      document.getElementById("fHsub").textContent = launchHeight;
+      document.getElementById("fGsub").textContent = g.toFixed(1);
+      document.getElementById("fVxNow").textContent = v0;
+      document.getElementById("fVyNow").textContent = vyNow.toFixed(1);
+      document.getElementById("fTrackH").textContent = launchHeight;
+      document.getElementById("fTrackB").textContent = trackB.toFixed(6);
+      document.getElementById("fH").textContent = launchHeight;
       document.getElementById("fT").textContent = tText;
-      document.getElementById("fR").textContent = rText;
+      document.getElementById("fR").textContent = info.range.toFixed(1);
     }
 
     function updateScale() {
@@ -246,7 +339,7 @@
       const drawW = canvas.width - MARGIN.left - MARGIN.right;
       const drawH = canvas.height - MARGIN.top - MARGIN.bottom;
       const worldW = Math.max(info.range * 1.08, 1);
-      const worldH = Math.max(LAUNCH_HEIGHT * 1.2, 1);
+      const worldH = Math.max(launchHeight * 1.2, 1);
       scale = Math.min(drawW / worldW, drawH / worldH);
     }
 
@@ -258,7 +351,7 @@
     }
 
     function buildPathWorld(endTime) {
-      const path = [{ x: 0, y: LAUNCH_HEIGHT }];
+      const path = [{ x: 0, y: launchHeight }];
       for (let i = 1; i <= PATH_SAMPLES; i += 1) {
         const t = (endTime * i) / PATH_SAMPLES;
         path.push(positionAtTime(t));
@@ -270,14 +363,14 @@
       projectile.t = 0;
       projectile.isFlying = false;
       projectile.landed = false;
-      projectile.pathWorld = [{ x: 0, y: LAUNCH_HEIGHT }];
+      projectile.pathWorld = [{ x: 0, y: launchHeight }];
     }
 
     function startProjectile() {
       syncSliders();
       resetFlight();
       projectile.isFlying = true;
-      projectile.pathWorld = [{ x: 0, y: LAUNCH_HEIGHT }];
+      projectile.pathWorld = [{ x: 0, y: launchHeight }];
     }
 
     function resizeCanvas() {
@@ -295,6 +388,11 @@
     }
 
     bindSlider(v0Slider, () => {
+      syncSliders();
+      if (!projectile.isFlying) resetFlight();
+    });
+
+    bindSlider(heightSlider, () => {
       syncSliders();
       if (!projectile.isFlying) resetFlight();
     });
@@ -392,7 +490,7 @@
       ctx.lineTo(canvas.width - MARGIN.right + 8, groundY);
       ctx.stroke();
 
-      const platform = worldToCanvas(0, LAUNCH_HEIGHT);
+      const platform = worldToCanvas(0, launchHeight);
       ctx.fillStyle = "rgba(0, 136, 204, 0.15)";
       ctx.fillRect(MARGIN.left - 10, platform.y, 18, groundY - platform.y);
 
@@ -407,7 +505,7 @@
 
       const ballPos = projectile.isFlying || projectile.landed
         ? positionAtTime(projectile.t)
-        : { x: 0, y: LAUNCH_HEIGHT };
+        : { x: 0, y: launchHeight };
       const ball = worldToCanvas(ballPos.x, ballPos.y);
 
       ctx.fillStyle = "#00e0ff";
