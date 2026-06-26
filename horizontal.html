@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>水平投射シミュレーション</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #4a7099;
+      line-height: 1.5;
+    }
+
+    #shootBtn {
+      margin-top: 4px;
+      padding: 14px 20px;
+      min-height: 48px;
+      font-size: 18px;
+      font-family: inherit;
+      font-weight: 600;
+      background: #00aaff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #66d0ff;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #shootBtn:active {
+      transform: scale(0.98);
+    }
+
+    canvas {
+      display: block;
+      width: 95vw;
+      max-width: 100%;
+      height: 42vh;
+      height: 42dvh;
+      border-radius: 12px;
+      margin-top: 10px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+    }
+
+    #formulaPanel {
+      width: 90%;
+      margin: 12px 0 16px;
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.12);
+      line-height: 1.7;
+    }
+
+    #formulaPanel h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      color: #004c99;
+    }
+
+    .formula-line {
+      margin: 4px 0;
+      font-size: 0.95rem;
+      color: #003366;
+    }
+
+    .formula-line.sub {
+      font-size: 0.88rem;
+      color: #4a7099;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>水平投射シミュレーション</h2>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      初速度 v₀ (m/s):
+      <input id="v0Slider" type="range" min="10" max="200" step="1" value="80">
+      <span id="v0Value">80</span>
+    </label>
+
+    <label>
+      重力 g (m/s²):
+      <input id="gravitySlider" type="range" min="0" max="20" step="0.1" value="9.8">
+      <span id="gravityValue">9.8</span>
+    </label>
+
+    <p class="hint">角度は 0° 固定。高さ 30 m の台から水平に投げ出します。</p>
+    <button id="shootBtn" type="button">発射</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <section id="formulaPanel" aria-label="水平投射の式">
+    <h3>水平投射の式</h3>
+    <p class="formula-line">x = v₀ t = <span id="fX">—</span> · t</p>
+    <p class="formula-line">y = ½gt² （落下方向の変位）</p>
+    <p class="formula-line sub">落下時間 T = √(2H/g) = <span id="fT">—</span> s</p>
+    <p class="formula-line sub">飛距離 R = v₀T = <span id="fR">—</span> m</p>
+  </section>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const shootBtn = document.getElementById("shootBtn");
+    const v0Slider = document.getElementById("v0Slider");
+    const gravitySlider = document.getElementById("gravitySlider");
+    const v0Value = document.getElementById("v0Value");
+    const gravityValue = document.getElementById("gravityValue");
+
+    const LAUNCH_HEIGHT = 30;
+    const MAX_DT = 1 / 30;
+    const MARGIN = { left: 44, right: 24, top: 36, bottom: 28 };
+    const PATH_SAMPLES = 80;
+
+    let v0 = parseFloat(v0Slider.value);
+    let g = parseFloat(gravitySlider.value);
+    let scale = 1;
+
+    const projectile = {
+      t: 0,
+      isFlying: false,
+      landed: false,
+      pathWorld: []
+    };
+
+    function syncSliders() {
+      v0 = parseFloat(v0Slider.value);
+      g = parseFloat(gravitySlider.value);
+      v0Value.textContent = v0;
+      gravityValue.textContent = g.toFixed(1);
+      updateFormulaPanel();
+    }
+
+    function flightInfo() {
+      if (g <= 0) {
+        const tShow = 4;
+        return {
+          tLand: Infinity,
+          range: v0 * tShow,
+          tShow
+        };
+      }
+      const tLand = Math.sqrt((2 * LAUNCH_HEIGHT) / g);
+      return {
+        tLand,
+        range: v0 * tLand,
+        tShow: tLand
+      };
+    }
+
+    function positionAtTime(t) {
+      const fall = 0.5 * g * t * t;
+      return {
+        x: v0 * t,
+        y: Math.max(0, LAUNCH_HEIGHT - fall)
+      };
+    }
+
+    function updateFormulaPanel() {
+      const info = flightInfo();
+      const tText = Number.isFinite(info.tLand) ? info.tLand.toFixed(2) : "—";
+      const rText = info.range.toFixed(1);
+      document.getElementById("fX").textContent = v0;
+      document.getElementById("fT").textContent = tText;
+      document.getElementById("fR").textContent = rText;
+    }
+
+    function updateScale() {
+      const info = flightInfo();
+      const drawW = canvas.width - MARGIN.left - MARGIN.right;
+      const drawH = canvas.height - MARGIN.top - MARGIN.bottom;
+      const worldW = Math.max(info.range * 1.08, 1);
+      const worldH = Math.max(LAUNCH_HEIGHT * 1.2, 1);
+      scale = Math.min(drawW / worldW, drawH / worldH);
+    }
+
+    function worldToCanvas(x, y) {
+      return {
+        x: MARGIN.left + x * scale,
+        y: canvas.height - MARGIN.bottom - y * scale
+      };
+    }
+
+    function buildPathWorld(endTime) {
+      const path = [{ x: 0, y: LAUNCH_HEIGHT }];
+      for (let i = 1; i <= PATH_SAMPLES; i += 1) {
+        const t = (endTime * i) / PATH_SAMPLES;
+        path.push(positionAtTime(t));
+      }
+      return path;
+    }
+
+    function resetFlight() {
+      projectile.t = 0;
+      projectile.isFlying = false;
+      projectile.landed = false;
+      projectile.pathWorld = [{ x: 0, y: LAUNCH_HEIGHT }];
+    }
+
+    function startProjectile() {
+      syncSliders();
+      resetFlight();
+      projectile.isFlying = true;
+      projectile.pathWorld = [{ x: 0, y: LAUNCH_HEIGHT }];
+    }
+
+    function resizeCanvas() {
+      const viewport = window.visualViewport;
+      const width = viewport ? viewport.width : window.innerWidth;
+      const height = viewport ? viewport.height : window.innerHeight;
+      canvas.width = Math.max(320, Math.floor(width * 0.95));
+      canvas.height = Math.max(220, Math.floor(height * 0.42));
+      updateScale();
+    }
+
+    function bindSlider(slider, onChange) {
+      slider.addEventListener("input", onChange);
+      slider.addEventListener("change", onChange);
+    }
+
+    bindSlider(v0Slider, () => {
+      syncSliders();
+      if (!projectile.isFlying) resetFlight();
+    });
+
+    bindSlider(gravitySlider, () => {
+      syncSliders();
+      if (!projectile.isFlying) resetFlight();
+    });
+
+    shootBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      startProjectile();
+    });
+
+    resizeCanvas();
+    resetFlight();
+    syncSliders();
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeCanvas);
+    }
+
+    function update(dt) {
+      if (!projectile.isFlying) return;
+
+      const info = flightInfo();
+      projectile.t += dt;
+
+      if (g <= 0) {
+        const pos = positionAtTime(projectile.t);
+        projectile.pathWorld.push(pos);
+        if (pos.x >= info.range) {
+          projectile.isFlying = false;
+          projectile.landed = true;
+        }
+        return;
+      }
+
+      if (projectile.t >= info.tLand) {
+        projectile.t = info.tLand;
+        projectile.isFlying = false;
+        projectile.landed = true;
+        projectile.pathWorld = buildPathWorld(info.tLand);
+        return;
+      }
+
+      projectile.pathWorld.push(positionAtTime(projectile.t));
+    }
+
+    function drawPath(pathWorld, color, lineWidth, dashed) {
+      if (pathWorld.length < 2) return;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      if (dashed) ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      pathWorld.forEach((p, i) => {
+        const c = worldToCanvas(p.x, p.y);
+        if (i === 0) ctx.moveTo(c.x, c.y);
+        else ctx.lineTo(c.x, c.y);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw() {
+      syncSliders();
+      updateScale();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const info = flightInfo();
+      const groundY = worldToCanvas(0, 0).y;
+
+      ctx.strokeStyle = "#d0e8ff";
+      ctx.lineWidth = 1;
+      for (let x = MARGIN.left; x <= canvas.width - MARGIN.right; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, MARGIN.top);
+        ctx.lineTo(x, canvas.height - MARGIN.bottom);
+        ctx.stroke();
+      }
+      for (let y = groundY; y >= MARGIN.top; y -= 40) {
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, y);
+        ctx.lineTo(canvas.width - MARGIN.right, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#66bfff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left - 8, groundY);
+      ctx.lineTo(canvas.width - MARGIN.right + 8, groundY);
+      ctx.stroke();
+
+      const platform = worldToCanvas(0, LAUNCH_HEIGHT);
+      ctx.fillStyle = "rgba(0, 136, 204, 0.15)";
+      ctx.fillRect(MARGIN.left - 10, platform.y, 18, groundY - platform.y);
+
+      const previewPath = buildPathWorld(info.tShow);
+      if (!projectile.isFlying && !projectile.landed) {
+        drawPath(previewPath, "rgba(0, 170, 255, 0.45)", 2, true);
+      }
+
+      if (projectile.pathWorld.length > 1) {
+        drawPath(projectile.pathWorld, "#00bfff", 2.5, false);
+      }
+
+      const ballPos = projectile.isFlying || projectile.landed
+        ? positionAtTime(projectile.t)
+        : { x: 0, y: LAUNCH_HEIGHT };
+      const ball = worldToCanvas(ballPos.x, ballPos.y);
+
+      ctx.fillStyle = "#00e0ff";
+      ctx.shadowColor = "#66ffff";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const vx = v0;
+      const vy = g * projectile.t;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      const KE = 0.5 * speed * speed;
+      const PE = g * ballPos.y;
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "14px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`運動エネルギー: ${KE.toFixed(1)} J`, 10, 18);
+      ctx.fillText(`位置エネルギー: ${PE.toFixed(1)} J`, 10, 38);
+      ctx.fillText(`t = ${projectile.t.toFixed(2)} s`, 10, 58);
+      ctx.fillText(`x = ${ballPos.x.toFixed(1)} m`, 10, 78);
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
