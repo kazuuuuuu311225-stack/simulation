@@ -16,6 +16,9 @@
       flex-direction: column;
       align-items: center;
       color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
     }
 
     h2 {
@@ -61,7 +64,8 @@
 
     #shootBtn {
       margin-top: 10px;
-      padding: 12px 20px;
+      padding: 14px 20px;
+      min-height: 48px;
       font-size: 18px;
       background: #00aaff;
       color: white;
@@ -69,9 +73,16 @@
       border-radius: 10px;
       box-shadow: 0 0 10px #66d0ff;
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     canvas {
+      display: block;
+      width: 95vw;
+      max-width: 100%;
+      height: 42vh;
+      height: 42dvh;
       border-radius: 12px;
       margin-top: 10px;
       background: white;
@@ -111,8 +122,33 @@
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+    const shootBtn = document.getElementById("shootBtn");
     const GROUND_OFFSET = 20;
     const LAUNCH_X = 50;
+    const MAX_DT = 1 / 30;
+
+    const v0Slider = document.getElementById("v0Slider");
+    const angleSlider = document.getElementById("angleSlider");
+    const gravitySlider = document.getElementById("gravitySlider");
+    const v0Value = document.getElementById("v0Value");
+    const angleValue = document.getElementById("angleValue");
+    const gravityValue = document.getElementById("gravityValue");
+
+    let v0 = parseFloat(v0Slider.value);
+    let angle = parseFloat(angleSlider.value) * Math.PI / 180;
+    let g = parseFloat(gravitySlider.value);
+
+    const projectile = {
+      x0: LAUNCH_X,
+      y0: 0,
+      x: LAUNCH_X,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      t: 0,
+      isFlying: false,
+      path: []
+    };
 
     function groundY() {
       return canvas.height - GROUND_OFFSET;
@@ -122,54 +158,6 @@
       return canvas.height - 40;
     }
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth * 0.95;
-      canvas.height = window.innerHeight * 0.55;
-      if (!projectile.isFlying) {
-        resetProjectilePosition();
-      }
-    }
-
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-
-    const v0Slider = document.getElementById("v0Slider");
-    const angleSlider = document.getElementById("angleSlider");
-    const gravitySlider = document.getElementById("gravitySlider");
-
-    const v0Value = document.getElementById("v0Value");
-    const angleValue = document.getElementById("angleValue");
-    const gravityValue = document.getElementById("gravityValue");
-
-    let v0 = parseFloat(v0Slider.value);
-    let angle = parseFloat(angleSlider.value) * Math.PI / 180;
-    let g = parseFloat(gravitySlider.value);
-
-    v0Slider.oninput = () => {
-      v0 = parseFloat(v0Slider.value);
-      v0Value.textContent = v0;
-    };
-    angleSlider.oninput = () => {
-      angle = parseFloat(angleSlider.value) * Math.PI / 180;
-      angleValue.textContent = angleSlider.value;
-    };
-    gravitySlider.oninput = () => {
-      g = parseFloat(gravitySlider.value);
-      gravityValue.textContent = g.toFixed(1);
-    };
-
-    const projectile = {
-      x0: LAUNCH_X,
-      y0: launchY(),
-      x: LAUNCH_X,
-      y: launchY(),
-      vx: 0,
-      vy: 0,
-      t: 0,
-      isFlying: false,
-      path: []
-    };
-
     function resetProjectilePosition() {
       projectile.x0 = LAUNCH_X;
       projectile.y0 = launchY();
@@ -177,16 +165,65 @@
       projectile.y = projectile.y0;
     }
 
+    function resizeCanvas() {
+      const viewport = window.visualViewport;
+      const width = viewport ? viewport.width : window.innerWidth;
+      const height = viewport ? viewport.height : window.innerHeight;
+      canvas.width = Math.max(320, Math.floor(width * 0.95));
+      canvas.height = Math.max(220, Math.floor(height * 0.42));
+      if (!projectile.isFlying) {
+        resetProjectilePosition();
+      }
+    }
+
+    function syncSliders() {
+      v0 = parseFloat(v0Slider.value);
+      angle = parseFloat(angleSlider.value) * Math.PI / 180;
+      g = parseFloat(gravitySlider.value);
+      v0Value.textContent = v0;
+      angleValue.textContent = angleSlider.value;
+      gravityValue.textContent = g.toFixed(1);
+    }
+
     function startProjectile() {
+      syncSliders();
       resetProjectilePosition();
       projectile.vx = v0 * Math.cos(angle);
       projectile.vy = -v0 * Math.sin(angle);
       projectile.t = 0;
       projectile.isFlying = true;
-      projectile.path = [];
+      projectile.path = [{ x: projectile.x, y: projectile.y }];
     }
 
-    document.getElementById("shootBtn").onclick = startProjectile;
+    function bindSlider(slider, onChange) {
+      const handler = () => onChange();
+      slider.addEventListener("input", handler);
+      slider.addEventListener("change", handler);
+    }
+
+    bindSlider(v0Slider, () => {
+      v0 = parseFloat(v0Slider.value);
+      v0Value.textContent = v0;
+    });
+    bindSlider(angleSlider, () => {
+      angle = parseFloat(angleSlider.value) * Math.PI / 180;
+      angleValue.textContent = angleSlider.value;
+    });
+    bindSlider(gravitySlider, () => {
+      g = parseFloat(gravitySlider.value);
+      gravityValue.textContent = g.toFixed(1);
+    });
+
+    shootBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      startProjectile();
+    });
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeCanvas);
+    }
 
     function update(dt) {
       if (!projectile.isFlying) return;
@@ -259,7 +296,7 @@
 
     let last = performance.now();
     function loop(now) {
-      const dt = (now - last) / 1000;
+      const dt = Math.min((now - last) / 1000, MAX_DT);
       last = now;
       update(dt);
       draw();
