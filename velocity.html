@@ -115,6 +115,17 @@
       border: 2px solid rgba(0, 170, 255, 0.35);
     }
 
+    #stopBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #cc3355;
+      border: 2px solid rgba(204, 51, 85, 0.35);
+    }
+
+    #stopBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     canvas {
       display: block;
       width: 95vw;
@@ -221,6 +232,7 @@
 
     <div class="btn-row">
       <button id="startBtn" type="button">スタート</button>
+      <button id="stopBtn" type="button" disabled>ストップ</button>
       <button id="resetBtn" type="button">リセット</button>
     </div>
   </div>
@@ -271,6 +283,7 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
     const resetBtn = document.getElementById("resetBtn");
     const v0Slider = document.getElementById("v0Slider");
     const aSlider = document.getElementById("aSlider");
@@ -287,6 +300,7 @@
     let simA = a;
     let t = 0;
     let running = false;
+    let stopped = false;
     let vtHistory = [{ t: 0, v: v0 }];
 
     function syncSliders() {
@@ -294,12 +308,16 @@
       a = parseFloat(aSlider.value);
       v0Value.textContent = v0;
       aValue.textContent = Number.isInteger(a) ? a : a.toFixed(1);
-      if (!running) {
+      if (!running && !stopped) {
         simV0 = v0;
         simA = a;
         if (t === 0) vtHistory = [{ t: 0, v: simV0 }];
       }
       updateFormulaPanel();
+    }
+
+    function updateButtons() {
+      stopBtn.disabled = !running;
     }
 
     function fmt(value, digits) {
@@ -348,7 +366,17 @@
       simA = a;
       t = 0;
       running = false;
+      stopped = false;
       vtHistory = [{ t: 0, v: simV0 }];
+      updateButtons();
+      updateFormulaPanel();
+    }
+
+    function stopSimulation() {
+      if (!running) return;
+      running = false;
+      stopped = true;
+      updateButtons();
       updateFormulaPanel();
     }
 
@@ -358,7 +386,9 @@
       simA = a;
       t = 0;
       running = true;
+      stopped = false;
       vtHistory = [{ t: 0, v: simV0 }];
+      updateButtons();
     }
 
     function resizeCanvas() {
@@ -380,6 +410,11 @@
     startBtn.addEventListener("click", (event) => {
       event.preventDefault();
       startSimulation();
+    });
+
+    stopBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      stopSimulation();
     });
 
     resetBtn.addEventListener("click", (event) => {
@@ -480,7 +515,7 @@
       ctx.stroke();
 
       const ballX = xToPx(state.x);
-      ctx.fillStyle = "#00aaff";
+      ctx.fillStyle = stopped ? "#ff8844" : "#00aaff";
       ctx.shadowColor = "#66d0ff";
       ctx.shadowBlur = 14;
       ctx.beginPath();
