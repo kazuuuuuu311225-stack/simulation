@@ -62,8 +62,15 @@
       height: 30px;
     }
 
+    .hint {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #4a7099;
+      line-height: 1.5;
+    }
+
     #shootBtn {
-      margin-top: 10px;
+      margin-top: 4px;
       padding: 14px 20px;
       min-height: 48px;
       font-size: 18px;
@@ -88,6 +95,7 @@
       background: white;
       touch-action: none;
       box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+      cursor: crosshair;
     }
   </style>
 </head>
@@ -104,16 +112,17 @@
 
     <label>
       発射角度 θ (度):
-      <input id="angleSlider" type="range" min="5" max="85" step="1" value="45">
+      <input id="angleSlider" type="range" min="5" max="85" step="0.5" value="45">
       <span id="angleValue">45</span>
     </label>
 
     <label>
       重力 g (m/s²):
-      <input id="gravitySlider" type="range" min="0" max="20" step="0.1" value="9.8">
+      <input id="gravitySlider" type="range" min="0.1" max="20" step="0.1" value="9.8">
       <span id="gravityValue">9.8</span>
     </label>
 
+    <p class="hint">キャンバスをタップ／ドラッグして角度も調整できます。点線は落下地点までの予測軌道です。</p>
     <button id="shootBtn" type="button">発射</button>
   </div>
 
@@ -123,10 +132,6 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const shootBtn = document.getElementById("shootBtn");
-    const GROUND_OFFSET = 20;
-    const LAUNCH_X = 50;
-    const MAX_DT = 1 / 30;
-
     const v0Slider = document.getElementById("v0Slider");
     const angleSlider = document.getElementById("angleSlider");
     const gravitySlider = document.getElementById("gravitySlider");
@@ -134,35 +139,113 @@
     const angleValue = document.getElementById("angleValue");
     const gravityValue = document.getElementById("gravityValue");
 
+    const MAX_DT = 1 / 30;
+    const MARGIN = { left: 44, right: 24, top: 36, bottom: 28 };
+    const PATH_SAMPLES = 80;
+
     let v0 = parseFloat(v0Slider.value);
-    let angle = parseFloat(angleSlider.value) * Math.PI / 180;
+    let angleDeg = parseFloat(angleSlider.value);
     let g = parseFloat(gravitySlider.value);
+    let scale = 1;
+    let draggingAngle = false;
 
     const projectile = {
-      x0: LAUNCH_X,
-      y0: 0,
-      x: LAUNCH_X,
-      y: 0,
-      vx: 0,
-      vy: 0,
       t: 0,
       isFlying: false,
-      path: []
+      landed: false,
+      pathWorld: []
     };
 
-    function groundY() {
-      return canvas.height - GROUND_OFFSET;
+    function clampAngle(deg) {
+      return Math.max(5, Math.min(85, deg));
     }
 
-    function launchY() {
-      return canvas.height - 40;
+    function syncSliders() {
+      v0 = parseFloat(v0Slider.value);
+      angleDeg = clampAngle(parseFloat(angleSlider.value));
+      g = Math.max(0.1, parseFloat(gravitySlider.value));
+      angleSlider.value = angleDeg;
+      v0Value.textContent = v0;
+      angleValue.textContent = Number.isInteger(angleDeg) ? angleDeg : angleDeg.toFixed(1);
+      gravityValue.textContent = g.toFixed(1);
     }
 
-    function resetProjectilePosition() {
-      projectile.x0 = LAUNCH_X;
-      projectile.y0 = launchY();
-      projectile.x = projectile.x0;
-      projectile.y = projectile.y0;
+    function trajectoryInfo() {
+      const rad = angleDeg * Math.PI / 180;
+      const v0x = v0 * Math.cos(rad);
+      const v0y = v0 * Math.sin(rad);
+      const tPeak = v0y / g;
+      const maxHeight = Math.max(0, (v0y * v0y) / (2 * g));
+      const tLand = (2 * v0y) / g;
+      const range = v0x * tLand;
+
+      return { v0x, v0y, tPeak, maxHeight, tLand, range };
+    }
+
+    function positionAtTime(t) {
+      const { v0x, v0y } = trajectoryInfo();
+      return {
+        x: v0x * t,
+        y: Math.max(0, v0y * t - 0.5 * g * t * t)
+      };
+    }
+
+    function updateScale() {
+      const { range, maxHeight } = trajectoryInfo();
+      const drawW = canvas.width - MARGIN.left - MARGIN.right;
+      const drawH = canvas.height - MARGIN.top - MARGIN.bottom;
+      const worldW = Math.max(range * 1.08, 1);
+      const worldH = Math.max(maxHeight * 1.25, 0.5);
+      scale = Math.min(drawW / worldW, drawH / worldH);
+    }
+
+    function worldToCanvas(x, y) {
+      return {
+        x: MARGIN.left + x * scale,
+        y: canvas.height - MARGIN.bottom - y * scale
+      };
+    }
+
+    function canvasToWorld(px, py) {
+      return {
+        x: (px - MARGIN.left) / scale,
+        y: (canvas.height - MARGIN.bottom - py) / scale
+      };
+    }
+
+    function buildPathWorld(endTime, includeStart) {
+      const samples = PATH_SAMPLES;
+      const path = includeStart ? [{ x: 0, y: 0 }] : [];
+      for (let i = 1; i <= samples; i += 1) {
+        const t = (endTime * i) / samples;
+        path.push(positionAtTime(t));
+      }
+      return path;
+    }
+
+    function setAngleFromPointer(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const px = ((clientX - rect.left) / rect.width) * canvas.width;
+      const py = ((clientY - rect.top) / rect.height) * canvas.height;
+      const world = canvasToWorld(px, py);
+      if (world.x < 0.05 && world.y < 0.05) return;
+      const rad = Math.atan2(Math.max(world.y, 0.01), Math.max(world.x, 0.01));
+      angleDeg = clampAngle(Math.round(rad * 180 / Math.PI * 2) / 2);
+      angleSlider.value = angleDeg;
+      syncSliders();
+    }
+
+    function resetFlight() {
+      projectile.t = 0;
+      projectile.isFlying = false;
+      projectile.landed = false;
+      projectile.pathWorld = [{ x: 0, y: 0 }];
+    }
+
+    function startProjectile() {
+      syncSliders();
+      resetFlight();
+      projectile.isFlying = true;
     }
 
     function resizeCanvas() {
@@ -171,28 +254,7 @@
       const height = viewport ? viewport.height : window.innerHeight;
       canvas.width = Math.max(320, Math.floor(width * 0.95));
       canvas.height = Math.max(220, Math.floor(height * 0.42));
-      if (!projectile.isFlying) {
-        resetProjectilePosition();
-      }
-    }
-
-    function syncSliders() {
-      v0 = parseFloat(v0Slider.value);
-      angle = parseFloat(angleSlider.value) * Math.PI / 180;
-      g = parseFloat(gravitySlider.value);
-      v0Value.textContent = v0;
-      angleValue.textContent = angleSlider.value;
-      gravityValue.textContent = g.toFixed(1);
-    }
-
-    function startProjectile() {
-      syncSliders();
-      resetProjectilePosition();
-      projectile.vx = v0 * Math.cos(angle);
-      projectile.vy = -v0 * Math.sin(angle);
-      projectile.t = 0;
-      projectile.isFlying = true;
-      projectile.path = [{ x: projectile.x, y: projectile.y }];
+      updateScale();
     }
 
     function bindSlider(slider, onChange) {
@@ -202,16 +264,16 @@
     }
 
     bindSlider(v0Slider, () => {
-      v0 = parseFloat(v0Slider.value);
-      v0Value.textContent = v0;
+      syncSliders();
+      if (!projectile.isFlying) resetFlight();
     });
     bindSlider(angleSlider, () => {
-      angle = parseFloat(angleSlider.value) * Math.PI / 180;
-      angleValue.textContent = angleSlider.value;
+      syncSliders();
+      if (!projectile.isFlying) resetFlight();
     });
     bindSlider(gravitySlider, () => {
-      g = parseFloat(gravitySlider.value);
-      gravityValue.textContent = g.toFixed(1);
+      syncSliders();
+      if (!projectile.isFlying) resetFlight();
     });
 
     shootBtn.addEventListener("click", (event) => {
@@ -219,7 +281,31 @@
       startProjectile();
     });
 
+    canvas.addEventListener("pointerdown", (event) => {
+      if (projectile.isFlying) return;
+      draggingAngle = true;
+      canvas.setPointerCapture(event.pointerId);
+      setAngleFromPointer(event.clientX, event.clientY);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!draggingAngle || projectile.isFlying) return;
+      setAngleFromPointer(event.clientX, event.clientY);
+    });
+
+    function stopAngleDrag(event) {
+      if (!draggingAngle) return;
+      draggingAngle = false;
+      if (canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", stopAngleDrag);
+    canvas.addEventListener("pointercancel", stopAngleDrag);
+
     resizeCanvas();
+    resetFlight();
     window.addEventListener("resize", resizeCanvas);
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", resizeCanvas);
@@ -228,70 +314,128 @@
     function update(dt) {
       if (!projectile.isFlying) return;
 
-      projectile.t += dt;
-      projectile.x = projectile.x0 + projectile.vx * projectile.t;
-      projectile.y =
-        projectile.y0 +
-        projectile.vy * projectile.t +
-        0.5 * g * projectile.t * projectile.t;
+      const { tLand } = trajectoryInfo();
+      projectile.t = Math.min(projectile.t + dt, tLand);
+      const pos = positionAtTime(projectile.t);
+      projectile.pathWorld.push(pos);
 
-      projectile.path.push({ x: projectile.x, y: projectile.y });
-
-      if (projectile.y >= groundY() || projectile.x > canvas.width) {
-        projectile.y = Math.min(projectile.y, groundY());
+      if (projectile.t >= tLand) {
+        projectile.t = tLand;
         projectile.isFlying = false;
+        projectile.landed = true;
+        projectile.pathWorld = buildPathWorld(tLand, true);
       }
     }
 
+    function drawPath(pathWorld, strokeStyle, lineWidth, dashed) {
+      if (pathWorld.length < 2) return;
+      ctx.save();
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+      if (dashed) ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      pathWorld.forEach((p, i) => {
+        const c = worldToCanvas(p.x, p.y);
+        if (i === 0) ctx.moveTo(c.x, c.y);
+        else ctx.lineTo(c.x, c.y);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+
     function draw() {
+      syncSliders();
+      updateScale();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const info = trajectoryInfo();
+      const groundLeft = worldToCanvas(0, 0);
+      const groundRight = worldToCanvas(info.range * 1.05, 0);
 
       ctx.strokeStyle = "#d0e8ff";
       ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
+      const gridStepM = info.range > 0 ? Math.pow(10, Math.floor(Math.log10(info.range))) : 1;
+      const gridStepPx = gridStepM * scale;
+      if (gridStepPx >= 24) {
+        for (let x = groundLeft.x; x <= canvas.width - MARGIN.right; x += gridStepPx) {
+          ctx.beginPath();
+          ctx.moveTo(x, MARGIN.top);
+          ctx.lineTo(x, canvas.height - MARGIN.bottom);
+          ctx.stroke();
+        }
       }
-      for (let y = 0; y < canvas.height; y += 40) {
+      for (let y = groundLeft.y; y >= MARGIN.top; y -= Math.max(24, gridStepPx * 0.5)) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.moveTo(MARGIN.left, y);
+        ctx.lineTo(canvas.width - MARGIN.right, y);
         ctx.stroke();
       }
 
       ctx.strokeStyle = "#66bfff";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(0, groundY());
-      ctx.lineTo(canvas.width, groundY());
+      ctx.moveTo(MARGIN.left - 8, groundLeft.y);
+      ctx.lineTo(canvas.width - MARGIN.right + 8, groundLeft.y);
       ctx.stroke();
 
-      ctx.strokeStyle = "#00bfff";
-      ctx.lineWidth = 2;
+      const previewPath = buildPathWorld(info.tLand, true);
+      if (!projectile.isFlying && !projectile.landed) {
+        drawPath(previewPath, "rgba(0, 170, 255, 0.45)", 2, true);
+      }
+
+      if (projectile.pathWorld.length > 1) {
+        drawPath(projectile.pathWorld, "#00bfff", 2.5, false);
+      }
+
+      const launch = worldToCanvas(0, 0);
+      const aimLen = Math.min(70, 28 + angleDeg * 0.5);
+      const aimRad = angleDeg * Math.PI / 180;
+      const aimEnd = {
+        x: launch.x + Math.cos(aimRad) * aimLen,
+        y: launch.y - Math.sin(aimRad) * aimLen
+      };
+
+      ctx.strokeStyle = "#0088cc";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      projectile.path.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
+      ctx.moveTo(launch.x, launch.y);
+      ctx.lineTo(aimEnd.x, aimEnd.y);
       ctx.stroke();
 
-      ctx.fillStyle = "#00e0ff";
+      ctx.fillStyle = "#0088cc";
       ctx.beginPath();
-      ctx.arc(projectile.x, projectile.y, 8, 0, Math.PI * 2);
+      ctx.arc(launch.x, launch.y, 6, 0, Math.PI * 2);
       ctx.fill();
 
-      const vx = projectile.vx;
-      const vy = projectile.vy + g * projectile.t;
+      const ballPos = projectile.isFlying || projectile.landed
+        ? positionAtTime(projectile.t)
+        : { x: 0, y: 0 };
+      const ball = worldToCanvas(ballPos.x, ballPos.y);
+      ctx.fillStyle = projectile.landed ? "#00aaff" : "#00e0ff";
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      const landing = worldToCanvas(info.range, 0);
+      ctx.fillStyle = "#004c99";
+      ctx.beginPath();
+      ctx.arc(landing.x, landing.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("着地点", landing.x + 8, landing.y - 8);
+
+      const vx = info.v0x;
+      const vy = info.v0y - g * projectile.t;
       const speed = Math.sqrt(vx * vx + vy * vy);
       const KE = 0.5 * speed * speed;
-      const PE = g * (groundY() - projectile.y);
+      const PE = g * ballPos.y;
 
+      ctx.font = "14px Inter, Noto Sans JP, sans-serif";
       ctx.fillStyle = "#004c99";
-      ctx.font = "16px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText(`運動エネルギー: ${KE.toFixed(1)}`, 10, 20);
-      ctx.fillText(`位置エネルギー: ${PE.toFixed(1)}`, 10, 40);
+      ctx.fillText(`θ = ${angleValue.textContent}°`, 10, 18);
+      ctx.fillText(`飛距離 R = ${info.range.toFixed(1)} m`, 10, 38);
+      ctx.fillText(`運動エネルギー = ${KE.toFixed(1)} J`, 10, 58);
+      ctx.fillText(`位置エネルギー = ${PE.toFixed(1)} J`, 10, 78);
     }
 
     let last = performance.now();
