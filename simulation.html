@@ -75,19 +75,42 @@
       line-height: 1.5;
     }
 
-    #shootBtn {
+    .btn-row {
+      display: flex;
+      gap: 10px;
       margin-top: 4px;
-      padding: 14px 20px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 12px;
       min-height: 48px;
-      font-size: 18px;
-      background: #00aaff;
-      color: white;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
       border: none;
       border-radius: 10px;
-      box-shadow: 0 0 10px #66d0ff;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+    }
+
+    #shootBtn {
+      margin-top: 0;
+      background: #00aaff;
+      color: white;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    #stopBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #cc3355;
+      border: 2px solid rgba(204, 51, 85, 0.35);
+    }
+
+    #stopBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     canvas {
@@ -198,7 +221,10 @@
     </label>
 
     <p class="hint">キャンバスをドラッグして角度を変えられます。点線は式②から求めた予測軌道です。</p>
-    <button id="shootBtn" type="button">発射</button>
+    <div class="btn-row">
+      <button id="shootBtn" type="button">発射</button>
+      <button id="stopBtn" type="button" disabled>ストップ</button>
+    </div>
   </div>
 
   <canvas id="canvas"></canvas>
@@ -249,6 +275,7 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const shootBtn = document.getElementById("shootBtn");
+    const stopBtn = document.getElementById("stopBtn");
     const v0Slider = document.getElementById("v0Slider");
     const angleSlider = document.getElementById("angleSlider");
     const gravitySlider = document.getElementById("gravitySlider");
@@ -270,6 +297,7 @@
       t: 0,
       isFlying: false,
       landed: false,
+      stopped: false,
       pathWorld: []
     };
 
@@ -299,7 +327,7 @@
       const cosTheta = Math.cos(rad);
       const trackA = tanTheta;
       const trackB = g / (2 * v0 * v0 * cosTheta * cosTheta);
-      const tNow = projectile.isFlying || projectile.landed ? projectile.t : 0;
+      const tNow = projectile.isFlying || projectile.landed || projectile.stopped ? projectile.t : 0;
       const vyNow = info.v0y - g * tNow;
 
       document.getElementById("fV0x").textContent = fmt(info.v0x, 1);
@@ -386,13 +414,27 @@
       projectile.t = 0;
       projectile.isFlying = false;
       projectile.landed = false;
+      projectile.stopped = false;
       projectile.pathWorld = [{ x: 0, y: 0 }];
+      updateButtons();
+    }
+
+    function stopProjectile() {
+      if (!projectile.isFlying) return;
+      projectile.isFlying = false;
+      projectile.stopped = true;
+      updateButtons();
+    }
+
+    function updateButtons() {
+      stopBtn.disabled = !projectile.isFlying;
     }
 
     function startProjectile() {
       syncSliders();
       resetFlight();
       projectile.isFlying = true;
+      updateButtons();
     }
 
     function resizeCanvas() {
@@ -426,6 +468,11 @@
     shootBtn.addEventListener("click", (event) => {
       event.preventDefault();
       startProjectile();
+    });
+
+    stopBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      stopProjectile();
     });
 
     canvas.addEventListener("pointerdown", (event) => {
@@ -471,6 +518,7 @@
         projectile.isFlying = false;
         projectile.landed = true;
         projectile.pathWorld = buildPathWorld(tLand, true);
+        updateButtons();
       }
     }
 
@@ -526,7 +574,7 @@
       ctx.stroke();
 
       const previewPath = buildPathWorld(info.tLand, true);
-      if (!projectile.isFlying && !projectile.landed) {
+      if (!projectile.isFlying && !projectile.landed && !projectile.stopped) {
         drawPath(previewPath, "rgba(0, 170, 255, 0.45)", 2, true);
       }
 
@@ -554,11 +602,11 @@
       ctx.arc(launch.x, launch.y, 6, 0, Math.PI * 2);
       ctx.fill();
 
-      const ballPos = projectile.isFlying || projectile.landed
+      const ballPos = projectile.isFlying || projectile.landed || projectile.stopped
         ? positionAtTime(projectile.t)
         : { x: 0, y: 0 };
       const ball = worldToCanvas(ballPos.x, ballPos.y);
-      ctx.fillStyle = projectile.landed ? "#00aaff" : "#00e0ff";
+      ctx.fillStyle = projectile.landed ? "#00aaff" : projectile.stopped ? "#ff8844" : "#00e0ff";
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
       ctx.fill();
