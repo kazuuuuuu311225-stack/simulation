@@ -262,7 +262,7 @@
   </div>
 
   <div class="canvas-section">
-    <p class="canvas-label">速度–時間グラフ（v–t）</p>
+    <p class="canvas-label">速度–時間グラフ（v–t）運動方向を正</p>
     <div class="canvas-wrap graph" id="vtWrap">
       <canvas id="vtCanvas"></canvas>
     </div>
@@ -343,6 +343,10 @@
       return -simV0 - simG * time;
     }
 
+    function velocityForGraph(v) {
+      return Math.abs(v);
+    }
+
     function initialY() {
       return simMode === "up" ? GROUND_Y : RELEASE_H;
     }
@@ -386,7 +390,7 @@
 
     function resetHistory() {
       ytHistory = [{ t: 0, y: initialY() }];
-      vtHistory = [{ t: 0, v: initialV() }];
+      vtHistory = [{ t: 0, v: velocityForGraph(initialV()) }];
     }
 
     function updateModeUI() {
@@ -501,7 +505,7 @@
       }
       t = nextT;
       ytHistory.push({ t, y: displayY(t) });
-      vtHistory.push({ t, v: velocityAt(t) });
+      vtHistory.push({ t, v: velocityForGraph(velocityAt(t)) });
       if (ytHistory.length > 2000) ytHistory.shift();
       if (vtHistory.length > 2000) vtHistory.shift();
     }
@@ -546,22 +550,18 @@
     }
 
     function computeVRange(tMax) {
-      let vMin = initialV();
-      let vMax = initialV();
-      const endV = velocityAt(tMax);
-      vMin = Math.min(vMin, endV, 0);
-      vMax = Math.max(vMax, endV, 0);
+      let vMax = velocityForGraph(initialV());
+      vMax = Math.max(vMax, velocityForGraph(velocityAt(tMax)));
+      if (simMode === "up") vMax = Math.max(vMax, simV0);
       vtHistory.forEach((p) => {
-        vMin = Math.min(vMin, p.v);
         vMax = Math.max(vMax, p.v);
       });
-      const pad = Math.max(2, (vMax - vMin) * 0.15);
-      if (vMax - vMin < 4) {
-        const mid = (vMin + vMax) / 2;
-        vMin = mid - 2;
-        vMax = mid + 2;
+      const pad = Math.max(2, vMax * 0.12);
+      const vMin = 0;
+      if (vMax < 4) {
+        return { vMin, vMax: 4 + pad };
       }
-      return { vMin: vMin - pad, vMax: vMax + pad };
+      return { vMin, vMax: vMax + pad };
     }
 
     function drawAxisLabels(ctx, w, h, xLabel, yLabel) {
@@ -831,7 +831,7 @@
       }
       ctx.strokeStyle = "#d0e8ff";
 
-      if (vMin < 0 && vMax > 0) {
+      if (vMin <= 0 && vMax >= 0) {
         ctx.strokeStyle = "#99ccee";
         ctx.lineWidth = 1.5;
         const zeroY = vToPx(0);
@@ -873,7 +873,7 @@
 
       drawValueTicks(ctx, w, h, vMin, vMax, vStep, vToPx);
       drawTimeTicks(ctx, w, h, tMax, tToPx);
-      drawAxisLabels(ctx, w, h, "t (s)", "v (m/s)");
+      drawAxisLabels(ctx, w, h, "t (s)", "v (m/s) 運動方向＋");
     }
 
     function draw() {
