@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>大気圧・水圧・浮力 — 流体</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+      line-height: 1.5;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 12px;
+      min-height: 48px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #startBtn {
+      background: #00aaff;
+      color: white;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+    }
+
+    #motionStatus {
+      width: 90%;
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      border: 2px solid rgba(0, 140, 220, 0.2);
+    }
+
+    #motionStatus.rise { color: #007744; }
+    #motionStatus.sink { color: #cc3355; }
+    #motionStatus.rest { color: #004c99; }
+
+    .canvas-section {
+      width: 95vw;
+      max-width: 100%;
+      margin-top: 8px;
+    }
+
+    .canvas-label {
+      margin: 0 0 4px 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a7099;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(480px, 58dvh);
+      min-height: 340px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 16px rgba(0, 150, 255, 0.25);
+    }
+
+    .legend {
+      width: 90%;
+      margin: 10px 0 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.45);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #4a7099;
+    }
+
+    .legend span { font-weight: 600; }
+    .lg-pa { color: #88ccee; }
+    .lg-pw { color: #0088dd; }
+    .lg-fb { color: #22aa55; }
+    .lg-fg { color: #ee4455; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>大気圧・水圧・浮力</h2>
+    <p class="chapter-label">5章　流体と圧力</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      深さ h (m):
+      <input id="hSlider" type="range" min="0" max="5" step="0.1" value="2">
+      <span id="hValue">2.0</span>
+    </label>
+
+    <label>
+      液体の密度 ρ (kg/m³):
+      <input id="rhoLiquidSlider" type="range" min="500" max="1500" step="10" value="1000">
+      <span id="rhoLiquidValue">1000</span>
+    </label>
+
+    <label>
+      物体の密度 (kg/m³):
+      <input id="rhoSlider" type="range" min="100" max="2000" step="10" value="800">
+      <span id="rhoValue">800</span>
+    </label>
+
+    <label>
+      重力 g (m/s²):
+      <input id="gSlider" type="range" min="0" max="20" step="0.1" value="9.8">
+      <span id="gValue">9.8</span>
+    </label>
+
+    <p class="hint">液体の密度 ρ と物体の密度を変えて浮力を比べられます。立方体 V = 0.008 m³（一辺 20 cm）。深さ h は物体中心の水面下の深さです。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="motionStatus" class="rest">静止</div>
+
+  <div class="canvas-section">
+    <p class="canvas-label">左：水槽の様子　／　右：力のベクトル（拡大）</p>
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="lg-pa">■ 大気圧 Pa</span>　
+    <span class="lg-pw">■ 水圧 P</span>　
+    <span class="lg-fb">■ 浮力 FB</span>　
+    <span class="lg-fg">■ 重力 Fg</span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const motionStatus = document.getElementById("motionStatus");
+    const hSlider = document.getElementById("hSlider");
+    const rhoLiquidSlider = document.getElementById("rhoLiquidSlider");
+    const rhoSlider = document.getElementById("rhoSlider");
+    const gSlider = document.getElementById("gSlider");
+
+    const P_ATM = 101325;
+    const CUBE_SIDE = 0.2;
+    const VOLUME = CUBE_SIDE ** 3;
+    const TANK_DEPTH = 6;
+    const MAX_DT = 1 / 30;
+    const CUBE_VISUAL_HALF = 44;
+    const FORCE_DIAG_SCALE = 0.42;
+    const PRESS_MIN_PX = 22;
+    const PRESS_MAX_PX = 52;
+
+    let objDepth = parseFloat(hSlider.value);
+    let objVel = 0;
+    let running = false;
+
+    const DEFAULTS = { h: 2, rhoLiquid: 1000, rho: 800, g: 9.8 };
+
+    function fmt(v, d) {
+      return Number(v).toFixed(d);
+    }
+
+    function syncSliders() {
+      document.getElementById("hValue").textContent = fmt(parseFloat(hSlider.value), 1);
+      document.getElementById("rhoLiquidValue").textContent = rhoLiquidSlider.value;
+      document.getElementById("rhoValue").textContent = rhoSlider.value;
+      document.getElementById("gValue").textContent = fmt(parseFloat(gSlider.value), 1);
+    }
+
+    function physicsState(depth) {
+      const g = parseFloat(gSlider.value);
+      const rhoLiquid = parseFloat(rhoLiquidSlider.value);
+      const rhoObj = parseFloat(rhoSlider.value);
+      const h = Math.max(0, depth);
+      const m = rhoObj * VOLUME;
+      const P = rhoLiquid * g * h;
+      const FB = rhoLiquid * g * VOLUME;
+      const Fg = m * g;
+      const Fnet = FB - Fg;
+      return { g, rhoLiquid, rhoObj, h, m, P, FB, Fg, Fnet, Pa: P_ATM };
+    }
+
+    function resetSimulation() {
+      hSlider.value = DEFAULTS.h;
+      rhoLiquidSlider.value = DEFAULTS.rhoLiquid;
+      rhoSlider.value = DEFAULTS.rho;
+      gSlider.value = DEFAULTS.g;
+      objDepth = DEFAULTS.h;
+      objVel = 0;
+      running = false;
+      syncSliders();
+    }
+
+    function startSimulation() {
+      objDepth = parseFloat(hSlider.value);
+      objVel = 0;
+      running = true;
+      syncSliders();
+    }
+
+    function applyDepthFromSlider() {
+      if (running) return;
+      objDepth = parseFloat(hSlider.value);
+      objVel = 0;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    [hSlider, rhoLiquidSlider, rhoSlider, gSlider].forEach((s) => {
+      s.addEventListener("input", () => {
+        syncSliders();
+        if (s === hSlider) applyDepthFromSlider();
+      });
+      s.addEventListener("change", syncSliders);
+    });
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      resetSimulation();
+    });
+
+    function update(dt) {
+      if (!running) return;
+      const state = physicsState(objDepth);
+      if (Math.abs(state.Fnet) < 0.01 || state.m <= 0) {
+        objVel = 0;
+        running = false;
+        return;
+      }
+      const a = state.Fnet / state.m;
+      objVel += a * dt;
+      objDepth -= objVel * dt;
+
+      const minD = CUBE_SIDE / 2;
+      const maxD = TANK_DEPTH - CUBE_SIDE / 2;
+      if (objDepth < minD) {
+        objDepth = minD;
+        objVel = 0;
+        running = false;
+      } else if (objDepth > maxD) {
+        objDepth = maxD;
+        objVel = 0;
+        running = false;
+      }
+
+      if (running) {
+        hSlider.value = Math.min(5, Math.max(0, objDepth)).toFixed(1);
+      }
+    }
+
+    function worldLayout(w, h) {
+      const pad = 12;
+      const splitX = Math.floor(w * 0.42);
+      const tank = {
+        left: pad + 8,
+        right: splitX - pad,
+        top: pad + 8,
+        bottom: h - pad - 8
+      };
+      const force = {
+        left: splitX + pad,
+        right: w - pad - 8,
+        top: pad + 8,
+        bottom: h - pad - 8
+      };
+      function depthToY(depth, region) {
+        return region.top + (depth / TANK_DEPTH) * (region.bottom - region.top);
+      }
+      return { tank, force, depthToY };
+    }
+
+    function pressToPx(pressure, g, rhoLiquid) {
+      const ref = rhoLiquid * Math.max(g, 1) * TANK_DEPTH;
+      const t = Math.min(1, pressure / ref);
+      return PRESS_MIN_PX + t * (PRESS_MAX_PX - PRESS_MIN_PX);
+    }
+
+    function drawArrow(x, y, dx, dy, color, lw, label, opts) {
+      const o = opts || {};
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 2) return;
+      const tx = x + dx;
+      const ty = y + dy;
+      if (o.dashed) ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(12, len * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+      if (!label) return;
+      const lx = tx + (o.lx ?? 5);
+      const ly = ty + (o.ly ?? -5);
+      drawLabelTag(lx, ly, label, color, o.align || "left", o.baseline || "middle");
+    }
+
+    function drawLabelTag(x, y, text, color, align, baseline) {
+      ctx.font = "bold 11px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.textAlign = align || "left";
+      ctx.textBaseline = baseline || "middle";
+      const tw = ctx.measureText(text).width + 10;
+      let hx = x - 5;
+      if (align === "center") hx = x - tw / 2;
+      else if (align === "right") hx = x - tw + 5;
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.fillRect(hx, y - 9, tw, 18);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.12)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hx, y - 9, tw, 18);
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawCube(cx, cy, half, fill, stroke) {
+      ctx.fillStyle = fill || "#ffffff";
+      ctx.strokeStyle = stroke || "#556677";
+      ctx.lineWidth = 2.5;
+      ctx.fillRect(cx - half, cy - half, half * 2, half * 2);
+      ctx.strokeRect(cx - half, cy - half, half * 2, half * 2);
+    }
+
+    function drawTankPanel(state, layout) {
+      const region = layout.tank;
+      const cx = (region.left + region.right) / 2;
+      const cy = layout.depthToY(objDepth, region);
+
+      const waterAlpha = 0.45 + 0.35 * Math.min(1, state.rhoLiquid / 1500);
+      ctx.fillStyle = `rgba(120, 190, 255, ${waterAlpha})`;
+      ctx.fillRect(region.left, region.top, region.right - region.left, region.bottom - region.top);
+      ctx.strokeStyle = "#0077bb";
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(region.left, region.top, region.right - region.left, region.bottom - region.top);
+
+      ctx.strokeStyle = "#0099dd";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(region.left, region.top);
+      ctx.lineTo(region.right, region.top);
+      ctx.stroke();
+      ctx.fillStyle = "#004c99";
+      ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText("水面", region.left + 6, region.top - 6);
+
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.35)";
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(region.left, cy);
+      ctx.lineTo(region.right, cy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#4a7099";
+      ctx.font = "11px Inter, Poppins, sans-serif";
+      ctx.fillText(`h=${fmt(state.h, 1)}m`, region.right - 58, cy - 6);
+
+      drawCube(cx, cy, CUBE_VISUAL_HALF);
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`ρ=${fmt(state.rhoLiquid, 0)} kg/m³`, (region.left + region.right) / 2, region.top + 18);
+      ctx.fillText("水槽（横断面）", (region.left + region.right) / 2, region.bottom + 18);
+      ctx.textAlign = "start";
+    }
+
+    function drawForcePanel(state, layout) {
+      const f = layout.force;
+      const panelW = f.right - f.left;
+      const panelH = f.bottom - f.top;
+      const cx = (f.left + f.right) / 2;
+
+      const infoH = 72;
+      const infoY = f.bottom - 10 - infoH;
+      const diagramTop = f.top + 34;
+      const diagramBottom = infoY - 10;
+      const cy = (diagramTop + diagramBottom) / 2;
+      const half = Math.min(34, Math.max(26, (diagramBottom - diagramTop) * 0.18));
+      const fbX = cx - 22;
+      const fgX = cx + 22;
+
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillRect(f.left, f.top, panelW, panelH);
+      ctx.strokeStyle = "rgba(0, 120, 200, 0.25)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(f.left, f.top, panelW, panelH);
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("力のベクトル（拡大）", cx, f.top + 20);
+      ctx.textAlign = "start";
+
+      const pTop = state.rhoLiquid * state.g * Math.max(0, state.h - CUBE_SIDE / 2);
+      const pBottom = state.rhoLiquid * state.g * (state.h + CUBE_SIDE / 2);
+      const pSide = state.rhoLiquid * state.g * state.h;
+      const maxPressPx = Math.min(PRESS_MAX_PX, half + 18);
+      const pTopPx = Math.min(pressToPx(pTop, state.g, state.rhoLiquid), maxPressPx);
+      const pBottomPx = Math.min(pressToPx(pBottom, state.g, state.rhoLiquid), maxPressPx);
+      const pSidePx = Math.min(pressToPx(pSide, state.g, state.rhoLiquid), maxPressPx - 4);
+
+      drawCube(cx, cy, half, "#ffffff", "#334455");
+
+      drawArrow(cx, cy - half - pTopPx, 0, pTopPx, "#0066bb", 3, null);
+      drawLabelTag(cx, cy - half - pTopPx - 14, "P（上）", "#0066bb", "center");
+
+      drawArrow(cx, cy + half + pBottomPx, 0, -pBottomPx, "#0066bb", 3, null);
+      drawLabelTag(cx, cy + half + pBottomPx + 14, "P（下）", "#0066bb", "center");
+
+      drawArrow(cx - half - pSidePx, cy, pSidePx, 0, "#0066bb", 3, null);
+      drawLabelTag(f.left + 8, cy, "P（左）", "#0066bb", "left");
+
+      drawArrow(cx + half + pSidePx, cy, -pSidePx, 0, "#0066bb", 3, null);
+      drawLabelTag(f.right - 8, cy, "P（右）", "#0066bb", "right");
+
+      const fbLen = Math.max(14, Math.min(state.FB * FORCE_DIAG_SCALE, cy - half - diagramTop - 28));
+      const fgLen = Math.max(14, Math.min(state.Fg * FORCE_DIAG_SCALE, diagramBottom - cy - half - 28));
+      drawArrow(fbX, cy, 0, fbLen, "#22aa55", 4, null);
+      drawLabelTag(fbX - 6, cy - fbLen - 12, `FB=${fmt(state.FB, 1)}N`, "#22aa55", "right");
+
+      drawArrow(fgX, cy, 0, -fgLen, "#ee4455", 4, null);
+      drawLabelTag(fgX + 6, cy + fgLen + 12, `Fg=${fmt(state.Fg, 1)}N`, "#ee4455", "left");
+
+      const infoX = f.left + 10;
+      const infoW = panelW - 20;
+      ctx.fillStyle = "rgba(232, 244, 255, 0.95)";
+      ctx.fillRect(infoX, infoY, infoW, infoH);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.15)";
+      ctx.strokeRect(infoX, infoY, infoW, infoH);
+      ctx.fillStyle = "#004c99";
+      ctx.font = "11px Inter, Poppins, Noto Sans JP, sans-serif";
+      const lines = [
+        `ρ = ${fmt(state.rhoLiquid, 0)} kg/m³　P = ${fmt(state.P / 1000, 1)} kPa　Pa = ${fmt(state.Pa / 1000, 0)} kPa`,
+        `浮力 FB = ρgV = ${fmt(state.FB, 1)} N　重力 Fg = ${fmt(state.Fg, 1)} N`,
+        `合力 Fnet = ${fmt(state.Fnet, 1)} N`
+      ];
+      lines.forEach((line, i) => ctx.fillText(line, infoX + 8, infoY + 22 + i * 18));
+    }
+
+    function draw() {
+      syncSliders();
+      const state = physicsState(objDepth);
+      const w = canvas.width;
+      const h = canvas.height;
+      const layout = worldLayout(w, h);
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#f8fcff";
+      ctx.fillRect(0, 0, w, h);
+
+      drawTankPanel(state, layout);
+      drawForcePanel(state, layout);
+
+      ctx.strokeStyle = "rgba(0, 120, 200, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(w * 0.42), 8);
+      ctx.lineTo(Math.floor(w * 0.42), h - 8);
+      ctx.stroke();
+
+      if (objDepth <= CUBE_SIDE / 2 + 0.02 && state.Fnet > 0.05 && !running) {
+        motionStatus.textContent = "水面で浮いている";
+        motionStatus.className = "rise";
+      } else if (!running) {
+        if (state.Fnet > 0.05) {
+          motionStatus.textContent = "スタートで上昇（浮く）";
+          motionStatus.className = "rise";
+        } else if (state.Fnet < -0.05) {
+          motionStatus.textContent = "スタートで下降（沈む）";
+          motionStatus.className = "sink";
+        } else {
+          motionStatus.textContent = "つり合い — スタート待ち";
+          motionStatus.className = "rest";
+        }
+      } else if (state.Fnet > 0.05) {
+        motionStatus.textContent = objVel > 0.02 ? "浮力 ＞ 重力 → 上昇（浮く）" : "浮力 ＞ 重力 → 浮上中";
+        motionStatus.className = "rise";
+      } else if (state.Fnet < -0.05) {
+        motionStatus.textContent = objVel < -0.02 ? "浮力 ＜ 重力 → 下降（沈む）" : "浮力 ＜ 重力 → 沈下中";
+        motionStatus.className = "sink";
+      } else {
+        motionStatus.textContent = "浮力 ＝ 重力 → 静止";
+        motionStatus.className = "rest";
+      }
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -129,6 +129,32 @@
       line-height: 1.5;
     }
 
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 12px;
+      min-height: 48px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #startBtn {
+      background: #00aaff;
+      color: white;
+      border: none;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
     #resetBtn {
       padding: 14px 12px;
       min-height: 48px;
@@ -155,6 +181,11 @@
       text-align: center;
       font-size: 1.05rem;
       font-weight: 600;
+    }
+
+    #statusPanel.broken {
+      color: #aa4400;
+      border: 2px solid rgba(170, 68, 0, 0.28);
     }
 
     #statusPanel.balanced {
@@ -272,7 +303,10 @@
 
     <p id="hint" class="hint">机の上の物体：重力 mg と垂直抗力 N がつり合います。</p>
 
-    <button id="resetBtn" type="button">リセット</button>
+    <div class="btn-row" id="animBtns">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
   </div>
 
   <div id="statusPanel" class="balanced">つりあっている</div>
@@ -304,9 +338,27 @@
 
     const G = 9.8;
     const FORCE_SCALE = 2.2;
+    const ANGLE_FORCE_SCALE = 3.6;
     const BALANCE_EPS = 0.15;
+    const MAX_DT = 1 / 30;
+    const BREAK_DURATION = 0.55;
+    const PIXELS_PER_M = 42;
 
     let activeTab = "table";
+    let anim = {
+      active: false,
+      phase: "idle",
+      breakT: 0,
+      dx: 0,
+      dy: 0,
+      vx: 0,
+      vy: 0,
+      onGround: false
+    };
+
+    function isStringTab() {
+      return activeTab === "string" || activeTab === "angle";
+    }
 
     const TAB_META = {
       table: {
@@ -323,7 +375,7 @@
       },
       string: {
         scene: "糸",
-        hint: "糸でつるした物体：重力 mg（下）と張力 T（上）がつり合います。T = mg のとき平衡です。",
+        hint: "糸でつるした物体：T = mg のときつり合います。スタートで確認 — つり合わないと糸が切れて物体が落ちます。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-t">■ 張力 T</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, T: 20 }
       },
@@ -335,7 +387,7 @@
       },
       angle: {
         scene: "角度",
-        hint: "糸でつながれた物体：糸が角度 θ で左上に張力 T を加えます。垂直抗力 N と摩擦力 Ff も働きます。",
+        hint: "糸が角度 θ で張力 T を加えます。スタートで確認 — 合力が 0 でなければ糸が切れます。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-n">■ 垂直抗力 N</span>　<span class="lg-t">■ 張力 T</span>　<span class="lg-ff">■ 摩擦力 Ff</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, T: 20, mu: 0.4, theta: 30 }
       }
@@ -365,6 +417,26 @@
       legendEl.innerHTML = TAB_META[activeTab].legend;
       document.getElementById("sceneLabel").textContent =
         `力のベクトル図 — ${TAB_META[activeTab].scene}`;
+      document.getElementById("animBtns").style.display = isStringTab() ? "flex" : "none";
+    }
+
+    function resetAnimation() {
+      anim = { active: false, phase: "idle", breakT: 0, dx: 0, dy: 0, vx: 0, vy: 0, onGround: false };
+    }
+
+    function startAnimation() {
+      if (!isStringTab()) return;
+      if (anim.active && (anim.phase === "break" || anim.phase === "fall")) return;
+      const forces = computeForces();
+      const balanced = forces.netMag < BALANCE_EPS;
+      anim.active = true;
+      anim.breakT = 0;
+      anim.dx = 0;
+      anim.dy = 0;
+      anim.vx = 0;
+      anim.vy = 0;
+      anim.onGround = false;
+      anim.phase = balanced ? "hold" : "break";
     }
 
     function staticFriction(hPull, ffMax) {
@@ -458,6 +530,7 @@
       if (d.mu !== undefined) muSlider.value = d.mu;
       if (d.theta !== undefined) thetaSlider.value = d.theta;
       syncSliders();
+      resetAnimation();
     }
 
     function setTab(tab) {
@@ -482,6 +555,10 @@
       s.addEventListener("input", syncSliders);
       s.addEventListener("change", syncSliders);
     });
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startAnimation();
+    });
     document.getElementById("resetBtn").addEventListener("click", (e) => {
       e.preventDefault();
       resetSimulation();
@@ -499,13 +576,135 @@
       resetSimulation();
     });
 
-    function drawArrow(ox, oy, vx, vy, color, lw, label) {
-      const tx = ox + vx * FORCE_SCALE;
-      const ty = oy - vy * FORCE_SCALE;
+    function updateAnimation(dt, forces, layout) {
+      if (!anim.active) return;
+
+      if (anim.phase === "hold") return;
+
+      if (anim.phase === "break") {
+        anim.breakT += dt;
+        if (anim.breakT >= BREAK_DURATION) {
+          anim.phase = "fall";
+          const m = Math.max(forces.m, 0.1);
+          if (activeTab === "string") {
+            anim.vy = forces.netY > BALANCE_EPS ? -1.5 : 0;
+          } else {
+            anim.vx = (forces.netX / m) * 0.35;
+            anim.vy = -(forces.netY / m) * 0.35;
+          }
+        }
+        return;
+      }
+
+      if (anim.phase === "fall") {
+        if (!anim.onGround) {
+          anim.vy += G * dt;
+          if (activeTab === "angle" && Math.abs(anim.vx) > 0.01) {
+            anim.vx *= 0.988;
+          }
+          anim.dx += anim.vx * PIXELS_PER_M * dt;
+          anim.dy += anim.vy * PIXELS_PER_M * dt;
+          if (anim.dy >= layout.maxDrop) {
+            anim.dy = layout.maxDrop;
+            anim.vy = 0;
+            anim.vx = 0;
+            anim.onGround = true;
+            anim.phase = "done";
+            anim.active = false;
+          }
+        }
+      }
+    }
+
+    function drawStringLine(x1, y1, x2, y2, intact, breakT) {
+      if (intact) {
+        ctx.strokeStyle = "#666";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        return;
+      }
+
+      const progress = Math.min(1, breakT / BREAK_DURATION);
+      const midY = y1 + (y2 - y1) * 0.45;
+      const gap = 6 + progress * 28;
+
+      ctx.strokeStyle = progress < 0.5 ? "#cc5500" : "#888";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1, midY - gap / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x1, midY + gap / 2);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      if (progress > 0.35) {
+        ctx.strokeStyle = "#cc3355";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 4]);
+        [-1, 1].forEach((s) => {
+          ctx.beginPath();
+          ctx.moveTo(x1 + s * 8, midY);
+          ctx.lineTo(x1 + s * (8 + progress * 18), midY + progress * 22);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawAngleString(anchorX, anchorY, attachX, attachY, intact, breakT) {
+      if (intact) {
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(anchorX, anchorY);
+        ctx.lineTo(attachX, attachY);
+        ctx.stroke();
+        ctx.fillStyle = "#555";
+        ctx.beginPath();
+        ctx.arc(anchorX, anchorY, 7, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+      }
+
+      const progress = Math.min(1, breakT / BREAK_DURATION);
+      const mx = anchorX + (attachX - anchorX) * 0.42;
+      const my = anchorY + (attachY - anchorY) * 0.42;
+      const gx = (attachX - anchorX) / Math.hypot(attachX - anchorX, attachY - anchorY) || 0;
+      const gy = (attachY - anchorY) / Math.hypot(attachX - anchorX, attachY - anchorY) || 0;
+      const gap = 8 + progress * 24;
+
+      ctx.strokeStyle = progress < 0.5 ? "#cc5500" : "#777";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(anchorX, anchorY);
+      ctx.lineTo(mx - gx * gap / 2, my - gy * gap / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mx + gx * gap / 2, my + gy * gap / 2);
+      ctx.lineTo(attachX, attachY);
+      ctx.stroke();
+      ctx.fillStyle = "#555";
+      ctx.beginPath();
+      ctx.arc(anchorX, anchorY, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawArrow(ox, oy, vx, vy, color, lw, label, opts) {
+      const options = opts || {};
+      const scale = options.scale ?? FORCE_SCALE;
+      const tx = ox + vx * scale;
+      const ty = oy - vy * scale;
       const dx = tx - ox;
       const dy = ty - oy;
       const len = Math.sqrt(dx * dx + dy * dy);
       if (len < 2) return;
+
+      if (options.dashed) ctx.setLineDash([7, 5]);
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = lw;
@@ -513,7 +712,9 @@
       ctx.moveTo(ox, oy);
       ctx.lineTo(tx, ty);
       ctx.stroke();
-      const head = Math.min(11, len * 0.22);
+      ctx.setLineDash([]);
+
+      const head = Math.min(12, len * 0.24);
       const ang = Math.atan2(dy, dx);
       ctx.beginPath();
       ctx.moveTo(tx, ty);
@@ -521,8 +722,70 @@
       ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
       ctx.closePath();
       ctx.fill();
-      ctx.font = "11px Inter, Poppins, Noto Sans JP, sans-serif";
-      ctx.fillText(label, tx + 5, ty - 4);
+
+      if (options.showLabel === false) return;
+      const lx = tx + (options.lx ?? 6);
+      const ly = ty + (options.ly ?? -4);
+      ctx.font = "bold 11px Inter, Poppins, Noto Sans JP, sans-serif";
+      if (options.labelBg) {
+        const tw = ctx.measureText(label).width + 8;
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.fillRect(lx - 4, ly - 12, tw, 16);
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(label, lx, ly);
+    }
+
+    function drawSpringCoil(cx, yTop, yBottom) {
+      const coils = 7;
+      const amp = 22;
+      const hookLen = 18;
+
+      ctx.fillStyle = "#555";
+      ctx.fillRect(cx - 46, yTop - 10, 92, 12);
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - 46, yTop - 10, 92, 12);
+
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, yTop + 2);
+      ctx.lineTo(cx, yTop + hookLen);
+      ctx.stroke();
+
+      const springTop = yTop + hookLen;
+      const springBottom = yBottom;
+      const steps = coils * 2;
+      const dy = (springBottom - springTop) / steps;
+
+      ctx.strokeStyle = "#cc5500";
+      ctx.lineWidth = 5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx, springTop);
+      let y = springTop;
+      for (let i = 0; i < steps; i += 1) {
+        const x = cx + (i % 2 === 0 ? amp : -amp);
+        y += dy;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(cx, springBottom);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#ffaa33";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, springTop);
+      y = springTop;
+      for (let i = 0; i < steps; i += 1) {
+        const x = cx + (i % 2 === 0 ? amp : -amp);
+        y += dy;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(cx, springBottom);
+      ctx.stroke();
     }
 
     function drawBlock(cx, cy, bw, bh) {
@@ -555,6 +818,47 @@
       lines.forEach((line, i) => ctx.fillText(line, 18, 28 + i * 18));
     }
 
+    function getStringLayout(w, h) {
+      const cx = w * 0.5;
+      const restCy = h * 0.55;
+      const half = 28;
+      const groundY = h * 0.86;
+      return {
+        cx,
+        restCy,
+        topY: h * 0.1,
+        half,
+        bw: 56,
+        bh: 56,
+        groundY,
+        maxDrop: Math.max(0, groundY - half - restCy)
+      };
+    }
+
+    function getAngleLayout(w, h) {
+      const groundY = h * 0.78;
+      const bw = 96;
+      const bh = 64;
+      const restCx = w * 0.58;
+      const restCy = groundY - bh / 2 - 4;
+      return {
+        groundY,
+        bw,
+        bh,
+        restCx,
+        restCy,
+        attachRestX: restCx - bw / 2,
+        attachRestY: restCy - bh / 2,
+        anchorX: Math.max(50, restCx - 150),
+        anchorY: restCy - 110,
+        maxDrop: Math.max(0, groundY - bh / 2 - restCy)
+      };
+    }
+
+    function stringIsIntact() {
+      return !anim.active || anim.phase === "idle" || anim.phase === "hold";
+    }
+
     function drawTableScene(forces, w, h) {
       const groundY = h * 0.72;
       const cx = w * 0.5;
@@ -569,50 +873,53 @@
 
     function drawSpringScene(forces, w, h) {
       const cx = w * 0.5;
-      const cy = h * 0.55;
-      const topY = h * 0.12;
-      ctx.strokeStyle = "#888";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(cx, topY);
-      ctx.lineTo(cx, topY + 20);
-      ctx.stroke();
-      ctx.strokeStyle = "#ff8800";
-      ctx.lineWidth = 2;
-      let sy = topY + 20;
-      for (let i = 0; i < 8; i += 1) {
-        ctx.beginPath();
-        ctx.moveTo(cx, sy);
-        ctx.lineTo(cx + (i % 2 === 0 ? 14 : -14), sy + 12);
-        ctx.stroke();
-        sy += 12;
+      const blockSize = 72;
+      const cy = h * 0.58;
+      const topY = h * 0.06;
+      const springBottom = cy - blockSize / 2 - 4;
+
+      drawSpringCoil(cx, topY, springBottom);
+      drawBlock(cx, cy, blockSize, blockSize);
+
+      const topAttach = cy - blockSize / 2;
+      drawArrow(cx, topAttach, 0, forces.Fs, "#ff8800", 4,
+        `Fs=${fmt(forces.Fs, 0)}N`, { lx: 12, ly: -8, labelBg: true });
+      drawArrow(cx, cy, 0, -forces.mg, "#0088dd", 4,
+        `mg=${fmt(forces.mg, 1)}N`, { lx: -72, ly: 8, labelBg: true });
+      if (forces.netMag > BALANCE_EPS) {
+        drawArrow(cx, cy, 0, forces.netY, "#cc9900", 3,
+          `F_net=${fmt(forces.netMag, 1)}N`, { lx: 14, ly: 14, dashed: true, labelBg: true });
       }
-      ctx.beginPath();
-      ctx.moveTo(cx, sy);
-      ctx.lineTo(cx, cy - 24);
-      ctx.stroke();
-      drawBlock(cx, cy, 56, 56);
-      drawArrow(cx, cy, 0, -forces.mg, "#0088dd", 3, `mg=${fmt(forces.mg, 1)}N`);
-      drawArrow(cx, cy, 0, forces.Fs, "#ff8800", 3, `Fs=${fmt(forces.Fs, 0)}N`);
-      drawArrow(cx, cy, 0, forces.netY, "#cc9900", 3.5, `F_net=${fmt(forces.netMag, 1)}N`);
     }
 
     function drawStringScene(forces, w, h) {
-      const cx = w * 0.5;
-      const cy = h * 0.55;
-      const topY = h * 0.1;
-      ctx.strokeStyle = "#666";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, topY);
-      ctx.lineTo(cx, cy - 28);
-      ctx.stroke();
+      const lay = getStringLayout(w, h);
+      const cx = lay.cx + anim.dx;
+      const cy = lay.restCy + anim.dy;
+      const intact = stringIsIntact();
+      const breakT = anim.phase === "break" ? anim.breakT : BREAK_DURATION;
+
+      drawGround(lay.groundY, w);
       ctx.fillStyle = "#666";
-      ctx.fillRect(cx - 30, topY - 8, 60, 8);
-      drawBlock(cx, cy, 56, 56);
+      ctx.fillRect(lay.cx - 30, lay.topY - 8, 60, 8);
+      drawStringLine(lay.cx, lay.topY, cx, cy - lay.half, intact, breakT);
+      drawBlock(cx, cy, lay.bw, lay.bh);
+
       drawArrow(cx, cy, 0, -forces.mg, "#0088dd", 3, `mg=${fmt(forces.mg, 1)}N`);
-      drawArrow(cx, cy, 0, forces.T, "#8844cc", 3, `T=${fmt(forces.T, 0)}N`);
-      drawArrow(cx, cy, 0, forces.netY, "#cc9900", 3.5, `F_net=${fmt(forces.netMag, 1)}N`);
+      if (intact) {
+        drawArrow(cx, cy, 0, forces.T, "#8844cc", 3, `T=${fmt(forces.T, 0)}N`);
+      }
+      if ((intact || anim.phase === "break") && forces.netMag > BALANCE_EPS) {
+        drawArrow(cx, cy, 0, forces.netY, "#cc9900", 3.5, `F_net=${fmt(forces.netMag, 1)}N`);
+      }
+      if (!intact && anim.phase !== "break") {
+        ctx.fillStyle = "#cc3355";
+        ctx.font = "bold 13px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("糸が切れた！", cx, cy + lay.half + 28);
+        ctx.textAlign = "start";
+      }
+      return lay;
     }
 
     function drawFrictionScene(forces, w, h) {
@@ -629,28 +936,89 @@
     }
 
     function drawAngleScene(forces, w, h) {
-      const groundY = h * 0.72;
-      const cx = w * 0.5;
-      const cy = groundY - 24;
-      const anchorX = cx - 90;
-      const anchorY = cy - 70;
-      drawGround(groundY, w);
-      ctx.strokeStyle = "#666";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(anchorX, anchorY);
-      ctx.lineTo(cx - 36, cy - 12);
-      ctx.stroke();
-      ctx.fillStyle = "#666";
-      ctx.beginPath();
-      ctx.arc(anchorX, anchorY, 5, 0, Math.PI * 2);
-      ctx.fill();
-      drawBlock(cx, cy, 72, 48);
-      drawArrow(cx, cy, 0, -forces.mg, "#0088dd", 3, `mg=${fmt(forces.mg, 1)}N`);
-      drawArrow(cx, cy, 0, forces.N, "#00b8d4", 3, `N=${fmt(forces.N, 1)}N`);
-      drawArrow(cx, cy, forces.Tx, forces.Ty, "#8844cc", 3, `T=${fmt(forces.T, 0)}N`);
-      if (Math.abs(forces.Ff) > 0.01) drawArrow(cx, cy, forces.Ff, 0, "#ee4455", 3, `Ff=${fmt(forces.Ff, 1)}N`);
-      drawArrow(cx, cy, forces.netX, forces.netY, "#cc9900", 3.5, `F_net=${fmt(forces.netMag, 1)}N`);
+      const lay = getAngleLayout(w, h);
+      const cx = lay.restCx + anim.dx;
+      const cy = lay.restCy + anim.dy;
+      const attachX = lay.attachRestX + anim.dx;
+      const attachY = lay.attachRestY + anim.dy;
+      const scale = ANGLE_FORCE_SCALE;
+      const intact = stringIsIntact();
+      const breakT = anim.phase === "break" ? anim.breakT : BREAK_DURATION;
+
+      drawGround(lay.groundY, w);
+      drawAngleString(lay.anchorX, lay.anchorY, attachX, attachY, intact, breakT);
+
+      if (intact) {
+        const thetaRad = forces.thetaDeg * Math.PI / 180;
+        ctx.strokeStyle = "rgba(136,68,204,0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(attachX, attachY, 36, 0, -thetaRad, true);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#8844cc";
+        ctx.font = "11px Inter, Poppins, sans-serif";
+        ctx.fillText(`θ=${forces.thetaDeg}°`, attachX - 52, attachY - 8);
+      }
+
+      drawBlock(cx, cy, lay.bw, lay.bh);
+      drawArrow(cx, cy + lay.bh * 0.15, 0, -forces.mg, "#0088dd", 4,
+        `mg=${fmt(forces.mg, 1)}N`, { scale, lx: -88, ly: 10, labelBg: true });
+
+      if (intact) {
+        drawArrow(cx, cy - lay.bh * 0.35, 0, forces.N, "#00b8d4", 4,
+          `N=${fmt(forces.N, 1)}N`, { scale, lx: 10, ly: -14, labelBg: true });
+        drawArrow(attachX, attachY, forces.Tx, forces.Ty, "#8844cc", 4,
+          `T=${fmt(forces.T, 0)}N`, { scale, lx: -78, ly: -16, labelBg: true });
+        if (Math.abs(forces.Ff) > 0.01) {
+          drawArrow(cx, cy + lay.bh * 0.35, forces.Ff, 0, "#ee4455", 4,
+            `Ff=${fmt(forces.Ff, 1)}N`, { scale, lx: -88, ly: 22, labelBg: true });
+        }
+        if (forces.netMag > BALANCE_EPS) {
+          drawArrow(cx + lay.bw * 0.35, cy, forces.netX, forces.netY, "#cc9900", 3.5,
+            `F_net=${fmt(forces.netMag, 1)}N`, { scale, lx: 10, ly: 6, dashed: true, labelBg: true });
+        }
+      } else if (anim.phase === "break" && forces.netMag > BALANCE_EPS) {
+        drawArrow(cx + lay.bw * 0.35, cy, forces.netX, forces.netY, "#cc9900", 3.5,
+          `F_net=${fmt(forces.netMag, 1)}N`, { scale, lx: 10, ly: 6, dashed: true, labelBg: true });
+      } else if (anim.phase !== "break") {
+        ctx.fillStyle = "#cc3355";
+        ctx.font = "bold 13px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("糸が切れた！", cx, cy + lay.bh / 2 + 24);
+        ctx.textAlign = "start";
+      }
+      return lay;
+    }
+
+    function updateStatusPanel(forces) {
+      const balanced = forces.netMag < BALANCE_EPS;
+      if (!isStringTab()) {
+        statusPanel.textContent = balanced ? "つりあっている" : "つりあっていない";
+        statusPanel.className = balanced ? "balanced" : "unbalanced";
+        return;
+      }
+      if (!anim.active) {
+        statusPanel.textContent = balanced
+          ? "つりあっている — スタートで確認"
+          : "つりあっていない — スタートで糸が切れる";
+        statusPanel.className = balanced ? "balanced" : "unbalanced";
+        return;
+      }
+      if (anim.phase === "hold") {
+        statusPanel.textContent = "つりあっている — 糸は切れません";
+        statusPanel.className = "balanced";
+      } else if (anim.phase === "break") {
+        statusPanel.textContent = "糸が切れています…";
+        statusPanel.className = "broken";
+      } else if (anim.phase === "fall") {
+        statusPanel.textContent = "糸が切れて物体が動いています";
+        statusPanel.className = "broken";
+      } else if (anim.phase === "done") {
+        statusPanel.textContent = "糸が切れて停止しました — リセットでやり直し";
+        statusPanel.className = "broken";
+      }
     }
 
     function draw() {
@@ -662,19 +1030,30 @@
       ctx.fillStyle = "#f8fcff";
       ctx.fillRect(0, 0, w, h);
 
+      let layout = null;
       if (activeTab === "table") drawTableScene(forces, w, h);
       else if (activeTab === "spring") drawSpringScene(forces, w, h);
-      else if (activeTab === "string") drawStringScene(forces, w, h);
+      else if (activeTab === "string") layout = drawStringScene(forces, w, h);
       else if (activeTab === "friction") drawFrictionScene(forces, w, h);
-      else drawAngleScene(forces, w, h);
+      else layout = drawAngleScene(forces, w, h);
 
       drawInfoPanel(forces.lines);
-      const balanced = forces.netMag < BALANCE_EPS;
-      statusPanel.textContent = balanced ? "つりあっている" : "つりあっていない";
-      statusPanel.className = balanced ? "balanced" : "unbalanced";
+      updateStatusPanel(forces);
+      return layout;
     }
 
-    function loop() {
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      const forces = computeForces();
+      let layout = null;
+      if (isStringTab()) {
+        const w = canvas.width;
+        const h = canvas.height;
+        layout = activeTab === "string" ? getStringLayout(w, h) : getAngleLayout(w, h);
+        updateAnimation(dt, forces, layout);
+      }
       draw();
       requestAnimationFrame(loop);
     }

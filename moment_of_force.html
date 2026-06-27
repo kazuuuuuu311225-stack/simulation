@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>力のモーメント — てこの回転</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .side-group {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(0, 140, 220, 0.15);
+    }
+
+    .side-group.left { border-left: 4px solid #0088dd; }
+    .side-group.right { border-left: 4px solid #cc3344; }
+
+    .side-title {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #004c99;
+    }
+
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    label:last-child { margin-bottom: 0; }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    .dir-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .dir-row button {
+      flex: 1;
+      padding: 10px 8px;
+      min-height: 44px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: 2px solid rgba(0, 170, 255, 0.25);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.7);
+      color: #004c99;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .dir-row button.active {
+      background: #00aaff;
+      color: white;
+      border-color: #00aaff;
+      box-shadow: 0 0 8px #66d0ff;
+    }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(0, 140, 220, 0.08);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #004c99;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+      line-height: 1.55;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-row button {
+      flex: 1 1 calc(33% - 8px);
+      min-width: 88px;
+      padding: 14px 10px;
+      min-height: 48px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #startBtn {
+      background: #00aaff;
+      color: white;
+      border: none;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+    }
+
+    #statusPanel {
+      width: min(520px, 92vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      border: 2px solid rgba(0, 140, 220, 0.2);
+      color: #004c99;
+      line-height: 1.5;
+    }
+
+    #statusPanel.balanced {
+      color: #007744;
+      border-color: rgba(0, 170, 100, 0.3);
+    }
+
+    #statusPanel.rotating {
+      color: #cc3355;
+      border-color: rgba(204, 51, 85, 0.28);
+    }
+
+    .canvas-section {
+      width: 95vw;
+      max-width: 640px;
+      margin-top: 8px;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(380px, 48dvh);
+      min-height: 260px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 16px rgba(0, 150, 255, 0.25);
+    }
+
+    #formulaPanel {
+      width: min(520px, 92vw);
+      margin: 10px 0 16px;
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.12);
+      line-height: 1.7;
+    }
+
+    #formulaPanel h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      color: #004c99;
+    }
+
+    .concept {
+      margin: 0 0 14px;
+      font-size: 0.92rem;
+      color: #4a7099;
+    }
+
+    .formula-block {
+      margin-bottom: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 140, 220, 0.15);
+    }
+
+    .formula-block:last-child { margin-bottom: 0; }
+
+    .formula-label {
+      margin: 0 0 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #2a7fd4;
+      letter-spacing: 0.04em;
+    }
+
+    .formula-line {
+      margin: 4px 0;
+      font-size: 0.95rem;
+      color: #003366;
+    }
+
+    .formula-line.sub {
+      margin-left: 0.5rem;
+      font-size: 0.88rem;
+      color: #4a7099;
+    }
+
+    .formula-line .num {
+      font-weight: 600;
+      color: #0066aa;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>力のモーメント</h2>
+    <p class="chapter-label">7章　力のモーメントと重心 — M = F × r</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <div class="side-group left">
+      <p class="side-title">左側の力</p>
+      <label>
+        力 F<sub>L</sub> (N):
+        <input id="fLeftSlider" type="range" min="0" max="50" step="1" value="20">
+        <span id="fLeftValue">20</span>
+      </label>
+      <label>
+        支点からの距離 r<sub>L</sub> (m):
+        <input id="rLeftSlider" type="range" min="0" max="2" step="0.1" value="1.5">
+        <span id="rLeftValue">1.5</span>
+      </label>
+      <label>
+        力の向き
+        <div class="dir-row" id="dirLeftRow">
+          <button type="button" class="dir-btn active" data-side="left" data-dir="up">上向き ↑</button>
+          <button type="button" class="dir-btn" data-side="left" data-dir="down">下向き ↓</button>
+        </div>
+      </label>
+    </div>
+
+    <div class="side-group right">
+      <p class="side-title">右側の力</p>
+      <label>
+        力 F<sub>R</sub> (N):
+        <input id="fRightSlider" type="range" min="0" max="50" step="1" value="20">
+        <span id="fRightValue">20</span>
+      </label>
+      <label>
+        支点からの距離 r<sub>R</sub> (m):
+        <input id="rRightSlider" type="range" min="0" max="2" step="0.1" value="1.5">
+        <span id="rRightValue">1.5</span>
+      </label>
+      <label>
+        力の向き
+        <div class="dir-row" id="dirRightRow">
+          <button type="button" class="dir-btn active" data-side="right" data-dir="up">上向き ↑</button>
+          <button type="button" class="dir-btn" data-side="right" data-dir="down">下向き ↓</button>
+        </div>
+      </label>
+    </div>
+
+    <p class="formula-box">M = F × r　　反時計回りを +、時計回りを −</p>
+
+    <p class="hint">
+      左右の F と r を変えて M<sub>L</sub> と M<sub>R</sub> を比べます。M<sub>L</sub> = M<sub>R</sub>（符号込みで打ち消し）なら「つりあい」、「スタート」で棒が回転します。
+    </p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">条件を設定して「スタート」</div>
+
+  <div class="canvas-section">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <section id="formulaPanel" aria-label="力のモーメントの計算">
+    <h3>モーメントの計算</h3>
+    <p class="concept">支点を中心とした回転のはたらき。M = F × r（N·m）。左右のモーメントが打ち消し合えば棒は水平のままです。</p>
+
+    <div class="formula-block">
+      <p class="formula-label">① 左側 M<sub>L</sub></p>
+      <p class="formula-line">M<sub>L</sub> = F<sub>L</sub> × r<sub>L</sub></p>
+      <p class="formula-line sub">→ <span id="fMLcalc" class="num">—</span> N·m（<span id="fMLdir" class="num">—</span>）</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">② 右側 M<sub>R</sub></p>
+      <p class="formula-line">M<sub>R</sub> = F<sub>R</sub> × r<sub>R</sub></p>
+      <p class="formula-line sub">→ <span id="fMRcalc" class="num">—</span> N·m（<span id="fMRdir" class="num">—</span>）</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">③ 合成モーメント</p>
+      <p class="formula-line">M = M<sub>L</sub> + M<sub>R</sub></p>
+      <p class="formula-line sub">→ M = <span id="fMnet" class="num">—</span> N·m（<span id="fMnetDir" class="num">—</span>）</p>
+      <p class="formula-line sub" id="fBalanceLine">判定：<span id="fBalance" class="num">—</span></p>
+    </div>
+  </section>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+
+    const fLeftSlider = document.getElementById("fLeftSlider");
+    const rLeftSlider = document.getElementById("rLeftSlider");
+    const fRightSlider = document.getElementById("fRightSlider");
+    const rRightSlider = document.getElementById("rRightSlider");
+
+    const MAX_DT = 1 / 30;
+    const ARM_MAX_M = 2.2;
+    const BALANCE_EPS = 0.5;
+    const MAX_ANGLE = 32 * Math.PI / 180;
+    const ROT_SCALE = 0.018;
+    const FORCE_SCALE = 2.6;
+    const MIN_ARROW_PX = 58;
+    const MASS_R = 12;
+
+    let dirLeft = "up";
+    let dirRight = "up";
+    let theta = 0;
+    let running = false;
+    let paused = false;
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getLeftF() { return parseFloat(fLeftSlider.value); }
+    function getRightF() { return parseFloat(fRightSlider.value); }
+    function getLeftR() { return parseFloat(rLeftSlider.value); }
+    function getRightR() { return parseFloat(rRightSlider.value); }
+
+    function signedMoment(side, F, r, dir) {
+      if (F < 0.01 || r < 0.01) return 0;
+      const up = dir === "up";
+      if (side === "left") return up ? F * r : -F * r;
+      return up ? -F * r : F * r;
+    }
+
+    function momentDirectionLabel(signed) {
+      if (Math.abs(signed) < BALANCE_EPS) return "—";
+      return signed > 0 ? "反時計回り" : "時計回り";
+    }
+
+    function computeMoments() {
+      const FL = getLeftF();
+      const FR = getRightF();
+      const rL = getLeftR();
+      const rR = getRightR();
+      const MLsigned = signedMoment("left", FL, rL, dirLeft);
+      const MRsigned = signedMoment("right", FR, rR, dirRight);
+      const Mnet = MLsigned + MRsigned;
+      const MLmag = Math.abs(MLsigned);
+      const MRmag = Math.abs(MRsigned);
+      const balanced = Math.abs(Mnet) < BALANCE_EPS;
+      return { FL, FR, rL, rR, MLsigned, MRsigned, Mnet, MLmag, MRmag, balanced };
+    }
+
+    function syncUI() {
+      document.getElementById("fLeftValue").textContent = fmt(getLeftF(), 0);
+      document.getElementById("rLeftValue").textContent = fmt(getLeftR(), 1);
+      document.getElementById("fRightValue").textContent = fmt(getRightF(), 0);
+      document.getElementById("rRightValue").textContent = fmt(getRightR(), 1);
+      updateFormulaPanel();
+    }
+
+    function updateFormulaPanel() {
+      const m = computeMoments();
+      document.getElementById("fMLcalc").textContent = fmt(m.MLmag, 1);
+      document.getElementById("fMLdir").textContent = momentDirectionLabel(m.MLsigned);
+      document.getElementById("fMRcalc").textContent = fmt(m.MRmag, 1);
+      document.getElementById("fMRdir").textContent = momentDirectionLabel(m.MRsigned);
+      document.getElementById("fMnet").textContent = fmt(Math.abs(m.Mnet), 1);
+      document.getElementById("fMnetDir").textContent = momentDirectionLabel(m.Mnet);
+      document.getElementById("fBalance").textContent = m.balanced ? "つりあい（M = 0）" : "回転する";
+    }
+
+    function updateStatus() {
+      const m = computeMoments();
+      if (!running) {
+        statusPanel.textContent = m.balanced
+          ? `つりあい — M_L = ${fmt(m.MLmag, 1)} N·m と M_R = ${fmt(m.MRmag, 1)} N·m が打ち消し合います`
+          : `回転する — 合成 M = ${fmt(m.Mnet, 1)} N·m（${momentDirectionLabel(m.Mnet)}）`;
+        statusPanel.className = m.balanced ? "balanced" : "rotating";
+        return;
+      }
+      if (paused) {
+        statusPanel.textContent = "一時停止中";
+        statusPanel.className = "";
+        return;
+      }
+      if (m.balanced) {
+        statusPanel.textContent = "つりあい — 棒は水平のまま";
+        statusPanel.className = "balanced";
+      } else {
+        statusPanel.textContent = `回転中 — M = ${fmt(m.Mnet, 1)} N·m（${momentDirectionLabel(m.Mnet)}）`;
+        statusPanel.className = "rotating";
+      }
+    }
+
+    function resetSimulation() {
+      theta = 0;
+      running = false;
+      paused = false;
+      syncUI();
+      updateStatus();
+    }
+
+    function startSimulation() {
+      running = true;
+      paused = false;
+      updateStatus();
+    }
+
+    function pauseSimulation() {
+      if (!running) return;
+      paused = !paused;
+      updateStatus();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const ht = Math.max(240, Math.round(rect.height));
+      if (canvas.width !== w || canvas.height !== ht) {
+        canvas.width = w;
+        canvas.height = ht;
+      }
+    }
+
+    document.querySelectorAll(".dir-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const side = btn.dataset.side;
+        const dir = btn.dataset.dir;
+        document.querySelectorAll(`.dir-btn[data-side="${side}"]`).forEach((b) => {
+          b.classList.toggle("active", b === btn);
+        });
+        if (side === "left") dirLeft = dir;
+        else dirRight = dir;
+        syncUI();
+        updateStatus();
+      });
+    });
+
+    [fLeftSlider, rLeftSlider, fRightSlider, rRightSlider].forEach((el) => {
+      el.addEventListener("input", () => {
+        syncUI();
+        updateStatus();
+      });
+    });
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      pauseSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      syncUI();
+      updateStatus();
+    });
+
+    function update(dt) {
+      if (!running || paused) return;
+      const { Mnet, balanced } = computeMoments();
+      if (!balanced) {
+        theta += Mnet * ROT_SCALE * dt;
+        if (theta > MAX_ANGLE) theta = MAX_ANGLE;
+        if (theta < -MAX_ANGLE) theta = -MAX_ANGLE;
+      }
+    }
+
+    function drawArrow(sx, sy, ex, ey, color, lw, label, opts) {
+      const options = opts || {};
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 4) return;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(16, Math.max(12, len * 0.18));
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = lw + 4;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - (head + 2) * Math.cos(ang - Math.PI / 7), ey - (head + 2) * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(ex - (head + 2) * Math.cos(ang + Math.PI / 7), ey - (head + 2) * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 7), ey - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), ey - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (label) {
+        const lx = options.absLabel ? options.lx : ex + (options.lx ?? 10);
+        const ly = options.absLabel ? options.ly : ey + (options.ly ?? (dy < 0 ? -10 : 18));
+        ctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+        const tw = ctx.measureText(label).width + 10;
+        const th = 18;
+        ctx.fillStyle = "rgba(255,255,255,0.94)";
+        ctx.strokeStyle = "rgba(0,60,120,0.15)";
+        ctx.lineWidth = 1;
+        ctx.fillRect(lx - 5, ly - th + 4, tw, th);
+        ctx.strokeRect(lx - 5, ly - th + 4, tw, th);
+        ctx.fillStyle = color;
+        ctx.textAlign = "left";
+        ctx.fillText(label, lx, ly);
+      }
+    }
+
+    function worldFromLocal(cx, cy, lx, ly) {
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      return { x: cx + lx * cos - ly * sin, y: cy + lx * sin + ly * cos };
+    }
+
+    function drawPointMass(x, y, color, label) {
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, MASS_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#223344";
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, x, y + 4);
+      ctx.textAlign = "left";
+    }
+
+    function drawDistanceR(pivot, point, rVal) {
+      ctx.strokeStyle = "rgba(0,120,200,0.45)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(pivot.x, pivot.y);
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const dx = point.x - pivot.x;
+      const dy = point.y - pivot.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const nx = -dy / dist;
+      const ny = dx / dist;
+      const mx = (pivot.x + point.x) * 0.5 + nx * 22;
+      const my = (pivot.y + point.y) * 0.5 + ny * 22;
+      ctx.fillStyle = "#4a7099";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`r=${fmt(rVal, 1)}m`, mx, my);
+      ctx.textAlign = "left";
+    }
+
+    function drawForceFromPoint(point, F, dir, color, label, side) {
+      if (F < 0.5) return;
+      const up = dir === "up";
+      const len = Math.max(MIN_ARROW_PX, F * FORCE_SCALE);
+      const startOff = MASS_R + 6;
+      const sx = point.x;
+      const sy = point.y + (up ? -startOff : startOff);
+      const ey = sy + (up ? -len : len);
+      const lx = side === "left" ? sx - 88 : sx + 16;
+      const ly = (sy + ey) * 0.5 + 4;
+      drawArrow(sx, sy, sx, ey, color, 5, label, { lx, ly, absLabel: true });
+    }
+
+    function drawPivotBase(cx, cy) {
+      ctx.fillStyle = "#334455";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + 8);
+      ctx.lineTo(cx - 14, cy + 28);
+      ctx.lineTo(cx + 14, cy + 28);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#223344";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#445566";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawPivotAndOverlay(w, ht, m) {
+      const cx = w * 0.5;
+      const cy = ht * 0.52;
+
+      ctx.fillStyle = "rgba(255,255,255,0.93)";
+      ctx.fillRect(10, 10, 210, 118);
+      ctx.strokeStyle = "rgba(0,76,153,0.12)";
+      ctx.strokeRect(10, 10, 210, 118);
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#0088dd";
+      ctx.fillText(`F_L=${fmt(m.FL, 0)}N  r_L=${fmt(m.rL, 1)}m`, 20, 32);
+      ctx.fillText(`M_L=${fmt(m.MLmag, 1)} N·m`, 20, 50);
+      ctx.fillStyle = "#cc3344";
+      ctx.fillText(`F_R=${fmt(m.FR, 0)}N  r_R=${fmt(m.rR, 1)}m`, 20, 72);
+      ctx.fillText(`M_R=${fmt(m.MRmag, 1)} N·m`, 20, 90);
+      ctx.fillStyle = "#004c99";
+      ctx.fillText(`M=${fmt(m.Mnet, 1)} N·m  θ=${fmt(theta * 180 / Math.PI, 1)}°`, 20, 112);
+
+      ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      if (m.balanced) {
+        ctx.fillStyle = "#007744";
+        ctx.fillText("つりあい", w / 2, ht - 16);
+      } else {
+        ctx.fillStyle = "#cc3355";
+        ctx.fillText(`回転する（${momentDirectionLabel(m.Mnet)}）`, w / 2, ht - 16);
+      }
+      ctx.textAlign = "left";
+    }
+
+    function drawFrame() {
+      resizeCanvas();
+      const w = canvas.width;
+      const ht = canvas.height;
+      const m = computeMoments();
+
+      ctx.clearRect(0, 0, w, ht);
+      ctx.fillStyle = "#f8fcff";
+      ctx.fillRect(0, 0, w, ht);
+
+      const cx = w * 0.5;
+      const cy = ht * 0.52;
+      const pxPerM = Math.min((w * 0.38) / ARM_MAX_M, (ht * 0.28) / 1.2);
+      const armPx = ARM_MAX_M * pxPerM;
+      const pivot = { x: cx, y: cy };
+
+      drawPivotBase(cx, cy);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(theta);
+      ctx.strokeStyle = "#556677";
+      ctx.lineWidth = 10;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-armPx, 0);
+      ctx.lineTo(armPx, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      function localPoint(rM, side) {
+        const x = (side === "left" ? -1 : 1) * rM * pxPerM;
+        return worldFromLocal(cx, cy, x, 0);
+      }
+
+      if (m.rL >= 0.05) {
+        const ptL = localPoint(m.rL, "left");
+        drawDistanceR(pivot, ptL, m.rL);
+        drawPointMass(ptL.x, ptL.y, "#0055bb", "質点");
+        drawForceFromPoint(ptL, m.FL, dirLeft, "#0055bb", `F_L=${fmt(m.FL, 0)}N`, "left");
+      }
+
+      if (m.rR >= 0.05) {
+        const ptR = localPoint(m.rR, "right");
+        drawDistanceR(pivot, ptR, m.rR);
+        drawPointMass(ptR.x, ptR.y, "#cc1133", "質点");
+        drawForceFromPoint(ptR, m.FR, dirRight, "#cc1133", `F_R=${fmt(m.FR, 0)}N`, "right");
+      }
+
+      ctx.fillStyle = "#445566";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#aaccdd";
+      ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("支点", cx, cy + 24);
+      ctx.textAlign = "left";
+
+      drawPivotAndOverlay(w, ht, m);
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      syncUI();
+      updateStatus();
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
