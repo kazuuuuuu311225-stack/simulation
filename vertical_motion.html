@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>鉛直運動 — 2章 落体の運動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mode-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mode-label {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #004c99;
+    }
+
+    .mode-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mode-btns button {
+      padding: 12px 14px;
+      min-height: 44px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: 2px solid rgba(0, 170, 255, 0.25);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.65);
+      color: #004c99;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mode-btns button.active {
+      background: #00aaff;
+      color: white;
+      border-color: #00aaff;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    label.hidden {
+      display: none;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+      line-height: 1.5;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #startBtn {
+      background: #00aaff;
+      color: white;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    #stopBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #cc3355;
+      border: 2px solid rgba(204, 51, 85, 0.35);
+    }
+
+    #stopBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+    }
+
+    .canvas-wrap {
+      width: 95vw;
+      max-width: 100%;
+      margin-top: 8px;
+    }
+
+    .canvas-label {
+      margin: 0 0 4px 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a7099;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 24vh;
+      height: 24dvh;
+      min-height: 140px;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 16px rgba(0, 150, 255, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>鉛直運動シミュレーション</h2>
+    <p class="chapter-label">2章　落体の運動</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <div class="mode-row">
+      <p class="mode-label">運動の種類</p>
+      <div class="mode-btns">
+        <button type="button" class="mode-btn active" data-mode="fall">自由落下</button>
+        <button type="button" class="mode-btn" data-mode="up">鉛直投げ上げ</button>
+        <button type="button" class="mode-btn" data-mode="down">鉛直投げおろし</button>
+      </div>
+    </div>
+
+    <label id="v0Label">
+      初速度 v₀ (m/s):
+      <input id="v0Slider" type="range" min="0" max="50" step="1" value="20">
+      <span id="v0Value">20</span>
+    </label>
+
+    <label>
+      重力 g (m/s²):
+      <input id="gSlider" type="range" min="0" max="20" step="0.1" value="9.8">
+      <span id="gValue">9.8</span>
+    </label>
+
+    <p id="modeHint" class="hint">高さ 50 m から静止した状態で落とします（y 軸は上向き正）。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="stopBtn" type="button" disabled>停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <p class="canvas-label">鉛直方向の運動</p>
+    <canvas id="motionCanvas"></canvas>
+  </div>
+
+  <div class="canvas-wrap">
+    <p class="canvas-label">位置–時間グラフ（y–t）</p>
+    <canvas id="ytCanvas"></canvas>
+  </div>
+
+  <div class="canvas-wrap">
+    <p class="canvas-label">速度–時間グラフ（v–t）</p>
+    <canvas id="vtCanvas"></canvas>
+  </div>
+
+  <script>
+    const motionCanvas = document.getElementById("motionCanvas");
+    const ytCanvas = document.getElementById("ytCanvas");
+    const vtCanvas = document.getElementById("vtCanvas");
+    const motionCtx = motionCanvas.getContext("2d");
+    const ytCtx = ytCanvas.getContext("2d");
+    const vtCtx = vtCanvas.getContext("2d");
+
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const v0Label = document.getElementById("v0Label");
+    const v0Slider = document.getElementById("v0Slider");
+    const gSlider = document.getElementById("gSlider");
+    const v0Value = document.getElementById("v0Value");
+    const gValue = document.getElementById("gValue");
+    const modeHint = document.getElementById("modeHint");
+    const modeBtns = document.querySelectorAll(".mode-btn");
+
+    const MAX_DT = 1 / 30;
+    const MARGIN = { left: 52, right: 16, top: 28, bottom: 32 };
+    const RELEASE_H = 50;
+    const GROUND_Y = 0;
+
+    let mode = "fall";
+    let v0 = parseFloat(v0Slider.value);
+    let g = parseFloat(gSlider.value);
+    let simV0 = v0;
+    let simG = g;
+    let simMode = mode;
+    let t = 0;
+    let running = false;
+    let stopped = false;
+    let landed = false;
+    let ytHistory = [{ t: 0, y: RELEASE_H }];
+    let vtHistory = [{ t: 0, v: 0 }];
+
+    const MODE_HINTS = {
+      fall: "高さ 50 m から静止した状態で落とします。y(t) = 0 − ½gt²（原点は落下開始点）。",
+      up: "地面（y = 0）から上向きに投げます。y(t) = v₀t − ½gt²",
+      down: "高さ 50 m から下向きに投げます。y(t) = −v₀t − ½gt²（原点は投げ開始点）。"
+    };
+
+    function fmt(value, digits) {
+      return Number(value).toFixed(digits);
+    }
+
+    function formatTick(value) {
+      if (Math.abs(value) < 0.05) return "0";
+      if (Math.abs(value) >= 100) return String(Math.round(value));
+      const rounded = Math.round(value * 10) / 10;
+      if (Number.isInteger(rounded)) return String(rounded);
+      return rounded.toFixed(1);
+    }
+
+    function positionFormula(time) {
+      if (simMode === "fall") return 0 - 0.5 * simG * time * time;
+      if (simMode === "up") return simV0 * time - 0.5 * simG * time * time;
+      return -simV0 * time - 0.5 * simG * time * time;
+    }
+
+    function displayY(time) {
+      if (simMode === "up") return positionFormula(time);
+      return RELEASE_H + positionFormula(time);
+    }
+
+    function velocityAt(time) {
+      if (simMode === "fall") return -simG * time;
+      if (simMode === "up") return simV0 - simG * time;
+      return -simV0 - simG * time;
+    }
+
+    function initialY() {
+      return simMode === "up" ? GROUND_Y : RELEASE_H;
+    }
+
+    function initialV() {
+      if (simMode === "fall") return 0;
+      if (simMode === "up") return simV0;
+      return -simV0;
+    }
+
+    function currentState() {
+      const y = landed ? GROUND_Y : displayY(t);
+      const v = landed ? 0 : velocityAt(t);
+      return { y, v };
+    }
+
+    function landingTimeEstimate() {
+      if (simG <= 0) return Infinity;
+      if (simMode === "up") return (2 * simV0) / simG;
+      if (simMode === "fall") return Math.sqrt((2 * RELEASE_H) / simG);
+      const a = 0.5 * simG;
+      const b = simV0;
+      const c = -RELEASE_H;
+      const disc = b * b - 4 * a * c;
+      if (disc < 0) return Infinity;
+      return (-b + Math.sqrt(disc)) / (2 * a);
+    }
+
+    function syncSliders() {
+      v0 = parseFloat(v0Slider.value);
+      g = parseFloat(gSlider.value);
+      v0Value.textContent = v0;
+      gValue.textContent = Number.isInteger(g) ? g : g.toFixed(1);
+      if (!running && !stopped && !landed) {
+        simV0 = v0;
+        simG = g;
+        simMode = mode;
+        if (t === 0) resetHistory();
+      }
+    }
+
+    function resetHistory() {
+      ytHistory = [{ t: 0, y: initialY() }];
+      vtHistory = [{ t: 0, v: initialV() }];
+    }
+
+    function updateModeUI() {
+      modeBtns.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === mode);
+      });
+      v0Label.classList.toggle("hidden", mode === "fall");
+      modeHint.textContent = MODE_HINTS[mode];
+    }
+
+    function updateButtons() {
+      stopBtn.disabled = !running;
+    }
+
+    function resetSimulation() {
+      syncSliders();
+      mode = document.querySelector(".mode-btn.active")?.dataset.mode || mode;
+      simV0 = v0;
+      simG = g;
+      simMode = mode;
+      t = 0;
+      running = false;
+      stopped = false;
+      landed = false;
+      resetHistory();
+      updateButtons();
+    }
+
+    function stopSimulation() {
+      if (!running) return;
+      running = false;
+      stopped = true;
+      updateButtons();
+    }
+
+    function startSimulation() {
+      syncSliders();
+      simV0 = v0;
+      simG = g;
+      simMode = mode;
+      t = 0;
+      running = true;
+      stopped = false;
+      landed = false;
+      resetHistory();
+      updateButtons();
+    }
+
+    function setMode(nextMode) {
+      if (running) return;
+      mode = nextMode;
+      updateModeUI();
+      resetSimulation();
+    }
+
+    function resizeCanvases() {
+      const viewport = window.visualViewport;
+      const width = viewport ? viewport.width : window.innerWidth;
+      const height = viewport ? viewport.height : window.innerHeight;
+      const w = Math.max(320, Math.floor(width * 0.95));
+      const h = Math.max(140, Math.floor(height * 0.24));
+      [motionCanvas, ytCanvas, vtCanvas].forEach((c) => {
+        c.width = w;
+        c.height = h;
+      });
+    }
+
+    modeBtns.forEach((btn) => {
+      btn.addEventListener("click", () => setMode(btn.dataset.mode));
+    });
+
+    v0Slider.addEventListener("input", syncSliders);
+    v0Slider.addEventListener("change", syncSliders);
+    gSlider.addEventListener("input", syncSliders);
+    gSlider.addEventListener("change", syncSliders);
+
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    stopBtn.addEventListener("click", (e) => { e.preventDefault(); stopSimulation(); });
+    resetBtn.addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+
+    resizeCanvases();
+    updateModeUI();
+    resetSimulation();
+    window.addEventListener("resize", resizeCanvases);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeCanvases);
+    }
+
+    function update(dt) {
+      if (!running || landed) return;
+      const nextT = t + dt;
+      const nextY = displayY(nextT);
+      if (nextY <= GROUND_Y && (simMode !== "up" || nextT > 0)) {
+        t = landingTimeEstimate();
+        if (!Number.isFinite(t) || t < 0) t = nextT;
+        ytHistory.push({ t, y: GROUND_Y });
+        vtHistory.push({ t, v: 0 });
+        landed = true;
+        running = false;
+        updateButtons();
+        return;
+      }
+      t = nextT;
+      ytHistory.push({ t, y: displayY(t) });
+      vtHistory.push({ t, v: velocityAt(t) });
+      if (ytHistory.length > 2000) ytHistory.shift();
+      if (vtHistory.length > 2000) vtHistory.shift();
+    }
+
+    function niceStep(range, targetTicks) {
+      if (range <= 0) return 1;
+      const rough = range / targetTicks;
+      const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+      const candidates = [1, 2, 5, 10];
+      for (let i = 0; i < candidates.length; i += 1) {
+        if (candidates[i] * pow >= rough) return candidates[i] * pow;
+      }
+      return pow * 10;
+    }
+
+    function computeTimeRange() {
+      const est = landingTimeEstimate();
+      const tMax = Math.max(t, Number.isFinite(est) ? est * 1.1 : 2, 2);
+      return { tMax };
+    }
+
+    function computeYRange(tMax) {
+      let yMin = GROUND_Y;
+      let yMax = initialY();
+      const samples = [0, tMax * 0.5, tMax];
+      samples.forEach((time) => {
+        const y = displayY(time);
+        yMin = Math.min(yMin, y);
+        yMax = Math.max(yMax, y);
+      });
+      ytHistory.forEach((p) => {
+        yMin = Math.min(yMin, p.y);
+        yMax = Math.max(yMax, p.y);
+      });
+      const pad = Math.max(2, (yMax - yMin) * 0.12);
+      if (yMax - yMin < 6) {
+        const mid = (yMin + yMax) / 2;
+        yMin = mid - 3;
+        yMax = mid + 3;
+      }
+      return { yMin: yMin - pad, yMax: yMax + pad };
+    }
+
+    function computeVRange(tMax) {
+      let vMin = initialV();
+      let vMax = initialV();
+      const endV = velocityAt(tMax);
+      vMin = Math.min(vMin, endV, 0);
+      vMax = Math.max(vMax, endV, 0);
+      vtHistory.forEach((p) => {
+        vMin = Math.min(vMin, p.v);
+        vMax = Math.max(vMax, p.v);
+      });
+      const pad = Math.max(2, (vMax - vMin) * 0.15);
+      if (vMax - vMin < 4) {
+        const mid = (vMin + vMax) / 2;
+        vMin = mid - 2;
+        vMax = mid + 2;
+      }
+      return { vMin: vMin - pad, vMax: vMax + pad };
+    }
+
+    function drawAxisLabels(ctx, w, h, xLabel, yLabel) {
+      ctx.fillStyle = "#7a9fbf";
+      ctx.font = "11px Inter, Poppins, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(xLabel, w - 4, h - 8);
+      ctx.textAlign = "start";
+      ctx.save();
+      ctx.translate(12, MARGIN.top + 12);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+    }
+
+    function drawTimeTicks(ctx, w, h, tMax, tToPx) {
+      const tStep = niceStep(tMax, 5);
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "10px Inter, Poppins, sans-serif";
+      ctx.strokeStyle = "#aaaaaa";
+      ctx.lineWidth = 1;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+        const px = tToPx(time);
+        if (px < MARGIN.left - 1 || px > w - MARGIN.right + 1) continue;
+        ctx.beginPath();
+        ctx.moveTo(px, h - MARGIN.bottom);
+        ctx.lineTo(px, h - MARGIN.bottom + 5);
+        ctx.stroke();
+        ctx.fillText(formatTick(time), px, h - MARGIN.bottom + 7);
+      }
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawValueTicks(ctx, w, h, valMin, valMax, valStep, valToPx) {
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "10px Inter, Poppins, sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      for (let val = Math.ceil(valMin / valStep) * valStep; val <= valMax + valStep * 0.01; val += valStep) {
+        const py = valToPx(val);
+        if (py < MARGIN.top - 1 || py > h - MARGIN.bottom + 1) continue;
+        ctx.fillText(formatTick(val), MARGIN.left - 8, py);
+      }
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawMotionView(state) {
+      const ctx = motionCtx;
+      const w = motionCanvas.width;
+      const h = motionCanvas.height;
+      const { tMax } = computeTimeRange();
+      const { yMin, yMax } = computeYRange(tMax);
+      const plotH = h - MARGIN.top - MARGIN.bottom;
+      const axisX = w / 2;
+
+      function yToPx(y) {
+        return MARGIN.top + plotH * ((yMax - y) / (yMax - yMin));
+      }
+
+      const sky = ctx.createLinearGradient(0, MARGIN.top, 0, h - MARGIN.bottom);
+      sky.addColorStop(0, "#d8f0ff");
+      sky.addColorStop(1, "#eef8ff");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, MARGIN.top, w, plotH);
+
+      const groundY = yToPx(GROUND_Y);
+      ctx.fillStyle = "#8bc98a";
+      ctx.fillRect(0, groundY, w, h - groundY);
+      ctx.strokeStyle = "#5a9a55";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, groundY);
+      ctx.lineTo(w - MARGIN.right, groundY);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#c8e4ff";
+      ctx.lineWidth = 1;
+      const yStep = niceStep(yMax - yMin, 4);
+      for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+        const py = yToPx(y);
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, py);
+        ctx.lineTo(w - MARGIN.right, py);
+        ctx.stroke();
+        ctx.fillStyle = "#5a7a99";
+        ctx.font = "10px Inter, Poppins, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(formatTick(y), axisX - 10, py + 4);
+      }
+      ctx.textAlign = "start";
+
+      ctx.strokeStyle = "#99ccee";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(axisX, MARGIN.top);
+      ctx.lineTo(axisX, groundY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "11px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText("地面 y = 0", MARGIN.left, groundY - 8);
+
+      const ballY = yToPx(state.y);
+      ctx.fillStyle = "#004c99";
+      ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`t = ${fmt(t, 2)} s`, 10, 18);
+      ctx.fillText(`y = ${fmt(state.y, 2)} m`, 10, 38);
+      ctx.fillText(`v = ${fmt(state.v, 2)} m/s`, 10, 58);
+
+      ctx.fillStyle = "#00aaff";
+      ctx.shadowColor = "#66d0ff";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(axisX, ballY, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawYtGraph() {
+      const ctx = ytCtx;
+      const w = ytCanvas.width;
+      const h = ytCanvas.height;
+      const { tMax } = computeTimeRange();
+      const { yMin, yMax } = computeYRange(tMax);
+      const plotW = w - MARGIN.left - MARGIN.right;
+      const plotH = h - MARGIN.top - MARGIN.bottom;
+
+      function tToPx(time) {
+        return MARGIN.left + (time / tMax) * plotW;
+      }
+
+      function yToPx(y) {
+        return MARGIN.top + plotH * ((yMax - y) / (yMax - yMin));
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "#d0e8ff";
+      ctx.lineWidth = 1;
+      const yStep = niceStep(yMax - yMin, 4);
+      for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+        const py = yToPx(y);
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, py);
+        ctx.lineTo(w - MARGIN.right, py);
+        ctx.stroke();
+      }
+
+      const tStep = niceStep(tMax, 5);
+      for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+        const px = tToPx(time);
+        ctx.beginPath();
+        ctx.moveTo(px, MARGIN.top);
+        ctx.lineTo(px, h - MARGIN.bottom);
+        ctx.strokeStyle = "#eef6ff";
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "#d0e8ff";
+
+      if (yMin <= GROUND_Y && yMax >= GROUND_Y) {
+        ctx.strokeStyle = "#99ccee";
+        ctx.lineWidth = 1.5;
+        const gy = yToPx(GROUND_Y);
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, gy);
+        ctx.lineTo(w - MARGIN.right, gy);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#cccccc";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, MARGIN.top);
+      ctx.lineTo(MARGIN.left, h - MARGIN.bottom);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, h - MARGIN.bottom);
+      ctx.lineTo(w - MARGIN.right, h - MARGIN.bottom);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#2288dd";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ytHistory.forEach((point, i) => {
+        const px = tToPx(point.t);
+        const py = yToPx(point.y);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+
+      if (ytHistory.length > 0) {
+        const last = ytHistory[ytHistory.length - 1];
+        ctx.fillStyle = "#00aaff";
+        ctx.beginPath();
+        ctx.arc(tToPx(last.t), yToPx(last.y), 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawValueTicks(ctx, w, h, yMin, yMax, yStep, yToPx);
+      drawTimeTicks(ctx, w, h, tMax, tToPx);
+      drawAxisLabels(ctx, w, h, "t (s)", "y (m)");
+    }
+
+    function drawVtGraph() {
+      const ctx = vtCtx;
+      const w = vtCanvas.width;
+      const h = vtCanvas.height;
+      const { tMax } = computeTimeRange();
+      const { vMin, vMax } = computeVRange(tMax);
+      const plotW = w - MARGIN.left - MARGIN.right;
+      const plotH = h - MARGIN.top - MARGIN.bottom;
+
+      function tToPx(time) {
+        return MARGIN.left + (time / tMax) * plotW;
+      }
+
+      function vToPx(v) {
+        return MARGIN.top + plotH * ((vMax - v) / (vMax - vMin));
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "#d0e8ff";
+      ctx.lineWidth = 1;
+      const vStep = niceStep(vMax - vMin, 4);
+      for (let v = Math.ceil(vMin / vStep) * vStep; v <= vMax; v += vStep) {
+        const py = vToPx(v);
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, py);
+        ctx.lineTo(w - MARGIN.right, py);
+        ctx.stroke();
+      }
+
+      const tStep = niceStep(tMax, 5);
+      for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+        const px = tToPx(time);
+        ctx.beginPath();
+        ctx.moveTo(px, MARGIN.top);
+        ctx.lineTo(px, h - MARGIN.bottom);
+        ctx.strokeStyle = "#eef6ff";
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "#d0e8ff";
+
+      if (vMin < 0 && vMax > 0) {
+        ctx.strokeStyle = "#99ccee";
+        ctx.lineWidth = 1.5;
+        const zeroY = vToPx(0);
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, zeroY);
+        ctx.lineTo(w - MARGIN.right, zeroY);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#cccccc";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, MARGIN.top);
+      ctx.lineTo(MARGIN.left, h - MARGIN.bottom);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, h - MARGIN.bottom);
+      ctx.lineTo(w - MARGIN.right, h - MARGIN.bottom);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#00bfff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      vtHistory.forEach((point, i) => {
+        const px = tToPx(point.t);
+        const py = vToPx(point.v);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+
+      if (vtHistory.length > 0) {
+        const last = vtHistory[vtHistory.length - 1];
+        ctx.fillStyle = "#00e0ff";
+        ctx.beginPath();
+        ctx.arc(tToPx(last.t), vToPx(last.v), 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawValueTicks(ctx, w, h, vMin, vMax, vStep, vToPx);
+      drawTimeTicks(ctx, w, h, tMax, tToPx);
+      drawAxisLabels(ctx, w, h, "t (s)", "v (m/s)");
+    }
+
+    function draw() {
+      if (!running) syncSliders();
+      const state = currentState();
+      drawMotionView(state);
+      drawYtGraph();
+      drawVtGraph();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
