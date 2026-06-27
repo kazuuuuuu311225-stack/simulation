@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>力のつりあい — 静力学</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,22 +78,26 @@
 
     .tab-row {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
     }
 
     .tab-row button {
-      padding: 10px 12px;
-      min-height: 42px;
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      min-height: 44px;
       font-size: 0.82rem;
       font-family: inherit;
       font-weight: 600;
       border: 2px solid rgba(0, 170, 255, 0.22);
-      border-radius: 10px;
+      border-radius: 999px;
       background: rgba(255, 255, 255, 0.65);
       color: #004c99;
       cursor: pointer;
-      text-align: left;
+      white-space: nowrap;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -213,18 +220,18 @@
 <body>
   <div class="page-header">
     <h2>力のつりあい</h2>
-    <p class="chapter-label">静力学 — 力のベクトルと合力</p>
+    <p class="chapter-label">静力学 — 5場面タブ切り替え</p>
     <a id="back" href="index.html">← ホームへ戻る</a>
   </div>
 
   <div id="ui">
     <p class="tab-label">場面を選ぶ</p>
     <div class="tab-row" id="tabRow">
-      <button type="button" class="tab-btn active" data-tab="table">机の上の物体のつり合い</button>
-      <button type="button" class="tab-btn" data-tab="spring">ばねでつるされた物体のつり合い</button>
-      <button type="button" class="tab-btn" data-tab="string">糸につるされた物体のつり合い</button>
-      <button type="button" class="tab-btn" data-tab="friction">摩擦力が働く物体のつり合い</button>
-      <button type="button" class="tab-btn" data-tab="angle">糸でつながれた物体と角度のつり合い</button>
+      <button type="button" class="tab-btn active" data-tab="table" title="机の上の物体のつり合い">机の上</button>
+      <button type="button" class="tab-btn" data-tab="spring" title="ばねでつるされた物体のつり合い">ばね</button>
+      <button type="button" class="tab-btn" data-tab="string" title="糸につるされた物体のつり合い">糸</button>
+      <button type="button" class="tab-btn" data-tab="friction" title="摩擦力が働く物体のつり合い">摩擦</button>
+      <button type="button" class="tab-btn" data-tab="angle" title="糸でつながれた物体と角度のつり合い">角度</button>
     </div>
 
     <label id="mLabel">
@@ -271,7 +278,7 @@
   <div id="statusPanel" class="balanced">つりあっている</div>
 
   <div class="canvas-section">
-    <p class="canvas-label">力のベクトル図</p>
+    <p class="canvas-label" id="sceneLabel">力のベクトル図 — 机の上</p>
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="canvas"></canvas>
     </div>
@@ -303,26 +310,31 @@
 
     const TAB_META = {
       table: {
+        scene: "机の上",
         hint: "机の上の物体：重力 mg（下）と垂直抗力 N（上）がつり合います。右向きの外力 F を加えると水平方向が不平衡になります。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-n">■ 垂直抗力 N</span>　<span class="lg-f">■ 外力 F</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, F: 0 }
       },
       spring: {
+        scene: "ばね",
         hint: "ばねでつるした物体：重力 mg（下）とばねの力 Fs（上）がつり合います。Fs = mg のとき平衡です。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-fs">■ ばねの力 Fs</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, Fs: 20 }
       },
       string: {
+        scene: "糸",
         hint: "糸でつるした物体：重力 mg（下）と張力 T（上）がつり合います。T = mg のとき平衡です。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-t">■ 張力 T</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, T: 20 }
       },
       friction: {
+        scene: "摩擦",
         hint: "摩擦力：垂直方向は N = mg。水平方向は外力 F と摩擦力 Ff（赤）がつり合います。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-n">■ 垂直抗力 N</span>　<span class="lg-f">■ 外力 F</span>　<span class="lg-ff">■ 摩擦力 Ff</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, F: 15, mu: 0.4 }
       },
       angle: {
+        scene: "角度",
         hint: "糸でつながれた物体：糸が角度 θ で左上に張力 T を加えます。垂直抗力 N と摩擦力 Ff も働きます。",
         legend: '<span class="lg-mg">■ 重力 mg</span>　<span class="lg-n">■ 垂直抗力 N</span>　<span class="lg-t">■ 張力 T</span>　<span class="lg-ff">■ 摩擦力 Ff</span>　<span class="lg-net">■ 合力</span>',
         defaults: { m: 2, T: 20, mu: 0.4, theta: 30 }
@@ -351,6 +363,8 @@
       document.getElementById("thetaLabel").classList.toggle("hidden", activeTab !== "angle");
       hintEl.textContent = TAB_META[activeTab].hint;
       legendEl.innerHTML = TAB_META[activeTab].legend;
+      document.getElementById("sceneLabel").textContent =
+        `力のベクトル図 — ${TAB_META[activeTab].scene}`;
     }
 
     function staticFriction(hPull, ffMax) {
@@ -450,6 +464,7 @@
       activeTab = tab;
       updateTabUI();
       resetSimulation();
+      draw();
     }
 
     function resizeCanvas() {
