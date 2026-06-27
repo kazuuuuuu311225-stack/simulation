@@ -170,22 +170,25 @@
       border: 2px solid rgba(0, 170, 255, 0.35);
     }
 
-    .canvas-wrap {
+    .canvas-section {
       width: 95vw;
       max-width: 100%;
       margin-top: 8px;
     }
 
-    .canvas-wrap.motion canvas {
-      height: 34vh;
-      height: 34dvh;
-      min-height: 220px;
+    .canvas-wrap {
+      width: 100%;
+      position: relative;
     }
 
-    .canvas-wrap.graph canvas {
-      height: 22vh;
-      height: 22dvh;
-      min-height: 170px;
+    .canvas-wrap.motion {
+      height: min(360px, 38dvh);
+      min-height: 240px;
+    }
+
+    .canvas-wrap.graph {
+      height: min(240px, 26dvh);
+      min-height: 190px;
     }
 
     .canvas-label {
@@ -197,7 +200,8 @@
 
     canvas {
       display: block;
-      width: 100%;
+      width: 100% !important;
+      height: 100% !important;
       border-radius: 12px;
       background: white;
       touch-action: none;
@@ -243,22 +247,31 @@
     </div>
   </div>
 
-  <div class="canvas-wrap motion">
+  <div class="canvas-section">
     <p class="canvas-label">鉛直方向の運動</p>
-    <canvas id="motionCanvas"></canvas>
+    <div class="canvas-wrap motion" id="motionWrap">
+      <canvas id="motionCanvas"></canvas>
+    </div>
   </div>
 
-  <div class="canvas-wrap graph">
+  <div class="canvas-section">
     <p class="canvas-label">位置–時間グラフ（y–t）</p>
-    <canvas id="ytCanvas"></canvas>
+    <div class="canvas-wrap graph" id="ytWrap">
+      <canvas id="ytCanvas"></canvas>
+    </div>
   </div>
 
-  <div class="canvas-wrap graph">
+  <div class="canvas-section">
     <p class="canvas-label">速度–時間グラフ（v–t）</p>
-    <canvas id="vtCanvas"></canvas>
+    <div class="canvas-wrap graph" id="vtWrap">
+      <canvas id="vtCanvas"></canvas>
+    </div>
   </div>
 
   <script>
+    const motionWrap = document.getElementById("motionWrap");
+    const ytWrap = document.getElementById("ytWrap");
+    const vtWrap = document.getElementById("vtWrap");
     const motionCanvas = document.getElementById("motionCanvas");
     const ytCanvas = document.getElementById("ytCanvas");
     const vtCanvas = document.getElementById("vtCanvas");
@@ -429,11 +442,10 @@
       resetSimulation();
     }
 
-    function resizeOneCanvas(canvas, fallbackH) {
-      const w = Math.max(280, Math.floor(canvas.clientWidth) || 320);
-      let h = Math.floor(canvas.clientHeight);
-      if (h < 80) h = fallbackH;
-      h = Math.max(120, h);
+    function resizeOneCanvas(canvas, wrap, minH) {
+      const rect = wrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(minH, Math.round(rect.height));
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -441,9 +453,9 @@
     }
 
     function resizeCanvases() {
-      resizeOneCanvas(motionCanvas, 220);
-      resizeOneCanvas(ytCanvas, 170);
-      resizeOneCanvas(vtCanvas, 170);
+      resizeOneCanvas(motionCanvas, motionWrap, 240);
+      resizeOneCanvas(ytCanvas, ytWrap, 190);
+      resizeOneCanvas(vtCanvas, vtWrap, 190);
     }
 
     modeBtns.forEach((btn) => {
@@ -470,7 +482,7 @@
     }
     if (typeof ResizeObserver !== "undefined") {
       const ro = new ResizeObserver(() => resizeCanvases());
-      [motionCanvas, ytCanvas, vtCanvas].forEach((c) => ro.observe(c));
+      [motionWrap, ytWrap, vtWrap].forEach((el) => ro.observe(el));
     }
 
     function update(dt) {
@@ -606,10 +618,10 @@
       const h = motionCanvas.height;
       const { tMax } = computeTimeRange();
       const { yMin, yMax } = computeYRange(tMax);
-      const infoH = 72;
-      const plotTop = MARGIN.top + infoH;
-      const plotBottom = h - MARGIN.bottom;
-      const plotH = plotBottom - plotTop;
+      const infoH = Math.min(64, Math.max(52, h * 0.22));
+      const plotTop = infoH + 6;
+      const plotBottom = h - 20;
+      const plotH = Math.max(80, plotBottom - plotTop);
       const axisX = w / 2;
 
       function yToPx(y) {
