@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>力のつりあい — 静力学</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+      line-height: 1.5;
+    }
+
+    #resetBtn {
+      padding: 14px 12px;
+      min-height: 48px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .canvas-section {
+      width: 95vw;
+      max-width: 100%;
+      margin-top: 8px;
+    }
+
+    .canvas-label {
+      margin: 0 0 4px 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a7099;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(420px, 52dvh);
+      min-height: 280px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 16px rgba(0, 150, 255, 0.25);
+    }
+
+    #statusPanel {
+      width: 90%;
+      margin: 10px 0 0;
+      padding: 14px 16px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 16px rgba(0, 100, 200, 0.12);
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    #statusPanel.balanced {
+      color: #007744;
+      border: 2px solid rgba(0, 170, 100, 0.25);
+    }
+
+    #statusPanel.unbalanced {
+      color: #cc3355;
+      border: 2px solid rgba(204, 51, 85, 0.25);
+    }
+
+    .legend {
+      width: 90%;
+      margin: 10px 0 0;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.45);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #4a7099;
+    }
+
+    .legend span {
+      font-weight: 600;
+    }
+
+    .lg-mg { color: #0088dd; }
+    .lg-n { color: #00b8d4; }
+    .lg-ff { color: #ee4455; }
+    .lg-f { color: #22aa55; }
+    .lg-t { color: #8844cc; }
+    .lg-net { color: #cc9900; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>力のつりあい</h2>
+    <p class="chapter-label">静力学 — 力のベクトルと合力</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      質量 m (kg):
+      <input id="mSlider" type="range" min="0" max="10" step="0.1" value="2">
+      <span id="mValue">2.0</span>
+    </label>
+
+    <label>
+      外力 F (N):
+      <input id="fSlider" type="range" min="0" max="50" step="1" value="15">
+      <span id="fValue">15</span>
+    </label>
+
+    <label>
+      摩擦係数 μ:
+      <input id="muSlider" type="range" min="0" max="1" step="0.01" value="0.4">
+      <span id="muValue">0.40</span>
+    </label>
+
+    <label>
+      ロープ角度 θ (°):
+      <input id="thetaSlider" type="range" min="0" max="90" step="1" value="30">
+      <span id="thetaValue">30</span>
+    </label>
+
+    <p class="hint">θ は水平面から測ったロープの角度です。張力 T は 20 N で固定し、左上方向に働きます。</p>
+
+    <button id="resetBtn" type="button">リセット</button>
+  </div>
+
+  <div id="statusPanel" class="unbalanced">つりあっていない</div>
+
+  <div class="canvas-section">
+    <p class="canvas-label">力のベクトル図</p>
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="lg-mg">■ 重力 mg</span>　
+    <span class="lg-n">■ 垂直抗力 N</span>　
+    <span class="lg-ff">■ 摩擦力 Ff</span><br>
+    <span class="lg-f">■ 外力 F</span>　
+    <span class="lg-t">■ 張力 T</span>　
+    <span class="lg-net">■ 合力 F_net</span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const resetBtn = document.getElementById("resetBtn");
+    const mSlider = document.getElementById("mSlider");
+    const fSlider = document.getElementById("fSlider");
+    const muSlider = document.getElementById("muSlider");
+    const thetaSlider = document.getElementById("thetaSlider");
+
+    const G = 9.8;
+    const T_MAG = 20;
+    const FORCE_SCALE = 2.4;
+    const BALANCE_EPS = 0.15;
+
+    const DEFAULTS = { m: 2, F: 15, mu: 0.4, theta: 30 };
+
+    function fmt(value, digits) {
+      return Number(value).toFixed(digits);
+    }
+
+    function syncSliders() {
+      document.getElementById("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
+      document.getElementById("fValue").textContent = fSlider.value;
+      document.getElementById("muValue").textContent = fmt(parseFloat(muSlider.value), 2);
+      document.getElementById("thetaValue").textContent = thetaSlider.value;
+    }
+
+    function computeForces() {
+      const m = parseFloat(mSlider.value);
+      const F = parseFloat(fSlider.value);
+      const mu = parseFloat(muSlider.value);
+      const thetaDeg = parseFloat(thetaSlider.value);
+      const theta = thetaDeg * Math.PI / 180;
+
+      const mg = m * G;
+      const Tx = -T_MAG * Math.cos(theta);
+      const Ty = T_MAG * Math.sin(theta);
+      const N = Math.max(0, mg - Ty);
+      const ffMax = mu * N;
+
+      const hPull = F + Tx;
+      let Ff = 0;
+      if (hPull > 0.001) Ff = -Math.min(ffMax, hPull);
+      else if (hPull < -0.001) Ff = Math.min(ffMax, -hPull);
+
+      const netX = F + Tx + Ff;
+      const netY = N + Ty - mg;
+      const netMag = Math.sqrt(netX * netX + netY * netY);
+
+      return {
+        m, F, mu, thetaDeg, mg, N, Ff, T: T_MAG, Tx, Ty,
+        netX, netY, netMag
+      };
+    }
+
+    function resetSimulation() {
+      mSlider.value = DEFAULTS.m;
+      fSlider.value = DEFAULTS.F;
+      muSlider.value = DEFAULTS.mu;
+      thetaSlider.value = DEFAULTS.theta;
+      syncSliders();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(240, Math.round(rect.height));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    [mSlider, fSlider, muSlider, thetaSlider].forEach((slider) => {
+      slider.addEventListener("input", syncSliders);
+      slider.addEventListener("change", syncSliders);
+    });
+
+    resetBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeCanvas);
+    }
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      resetSimulation();
+    });
+
+    function drawArrow(fromX, fromY, vecX, vecY, color, lineWidth, label) {
+      const toX = fromX + vecX * FORCE_SCALE;
+      const toY = fromY - vecY * FORCE_SCALE;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 2) return;
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      const head = Math.min(11, len * 0.22);
+      const angle = Math.atan2(dy, dx);
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - head * Math.cos(angle - Math.PI / 7), toY - head * Math.sin(angle - Math.PI / 7));
+      ctx.lineTo(toX - head * Math.cos(angle + Math.PI / 7), toY - head * Math.sin(angle + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = "11px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(label, toX + 6, toY - 4);
+    }
+
+    function draw() {
+      syncSliders();
+      const forces = computeForces();
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w * 0.5;
+      const blockW = 72;
+      const blockH = 48;
+      const groundY = h * 0.72;
+      const cy = groundY - blockH / 2;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#f8fcff";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = "#8bc98a";
+      ctx.fillRect(0, groundY, w, h - groundY);
+      ctx.strokeStyle = "#5a9a55";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(40, groundY);
+      ctx.lineTo(w - 40, groundY);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#ccddee";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 80, cy - 100);
+      ctx.lineTo(cx - 80, groundY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#7a9fbf";
+      ctx.font = "11px Inter, Poppins, sans-serif";
+      ctx.fillText("ロープ", cx - 118, cy - 90);
+
+      ctx.fillStyle = "#ddeeff";
+      ctx.strokeStyle = "#4488bb";
+      ctx.lineWidth = 2;
+      ctx.fillRect(cx - blockW / 2, cy - blockH / 2, blockW, blockH);
+      ctx.strokeRect(cx - blockW / 2, cy - blockH / 2, blockW, blockH);
+
+      const ox = cx;
+      const oy = cy;
+
+      drawArrow(ox, oy, 0, -forces.mg, "#0088dd", 3, `mg=${fmt(forces.mg, 1)}N`);
+      drawArrow(ox, oy, 0, forces.N, "#00b8d4", 3, `N=${fmt(forces.N, 1)}N`);
+      if (Math.abs(forces.Ff) > 0.01) {
+        drawArrow(ox, oy, forces.Ff, 0, "#ee4455", 3, `Ff=${fmt(forces.Ff, 1)}N`);
+      }
+      if (forces.F > 0.01) {
+        drawArrow(ox, oy, forces.F, 0, "#22aa55", 3, `F=${fmt(forces.F, 0)}N`);
+      }
+      drawArrow(ox, oy, forces.Tx, forces.Ty, "#8844cc", 3, `T=${fmt(forces.T, 0)}N`);
+      drawArrow(ox, oy, forces.netX, forces.netY, "#cc9900", 3.5, `F_net=${fmt(forces.netMag, 1)}N`);
+
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.fillRect(10, 10, 210, 126);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.15)";
+      ctx.strokeRect(10, 10, 210, 126);
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`mg = ${fmt(forces.mg, 1)} N`, 18, 28);
+      ctx.fillText(`N  = ${fmt(forces.N, 1)} N`, 18, 46);
+      ctx.fillText(`Ff = ${fmt(forces.Ff, 1)} N`, 18, 64);
+      ctx.fillText(`F  = ${fmt(forces.F, 0)} N`, 18, 82);
+      ctx.fillText(`T  = ${fmt(forces.T, 0)} N  ∠${forces.thetaDeg}°`, 18, 100);
+      ctx.fillText(`F_net = ${fmt(forces.netMag, 1)} N`, 18, 118);
+
+      const balanced = forces.netMag < BALANCE_EPS;
+      statusPanel.textContent = balanced ? "つりあっている" : "つりあっていない";
+      statusPanel.className = balanced ? "balanced" : "unbalanced";
+    }
+
+    function loop() {
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
