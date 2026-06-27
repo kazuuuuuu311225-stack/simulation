@@ -204,7 +204,7 @@
     const aValue = document.getElementById("aValue");
 
     const MAX_DT = 1 / 30;
-    const MARGIN = { left: 44, right: 16, top: 28, bottom: 28 };
+    const MARGIN = { left: 52, right: 16, top: 28, bottom: 32 };
     const X0 = 0;
 
     let v0 = parseFloat(v0Slider.value);
@@ -219,6 +219,14 @@
 
     function fmt(value, digits) {
       return Number(value).toFixed(digits);
+    }
+
+    function formatTick(value) {
+      if (Math.abs(value) < 0.05) return "0";
+      if (Math.abs(value) >= 100) return String(Math.round(value));
+      const rounded = Math.round(value * 10) / 10;
+      if (Number.isInteger(rounded)) return String(rounded);
+      return rounded.toFixed(1);
     }
 
     function positionAt(time) {
@@ -400,10 +408,12 @@
         ctx.moveTo(px, MARGIN.top);
         ctx.lineTo(px, axisY + 6);
         ctx.stroke();
-        ctx.fillStyle = "#7a9fbf";
+        ctx.fillStyle = "#5a7a99";
         ctx.font = "10px Inter, Poppins, sans-serif";
-        ctx.fillText(String(Math.round(x)), px - 8, axisY + 18);
+        ctx.textAlign = "center";
+        ctx.fillText(formatTick(x), px, axisY + 18);
       }
+      ctx.textAlign = "start";
 
       ctx.strokeStyle = "#66bfff";
       ctx.lineWidth = 3;
@@ -429,12 +439,49 @@
     function drawAxisLabels(ctx, w, h, xLabel, yLabel) {
       ctx.fillStyle = "#7a9fbf";
       ctx.font = "11px Inter, Poppins, sans-serif";
-      ctx.fillText(xLabel, w - MARGIN.right - 28, h - 8);
+      ctx.textAlign = "right";
+      ctx.fillText(xLabel, w - 4, h - 8);
+      ctx.textAlign = "start";
       ctx.save();
       ctx.translate(12, MARGIN.top + 12);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText(yLabel, 0, 0);
       ctx.restore();
+    }
+
+    function drawTimeTicks(ctx, w, h, tMax, tToPx) {
+      const tStep = niceStep(tMax, 5);
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "10px Inter, Poppins, sans-serif";
+      ctx.strokeStyle = "#aaaaaa";
+      ctx.lineWidth = 1;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+        const px = tToPx(time);
+        if (px < MARGIN.left - 1 || px > w - MARGIN.right + 1) continue;
+        ctx.beginPath();
+        ctx.moveTo(px, h - MARGIN.bottom);
+        ctx.lineTo(px, h - MARGIN.bottom + 5);
+        ctx.stroke();
+        ctx.fillText(formatTick(time), px, h - MARGIN.bottom + 7);
+      }
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawValueTicks(ctx, w, h, yMin, yMax, yStep, yToPx) {
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "10px Inter, Poppins, sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      for (let val = Math.ceil(yMin / yStep) * yStep; val <= yMax + yStep * 0.01; val += yStep) {
+        const py = yToPx(val);
+        if (py < MARGIN.top - 1 || py > h - MARGIN.bottom + 1) continue;
+        ctx.fillText(formatTick(val), MARGIN.left - 8, py);
+      }
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
     }
 
     function drawXtGraph() {
@@ -469,6 +516,17 @@
         ctx.stroke();
       }
 
+      const tStep = niceStep(tMax, 5);
+      for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+        const px = tToPx(time);
+        ctx.beginPath();
+        ctx.moveTo(px, MARGIN.top);
+        ctx.lineTo(px, h - MARGIN.bottom);
+        ctx.strokeStyle = "#eef6ff";
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "#d0e8ff";
+
       ctx.strokeStyle = "#cccccc";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -499,6 +557,8 @@
         ctx.fill();
       }
 
+      drawValueTicks(ctx, w, h, xMin, xMax, xStep, xToPx);
+      drawTimeTicks(ctx, w, h, tMax, tToPx);
       drawAxisLabels(ctx, w, h, "t (s)", "x (m)");
     }
 
@@ -533,6 +593,17 @@
         ctx.lineTo(w - MARGIN.right, py);
         ctx.stroke();
       }
+
+      const tStep = niceStep(tMax, 5);
+      for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+        const px = tToPx(time);
+        ctx.beginPath();
+        ctx.moveTo(px, MARGIN.top);
+        ctx.lineTo(px, h - MARGIN.bottom);
+        ctx.strokeStyle = "#eef6ff";
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "#d0e8ff";
 
       if (vMin < 0 && vMax > 0) {
         ctx.strokeStyle = "#99ccee";
@@ -574,6 +645,8 @@
         ctx.fill();
       }
 
+      drawValueTicks(ctx, w, h, vMin, vMax, vStep, vToPx);
+      drawTimeTicks(ctx, w, h, tMax, tToPx);
       drawAxisLabels(ctx, w, h, "t (s)", "v (m/s)");
     }
 
