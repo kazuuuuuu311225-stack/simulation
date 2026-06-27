@@ -239,11 +239,11 @@
       <span id="vBValue">-10</span>
     </label>
 
-    <p class="hint">観測者を選ぶと、相対速度の見方が変わります。</p>
+    <p class="hint">観測者を切り替えると、電車の窓から見た景色のように見え方が変わります。</p>
 
     <div class="observer-row">
-      <button type="button" class="observer-btn active" id="obsBtnA" data-observer="A">観測者：A</button>
-      <button type="button" class="observer-btn" id="obsBtnB" data-observer="B">観測者：B</button>
+      <button type="button" class="observer-btn active" id="obsBtnA" data-observer="A">A の車内から見る</button>
+      <button type="button" class="observer-btn" id="obsBtnB" data-observer="B">B の車内から見る</button>
     </div>
 
     <div class="btn-row">
@@ -256,7 +256,7 @@
 
   <section id="formulaPanel" aria-label="相対速度の式">
     <h3>相対速度の式（高校物理）</h3>
-    <p class="concept">2 つの物体 A・B が x 軸上を等速直線運動します。観測者によって見える速度が変わります。</p>
+    <p class="concept">2 つの物体 A・B が x 軸上を等速直線運動します。観測者の車内から見ると、外の景色と相手の動き方が変わります。</p>
 
     <div class="formula-block">
       <p class="formula-label">① 位置の式</p>
@@ -272,10 +272,11 @@
     </div>
 
     <div class="formula-block">
-      <p class="formula-label">③ 距離の変化</p>
-      <p class="formula-line">x<sub>B</sub> − x<sub>A</sub> = (x<sub>B0</sub> − x<sub>A0</sub>) + (v<sub>B</sub> − v<sub>A</sub>)t</p>
-      <p class="formula-line sub">今の x<sub>B</sub> − x<sub>A</sub> = <span id="fGap" class="num">—</span> m</p>
-      <span class="formula-line sub">v<sub>rel</sub> &gt; 0 なら観測者から見て相手は正の方向へ離れる。</span>
+      <p class="formula-label">③ 見え方（視点の切り替え）</p>
+      <p class="formula-line">観測者は自分と一緒に動くので、<strong>自分は止まって見える</strong></p>
+      <p class="formula-line">外の物体は v<sub>rel</sub> の速さで動いて見える</p>
+      <p class="formula-line sub">いま：<span id="fViewDesc" class="num">—</span></p>
+      <p class="formula-line sub">相手までの距離（観測者基準）= <span id="fRelDist" class="num">—</span> m</p>
     </div>
   </section>
 
@@ -292,9 +293,10 @@
     const obsBtnB = document.getElementById("obsBtnB");
 
     const MAX_DT = 1 / 30;
-    const MARGIN = { left: 48, right: 20, top: 40, bottom: 16 };
+    const MARGIN = { left: 16, right: 16, top: 16, bottom: 16 };
     const XA0 = -25;
     const XB0 = 25;
+    const SCENERY_SPACING = 70;
 
     let vA = parseFloat(vASlider.value);
     let vB = parseFloat(vBSlider.value);
@@ -303,7 +305,6 @@
     let observer = "A";
     let t = 0;
     let running = false;
-    let vRelHistory = [];
 
     function syncSliders() {
       vA = parseFloat(vASlider.value);
@@ -313,13 +314,20 @@
       if (!running) {
         simVA = vA;
         simVB = vB;
-        if (t === 0) vRelHistory = [{ t: 0, v: relativeVelocity() }];
       }
       updateFormulaPanel();
     }
 
     function relativeVelocity() {
       return observer === "A" ? simVB - simVA : simVA - simVB;
+    }
+
+    function relativeDistance() {
+      return observer === "A" ? positionB(t) - positionA(t) : positionA(t) - positionB(t);
+    }
+
+    function observerSpeed() {
+      return observer === "A" ? simVA : simVB;
     }
 
     function positionA(time) {
@@ -336,24 +344,25 @@
 
     function updateFormulaPanel() {
       const vRel = relativeVelocity();
-      const gap = positionB(t) - positionA(t);
+      const relDist = relativeDistance();
+      const viewDesc = observer === "A"
+        ? "A は止まって見え、B が v_rel の速さで動く"
+        : "B は止まって見え、A が v_rel の速さで動く";
+
       document.getElementById("fXA0").textContent = XA0;
       document.getElementById("fVA").textContent = simVA;
       document.getElementById("fXB0").textContent = XB0;
       document.getElementById("fVB").textContent = simVB;
       document.getElementById("fObsLabel").textContent = observer;
       document.getElementById("fVrel").textContent = fmt(vRel, 1);
-      document.getElementById("fGap").textContent = fmt(gap, 1);
+      document.getElementById("fViewDesc").textContent = viewDesc;
+      document.getElementById("fRelDist").textContent = fmt(relDist, 1);
     }
 
     function setObserver(next) {
       observer = next;
       obsBtnA.classList.toggle("active", observer === "A");
       obsBtnB.classList.toggle("active", observer === "B");
-      vRelHistory = vRelHistory.map((point) => ({
-        t: point.t,
-        v: relativeVelocity()
-      }));
       updateFormulaPanel();
     }
 
@@ -363,7 +372,6 @@
       simVB = vB;
       t = 0;
       running = false;
-      vRelHistory = [{ t: 0, v: relativeVelocity() }];
       updateFormulaPanel();
     }
 
@@ -373,7 +381,6 @@
       simVB = vB;
       t = 0;
       running = true;
-      vRelHistory = [{ t: 0, v: relativeVelocity() }];
     }
 
     function resizeCanvas() {
@@ -415,188 +422,139 @@
     function update(dt) {
       if (!running) return;
       t += dt;
-      vRelHistory.push({ t, v: relativeVelocity() });
-      if (vRelHistory.length > 2000) vRelHistory.shift();
     }
 
-    function getLayout() {
-      const posTop = MARGIN.top;
-      const posBottom = Math.floor(canvas.height * 0.52);
-      const vtTop = posBottom + 28;
-      const vtBottom = canvas.height - MARGIN.bottom;
-      return { posTop, posBottom, vtTop, vtBottom };
+    function getViewMetrics() {
+      const innerW = canvas.width - MARGIN.left - MARGIN.right;
+      const innerH = canvas.height - MARGIN.top - MARGIN.bottom;
+      const groundY = MARGIN.top + innerH - 36;
+      const windowTop = MARGIN.top + 28;
+      const observerPx = MARGIN.left + innerW * 0.24;
+      const metersPerPx = 120 / innerW;
+      return { innerW, innerH, groundY, windowTop, observerPx, metersPerPx };
     }
 
-    function computeXRange() {
-      const horizon = Math.max(t, 2);
-      let xMin = Math.min(positionA(0), positionB(0), positionA(horizon), positionB(horizon));
-      let xMax = Math.max(positionA(0), positionB(0), positionA(horizon), positionB(horizon));
-      const pad = Math.max(8, (xMax - xMin) * 0.12);
-      if (xMax - xMin < 20) {
-        const mid = (xMin + xMax) / 2;
-        xMin = mid - 10;
-        xMax = mid + 10;
+    function drawScenery(metrics, bgOffsetPx) {
+      const { innerW, groundY, windowTop } = metrics;
+      const left = MARGIN.left;
+      const right = canvas.width - MARGIN.right;
+
+      ctx.fillStyle = "#dff3ff";
+      ctx.fillRect(left, windowTop, innerW, groundY - windowTop - 8);
+
+      const start = left + (bgOffsetPx % SCENERY_SPACING) - SCENERY_SPACING;
+      for (let x = start; x < right + SCENERY_SPACING; x += SCENERY_SPACING) {
+        ctx.strokeStyle = "#a8d8ff";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x, groundY - 55);
+        ctx.lineTo(x, groundY - 8);
+        ctx.stroke();
+
+        ctx.fillStyle = "#7ec8a0";
+        ctx.beginPath();
+        ctx.arc(x, groundY - 58, 14, 0, Math.PI * 2);
+        ctx.fill();
       }
-      return { xMin: xMin - pad, xMax: xMax + pad };
+
+      ctx.fillStyle = "#c8e6c9";
+      ctx.fillRect(left, groundY - 6, innerW, 10);
     }
 
-    function computeVRelRange() {
-      const values = vRelHistory.map((p) => p.v);
-      let vMin = Math.min(...values);
-      let vMax = Math.max(...values);
-      const pad = Math.max(3, (vMax - vMin) * 0.2 + 2);
-      if (vMax - vMin < 4) {
-        const mid = (vMin + vMax) / 2;
-        vMin = mid - 2;
-        vMax = mid + 2;
-      }
-      const tMax = Math.max(t, 2);
-      return { vMin: vMin - pad, vMax: vMax + pad, tMax };
-    }
+    function drawTrainCar(x, groundY, color, label, isSelf) {
+      const w = 56;
+      const h = 28;
+      const baseX = x - w / 2;
+      const baseY = groundY - h - 6;
 
-    function niceStep(range, targetTicks) {
-      const rough = range / targetTicks;
-      const pow = Math.pow(10, Math.floor(Math.log10(rough)));
-      const candidates = [1, 2, 5, 10];
-      for (let i = 0; i < candidates.length; i += 1) {
-        if (candidates[i] * pow >= rough) return candidates[i] * pow;
-      }
-      return pow * 10;
-    }
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = isSelf ? 16 : 8;
+      ctx.fillRect(baseX, baseY, w, h);
+      ctx.shadowBlur = 0;
 
-    function drawMotionView(layout) {
-      const { posTop, posBottom } = layout;
-      const { xMin, xMax } = computeXRange();
-      const plotW = canvas.width - MARGIN.left - MARGIN.right;
-      const axisY = posBottom - 24;
-      const xA = positionA(t);
-      const xB = positionB(t);
-      const vRel = relativeVelocity();
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillRect(baseX + 8, baseY + 6, 16, 12);
+      ctx.fillRect(baseX + 32, baseY + 6, 16, 12);
 
-      function xToPx(x) {
-        return MARGIN.left + ((x - xMin) / (xMax - xMin)) * plotW;
-      }
+      ctx.strokeStyle = "#004c99";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(baseX + 14, groundY - 2, 5, 0, Math.PI * 2);
+      ctx.arc(baseX + 42, groundY - 2, 5, 0, Math.PI * 2);
+      ctx.stroke();
 
       ctx.fillStyle = "#004c99";
-      ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
-      ctx.fillText("位置（A：青　B：赤）", MARGIN.left, posTop - 10);
+      ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(label + (isSelf ? "（あなた）" : ""), baseX + 14, baseY - 6);
+    }
 
-      ctx.strokeStyle = "#d0e8ff";
-      ctx.lineWidth = 1;
-      const step = niceStep(xMax - xMin, 5);
-      for (let x = Math.ceil(xMin / step) * step; x <= xMax; x += step) {
-        const px = xToPx(x);
-        ctx.beginPath();
-        ctx.moveTo(px, posTop);
-        ctx.lineTo(px, axisY + 8);
-        ctx.stroke();
-      }
+    function drawWindowFrame(metrics) {
+      const { innerW, innerH } = metrics;
+      const left = MARGIN.left;
+      const top = MARGIN.top;
 
       ctx.strokeStyle = "#66bfff";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(MARGIN.left, axisY);
-      ctx.lineTo(canvas.width - MARGIN.right, axisY);
-      ctx.stroke();
+      ctx.lineWidth = 5;
+      ctx.strokeRect(left, top, innerW, innerH);
 
-      function drawBody(x, color, label) {
-        const px = xToPx(x);
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.arc(px, axisY, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "#004c99";
-        ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
-        ctx.fillText(label, px - 6, axisY - 16);
-      }
-
-      drawBody(xA, "#00aaff", "A");
-      drawBody(xB, "#ff5566", "B");
-
-      ctx.fillStyle = "#004c99";
-      ctx.font = "14px Inter, Poppins, Noto Sans JP, sans-serif";
-      ctx.fillText(`t = ${fmt(t, 2)} s`, 10, posTop + 12);
-      ctx.fillText(`vA = ${fmt(simVA, 1)} m/s`, 10, posTop + 32);
-      ctx.fillText(`vB = ${fmt(simVB, 1)} m/s`, 10, posTop + 52);
-      ctx.fillText(`v_rel = ${fmt(vRel, 1)} m/s（観測者 ${observer}）`, 10, posTop + 72);
-    }
-
-    function drawVRelGraph(layout) {
-      const { vtTop, vtBottom } = layout;
-      const { vMin, vMax, tMax } = computeVRelRange();
-      const plotW = canvas.width - MARGIN.left - MARGIN.right;
-      const plotH = vtBottom - vtTop - 24;
-      const observerLabel = observer === "A" ? "B − A" : "A − B";
-
-      function tToPx(time) {
-        return MARGIN.left + (time / tMax) * plotW;
-      }
-
-      function vToPx(v) {
-        return vtTop + plotH * ((vMax - v) / (vMax - vMin));
-      }
-
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillRect(left + 8, top + 8, innerW - 16, 22);
       ctx.fillStyle = "#004c99";
       ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
-      ctx.fillText(`相対速度グラフ v_rel – t（${observerLabel}）`, MARGIN.left, vtTop - 8);
-
-      ctx.strokeStyle = "#d0e8ff";
-      ctx.lineWidth = 1;
-      const vStep = niceStep(vMax - vMin, 4);
-      for (let v = Math.ceil(vMin / vStep) * vStep; v <= vMax; v += vStep) {
-        const py = vToPx(v);
-        ctx.beginPath();
-        ctx.moveTo(MARGIN.left, py);
-        ctx.lineTo(canvas.width - MARGIN.right, py);
-        ctx.stroke();
-      }
-
-      if (vMin < 0 && vMax > 0) {
-        ctx.strokeStyle = "#99ccee";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(MARGIN.left, vToPx(0));
-        ctx.lineTo(canvas.width - MARGIN.right, vToPx(0));
-        ctx.stroke();
-      }
-
-      ctx.strokeStyle = "#00bfff";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      vRelHistory.forEach((point, i) => {
-        const px = tToPx(point.t);
-        const py = vToPx(point.v);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.stroke();
-
-      if (vRelHistory.length > 0) {
-        const last = vRelHistory[vRelHistory.length - 1];
-        ctx.fillStyle = "#00e0ff";
-        ctx.beginPath();
-        ctx.arc(tToPx(last.t), vToPx(last.v), 6, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.fillStyle = "#7a9fbf";
-      ctx.font = "11px Inter, Poppins, sans-serif";
-      ctx.fillText("t (s)", canvas.width - MARGIN.right - 24, vtBottom);
-      ctx.fillText("v_rel (m/s)", MARGIN.left, vtTop + 10);
+      const viewTitle = observer === "A"
+        ? "A の車内から見た景色（外が流れる）"
+        : "B の車内から見た景色（外が流れる）";
+      ctx.fillText(viewTitle, left + 16, top + 24);
     }
 
-    function draw() {
-      if (!running) syncSliders();
+    function drawScene() {
+      const metrics = getViewMetrics();
+      const { observerPx, metersPerPx, groundY } = metrics;
+      const vRel = relativeVelocity();
+      const relDist = relativeDistance();
+      const otherPx = observerPx + relDist / metersPerPx;
+      const bgOffsetPx = -observerSpeed() * t / metersPerPx;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const layout = getLayout();
-      drawMotionView(layout);
-      drawVRelGraph(layout);
+      drawWindowFrame(metrics);
+      drawScenery(metrics, bgOffsetPx);
+
+      ctx.strokeStyle = "#66bfff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, groundY);
+      ctx.lineTo(canvas.width - MARGIN.right, groundY);
+      ctx.stroke();
+
+      const obsColor = observer === "A" ? "#00aaff" : "#ff5566";
+      const otherColor = observer === "A" ? "#ff5566" : "#00aaff";
+      const otherLabel = observer === "A" ? "B" : "A";
+
+      drawTrainCar(observerPx, groundY, obsColor, observer, true);
+      if (otherPx > MARGIN.left - 20 && otherPx < canvas.width - MARGIN.right + 20) {
+        drawTrainCar(otherPx, groundY, otherColor, otherLabel, false);
+      } else {
+        ctx.fillStyle = "#4a7099";
+        ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+        const dir = relDist > 0 ? "右" : "左";
+        ctx.fillText(`相手（${otherLabel}）は画面の${dir}の外へ`, observerPx - 40, groundY - 50);
+      }
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "14px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`t = ${fmt(t, 2)} s`, MARGIN.left + 12, canvas.height - 52);
+      ctx.fillText(`vA = ${fmt(simVA, 1)} m/s`, MARGIN.left + 12, canvas.height - 34);
+      ctx.fillText(`vB = ${fmt(simVB, 1)} m/s`, MARGIN.left + 130, canvas.height - 34);
+      ctx.fillText(`v_rel = ${fmt(vRel, 1)} m/s`, MARGIN.left + 12, canvas.height - 16);
+    }
+
+    function draw() {
+      if (!running) syncSliders();
+      drawScene();
       updateFormulaPanel();
     }
 
