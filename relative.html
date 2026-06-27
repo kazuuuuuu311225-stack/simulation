@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>相対速度シミュレーション — 1章 物体の運動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #4a7099;
+      line-height: 1.5;
+    }
+
+    .observer-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .observer-btn {
+      flex: 1;
+      padding: 12px 10px;
+      min-height: 48px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.65);
+      color: #4a7099;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+    }
+
+    .observer-btn.active {
+      color: #004c99;
+      border-color: #00aaff;
+      box-shadow: 0 0 12px rgba(0, 170, 255, 0.25);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 12px;
+      min-height: 48px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #startBtn {
+      background: #00aaff;
+      color: white;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+    }
+
+    canvas {
+      display: block;
+      width: 95vw;
+      max-width: 100%;
+      height: 42vh;
+      height: 42dvh;
+      border-radius: 12px;
+      margin-top: 10px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+    }
+
+    #formulaPanel {
+      width: 90%;
+      margin: 12px 0 16px;
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.12);
+      line-height: 1.7;
+    }
+
+    #formulaPanel h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      color: #004c99;
+    }
+
+    .concept {
+      margin: 0 0 14px;
+      font-size: 0.92rem;
+      color: #4a7099;
+    }
+
+    .formula-block {
+      margin-bottom: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 140, 220, 0.15);
+    }
+
+    .formula-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .formula-label {
+      margin: 0 0 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #2a7fd4;
+      letter-spacing: 0.04em;
+    }
+
+    .formula-line {
+      margin: 4px 0;
+      font-size: 0.95rem;
+      color: #003366;
+    }
+
+    .formula-line.sub {
+      margin-left: 0.5rem;
+      font-size: 0.88rem;
+      color: #4a7099;
+    }
+
+    .formula-line .num {
+      font-weight: 600;
+      color: #0066aa;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>相対速度シミュレーション</h2>
+    <p class="chapter-label">1章　物体の運動</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      物体 A の速度 v<sub>A</sub> (m/s):
+      <input id="vASlider" type="range" min="-50" max="50" step="1" value="15">
+      <span id="vAValue">15</span>
+    </label>
+
+    <label>
+      物体 B の速度 v<sub>B</sub> (m/s):
+      <input id="vBSlider" type="range" min="-50" max="50" step="1" value="-10">
+      <span id="vBValue">-10</span>
+    </label>
+
+    <p class="hint">観測者を選ぶと、相対速度の見方が変わります。</p>
+
+    <div class="observer-row">
+      <button type="button" class="observer-btn active" id="obsBtnA" data-observer="A">観測者：A</button>
+      <button type="button" class="observer-btn" id="obsBtnB" data-observer="B">観測者：B</button>
+    </div>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <section id="formulaPanel" aria-label="相対速度の式">
+    <h3>相対速度の式（高校物理）</h3>
+    <p class="concept">2 つの物体 A・B が x 軸上を等速直線運動します。観測者によって見える速度が変わります。</p>
+
+    <div class="formula-block">
+      <p class="formula-label">① 位置の式</p>
+      <p class="formula-line">x<sub>A</sub> = x<sub>A0</sub> + v<sub>A</sub>t = <span id="fXA0" class="num">—</span> + <span id="fVA" class="num">—</span> · t</p>
+      <p class="formula-line">x<sub>B</sub> = x<sub>B0</sub> + v<sub>B</sub>t = <span id="fXB0" class="num">—</span> + <span id="fVB" class="num">—</span> · t</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">② 相対速度</p>
+      <p class="formula-line">A から見た B：v<sub>rel</sub> = v<sub>B</sub> − v<sub>A</sub></p>
+      <p class="formula-line">B から見た A：v<sub>rel</sub> = v<sub>A</sub> − v<sub>B</sub></p>
+      <p class="formula-line sub">いま（<span id="fObsLabel" class="num">—</span> が観測者）：v<sub>rel</sub> = <span id="fVrel" class="num">—</span> m/s</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">③ 距離の変化</p>
+      <p class="formula-line">x<sub>B</sub> − x<sub>A</sub> = (x<sub>B0</sub> − x<sub>A0</sub>) + (v<sub>B</sub> − v<sub>A</sub>)t</p>
+      <p class="formula-line sub">今の x<sub>B</sub> − x<sub>A</sub> = <span id="fGap" class="num">—</span> m</p>
+      <span class="formula-line sub">v<sub>rel</sub> &gt; 0 なら観測者から見て相手は正の方向へ離れる。</span>
+    </div>
+  </section>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const vASlider = document.getElementById("vASlider");
+    const vBSlider = document.getElementById("vBSlider");
+    const vAValue = document.getElementById("vAValue");
+    const vBValue = document.getElementById("vBValue");
+    const obsBtnA = document.getElementById("obsBtnA");
+    const obsBtnB = document.getElementById("obsBtnB");
+
+    const MAX_DT = 1 / 30;
+    const MARGIN = { left: 48, right: 20, top: 40, bottom: 16 };
+    const XA0 = -25;
+    const XB0 = 25;
+
+    let vA = parseFloat(vASlider.value);
+    let vB = parseFloat(vBSlider.value);
+    let simVA = vA;
+    let simVB = vB;
+    let observer = "A";
+    let t = 0;
+    let running = false;
+    let vRelHistory = [];
+
+    function syncSliders() {
+      vA = parseFloat(vASlider.value);
+      vB = parseFloat(vBSlider.value);
+      vAValue.textContent = vA;
+      vBValue.textContent = vB;
+      if (!running) {
+        simVA = vA;
+        simVB = vB;
+        if (t === 0) vRelHistory = [{ t: 0, v: relativeVelocity() }];
+      }
+      updateFormulaPanel();
+    }
+
+    function relativeVelocity() {
+      return observer === "A" ? simVB - simVA : simVA - simVB;
+    }
+
+    function positionA(time) {
+      return XA0 + simVA * time;
+    }
+
+    function positionB(time) {
+      return XB0 + simVB * time;
+    }
+
+    function fmt(value, digits) {
+      return Number(value).toFixed(digits);
+    }
+
+    function updateFormulaPanel() {
+      const vRel = relativeVelocity();
+      const gap = positionB(t) - positionA(t);
+      document.getElementById("fXA0").textContent = XA0;
+      document.getElementById("fVA").textContent = simVA;
+      document.getElementById("fXB0").textContent = XB0;
+      document.getElementById("fVB").textContent = simVB;
+      document.getElementById("fObsLabel").textContent = observer;
+      document.getElementById("fVrel").textContent = fmt(vRel, 1);
+      document.getElementById("fGap").textContent = fmt(gap, 1);
+    }
+
+    function setObserver(next) {
+      observer = next;
+      obsBtnA.classList.toggle("active", observer === "A");
+      obsBtnB.classList.toggle("active", observer === "B");
+      vRelHistory = vRelHistory.map((point) => ({
+        t: point.t,
+        v: relativeVelocity()
+      }));
+      updateFormulaPanel();
+    }
+
+    function resetSimulation() {
+      syncSliders();
+      simVA = vA;
+      simVB = vB;
+      t = 0;
+      running = false;
+      vRelHistory = [{ t: 0, v: relativeVelocity() }];
+      updateFormulaPanel();
+    }
+
+    function startSimulation() {
+      syncSliders();
+      simVA = vA;
+      simVB = vB;
+      t = 0;
+      running = true;
+      vRelHistory = [{ t: 0, v: relativeVelocity() }];
+    }
+
+    function resizeCanvas() {
+      const viewport = window.visualViewport;
+      const width = viewport ? viewport.width : window.innerWidth;
+      const height = viewport ? viewport.height : window.innerHeight;
+      canvas.width = Math.max(320, Math.floor(width * 0.95));
+      canvas.height = Math.max(280, Math.floor(height * 0.42));
+    }
+
+    function bindSlider(slider, onChange) {
+      slider.addEventListener("input", onChange);
+      slider.addEventListener("change", onChange);
+    }
+
+    bindSlider(vASlider, syncSliders);
+    bindSlider(vBSlider, syncSliders);
+
+    obsBtnA.addEventListener("click", () => setObserver("A"));
+    obsBtnB.addEventListener("click", () => setObserver("B"));
+
+    startBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      startSimulation();
+    });
+
+    resetBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      resetSimulation();
+    });
+
+    resizeCanvas();
+    resetSimulation();
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeCanvas);
+    }
+
+    function update(dt) {
+      if (!running) return;
+      t += dt;
+      vRelHistory.push({ t, v: relativeVelocity() });
+      if (vRelHistory.length > 2000) vRelHistory.shift();
+    }
+
+    function getLayout() {
+      const posTop = MARGIN.top;
+      const posBottom = Math.floor(canvas.height * 0.52);
+      const vtTop = posBottom + 28;
+      const vtBottom = canvas.height - MARGIN.bottom;
+      return { posTop, posBottom, vtTop, vtBottom };
+    }
+
+    function computeXRange() {
+      const horizon = Math.max(t, 2);
+      let xMin = Math.min(positionA(0), positionB(0), positionA(horizon), positionB(horizon));
+      let xMax = Math.max(positionA(0), positionB(0), positionA(horizon), positionB(horizon));
+      const pad = Math.max(8, (xMax - xMin) * 0.12);
+      if (xMax - xMin < 20) {
+        const mid = (xMin + xMax) / 2;
+        xMin = mid - 10;
+        xMax = mid + 10;
+      }
+      return { xMin: xMin - pad, xMax: xMax + pad };
+    }
+
+    function computeVRelRange() {
+      const values = vRelHistory.map((p) => p.v);
+      let vMin = Math.min(...values);
+      let vMax = Math.max(...values);
+      const pad = Math.max(3, (vMax - vMin) * 0.2 + 2);
+      if (vMax - vMin < 4) {
+        const mid = (vMin + vMax) / 2;
+        vMin = mid - 2;
+        vMax = mid + 2;
+      }
+      const tMax = Math.max(t, 2);
+      return { vMin: vMin - pad, vMax: vMax + pad, tMax };
+    }
+
+    function niceStep(range, targetTicks) {
+      const rough = range / targetTicks;
+      const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+      const candidates = [1, 2, 5, 10];
+      for (let i = 0; i < candidates.length; i += 1) {
+        if (candidates[i] * pow >= rough) return candidates[i] * pow;
+      }
+      return pow * 10;
+    }
+
+    function drawMotionView(layout) {
+      const { posTop, posBottom } = layout;
+      const { xMin, xMax } = computeXRange();
+      const plotW = canvas.width - MARGIN.left - MARGIN.right;
+      const axisY = posBottom - 24;
+      const xA = positionA(t);
+      const xB = positionB(t);
+      const vRel = relativeVelocity();
+
+      function xToPx(x) {
+        return MARGIN.left + ((x - xMin) / (xMax - xMin)) * plotW;
+      }
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText("位置（A：青　B：赤）", MARGIN.left, posTop - 10);
+
+      ctx.strokeStyle = "#d0e8ff";
+      ctx.lineWidth = 1;
+      const step = niceStep(xMax - xMin, 5);
+      for (let x = Math.ceil(xMin / step) * step; x <= xMax; x += step) {
+        const px = xToPx(x);
+        ctx.beginPath();
+        ctx.moveTo(px, posTop);
+        ctx.lineTo(px, axisY + 8);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#66bfff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN.left, axisY);
+      ctx.lineTo(canvas.width - MARGIN.right, axisY);
+      ctx.stroke();
+
+      function drawBody(x, color, label) {
+        const px = xToPx(x);
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(px, axisY, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#004c99";
+        ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+        ctx.fillText(label, px - 6, axisY - 16);
+      }
+
+      drawBody(xA, "#00aaff", "A");
+      drawBody(xB, "#ff5566", "B");
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "14px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`t = ${fmt(t, 2)} s`, 10, posTop + 12);
+      ctx.fillText(`vA = ${fmt(simVA, 1)} m/s`, 10, posTop + 32);
+      ctx.fillText(`vB = ${fmt(simVB, 1)} m/s`, 10, posTop + 52);
+      ctx.fillText(`v_rel = ${fmt(vRel, 1)} m/s（観測者 ${observer}）`, 10, posTop + 72);
+    }
+
+    function drawVRelGraph(layout) {
+      const { vtTop, vtBottom } = layout;
+      const { vMin, vMax, tMax } = computeVRelRange();
+      const plotW = canvas.width - MARGIN.left - MARGIN.right;
+      const plotH = vtBottom - vtTop - 24;
+      const observerLabel = observer === "A" ? "B − A" : "A − B";
+
+      function tToPx(time) {
+        return MARGIN.left + (time / tMax) * plotW;
+      }
+
+      function vToPx(v) {
+        return vtTop + plotH * ((vMax - v) / (vMax - vMin));
+      }
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`相対速度グラフ v_rel – t（${observerLabel}）`, MARGIN.left, vtTop - 8);
+
+      ctx.strokeStyle = "#d0e8ff";
+      ctx.lineWidth = 1;
+      const vStep = niceStep(vMax - vMin, 4);
+      for (let v = Math.ceil(vMin / vStep) * vStep; v <= vMax; v += vStep) {
+        const py = vToPx(v);
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, py);
+        ctx.lineTo(canvas.width - MARGIN.right, py);
+        ctx.stroke();
+      }
+
+      if (vMin < 0 && vMax > 0) {
+        ctx.strokeStyle = "#99ccee";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(MARGIN.left, vToPx(0));
+        ctx.lineTo(canvas.width - MARGIN.right, vToPx(0));
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#00bfff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      vRelHistory.forEach((point, i) => {
+        const px = tToPx(point.t);
+        const py = vToPx(point.v);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+
+      if (vRelHistory.length > 0) {
+        const last = vRelHistory[vRelHistory.length - 1];
+        ctx.fillStyle = "#00e0ff";
+        ctx.beginPath();
+        ctx.arc(tToPx(last.t), vToPx(last.v), 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#7a9fbf";
+      ctx.font = "11px Inter, Poppins, sans-serif";
+      ctx.fillText("t (s)", canvas.width - MARGIN.right - 24, vtBottom);
+      ctx.fillText("v_rel (m/s)", MARGIN.left, vtTop + 10);
+    }
+
+    function draw() {
+      if (!running) syncSliders();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const layout = getLayout();
+      drawMotionView(layout);
+      drawVRelGraph(layout);
+      updateFormulaPanel();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
