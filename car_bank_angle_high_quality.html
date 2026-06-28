@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>バンク角とカーブ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 42%, #1e293b 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e2e8f0;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #ddd6fe;
+      text-shadow: 0 0 20px rgba(167, 139, 250, 0.45);
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(167, 139, 250, 0.22);
+      color: #f5f3ff;
+      border: 1px solid rgba(167, 139, 250, 0.45);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(167, 139, 250, 0.24);
+      box-shadow: 0 4px 28px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      accent-color: #a78bfa;
+    }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(167, 139, 250, 0.12);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #e9d5ff;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.55;
+    }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 120px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: white;
+      border: none;
+      box-shadow: 0 0 18px rgba(167, 139, 250, 0.45);
+    }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 2px solid rgba(167, 139, 250, 0.32);
+    }
+
+    #statusPanel { display: none; }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(340px, 38vw);
+        max-height: min(560px, 65dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      box-shadow: 0 4px 28px rgba(0, 0, 0, 0.35);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      color: #ddd6fe;
+    }
+
+    .run-status {
+      margin: 0 0 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      text-align: center;
+    }
+
+    .run-status.running {
+      color: #67e8f9;
+      border-color: rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.08);
+    }
+
+    .run-status.danger {
+      color: #fb7185;
+      border-color: rgba(251, 113, 133, 0.35);
+      background: rgba(251, 113, 133, 0.1);
+    }
+
+    .concept {
+      margin: 0 0 12px;
+      font-size: 0.88rem;
+      color: #94a3b8;
+    }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(167, 139, 250, 0.14);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #a78bfa; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #818cf8; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #fbbf24; }
+    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #34d399; }
+    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #fb7185; }
+
+    .calc-label {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c4b5fd;
+    }
+
+    .calc-line {
+      margin: 3px 0;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+    }
+
+    .calc-line.sub {
+      margin-left: 0.4rem;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    .verdict {
+      margin-top: 6px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .verdict.ok {
+      background: rgba(52, 211, 153, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.28);
+    }
+
+    .verdict.ng {
+      background: rgba(251, 113, 133, 0.12);
+      color: #fb7185;
+      border: 1px solid rgba(251, 113, 133, 0.28);
+    }
+
+    .num-v { font-weight: 600; color: #38bdf8; }
+    .num-r { font-weight: 600; color: #a78bfa; }
+    .num-theta { font-weight: 600; color: #c4b5fd; }
+    .num-mu { font-weight: 600; color: #818cf8; }
+    .num-n { font-weight: 600; color: #94a3b8; }
+    .num-fr { font-weight: 600; color: #fb7185; }
+    .num-ff { font-weight: 600; color: #fbbf24; }
+    .num-fb { font-weight: 600; color: #34d399; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+    .view-label {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(340px, 42dvh);
+      min-height: 240px;
+    }
+
+    .cross-wrap {
+      width: 100%;
+      height: min(360px, 44dvh);
+      min-height: 280px;
+    }
+
+    @media (min-width: 760px) {
+      .canvas-wrap { height: min(300px, 36dvh); min-height: 220px; }
+      .cross-wrap { height: min(280px, 34dvh); min-height: 240px; }
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      background: transparent;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(167, 139, 250, 0.18);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(167, 139, 250, 0.15);
+      font-size: 0.78rem;
+      line-height: 1.8;
+      color: #94a3b8;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>バンク角とカーブ</h2>
+    <p class="chapter-label">8章　等速円運動 — 傾いた道路と力の合成</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      速度 v (m/s):
+      <input id="vSlider" type="range" min="0" max="40" step="0.5" value="20">
+      <span id="vValue">20.0</span>
+    </label>
+    <label>
+      カーブ半径 r (m):
+      <input id="rSlider" type="range" min="10" max="200" step="1" value="80">
+      <span id="rValue">80</span>
+    </label>
+    <label>
+      バンク角 θ (°):
+      <input id="bankSlider" type="range" min="0" max="30" step="1" value="15">
+      <span id="bankValue">15</span>
+    </label>
+    <label>
+      摩擦係数 μ:
+      <input id="muSlider" type="range" min="0" max="1.0" step="0.05" value="0.4">
+      <span id="muValue">0.40</span>
+    </label>
+
+    <p class="formula-box">
+      F<sub>bank</sub> + F<sub>f max</sub> ≥ F<sub>req</sub>　　（μ=0 なら tan θ = v²/rg）
+    </p>
+    <p class="hint">傾いた道路では mg の水平成分（F<sub>bank</sub>）も向心力になります。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">v, r, θ, μ を設定して「スタート」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="計算過程">
+      <h3>値の連動</h3>
+      <p id="runStatus" class="run-status">v, r, θ, μ を設定して「スタート」</p>
+      <p class="concept">N = mg/cos θ。バンク成分 F<sub>bank</sub> = mg tan θ と摩擦 μN を合わせて F<sub>req</sub> = mv²/r と比べます。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">入力</p>
+        <p class="calc-line">v = <span id="cV" class="num-v">—</span> m/s</p>
+        <p class="calc-line">r = <span id="cR" class="num-r">—</span> m</p>
+        <p class="calc-line">θ = <span id="cTheta" class="num-theta">—</span>°</p>
+        <p class="calc-line">μ = <span id="cMu" class="num-mu">—</span>　（m = 1000 kg）</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">法線力</p>
+        <p class="calc-line">N = mg / cos θ</p>
+        <p class="calc-line sub">→ N = <span id="cN" class="num-n">—</span> N</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">摩擦の最大値</p>
+        <p class="calc-line">F<sub>friction max</sub> = μN</p>
+        <p class="calc-line sub">→ <span id="cFFric" class="num-ff">—</span> N</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">バンク角による向心力</p>
+        <p class="calc-line">F<sub>bank</sub> = mg tan θ</p>
+        <p class="calc-line sub">→ <span id="cFBank" class="num-fb">—</span> N</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">必要向心力</p>
+        <p class="calc-line">F<sub>required</sub> = mv² / r</p>
+        <p class="calc-line sub">→ <span id="cFReq" class="num-fr">—</span> N</p>
+        <p class="calc-line sub">供給 = F<sub>bank</sub> + F<sub>f max</sub> = <span id="cFSupply" class="num-fb">—</span> N</p>
+        <p class="calc-line sub">理想速度（μ=0）v = √(rg tan θ) = <span id="cVIdeal" class="num-v">—</span> m/s</p>
+        <div id="verdict" class="verdict ok">判定 —</div>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">俯瞰図 — 車の走行</p>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+      <p class="view-label">断面図 — 力の合成（mg・N・f・F<sub>req</sub>）</p>
+      <div class="cross-wrap" id="crossWrap">
+        <canvas id="crossCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#e2e8f0">■ 白：重力 mg</span>　
+    <span style="color:#38bdf8">■ 水色：法線力 N</span>　
+    <span style="color:#fbbf24">■ 黄：摩擦力 f</span>　
+    <span style="color:#fb7185">■ ピンク：必要向心力 F<sub>req</sub></span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const crossCanvas = document.getElementById("crossCanvas");
+    const crossCtx = crossCanvas.getContext("2d");
+    const crossWrap = document.getElementById("crossWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const runStatus = document.getElementById("runStatus");
+    const verdictEl = document.getElementById("verdict");
+    const startBtn = document.getElementById("startBtn");
+
+    const G = 9.8;
+    const M = 1000;
+    const MAX_DT = 1 / 30;
+    const DEG = Math.PI / 180;
+    const START_PHI = 0;
+
+    const DEFAULTS = { v: 20, r: 80, bank: 15, mu: 0.4 };
+
+    let phase = "idle";
+    let mode = "curve";
+    let phi = START_PHI;
+    let flyX = 0;
+    let flyY = 0;
+    let flyVx = 0;
+    let flyVy = 0;
+    let layout = { cx: 0, cy: 0, drawR: 0, ppm: 1, w: 0, h: 0, dpr: 1 };
+    let crossLayout = { w: 0, h: 0, dpr: 1 };
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getV() { return parseFloat(document.getElementById("vSlider").value); }
+    function getR() { return parseFloat(document.getElementById("rSlider").value); }
+    function getBankDeg() { return parseFloat(document.getElementById("bankSlider").value); }
+    function getBankRad() { return getBankDeg() * DEG; }
+    function getMu() { return parseFloat(document.getElementById("muSlider").value); }
+
+    function computePhysics(v, r, bankDeg, mu) {
+      const bankRad = bankDeg * DEG;
+      const n = (M * G) / Math.cos(bankRad);
+      const fFric = mu * n;
+      const fBank = M * G * Math.tan(bankRad);
+      const fReq = (M * v * v) / r;
+      const fSupply = fBank + fFric;
+      const vIdeal = bankRad > 1e-6 ? Math.sqrt(r * G * Math.tan(bankRad)) : 0;
+      const canTurn = fSupply >= fReq - 1e-3;
+      return { v, r, bankDeg, bankRad, mu, n, fFric, fBank, fReq, fSupply, vIdeal, canTurn };
+    }
+
+    function syncSliders() {
+      document.getElementById("vValue").textContent = fmt(getV(), 1);
+      document.getElementById("rValue").textContent = fmt(getR(), 0);
+      document.getElementById("bankValue").textContent = fmt(getBankDeg(), 0);
+      document.getElementById("muValue").textContent = fmt(getMu(), 2);
+    }
+
+    function setRunStatus(text, state) {
+      runStatus.textContent = text;
+      statusPanel.textContent = text;
+      runStatus.classList.remove("running", "danger");
+      if (state) runStatus.classList.add(state);
+    }
+
+    function updateCalcPanel(p) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      set("cV", fmt(p.v, 1));
+      set("cR", fmt(p.r, 0));
+      set("cTheta", fmt(p.bankDeg, 0));
+      set("cMu", fmt(p.mu, 2));
+      set("cN", fmt(p.n, 0));
+      set("cFFric", fmt(p.fFric, 0));
+      set("cFBank", fmt(p.fBank, 0));
+      set("cFReq", fmt(p.fReq, 0));
+      set("cFSupply", fmt(p.fSupply, 0));
+      set("cVIdeal", fmt(p.vIdeal, 2));
+      verdictEl.textContent = p.canTurn ? "✓ 曲がれる" : "✗ 曲がれない";
+      verdictEl.className = "verdict " + (p.canTurn ? "ok" : "ng");
+    }
+
+    function carWorldPos(r, angle) {
+      return { x: r * Math.cos(angle), y: r * Math.sin(angle) };
+    }
+
+    function tangentWorld(angle) {
+      return { x: -Math.sin(angle), y: Math.cos(angle) };
+    }
+
+    function toScreen(wx, wy) {
+      return {
+        x: layout.cx + wx * layout.ppm,
+        y: layout.cy - wy * layout.ppm,
+      };
+    }
+
+    function enterFlyoff(v, r, angle) {
+      mode = "flyoff";
+      const pos = carWorldPos(r, angle);
+      const tan = tangentWorld(angle);
+      flyX = pos.x;
+      flyY = pos.y;
+      flyVx = tan.x * v;
+      flyVy = tan.y * v;
+      setRunStatus("向心力不足 — 外側へ直進中", "danger");
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      mode = "curve";
+      phi = START_PHI;
+      syncSliders();
+      updateCalcPanel(computePhysics(getV(), getR(), getBankDeg(), getMu()));
+      setRunStatus("v, r, θ, μ を設定して「スタート」");
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "走行中";
+      const p = computePhysics(getV(), getR(), getBankDeg(), getMu());
+      if (p.canTurn) {
+        mode = "curve";
+        setRunStatus("バンクカーブ走行中 — 曲がれる", "running");
+      } else {
+        enterFlyoff(p.v, p.r, phi);
+      }
+    }
+
+    function checkTurnCondition() {
+      const p = computePhysics(getV(), getR(), getBankDeg(), getMu());
+      if (phase === "running" && mode === "curve" && !p.canTurn) {
+        enterFlyoff(p.v, p.r, phi);
+      }
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      const v = getV();
+      const r = getR();
+      checkTurnCondition();
+      if (mode === "curve") {
+        phi += (v / r) * dt;
+      } else {
+        flyX += flyVx * dt;
+        flyY += flyVy * dt;
+        const vNow = getV();
+        const len = Math.hypot(flyVx, flyVy);
+        if (len > 1e-6) {
+          const s = vNow / len;
+          flyVx *= s;
+          flyVy *= s;
+        }
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      const rM = getR();
+      const maxR = Math.min(w, h) * 0.32;
+      layout = {
+        cx: w * 0.5,
+        cy: h * 0.52,
+        drawR: maxR,
+        ppm: maxR / rM,
+        w, h, dpr,
+      };
+    }
+
+    function resizeCrossCanvas() {
+      const rect = crossWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(240, Math.round(rect.height));
+      if (crossCanvas.width !== Math.round(w * dpr) || crossCanvas.height !== Math.round(h * dpr)) {
+        crossCanvas.width = Math.round(w * dpr);
+        crossCanvas.height = Math.round(h * dpr);
+      }
+      crossLayout = { w, h, dpr };
+    }
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0f172a");
+      bg.addColorStop(0.55, "#1e1b4b");
+      bg.addColorStop(1, "#172554");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+
+      c.strokeStyle = "rgba(148, 163, 184, 0.07)";
+      c.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        c.beginPath();
+        c.moveTo(i, 0);
+        c.lineTo(i, h);
+        c.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        c.beginPath();
+        c.moveTo(0, j);
+        c.lineTo(w, j);
+        c.stroke();
+      }
+    }
+
+    function setupCtx() {
+      const { w, h, dpr } = layout;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, w, h);
+    }
+
+    function drawBankedRoad(bankRad) {
+      const { cx, cy, drawR } = layout;
+      const roadW = 6;
+      const segments = 120;
+      const band = 14;
+
+      ctx.save();
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "rgba(167,139,250,0.45)";
+
+      for (let i = 0; i < segments; i += 1) {
+        const a0 = (i / segments) * Math.PI * 2;
+        const a1 = ((i + 1) / segments) * Math.PI * 2;
+        const mid = (a0 + a1) * 0.5;
+        const inR = drawR - band * 0.5;
+        const outR = drawR + band * 0.5;
+        const tilt = Math.sin(mid) * Math.tan(bankRad) * 3;
+
+        const grad = ctx.createLinearGradient(
+          cx + Math.cos(mid) * inR, cy - Math.sin(mid) * inR,
+          cx + Math.cos(mid) * outR, cy - Math.sin(mid) * outR
+        );
+        grad.addColorStop(0, `rgba(99,102,241,${0.55 + tilt * 0.05})`);
+        grad.addColorStop(0.5, "#818cf8");
+        grad.addColorStop(1, `rgba(167,139,250,${0.72 + tilt * 0.05})`);
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = roadW + 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(cx, cy, drawR, a0, a1);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#818cf8";
+      ctx.lineWidth = roadW;
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = "rgba(167,139,250,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 10]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      ctx.fillStyle = "#a78bfa";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("中心", cx - 26, cy + 4);
+    }
+
+    function drawCrossForceArrow(c, sx, sy, dx, dy, opts) {
+      const { color, lineW, label, labelPos, minLen, dashed, strokeColor } = opts;
+      let len = Math.hypot(dx, dy);
+      if (len < 1) return;
+      if (minLen && len < minLen) {
+        const s = minLen / len;
+        dx *= s;
+        dy *= s;
+        len = minLen;
+      }
+      const ex = sx + dx;
+      const ey = sy + dy;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.max(20, Math.min(26, len * 0.16));
+
+      c.save();
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      c.shadowBlur = 8;
+      c.shadowColor = "rgba(0,0,0,0.35)";
+
+      c.strokeStyle = "rgba(255,255,255,0.15)";
+      c.lineWidth = lineW + 6;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
+      c.stroke();
+
+      if (dashed) c.setLineDash([10, 7]);
+      c.strokeStyle = strokeColor || color;
+      c.lineWidth = lineW;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
+      c.stroke();
+      c.setLineDash([]);
+      c.shadowBlur = 0;
+
+      c.fillStyle = strokeColor || color;
+      c.beginPath();
+      c.moveTo(ex, ey);
+      c.lineTo(ex - head * Math.cos(ang - Math.PI / 5.5), ey - head * Math.sin(ang - Math.PI / 5.5));
+      c.lineTo(ex - head * 0.55 * Math.cos(ang), ey - head * 0.55 * Math.sin(ang));
+      c.lineTo(ex - head * Math.cos(ang + Math.PI / 5.5), ey - head * Math.sin(ang + Math.PI / 5.5));
+      c.closePath();
+      c.fill();
+
+      if (label && labelPos) {
+        drawArrowLabel(c, labelPos.x, labelPos.y, label, color, strokeColor);
+      }
+      c.restore();
+    }
+
+    function drawArrowLabel(c, x, y, text, color, strokeColor) {
+      c.font = "700 14px Inter, Noto Sans JP, sans-serif";
+      const tw = c.measureText(text).width;
+      const padX = 8;
+      const padY = 5;
+      const boxH = 22 + padY * 2;
+      c.fillStyle = "rgba(18,24,36,0.92)";
+      c.strokeStyle = strokeColor || color || "rgba(167,139,250,0.35)";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.roundRect(x - padX, y - 16 - padY, tw + padX * 2, boxH, 8);
+      c.fill();
+      c.stroke();
+      c.fillStyle = strokeColor || color;
+      c.fillText(text, x, y);
+    }
+
+    function drawForceArrow(c, sx, sy, dx, dy, color, alpha, lineW, label, labelPos) {
+      const len = Math.hypot(dx, dy);
+      if (len < 3) return;
+      const ex = sx + dx;
+      const ey = sy + dy;
+      c.save();
+      c.globalAlpha = alpha;
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      c.strokeStyle = "rgba(255,255,255,0.15)";
+      c.lineWidth = lineW + 3;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
+      c.stroke();
+      c.strokeStyle = color;
+      c.lineWidth = lineW;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
+      c.stroke();
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(14, len * 0.22);
+      c.fillStyle = color;
+      c.beginPath();
+      c.moveTo(ex, ey);
+      c.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+      c.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
+      c.closePath();
+      c.fill();
+      if (label && labelPos) {
+        drawArrowLabel(c, labelPos.x, labelPos.y, label, color);
+      }
+      c.restore();
+    }
+
+    function drawCarTop(sx, sy, screenHeading) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(screenHeading);
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.fillStyle = "#FF5252";
+      const cw = 16;
+      const ch = 30;
+      ctx.beginPath();
+      ctx.roundRect(-cw * 0.5, -ch * 0.5, cw, ch, 4);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.fillRect(-cw * 0.5 + 2, -ch * 0.5 + 3, cw - 4, 7);
+      ctx.strokeStyle = "#cc3333";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCrossSection(p) {
+      resizeCrossCanvas();
+      const { w, h, dpr } = crossLayout;
+      crossCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      crossCtx.imageSmoothingEnabled = true;
+      crossCtx.imageSmoothingQuality = "high";
+      crossCtx.clearRect(0, 0, w, h);
+
+      drawDarkBg(crossCtx, w, h);
+
+      const bankRad = p.bankRad;
+      const ox = w * 0.48;
+      const groundY = h * 0.78;
+      const roadLen = Math.min(w * 0.72, h * 1.1);
+      const surfAng = -bankRad;
+      const roadMidY = groundY - 18;
+      const sx = ox - roadLen * 0.5 * Math.cos(surfAng);
+      const sy = roadMidY - roadLen * 0.5 * Math.sin(surfAng);
+      const ex = ox + roadLen * 0.5 * Math.cos(surfAng);
+      const ey = roadMidY + roadLen * 0.5 * Math.sin(surfAng);
+      const carX = ox - roadLen * 0.08 * Math.cos(surfAng);
+      const carY = roadMidY - roadLen * 0.08 * Math.sin(surfAng) - 6;
+
+      crossCtx.strokeStyle = "rgba(148,163,184,0.22)";
+      crossCtx.lineWidth = 1.5;
+      crossCtx.setLineDash([6, 5]);
+      crossCtx.beginPath();
+      crossCtx.moveTo(24, groundY);
+      crossCtx.lineTo(w - 24, groundY);
+      crossCtx.stroke();
+      crossCtx.setLineDash([]);
+      crossCtx.fillStyle = "#64748b";
+      crossCtx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+      crossCtx.fillText("水平", 28, groundY + 18);
+
+      crossCtx.save();
+      crossCtx.fillStyle = "rgba(99,102,241,0.22)";
+      crossCtx.strokeStyle = "#6366f1";
+      crossCtx.lineWidth = 3;
+      crossCtx.beginPath();
+      crossCtx.moveTo(sx, sy);
+      crossCtx.lineTo(ex, ey);
+      crossCtx.lineTo(ex + Math.sin(surfAng) * 14, ey - Math.cos(surfAng) * 14);
+      crossCtx.lineTo(sx + Math.sin(surfAng) * 14, sy - Math.cos(surfAng) * 14);
+      crossCtx.closePath();
+      crossCtx.fill();
+      crossCtx.stroke();
+      crossCtx.shadowBlur = 12;
+      crossCtx.shadowColor = "rgba(129,140,248,0.4)";
+      crossCtx.strokeStyle = "#818cf8";
+      crossCtx.lineWidth = 10;
+      crossCtx.lineCap = "round";
+      crossCtx.beginPath();
+      crossCtx.moveTo(sx, sy);
+      crossCtx.lineTo(ex, ey);
+      crossCtx.stroke();
+      crossCtx.shadowBlur = 0;
+      crossCtx.restore();
+
+      crossCtx.strokeStyle = "#a78bfa";
+      crossCtx.lineWidth = 2.5;
+      crossCtx.setLineDash([5, 4]);
+      crossCtx.beginPath();
+      crossCtx.arc(sx, sy, 36, -bankRad - Math.PI / 2, -Math.PI / 2);
+      crossCtx.stroke();
+      crossCtx.setLineDash([]);
+      crossCtx.fillStyle = "#c4b5fd";
+      crossCtx.font = "700 14px Inter, Noto Sans JP, sans-serif";
+      crossCtx.fillText(`θ = ${fmt(p.bankDeg, 0)}°`, sx + 10, sy - 16);
+
+      const nx = -Math.sin(surfAng);
+      const ny = -Math.cos(surfAng);
+      const tx = Math.cos(surfAng);
+      const ty = Math.sin(surfAng);
+
+      const originX = carX;
+      const originY = carY + 2;
+
+      crossCtx.fillStyle = "#FF5252";
+      crossCtx.strokeStyle = "#aa2233";
+      crossCtx.lineWidth = 2.5;
+      crossCtx.beginPath();
+      crossCtx.roundRect(carX - 16, carY - 9, 32, 18, 5);
+      crossCtx.fill();
+      crossCtx.stroke();
+
+      crossCtx.fillStyle = "rgba(167,139,250,0.18)";
+      crossCtx.strokeStyle = "#a78bfa";
+      crossCtx.lineWidth = 2;
+      crossCtx.beginPath();
+      crossCtx.arc(originX, originY, 7, 0, Math.PI * 2);
+      crossCtx.fill();
+      crossCtx.stroke();
+
+      const refPx = Math.min(h * 0.44, w * 0.24);
+      const sc = refPx / (M * G);
+      const mgLen = M * G * sc;
+      const nLenX = nx * p.n * sc;
+      const nLenY = ny * p.n * sc;
+      const fReqLen = p.fReq * sc;
+
+      const fDir = p.fReq > p.fBank ? 1 : -1;
+      const fAlong = Math.min(p.fFric, Math.abs(p.fReq - p.fBank)) * fDir;
+      const fMag = Math.abs(fAlong) > 1 ? fAlong : p.fFric;
+      const fLenX = tx * fMag * sc;
+      const fLenY = ty * fMag * sc;
+
+      drawCrossForceArrow(crossCtx, originX, originY, 0, mgLen, {
+        color: "#e2e8f0", strokeColor: "#e2e8f0", lineW: 8,
+        label: "mg", labelPos: { x: originX + 14, y: originY + mgLen + 28 },
+      });
+      drawCrossForceArrow(crossCtx, originX, originY, -fReqLen, 0, {
+        color: "#fb7185", strokeColor: "#fb7185", lineW: 8,
+        label: "F_req", labelPos: { x: Math.max(16, originX - fReqLen - 58), y: originY - 22 },
+        minLen: 58,
+      });
+      drawCrossForceArrow(crossCtx, originX, originY, nLenX, nLenY, {
+        color: "#38bdf8", strokeColor: "#38bdf8", lineW: 7,
+        label: "N", labelPos: { x: originX + nLenX + 18, y: originY + nLenY - 18 },
+        minLen: 62,
+      });
+      drawCrossForceArrow(crossCtx, originX, originY, fLenX, fLenY, {
+        color: "#fbbf24", strokeColor: "#fbbf24", lineW: 7, dashed: true,
+        label: p.mu > 0.001 ? "f" : "f max",
+        labelPos: { x: originX + fLenX + 14, y: originY + fLenY + 24 },
+        minLen: 52,
+      });
+
+      crossCtx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      crossCtx.fillStyle = "#94a3b8";
+      crossCtx.textAlign = "center";
+      crossCtx.fillText("内側（カーブ中心）←", w * 0.22, h * 0.14);
+      crossCtx.fillText("→ 外側", w * 0.78, h * 0.14);
+      crossCtx.textAlign = "left";
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx();
+      const p = computePhysics(getV(), getR(), getBankDeg(), getMu());
+      updateCalcPanel(p);
+
+      const { w, h, cx, cy, ppm } = layout;
+
+      drawDarkBg(ctx, w, h);
+
+      drawBankedRoad(p.bankRad);
+
+      let wx, wy, screenHeading;
+      if (mode === "curve") {
+        const pos = carWorldPos(p.r, phi);
+        wx = pos.x;
+        wy = pos.y;
+        screenHeading = Math.atan2(-Math.cos(phi), -Math.sin(phi)) + Math.PI / 2;
+      } else {
+        wx = flyX;
+        wy = flyY;
+        screenHeading = Math.atan2(-flyVy, flyVx) + Math.PI / 2;
+      }
+
+      const car = toScreen(wx, wy);
+      const center = toScreen(0, 0);
+
+      const forceMax = Math.max(p.fReq, p.fSupply, 1);
+      const arrowScale = Math.min(ppm * 0.5, 85) / forceMax;
+      const tcx = center.x - car.x;
+      const tcy = center.y - car.y;
+      const tcl = Math.hypot(tcx, tcy) || 1;
+      const ux = tcx / tcl;
+      const uy = tcy / tcl;
+
+      drawForceArrow(ctx, car.x, car.y, ux * p.fReq * arrowScale, uy * p.fReq * arrowScale, "#fb7185", 0.9, 4, null, null);
+      drawForceArrow(ctx, car.x, car.y, ux * p.fSupply * arrowScale, uy * p.fSupply * arrowScale, "#34d399", 0.55, 3, null, null);
+
+      if (mode === "flyoff" && phase === "running") {
+        ctx.strokeStyle = "rgba(251,113,133,0.4)";
+        ctx.setLineDash([6, 5]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(car.x, car.y);
+        ctx.lineTo(car.x + flyVx * 0.08 * ppm, car.y - flyVy * 0.08 * ppm);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      drawCarTop(car.x, car.y, screenHeading);
+
+      ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText(`r = ${fmt(p.r, 0)} m　θ = ${fmt(p.bankDeg, 0)}°`, cx - layout.drawR * 0.42, cy - layout.drawR - 6);
+
+      drawCrossSection(p);
+    }
+
+    ["vSlider", "rSlider", "bankSlider", "muSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") {
+          updateCalcPanel(computePhysics(getV(), getR(), getBankDeg(), getMu()));
+        }
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("vSlider").value = DEFAULTS.v;
+      document.getElementById("rSlider").value = DEFAULTS.r;
+      document.getElementById("bankSlider").value = DEFAULTS.bank;
+      document.getElementById("muSlider").value = DEFAULTS.mu;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(canvasWrap);
+      ro.observe(crossWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

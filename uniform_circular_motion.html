@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>等速円運動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 42%, #1e293b 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e2e8f0;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #ddd6fe;
+      text-shadow: 0 0 20px rgba(167, 139, 250, 0.45);
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(167, 139, 250, 0.22);
+      color: #f5f3ff;
+      border: 1px solid rgba(167, 139, 250, 0.45);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(167, 139, 250, 0.24);
+      box-shadow: 0 4px 28px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      accent-color: #a78bfa;
+    }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(167, 139, 250, 0.12);
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #e9d5ff;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.55;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: white;
+      border: none;
+      box-shadow: 0 0 18px rgba(167, 139, 250, 0.45);
+    }
+
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 2px solid rgba(167, 139, 250, 0.32);
+    }
+
+    #statusPanel { display: none; }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(340px, 38vw);
+        max-height: min(480px, 58dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      box-shadow: 0 4px 28px rgba(0, 0, 0, 0.35);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      color: #ddd6fe;
+    }
+
+    .run-status {
+      margin: 0 0 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      text-align: center;
+    }
+
+    .run-status.running { color: #67e8f9; border-color: rgba(34, 211, 238, 0.35); background: rgba(34, 211, 238, 0.08); }
+    .run-status.paused { color: #fbbf24; border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.08); }
+
+    .concept {
+      margin: 0 0 12px;
+      font-size: 0.88rem;
+      color: #94a3b8;
+    }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(167, 139, 250, 0.14);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #a78bfa; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #818cf8; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #38bdf8; }
+    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #34d399; }
+    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #fb7185; }
+
+    .calc-label {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c4b5fd;
+    }
+
+    .calc-line {
+      margin: 3px 0;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+    }
+
+    .calc-line.sub {
+      margin-left: 0.4rem;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    .num-r { font-weight: 600; color: #a78bfa; }
+    .num-t { font-weight: 600; color: #818cf8; }
+    .num-f { font-weight: 600; color: #34d399; }
+    .num-w { font-weight: 600; color: #38bdf8; }
+    .num-v { font-weight: 600; color: #38bdf8; }
+    .num-a { font-weight: 600; color: #fb7185; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+    .canvas-caption {
+      margin: 0;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(420px, 52dvh);
+      min-height: 260px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      background: transparent;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(167, 139, 250, 0.18);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(167, 139, 250, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #94a3b8;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>等速円運動</h2>
+    <p class="chapter-label">8章　等速円運動 — T・f・ω・v・a</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      半径 r (m):
+      <input id="rSlider" type="range" min="0.3" max="3" step="0.1" value="1.2">
+      <span id="rValue">1.2</span>
+    </label>
+    <label>
+      周期 T (s):
+      <input id="tSlider" type="range" min="0.5" max="10" step="0.1" value="2">
+      <span id="tValue">2.0</span>
+    </label>
+
+    <p class="formula-box">T → f = 1/T → ω = 2πf → v = rω → a = v²/r</p>
+    <p class="hint">T を変えると f, ω, v, a がすべて連動して更新されます。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">r と T を設定して「スタート」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="計算過程">
+      <h3>値の連動</h3>
+      <p id="runStatus" class="run-status">r と T を設定して「スタート」</p>
+      <p class="concept">θ = ωt で点 P が円周を等速で回ります。v は接線方向、a は中心向きです。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">① 半径</p>
+        <p class="calc-line">r = <span id="cR" class="num-r">—</span> m</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">② 周期 T → 振動数 f</p>
+        <p class="calc-line">f = 1 / T</p>
+        <p class="calc-line sub">T = <span id="cT" class="num-t">—</span> s → f = <span id="cF" class="num-f">—</span> Hz</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">③ 角速度 ω</p>
+        <p class="calc-line">ω = 2πf = 2π / T</p>
+        <p class="calc-line sub">→ ω = <span id="cW" class="num-w">—</span> rad/s</p>
+        <p class="calc-line sub">θ = ωt = <span id="cTheta" class="num-w">—</span> rad（<span id="cThetaDeg" class="num-w">—</span>°）</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">④ 周速度 v</p>
+        <p class="calc-line">v = rω = 2πr / T</p>
+        <p class="calc-line sub">→ v = <span id="cV" class="num-v">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">⑤ 向心加速度 a</p>
+        <p class="calc-line">a = v² / r = rω²</p>
+        <p class="calc-line sub">→ a = <span id="cA" class="num-a">—</span> m/s²</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+      <p class="canvas-caption">
+        <span style="color:#38bdf8">● v（接線）</span>　
+        <span style="color:#fb7185">● a（向心）</span>　
+        <span style="color:#22d3ee">● P</span> — 反時計回りに等速
+      </p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#38bdf8">■ 水色：速度 v（接線）</span>　
+    <span style="color:#fb7185">■ ピンク：向心加速度 a</span>　
+    点 P は反時計回りに等速で運動
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const runStatus = document.getElementById("runStatus");
+    const startBtn = document.getElementById("startBtn");
+
+    const TWO_PI = Math.PI * 2;
+    const MAX_DT = 1 / 30;
+    const V_LEN = 0.55;
+    const A_LEN = 0.38;
+    const COLOR_V = "#38bdf8";
+    const COLOR_A = "#fb7185";
+    const COLOR_P = "#22d3ee";
+
+    const DEFAULTS = { r: 1.2, T: 2 };
+
+    let phase = "idle";
+    let simTime = 0;
+    let layout = { cx: 0, cy: 0, drawR: 0, w: 0, h: 0, dpr: 1 };
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getR() { return parseFloat(document.getElementById("rSlider").value); }
+    function getT() { return parseFloat(document.getElementById("tSlider").value); }
+
+    function computePhysics(r, T, t) {
+      const f = 1 / T;
+      const omega = TWO_PI * f;
+      const v = r * omega;
+      const a = (v * v) / r;
+      const theta = omega * t;
+      return { r, T, f, omega, v, a, theta, t };
+    }
+
+    function syncSliders() {
+      document.getElementById("rValue").textContent = fmt(getR(), 1);
+      document.getElementById("tValue").textContent = fmt(getT(), 1);
+    }
+
+    function setRunStatus(text, state) {
+      runStatus.textContent = text;
+      statusPanel.textContent = text;
+      runStatus.classList.remove("running", "paused");
+      if (state) runStatus.classList.add(state);
+    }
+
+    function updateCalcPanel(p) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      set("cR", fmt(p.r, 2));
+      set("cT", fmt(p.T, 2));
+      set("cF", fmt(p.f, 3));
+      set("cW", fmt(p.omega, 3));
+      set("cTheta", fmt(p.theta, 3));
+      set("cThetaDeg", fmt(p.theta * 180 / Math.PI, 1));
+      set("cV", fmt(p.v, 3));
+      set("cA", fmt(p.a, 3));
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      simTime = 0;
+      syncSliders();
+      updateCalcPanel(computePhysics(getR(), getT(), 0));
+      setRunStatus("r と T を設定して「スタート」");
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "再開";
+      setRunStatus("等速円運動中", "running");
+    }
+
+    function pauseSimulation() {
+      if (phase !== "running") return;
+      phase = "paused";
+      setRunStatus("一時停止 — 「再開」または「リセット」", "paused");
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      simTime += dt;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(240, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      const maxR = Math.min(w, h) * 0.38;
+      layout = {
+        cx: w * 0.5,
+        cy: h * 0.52,
+        drawR: maxR,
+        w, h, dpr,
+      };
+    }
+
+    function setupCtx() {
+      const { w, h, dpr } = layout;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, w, h);
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0f172a");
+      bg.addColorStop(0.55, "#1e1b4b");
+      bg.addColorStop(1, "#172554");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.07)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, h);
+        ctx.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(w, j);
+        ctx.stroke();
+      }
+    }
+
+    function drawArrow(sx, sy, ex, ey, color) {
+      const len = Math.hypot(ex - sx, ey - sy);
+      if (len < 6) return;
+      const ang = Math.atan2(ey - sy, ex - sx);
+      const head = Math.min(13, len * 0.24);
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      const hx1 = ex - head * Math.cos(ang - Math.PI / 6);
+      const hy1 = ey - head * Math.sin(ang - Math.PI / 6);
+      const hx2 = ex - head * Math.cos(ang + Math.PI / 6);
+      const hy2 = ey - head * Math.sin(ang + Math.PI / 6);
+
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(hx1, hy1);
+      ctx.lineTo(hx2, hy2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(hx1 + Math.cos(ang) * 1.2, hy1 + Math.sin(ang) * 1.2);
+      ctx.lineTo(hx2 + Math.cos(ang) * 1.2, hy2 + Math.sin(ang) * 1.2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawGlowPoint(x, y) {
+      ctx.save();
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = COLOR_P;
+      const grad = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, 11);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.45, COLOR_P);
+      grad.addColorStop(1, "rgba(34,211,238,0.15)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, TWO_PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx();
+      const p = computePhysics(getR(), getT(), simTime);
+      updateCalcPanel(p);
+
+      const { cx, cy, drawR, w, h } = layout;
+      const theta = p.theta;
+
+      drawDarkBg(w, h);
+
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, cy);
+      ctx.lineTo(w, cy);
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, h);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(167, 139, 250, 0.45)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, TWO_PI);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(167, 139, 250, 0.85)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, TWO_PI);
+      ctx.fill();
+
+      const Px = cx + drawR * Math.cos(theta);
+      const Py = cy - drawR * Math.sin(theta);
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + drawR, cy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.55)";
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(Px, Py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const arcR = Math.min(drawR * 0.22, 36);
+      const turns = Math.floor(Math.abs(theta) / TWO_PI);
+      const thetaVis = theta - turns * TWO_PI * Math.sign(theta || 1);
+      if (Math.abs(thetaVis) > 0.04) {
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, arcR, 0, -thetaVis, thetaVis > 0);
+        ctx.stroke();
+      }
+
+      const vLen = drawR * V_LEN;
+      const aLen = drawR * A_LEN;
+      const vEndX = Px - Math.sin(theta) * vLen;
+      const vEndY = Py - Math.cos(theta) * vLen;
+      const aEndX = Px - Math.cos(theta) * aLen;
+      const aEndY = Py + Math.sin(theta) * aLen;
+
+      drawArrow(Px, Py, vEndX, vEndY, COLOR_V);
+      drawArrow(Px, Py, aEndX, aEndY, COLOR_A);
+      drawGlowPoint(Px, Py);
+    }
+
+    ["rSlider", "tSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") {
+          updateCalcPanel(computePhysics(getR(), getT(), simTime));
+        }
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      pauseSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("rSlider").value = DEFAULTS.r;
+      document.getElementById("tSlider").value = DEFAULTS.T;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => draw()).observe(canvasWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

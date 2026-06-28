@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>単振り子と単振動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0a1210 0%, #0f1a18 45%, #1a1428 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8f0ff;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #b8f0e8;
+      text-shadow: 0 0 20px rgba(52, 211, 167, 0.45);
+    }
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #8ab8b0; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(20, 184, 166, 0.35);
+      color: #eefaf8;
+      border: 1px solid rgba(94, 234, 212, 0.45);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.22);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: #a8d0c8; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #2dd4bf; }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(45, 212, 191, 0.12);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #c8f0e8;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint { margin: 0; font-size: 0.82rem; color: #8ab8b0; line-height: 1.55; }
+
+    .warn-box {
+      margin: 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(180, 110, 0, 0.22);
+      border: 1px solid rgba(220, 160, 40, 0.4);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #ffcc66;
+      display: none;
+    }
+
+    .warn-box.show { display: block; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #14b8a6, #a855f7);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(45, 212, 191, 0.4);
+    }
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #c8f0e8;
+      border: 2px solid rgba(52, 211, 167, 0.35);
+    }
+
+    #statusPanel {
+      width: min(960px, 95vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.28);
+      color: #b8e8e0;
+    }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(300px, 34vw);
+        max-height: min(640px, 74dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.22);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #b8f0e8; }
+    .concept { margin: 0 0 12px; font-size: 0.88rem; color: #8ab8b0; }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(52, 211, 167, 0.15);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-label { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; color: #5eead4; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e0f5f0; }
+    .calc-line.sub { margin-left: 0.4rem; font-size: 0.78rem; color: #8ab8b0; }
+
+    .num-l { font-weight: 600; color: #cc99ff; }
+    .num-th { font-weight: 600; color: #5eead4; }
+    .num-w { font-weight: 600; color: #34d399; }
+    .num-t { font-weight: 600; color: #fbbf24; }
+    .num-g { font-weight: 600; color: #ffcc66; }
+    .num-m { font-weight: 600; color: #2dd4bf; }
+    .num-x { font-weight: 600; color: #f472b6; }
+    .num-v { font-weight: 600; color: #34d399; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .view-label { margin: 0; font-size: 0.82rem; font-weight: 600; color: #8ab8b0; text-align: center; }
+
+    .pendulum-wrap { width: 100%; height: min(240px, 28dvh); min-height: 200px; }
+    .graph-wrap { width: 100%; height: min(200px, 22dvh); min-height: 170px; }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(45, 212, 191, 0.18);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #8ab8b0;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>単振り子と単振動</h2>
+    <p class="chapter-label">9章　単振動 — 単振り子の周期と x(t)</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      振り子の長さ L (m):
+      <input id="lSlider" type="range" min="0.2" max="2" step="0.05" value="1.8">
+      <span id="lValue">1.80</span>
+    </label>
+    <label>
+      初期角度 θ₀ (°):
+      <input id="thetaSlider" type="range" min="1" max="15" step="0.5" value="10">
+      <span id="thetaValue">10.0</span>
+    </label>
+
+    <label>
+      おもりの質量 m (kg):
+      <input id="mSlider" type="range" min="0.1" max="5" step="0.1" value="1">
+      <span id="mValue">1.0</span>
+    </label>
+
+    <label>
+      重力加速度 g (m/s²):
+      <input id="gSlider" type="range" min="1" max="20" step="0.1" value="9.8">
+      <span id="gValue">9.8</span>
+    </label>
+
+    <p class="formula-box">ω = √(g/L)　　T = 2π√(L/g)　　x = Lθ₀ cos(ωt)　　v = −Lθ₀ω sin(ωt)</p>
+    <p class="hint">g や L を変えると ω・T が変わります。m は周期に影響せず、エネルギーだけ変わります。</p>
+    <p id="warnBox" class="warn-box">θ₀ が大きいため小振幅近似の誤差が大きくなります（15° 以下を推奨）。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">パラメータを設定して「スタート」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="値の連動">
+      <h3>値の連動</h3>
+      <p class="concept">小振幅の単振り子は d²θ/dt² = −(g/L)θ。水平方向は x ≈ Lθ で単振動になります。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">パラメータ</p>
+        <p class="calc-line">L = <span id="cL" class="num-l">—</span> m</p>
+        <p class="calc-line">m = <span id="cM" class="num-m">—</span> kg</p>
+        <p class="calc-line">θ₀ = <span id="cTheta0" class="num-th">—</span> rad（<span id="cTheta0deg">—</span>°）</p>
+        <p class="calc-line">g = <span id="cG" class="num-g">—</span> m/s²</p>
+        <p class="calc-line sub">※ T, ω は m に依存しない（L と g で決まる）</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">角振動数・周期</p>
+        <p class="calc-line">ω = √(g/L)</p>
+        <p class="calc-line sub">→ ω = <span id="cW" class="num-w">—</span> rad/s</p>
+        <p class="calc-line">T = 2π / ω = 2π√(L/g)</p>
+        <p class="calc-line sub">→ T = <span id="cT" class="num-t">—</span> s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">現在</p>
+        <p class="calc-line">θ(t) = θ₀ cos(ωt)</p>
+        <p class="calc-line sub">→ θ = <span id="cTheta" class="num-th">—</span> rad</p>
+        <p class="calc-line">x(t) ≈ L θ(t)</p>
+        <p class="calc-line sub">t = <span id="cTime" class="num-t">—</span> s</p>
+        <p class="calc-line sub">→ x = <span id="cX" class="num-x">—</span> m</p>
+        <p class="calc-line">v(t) = −L θ₀ ω sin(ωt)</p>
+        <p class="calc-line sub">→ v = <span id="cV" class="num-v">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">エネルギー（m に比例）</p>
+        <p class="calc-line">K = ½ m (Lωθ₀ sin ωt)²</p>
+        <p class="calc-line sub">→ K = <span id="cK" class="num-m">—</span> J</p>
+        <p class="calc-line">U = m g L (1 − cos θ)</p>
+        <p class="calc-line sub">→ U = <span id="cU" class="num-m">—</span> J</p>
+        <p class="calc-line sub">E = K + U = <span id="cE" class="num-m">—</span> J</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">単振り子（小振幅近似）</p>
+      <div class="pendulum-wrap" id="pendulumWrap">
+        <canvas id="pendulumCanvas"></canvas>
+      </div>
+      <p class="view-label">水平変位 x(t) — 1 周期分</p>
+      <div class="graph-wrap" id="graphWrap">
+        <canvas id="graphCanvas"></canvas>
+      </div>
+      <p class="view-label">水平速度 v(t) — 1 周期分</p>
+      <div class="graph-wrap" id="vGraphWrap">
+        <canvas id="vGraphCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#88bbff">○ 円弧ガイド</span>　
+    <span style="color:#f472b6">● 質点</span>　
+    <span style="color:#5eead4">— x(t)</span>　
+    <span style="color:#34d399">— v(t)</span>　
+    赤点線 = 現在時刻
+  </div>
+
+  <script>
+    const pendulumCanvas = document.getElementById("pendulumCanvas");
+    const pendulumCtx = pendulumCanvas.getContext("2d");
+    const graphCanvas = document.getElementById("graphCanvas");
+    const graphCtx = graphCanvas.getContext("2d");
+    const vGraphCanvas = document.getElementById("vGraphCanvas");
+    const vGraphCtx = vGraphCanvas.getContext("2d");
+    const pendulumWrap = document.getElementById("pendulumWrap");
+    const graphWrap = document.getElementById("graphWrap");
+    const vGraphWrap = document.getElementById("vGraphWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const startBtn = document.getElementById("startBtn");
+    const warnBox = document.getElementById("warnBox");
+
+    const MAX_DT = 1 / 30;
+    const TWO_PI = Math.PI * 2;
+    const DEG = Math.PI / 180;
+    const DEFAULTS = { L: 1.8, thetaDeg: 10, m: 1, g: 9.8 };
+
+    let phase = "idle";
+    let simTime = 0;
+    let pendulumLayout = { w: 0, h: 0, dpr: 1 };
+    let graphLayout = { w: 0, h: 0, dpr: 1 };
+    let vGraphLayout = { w: 0, h: 0, dpr: 1 };
+    let pendulumStars = [];
+    let graphStars = [];
+    let vGraphStars = [];
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function initStars(stars, w, h, count) {
+      stars.length = 0;
+      for (let i = 0; i < count; i += 1) {
+        stars.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.0 + 0.25,
+          a: Math.random() * 0.35 + 0.08,
+        });
+      }
+    }
+
+    function drawDarkBg(c, w, h, stars) {
+      const bg = c.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0a0e28");
+      bg.addColorStop(0.5, "#141038");
+      bg.addColorStop(1, "#1a0850");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+
+      const gal = c.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.5, w * 0.65);
+      gal.addColorStop(0, "rgba(90,50,160,0.12)");
+      gal.addColorStop(1, "rgba(40,20,80,0)");
+      c.fillStyle = gal;
+      c.fillRect(0, 0, w, h);
+
+      stars.forEach((s) => {
+        c.fillStyle = `rgba(255,255,255,${s.a})`;
+        c.beginPath();
+        c.arc(s.x, s.y, s.r, 0, TWO_PI);
+        c.fill();
+      });
+    }
+
+    function getL() { return parseFloat(document.getElementById("lSlider").value); }
+    function getTheta0Rad() { return parseFloat(document.getElementById("thetaSlider").value) * DEG; }
+    function getTheta0Deg() { return parseFloat(document.getElementById("thetaSlider").value); }
+
+    function getM() { return parseFloat(document.getElementById("mSlider").value); }
+    function getG() { return parseFloat(document.getElementById("gSlider").value); }
+
+    function computePhysics(t) {
+      const L = getL();
+      const m = getM();
+      const g = getG();
+      const theta0 = getTheta0Rad();
+      const omega = Math.sqrt(g / L);
+      const T = TWO_PI / omega;
+      const theta = theta0 * Math.cos(omega * t);
+      const x = L * theta;
+      const xExact = L * Math.sin(theta);
+      const thetaDot = -theta0 * omega * Math.sin(omega * t);
+      const v = L * thetaDot;
+      const vTan = L * Math.abs(thetaDot);
+      const K = 0.5 * m * vTan * vTan;
+      const U = m * g * L * (1 - Math.cos(theta));
+      const E = K + U;
+      return {
+        L, m, g, theta0, theta0Deg: getTheta0Deg(), omega, T,
+        theta, x, v, xExact, K, U, E, t,
+      };
+    }
+
+    function syncSliders() {
+      document.getElementById("lValue").textContent = fmt(getL(), 2);
+      document.getElementById("mValue").textContent = fmt(getM(), 1);
+      document.getElementById("gValue").textContent = fmt(getG(), 1);
+      document.getElementById("thetaValue").textContent = fmt(getTheta0Deg(), 1);
+      warnBox.classList.toggle("show", getTheta0Deg() > 12);
+    }
+
+    function updateCalcPanel(p) {
+      document.getElementById("cL").textContent = fmt(p.L, 2);
+      document.getElementById("cM").textContent = fmt(p.m, 1);
+      document.getElementById("cG").textContent = fmt(p.g, 1);
+      document.getElementById("cTheta0").textContent = fmt(p.theta0, 4);
+      document.getElementById("cTheta0deg").textContent = fmt(p.theta0Deg, 1);
+      document.getElementById("cW").textContent = fmt(p.omega, 3);
+      document.getElementById("cT").textContent = fmt(p.T, 3);
+      document.getElementById("cTheta").textContent = fmt(p.theta, 4);
+      document.getElementById("cTime").textContent = fmt(p.t, 2);
+      document.getElementById("cX").textContent = fmt(p.x, 4);
+      document.getElementById("cV").textContent = fmt(p.v, 4);
+      document.getElementById("cK").textContent = fmt(p.K, 3);
+      document.getElementById("cU").textContent = fmt(p.U, 3);
+      document.getElementById("cE").textContent = fmt(p.E, 3);
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      simTime = 0;
+      syncSliders();
+      updateCalcPanel(computePhysics(0));
+      statusPanel.textContent = "パラメータを設定して「スタート」";
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "再開";
+      statusPanel.textContent = "振動中 — 振り子と x(t) グラフが同期";
+    }
+
+    function pauseSimulation() {
+      if (phase !== "running") return;
+      phase = "paused";
+      statusPanel.textContent = "一時停止 — 「再開」または「リセット」";
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      simTime += dt;
+    }
+
+    function resizeCanvas(canvas, wrap, key) {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(260, Math.round(rect.width));
+      const h = Math.max(160, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        if (key === "pendulum") initStars(pendulumStars, w, h, 70);
+        else if (key === "vgraph") initStars(vGraphStars, w, h, 45);
+        else initStars(graphStars, w, h, 45);
+      }
+      if (key === "pendulum") pendulumLayout = { w, h, dpr };
+      else if (key === "vgraph") vGraphLayout = { w, h, dpr };
+      else graphLayout = { w, h, dpr };
+    }
+
+    function setupCtx(c, layout) {
+      c.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+      c.clearRect(0, 0, layout.w, layout.h);
+    }
+
+    function drawBezierCurve(c, pts) {
+      if (pts.length < 2) return;
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length - 1; i += 1) {
+        const xc = (pts[i].x + pts[i + 1].x) / 2;
+        const yc = (pts[i].y + pts[i + 1].y) / 2;
+        c.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      c.quadraticCurveTo(
+        pts[pts.length - 2].x, pts[pts.length - 2].y,
+        pts[pts.length - 1].x, pts[pts.length - 1].y
+      );
+      c.stroke();
+    }
+
+    function drawPendulum(p) {
+      resizeCanvas(pendulumCanvas, pendulumWrap, "pendulum");
+      const { w, h } = pendulumLayout;
+      setupCtx(pendulumCtx, pendulumLayout);
+      drawDarkBg(pendulumCtx, w, h, pendulumStars);
+
+      const pivotX = w * 0.5;
+      const pivotY = h * 0.14;
+      const maxLPx = Math.min(w * 0.38, h * 0.62);
+      const Lpx = maxLPx * (p.L / 2);
+      const theta = p.theta;
+      const bobX = pivotX + Lpx * Math.sin(theta);
+      const bobY = pivotY + Lpx * Math.cos(theta);
+      const theta0 = p.theta0;
+
+      pendulumCtx.save();
+      pendulumCtx.shadowBlur = 16;
+      pendulumCtx.shadowColor = "rgba(94,234,212,0.55)";
+      pendulumCtx.strokeStyle = "rgba(120,190,255,0.6)";
+      pendulumCtx.lineWidth = 2.5;
+      pendulumCtx.beginPath();
+      pendulumCtx.arc(pivotX, pivotY, Lpx, Math.PI / 2 - theta0, Math.PI / 2 + theta0);
+      pendulumCtx.stroke();
+      pendulumCtx.restore();
+      if (theta0 > 0.01) {
+        pendulumCtx.save();
+        pendulumCtx.shadowBlur = 8;
+        pendulumCtx.shadowColor = "rgba(94,234,212,0.25)";
+        pendulumCtx.strokeStyle = "rgba(94,234,212,0.18)";
+        pendulumCtx.lineWidth = 1.5;
+        pendulumCtx.beginPath();
+        pendulumCtx.arc(pivotX, pivotY, Lpx, Math.PI / 2 + theta0, Math.PI / 2 - theta0 + TWO_PI);
+        pendulumCtx.stroke();
+        pendulumCtx.restore();
+      }
+
+      pendulumCtx.strokeStyle = "rgba(52,211,167,0.22)";
+      pendulumCtx.lineWidth = 1;
+      pendulumCtx.setLineDash([4, 4]);
+      pendulumCtx.beginPath();
+      pendulumCtx.moveTo(pivotX, pivotY);
+      pendulumCtx.lineTo(pivotX, h - 20);
+      pendulumCtx.stroke();
+      pendulumCtx.beginPath();
+      pendulumCtx.moveTo(pivotX, bobY);
+      pendulumCtx.lineTo(bobX, bobY);
+      pendulumCtx.stroke();
+      pendulumCtx.setLineDash([]);
+
+      pendulumCtx.fillStyle = "#aab8cc";
+      pendulumCtx.beginPath();
+      pendulumCtx.arc(pivotX, pivotY, 6, 0, TWO_PI);
+      pendulumCtx.fill();
+
+      pendulumCtx.save();
+      pendulumCtx.shadowBlur = 10;
+      pendulumCtx.shadowColor = "rgba(0,0,0,0.55)";
+      pendulumCtx.strokeStyle = "rgba(255,255,255,0.95)";
+      pendulumCtx.lineWidth = 5;
+      pendulumCtx.beginPath();
+      pendulumCtx.moveTo(pivotX, pivotY);
+      pendulumCtx.lineTo(bobX, bobY);
+      pendulumCtx.stroke();
+      pendulumCtx.shadowBlur = 0;
+      pendulumCtx.strokeStyle = "rgba(255,255,255,0.88)";
+      pendulumCtx.lineWidth = 3;
+      pendulumCtx.beginPath();
+      pendulumCtx.moveTo(pivotX, pivotY);
+      pendulumCtx.lineTo(bobX, bobY);
+      pendulumCtx.stroke();
+      pendulumCtx.restore();
+
+      pendulumCtx.save();
+      pendulumCtx.shadowBlur = 18;
+      pendulumCtx.shadowColor = "rgba(255,80,100,0.65)";
+      const bobR = 11 + (p.m / 5) * 9;
+      const grad = pendulumCtx.createRadialGradient(bobX - 5, bobY - 5, 2, bobX, bobY, bobR);
+      grad.addColorStop(0, "#ffaaaa");
+      grad.addColorStop(0.5, "#ff5566");
+      grad.addColorStop(1, "#cc2244");
+      pendulumCtx.fillStyle = grad;
+      pendulumCtx.beginPath();
+      pendulumCtx.arc(bobX, bobY, bobR, 0, TWO_PI);
+      pendulumCtx.fill();
+      pendulumCtx.shadowBlur = 0;
+      pendulumCtx.strokeStyle = "rgba(255,180,190,0.7)";
+      pendulumCtx.lineWidth = 2;
+      pendulumCtx.stroke();
+      pendulumCtx.restore();
+
+      pendulumCtx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      pendulumCtx.fillStyle = "#8ab8b0";
+      pendulumCtx.fillText("平衡", pivotX + 8, pivotY + Lpx + 16);
+      pendulumCtx.fillStyle = "#cc99ff";
+      pendulumCtx.fillText(`m = ${fmt(p.m, 1)} kg`, bobX + bobR + 6, bobY + 4);
+      pendulumCtx.fillStyle = "#5eead4";
+      pendulumCtx.fillText(`x ≈ ${fmt(p.x, 3)} m`, bobX + bobR + 6, bobY - 10);
+    }
+
+    function drawWaveGraph(ctx, layout, p, opts) {
+      const { w, h } = layout;
+      setupCtx(ctx, layout);
+      drawDarkBg(ctx, w, h, opts.stars);
+
+      const padL = 52;
+      const padR = 18;
+      const padT = 24;
+      const padB = 34;
+      const plotW = w - padL - padR;
+      const plotH = h - padT - padB;
+      const T = p.T;
+      const amp = Math.max(Math.abs(opts.amp), 1e-6);
+      const yScale = plotH * 0.4;
+      const midY = padT + plotH / 2;
+      const axisX = padL;
+
+      const tx = (t) => axisX + (t / T) * plotW;
+      const ty = (val) => midY - (val / amp) * yScale;
+
+      ctx.strokeStyle = "rgba(52,211,167,0.15)";
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i += 1) {
+        const gy = padT + (plotH * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(axisX, gy);
+        ctx.lineTo(axisX + plotW, gy);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(52,211,167,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(axisX, padT);
+      ctx.lineTo(axisX, padT + plotH);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(52,211,167,0.22)";
+      ctx.beginPath();
+      ctx.moveTo(axisX, midY);
+      ctx.lineTo(axisX + plotW, midY);
+      ctx.stroke();
+
+      ctx.fillStyle = opts.shade || "rgba(45,212,191,0.08)";
+      ctx.fillRect(axisX, midY - yScale, plotW, yScale * 2);
+
+      const steps = 140;
+      const pts = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (i / steps) * T;
+        pts.push({ x: tx(t), y: ty(opts.valueAt(t)) });
+      }
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.save();
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = opts.glowColor || opts.color;
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 5;
+      drawBezierCurve(ctx, pts);
+      ctx.restore();
+      ctx.save();
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = opts.glowColor || opts.color;
+      ctx.strokeStyle = opts.color;
+      ctx.lineWidth = 3;
+      drawBezierCurve(ctx, pts);
+      ctx.restore();
+
+      const tMod = phase === "idle" ? 0 : ((p.t % T) + T) % T;
+      const curX = tx(tMod);
+      const curY = ty(opts.currentVal);
+
+      ctx.strokeStyle = "rgba(255,80,100,0.75)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(curX, padT);
+      ctx.lineTo(curX, padT + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.save();
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = opts.color;
+      ctx.fillStyle = opts.color;
+      ctx.beginPath();
+      ctx.arc(curX, curY, 7, 0, TWO_PI);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(curX, curY, 7, 0, TWO_PI);
+      ctx.stroke();
+
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = opts.labelColor || "#b8f0e8";
+      ctx.fillText(opts.yLabel, 10, midY - yScale - 4);
+      ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#8ab8b0";
+      ctx.fillText("0", axisX - 10, padT + plotH + 14);
+      ctx.fillText("T", axisX + plotW - 6, padT + plotH + 14);
+      ctx.fillText("t", axisX + plotW - 2, midY + 14);
+      ctx.fillText(opts.ampLabelPos, 6, ty(amp) + 4);
+      ctx.fillText(opts.ampLabelNeg, 6, ty(-amp) + 4);
+    }
+
+    function drawGraph(p) {
+      resizeCanvas(graphCanvas, graphWrap, "graph");
+      const xAmp = p.L * p.theta0;
+      drawWaveGraph(graphCtx, graphLayout, p, {
+        stars: graphStars,
+        amp: xAmp,
+        valueAt: (t) => p.L * p.theta0 * Math.cos(p.omega * t),
+        currentVal: p.x,
+        yLabel: "x",
+        color: "#5eead4",
+        glowColor: "rgba(102,204,255,0.6)",
+        shade: "rgba(102,204,255,0.08)",
+        ampLabelPos: "+Lθ₀",
+        ampLabelNeg: "−Lθ₀",
+      });
+    }
+
+    function drawVGraph(p) {
+      resizeCanvas(vGraphCanvas, vGraphWrap, "vgraph");
+      const vAmp = p.L * p.theta0 * p.omega;
+      drawWaveGraph(vGraphCtx, vGraphLayout, p, {
+        stars: vGraphStars,
+        amp: vAmp,
+        valueAt: (t) => -p.L * p.theta0 * p.omega * Math.sin(p.omega * t),
+        currentVal: p.v,
+        yLabel: "v",
+        color: "#34d399",
+        glowColor: "rgba(136,255,170,0.6)",
+        labelColor: "#34d399",
+        shade: "rgba(136,255,170,0.08)",
+        ampLabelPos: "+Lθ₀ω",
+        ampLabelNeg: "−Lθ₀ω",
+      });
+    }
+
+    function draw() {
+      const p = computePhysics(simTime);
+      updateCalcPanel(p);
+      drawPendulum(p);
+      drawGraph(p);
+      drawVGraph(p);
+    }
+
+    ["lSlider", "mSlider", "gSlider", "thetaSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") updateCalcPanel(computePhysics(simTime));
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("lSlider").value = DEFAULTS.L;
+      document.getElementById("mSlider").value = DEFAULTS.m;
+      document.getElementById("gSlider").value = DEFAULTS.g;
+      document.getElementById("thetaSlider").value = DEFAULTS.thetaDeg;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(pendulumWrap);
+      ro.observe(graphWrap);
+      ro.observe(vGraphWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

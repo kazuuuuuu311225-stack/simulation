@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>万有引力と惑星の公転</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0a0e27 0%, #1a1040 45%, #0d1b3e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8f0ff;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #c8e4ff;
+      text-shadow: 0 0 20px rgba(120, 180, 255, 0.5);
+    }
+
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #8aa8cc; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(80, 140, 255, 0.35);
+      color: #eef4ff;
+      border: 1px solid rgba(140, 180, 255, 0.4);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.55);
+      border: 1px solid rgba(120, 160, 255, 0.2);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: #b8cce8; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #6699ff; }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(80, 120, 200, 0.15);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #c8dcff;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint { margin: 0; font-size: 0.82rem; color: #8aa8cc; line-height: 1.55; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #playBtn {
+      background: linear-gradient(135deg, #4488ff, #6655cc);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(100, 140, 255, 0.45);
+    }
+
+    #pauseBtn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #c8dcff;
+      border: 2px solid rgba(120, 160, 255, 0.35);
+    }
+
+    #statusPanel {
+      width: min(960px, 95vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.55);
+      border: 1px solid rgba(120, 160, 255, 0.25);
+      color: #b8d4ff;
+    }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(300px, 34vw);
+        max-height: min(680px, 78dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.2);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c8e4ff; }
+    .concept { margin: 0 0 12px; font-size: 0.88rem; color: #8aa8cc; }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(120, 160, 255, 0.15);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-label { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; color: #88b0ff; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #dce8ff; }
+    .calc-line.sub { margin-left: 0.4rem; font-size: 0.78rem; color: #8aa8cc; }
+
+    .num-m { font-weight: 600; color: #ffcc66; }
+    .num-r { font-weight: 600; color: #66ccff; }
+    .num-v { font-weight: 600; color: #88ffaa; }
+    .num-t { font-weight: 600; color: #ff9966; }
+    .num-f { font-weight: 600; color: #ff88cc; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .view-label { margin: 0; font-size: 0.82rem; font-weight: 600; color: #8aa8cc; text-align: center; }
+
+    .space-wrap {
+      width: 100%;
+      height: min(520px, 58dvh);
+      min-height: 320px;
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(80, 120, 255, 0.2);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(20, 30, 60, 0.45);
+      border: 1px solid rgba(120, 160, 255, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #8aa8cc;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>万有引力と惑星の公転</h2>
+    <p class="chapter-label">10章　万有引力 — 太陽系の簡略モデル</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      太陽の質量 M（倍率）:
+      <input id="mSlider" type="range" min="0.5" max="2" step="0.05" value="1">
+      <span id="mValue">1.00</span> × M☉
+    </label>
+    <label>
+      距離スケール:
+      <input id="distSlider" type="range" min="0.6" max="1.4" step="0.05" value="1">
+      <span id="distValue">1.00</span>
+    </label>
+
+    <p class="formula-box">F = G m₁ m₂ / r²　　v = √(GM/r)　　T = 2π√(r³/GM)</p>
+    <p class="hint">惑星をクリックして選択。距離 r が小さいほど F が大きく、v も速くなります。</p>
+
+    <div class="btn-row">
+      <button id="playBtn" type="button">再生</button>
+      <button id="pauseBtn" type="button">停止</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">惑星をクリック — 公転中</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="万有引力">
+      <h3>万有引力</h3>
+      <p class="concept">向心力 m v²/r と万有引力 G M m/r² が釣り合い、円軌道で公転します。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">法則</p>
+        <p class="calc-line">F = G m₁ m₂ / r²</p>
+        <p class="calc-line sub">G … 万有定数（シミュレーション単位）</p>
+        <p class="calc-line sub">m₁ = 太陽 M、 m₂ = 惑星 m</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">選択中の惑星</p>
+        <p class="calc-line">名前：<span id="cName">地球</span></p>
+        <p class="calc-line">m = <span id="cMass" class="num-m">—</span>（地球=1）</p>
+        <p class="calc-line">r = <span id="cR" class="num-r">—</span> AU</p>
+        <p class="calc-line">v = <span id="cV" class="num-v">—</span>（相対）</p>
+        <p class="calc-line">T = <span id="cT" class="num-t">—</span>（相対）</p>
+        <p class="calc-line">F = <span id="cF" class="num-f">—</span>（相対）</p>
+        <p class="calc-line sub" id="cCompare">—</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">太陽系（上から見た図）— 白矢印 = 太陽方向の万有引力</p>
+      <div class="space-wrap" id="spaceWrap">
+        <canvas id="spaceCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#ffcc44">● 太陽</span>　
+    淡い円 = 軌道　
+    <span style="color:#fff">→ F</span>　
+    クリックで惑星を選択
+  </div>
+
+  <script>
+    const spaceCanvas = document.getElementById("spaceCanvas");
+    const spaceCtx = spaceCanvas.getContext("2d");
+    const spaceWrap = document.getElementById("spaceWrap");
+    const statusPanel = document.getElementById("statusPanel");
+
+    const G = 1;
+    const M_SUN_BASE = 1;
+    const MAX_DT = 1 / 30;
+    const TWO_PI = Math.PI * 2;
+    const TIME_SCALE = 1.8;
+
+    const PLANETS = [
+      { id: "mercury", name: "水星", mass: 0.055, orbitAU: 0.39, size: 6, colors: ["#c9c9c9", "#7a7a7a"], angle: 0.2 },
+      { id: "venus", name: "金星", mass: 0.815, orbitAU: 0.72, size: 8, colors: ["#ffe4a8", "#d4a040"], angle: 1.1 },
+      { id: "earth", name: "地球", mass: 1, orbitAU: 1, size: 8, colors: ["#44aaff", "#2266aa"], hasCloud: true, angle: 2.4 },
+      { id: "mars", name: "火星", mass: 0.107, orbitAU: 1.52, size: 6, colors: ["#e07050", "#a03020"], angle: 4.0 },
+      { id: "jupiter", name: "木星", mass: 317.8, orbitAU: 5.2, size: 18, colors: ["#d4a574", "#8b6914"], bands: true, angle: 0.8 },
+    ];
+
+    let phase = "running";
+    let simTime = 0;
+    let selectedId = "earth";
+    let spaceLayout = { w: 0, h: 0, dpr: 1 };
+    let stars = [];
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getMSunMult() { return parseFloat(document.getElementById("mSlider").value); }
+    function getDistScale() { return parseFloat(document.getElementById("distSlider").value); }
+
+    function getSunMass() { return M_SUN_BASE * getMSunMult(); }
+
+    function orbitRadiusAU(planet) {
+      return planet.orbitAU * getDistScale();
+    }
+
+    function computeOrbit(planet) {
+      const M = getSunMass();
+      const r = orbitRadiusAU(planet);
+      const v = Math.sqrt(G * M / r);
+      const T = TWO_PI * Math.sqrt((r * r * r) / (G * M));
+      const F = (G * M * planet.mass) / (r * r);
+      return { r, v, T, F };
+    }
+
+    function getPlanetState(planet) {
+      const orb = computeOrbit(planet);
+      const omega = Math.sqrt(G * getSunMass() / (orb.r * orb.r * orb.r)) * TIME_SCALE;
+      const theta = planet.angle + omega * simTime;
+      return { ...orb, theta, omega };
+    }
+
+    function syncSliders() {
+      document.getElementById("mValue").textContent = fmt(getMSunMult(), 2);
+      document.getElementById("distValue").textContent = fmt(getDistScale(), 2);
+    }
+
+    function updateCalcPanel() {
+      const planet = PLANETS.find((p) => p.id === selectedId) || PLANETS[2];
+      const orb = computeOrbit(planet);
+      const earthOrb = computeOrbit(PLANETS[2]);
+
+      document.getElementById("cName").textContent = planet.name;
+      document.getElementById("cMass").textContent = fmt(planet.mass, 3);
+      document.getElementById("cR").textContent = fmt(orb.r, 2);
+      document.getElementById("cV").textContent = fmt(orb.v, 3);
+      document.getElementById("cT").textContent = fmt(orb.T, 2);
+      document.getElementById("cF").textContent = fmt(orb.F, 4);
+
+      const fRatio = orb.F / earthOrb.F;
+      const rText = orb.r < earthOrb.r ? "地球より太陽に近い → F は大きい" : orb.r > earthOrb.r ? "地球より遠い → F は小さい" : "地球と同じ距離";
+      document.getElementById("cCompare").textContent =
+        `地球の F の ${fmt(fRatio, 2)} 倍。${rText}`;
+    }
+
+    function initStars(w, h) {
+      stars = [];
+      for (let i = 0; i < 120; i += 1) {
+        stars.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.2 + 0.3,
+          a: Math.random() * 0.5 + 0.2,
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = spaceWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      if (spaceCanvas.width !== Math.round(w * dpr) || spaceCanvas.height !== Math.round(h * dpr)) {
+        spaceCanvas.width = Math.round(w * dpr);
+        spaceCanvas.height = Math.round(h * dpr);
+        initStars(w, h);
+      }
+      spaceLayout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      const { w, h, dpr } = spaceLayout;
+      spaceCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      spaceCtx.imageSmoothingEnabled = true;
+      spaceCtx.imageSmoothingQuality = "high";
+      spaceCtx.clearRect(0, 0, w, h);
+    }
+
+    function getSunRadiusPx() {
+      return 14 + getMSunMult() * 3;
+    }
+
+    /** 内側の惑星が太陽に埋もれないよう √r スケール＋最小軌道半径を確保 */
+    function auToPx(au, maxR) {
+      const maxAU = 5.2 * getDistScale();
+      const minAU = 0.39 * getDistScale();
+      const sqrtSpan = Math.sqrt(maxAU) - Math.sqrt(minAU);
+      const t = sqrtSpan > 0 ? (Math.sqrt(au) - Math.sqrt(minAU)) / sqrtSpan : 0;
+      const sunR = getSunRadiusPx();
+      const innerGap = sunR + 26;
+      return innerGap + t * Math.max(maxR - innerGap, 40);
+    }
+
+    function drawBackground(w, h) {
+      const bg = spaceCtx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.7);
+      bg.addColorStop(0, "#1a2048");
+      bg.addColorStop(0.5, "#0f1530");
+      bg.addColorStop(1, "#080818");
+      spaceCtx.fillStyle = bg;
+      spaceCtx.fillRect(0, 0, w, h);
+
+      const gal = spaceCtx.createLinearGradient(0, h * 0.2, w, h * 0.8);
+      gal.addColorStop(0, "rgba(100,80,180,0)");
+      gal.addColorStop(0.5, "rgba(80,60,140,0.08)");
+      gal.addColorStop(1, "rgba(60,40,100,0)");
+      spaceCtx.fillStyle = gal;
+      spaceCtx.fillRect(0, 0, w, h);
+
+      stars.forEach((s) => {
+        spaceCtx.fillStyle = `rgba(255,255,255,${s.a})`;
+        spaceCtx.beginPath();
+        spaceCtx.arc(s.x, s.y, s.r, 0, TWO_PI);
+        spaceCtx.fill();
+      });
+    }
+
+    function drawSun(cx, cy) {
+      const r = getSunRadiusPx();
+      spaceCtx.save();
+      spaceCtx.shadowBlur = 18;
+      spaceCtx.shadowColor = "rgba(255,180,60,0.45)";
+      const g = spaceCtx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+      g.addColorStop(0, "#fff8cc");
+      g.addColorStop(0.45, "#ffcc44");
+      g.addColorStop(0.85, "#ff8822");
+      g.addColorStop(1, "#cc4400");
+      spaceCtx.fillStyle = g;
+      spaceCtx.beginPath();
+      spaceCtx.arc(cx, cy, r, 0, TWO_PI);
+      spaceCtx.fill();
+      spaceCtx.shadowBlur = 0;
+      spaceCtx.strokeStyle = "rgba(255,220,100,0.25)";
+      spaceCtx.lineWidth = 2;
+      spaceCtx.beginPath();
+      spaceCtx.arc(cx, cy, r + 4, 0, TWO_PI);
+      spaceCtx.stroke();
+      spaceCtx.restore();
+
+      spaceCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      spaceCtx.fillStyle = "rgba(255,220,120,0.85)";
+      spaceCtx.textAlign = "center";
+      spaceCtx.fillText("太陽", cx, cy + r + 14);
+      spaceCtx.textAlign = "left";
+    }
+
+    function drawOrbit(cx, cy, rPx) {
+      spaceCtx.strokeStyle = "rgba(120, 160, 255, 0.18)";
+      spaceCtx.lineWidth = 2;
+      spaceCtx.beginPath();
+      spaceCtx.arc(cx, cy, rPx, 0, TWO_PI);
+      spaceCtx.stroke();
+    }
+
+    function drawPlanetBody(x, y, planet, selected, cx, cy) {
+      const s = planet.size * (selected ? 1.12 : 1);
+      spaceCtx.save();
+      if (selected) {
+        spaceCtx.shadowBlur = 14;
+        spaceCtx.shadowColor = "rgba(120,180,255,0.7)";
+        spaceCtx.strokeStyle = "rgba(180,220,255,0.95)";
+        spaceCtx.lineWidth = 2;
+        spaceCtx.beginPath();
+        spaceCtx.arc(x, y, s + 6, 0, TWO_PI);
+        spaceCtx.stroke();
+      }
+      spaceCtx.shadowBlur = 10;
+      spaceCtx.shadowColor = "rgba(0,0,0,0.5)";
+      const g = spaceCtx.createRadialGradient(x - s * 0.35, y - s * 0.35, s * 0.1, x, y, s);
+      g.addColorStop(0, planet.colors[0]);
+      g.addColorStop(1, planet.colors[1]);
+      spaceCtx.fillStyle = g;
+      spaceCtx.beginPath();
+      spaceCtx.arc(x, y, s, 0, TWO_PI);
+      spaceCtx.fill();
+      spaceCtx.shadowBlur = 0;
+
+      if (planet.hasCloud) {
+        spaceCtx.fillStyle = "rgba(255,255,255,0.35)";
+        spaceCtx.beginPath();
+        spaceCtx.ellipse(x - s * 0.2, y - s * 0.15, s * 0.55, s * 0.25, -0.3, 0, TWO_PI);
+        spaceCtx.fill();
+      }
+      if (planet.bands) {
+        spaceCtx.strokeStyle = "rgba(90,60,20,0.35)";
+        spaceCtx.lineWidth = 1.5;
+        for (let i = -2; i <= 2; i += 1) {
+          spaceCtx.beginPath();
+          spaceCtx.ellipse(x, y + i * s * 0.22, s * 0.95, s * 0.18, 0, 0, TWO_PI);
+          spaceCtx.stroke();
+        }
+      }
+      spaceCtx.restore();
+
+      if (selected) {
+        const ang = Math.atan2(y - cy, x - cx);
+        const lx = x + Math.cos(ang) * (s + 16);
+        const ly = y + Math.sin(ang) * (s + 16);
+        spaceCtx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+        spaceCtx.fillStyle = "#e8f4ff";
+        spaceCtx.strokeStyle = "rgba(0,0,0,0.5)";
+        spaceCtx.lineWidth = 3;
+        spaceCtx.textAlign = "center";
+        spaceCtx.strokeText(planet.name, lx, ly);
+        spaceCtx.fillText(planet.name, lx, ly);
+        spaceCtx.textAlign = "left";
+      }
+    }
+
+    function drawForceArrow(px, py, cx, cy, F, maxF) {
+      const dx = cx - px;
+      const dy = cy - py;
+      const dist = Math.hypot(dx, dy) || 1;
+      const len = 18 + (F / maxF) * 42;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const ex = px + ux * len;
+      const ey = py + uy * len;
+
+      spaceCtx.strokeStyle = "rgba(255,255,255,0.85)";
+      spaceCtx.fillStyle = "rgba(255,255,255,0.85)";
+      spaceCtx.lineWidth = 2;
+      spaceCtx.lineCap = "round";
+      spaceCtx.beginPath();
+      spaceCtx.moveTo(px, py);
+      spaceCtx.lineTo(ex, ey);
+      spaceCtx.stroke();
+
+      const head = 7;
+      const angle = Math.atan2(uy, ux);
+      spaceCtx.beginPath();
+      spaceCtx.moveTo(ex, ey);
+      spaceCtx.lineTo(ex - head * Math.cos(angle - 0.4), ey - head * Math.sin(angle - 0.4));
+      spaceCtx.lineTo(ex - head * Math.cos(angle + 0.4), ey - head * Math.sin(angle + 0.4));
+      spaceCtx.closePath();
+      spaceCtx.fill();
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx();
+      const { w, h } = spaceLayout;
+      drawBackground(w, h);
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const maxOrbitPx = Math.min(w, h) * 0.44;
+
+      drawSun(cx, cy);
+
+      let maxF = 0;
+      PLANETS.forEach((p) => {
+        maxF = Math.max(maxF, computeOrbit(p).F);
+      });
+
+      PLANETS.forEach((p) => {
+        const rPx = auToPx(orbitRadiusAU(p), maxOrbitPx);
+        drawOrbit(cx, cy, rPx);
+      });
+
+      PLANETS.forEach((p) => {
+        const st = getPlanetState(p);
+        const rPx = auToPx(st.r, maxOrbitPx);
+        const px = cx + rPx * Math.cos(st.theta);
+        const py = cy + rPx * Math.sin(st.theta);
+        drawForceArrow(px, py, cx, cy, st.F, maxF);
+      });
+
+      PLANETS.forEach((p) => {
+        const st = getPlanetState(p);
+        const rPx = auToPx(st.r, maxOrbitPx);
+        const px = cx + rPx * Math.cos(st.theta);
+        const py = cy + rPx * Math.sin(st.theta);
+        drawPlanetBody(px, py, p, p.id === selectedId, cx, cy);
+      });
+
+      updateCalcPanel();
+    }
+
+    function pickPlanet(clientX, clientY) {
+      const rect = spaceCanvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const { w, h } = spaceLayout;
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const maxOrbitPx = Math.min(w, h) * 0.44;
+
+      let hit = null;
+      let best = Infinity;
+      PLANETS.forEach((p) => {
+        const st = getPlanetState(p);
+        const rPx = auToPx(st.r, maxOrbitPx);
+        const px = cx + rPx * Math.cos(st.theta);
+        const py = cy + rPx * Math.sin(st.theta);
+        const d = Math.hypot(x - px, y - py);
+        const hitR = p.size + 10;
+        if (d < hitR && d < best) {
+          best = d;
+          hit = p;
+        }
+      });
+      if (hit) {
+        selectedId = hit.id;
+        statusPanel.textContent = `${hit.name} を選択 — F ∝ 1/r²`;
+      }
+    }
+
+    spaceCanvas.addEventListener("click", (e) => pickPlanet(e.clientX, e.clientY));
+    spaceCanvas.addEventListener("touchend", (e) => {
+      if (e.changedTouches[0]) {
+        pickPlanet(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      }
+    });
+
+    document.getElementById("playBtn").addEventListener("click", () => {
+      phase = "running";
+      statusPanel.textContent = "公転中 — 惑星をクリックで選択";
+    });
+
+    document.getElementById("pauseBtn").addEventListener("click", () => {
+      phase = "paused";
+      statusPanel.textContent = "停止中 — 「再生」で再開";
+    });
+
+    ["mSlider", "distSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        updateCalcPanel();
+      });
+    });
+
+    syncSliders();
+    updateCalcPanel();
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(spaceWrap);
+    }
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (phase === "running" && dt > 0) simTime += dt;
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>人工衛星の円軌道</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0a0e27 0%, #1a1040 45%, #2a1060 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8f0ff;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #c8e4ff;
+      text-shadow: 0 0 20px rgba(120, 180, 255, 0.5);
+    }
+
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #8aa8cc; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(80, 140, 255, 0.35);
+      color: #eef4ff;
+      border: 1px solid rgba(140, 180, 255, 0.4);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.2);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: #b8cce8; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #6699ff; }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(80, 120, 200, 0.15);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c8dcff;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint { margin: 0; font-size: 0.82rem; color: #8aa8cc; line-height: 1.55; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #playBtn {
+      background: linear-gradient(135deg, #4488ff, #6655cc);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(100, 140, 255, 0.45);
+    }
+
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #c8dcff;
+      border: 2px solid rgba(120, 160, 255, 0.35);
+    }
+
+    #statusPanel {
+      width: min(960px, 95vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.25);
+      color: #b8d4ff;
+    }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(310px, 36vw);
+        max-height: min(680px, 78dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.2);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c8e4ff; }
+    .concept { margin: 0 0 12px; font-size: 0.88rem; color: #8aa8cc; }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(120, 160, 255, 0.15);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-block.highlight {
+      border-color: rgba(120, 200, 255, 0.55);
+      box-shadow: 0 0 18px rgba(100, 160, 255, 0.25);
+    }
+
+    .calc-label { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; color: #88b0ff; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #dce8ff; }
+    .calc-line.sub { margin-left: 0.4rem; font-size: 0.78rem; color: #8aa8cc; }
+
+    .num-r { font-weight: 600; color: #66ccff; }
+    .num-v { font-weight: 600; color: #88ffaa; }
+    .num-t { font-weight: 600; color: #ff9966; }
+    .num-m { font-weight: 600; color: #ffcc66; }
+    .num-f { font-weight: 600; color: #ff8899; }
+    .num-c { font-weight: 600; color: #cc99ff; }
+    .num-ok { font-weight: 600; color: #88ffaa; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .view-label { margin: 0; font-size: 0.82rem; font-weight: 600; color: #8aa8cc; text-align: center; }
+
+    .space-wrap {
+      width: 100%;
+      height: min(520px, 58dvh);
+      min-height: 320px;
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(80, 120, 255, 0.2);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(20, 30, 60, 0.45);
+      border: 1px solid rgba(120, 160, 255, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #8aa8cc;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>人工衛星の円軌道</h2>
+    <p class="chapter-label">10章　万有引力 — 向心力＝万有引力</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      軌道半径 r（地心から）:
+      <input id="rSlider" type="range" min="7000" max="50000" step="100" value="7000">
+      <span id="rValue">7000</span> km
+    </label>
+    <label>
+      地球の質量 M（倍率）:
+      <input id="mSlider" type="range" min="0.5" max="2" step="0.05" value="1">
+      <span id="mValue">1.00</span> × M⊕
+    </label>
+
+    <p class="formula-box">m v²/r = G M m/r²　→　v = √(GM/r)　　T = 2π√(r³/GM)</p>
+    <p class="hint">衛星をクリックで v・T を強調。半径 r を変えると速度 v が変わります（スローモーション表示）。</p>
+
+    <div class="btn-row">
+      <button id="playBtn" type="button">再生</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">公転中 — 衛星をクリックで詳細表示</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="軌道力学">
+      <h3>円軌道の条件</h3>
+      <p class="concept">向心力 m v²/r と万有引力 G M m/r² が等しく、衛星は円軌道を描きます。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">万有引力</p>
+        <p class="calc-line">F = G M m / r²</p>
+        <p class="calc-line sub">F = <span id="cFgrav" class="num-f">—</span> N（m = 1000 kg）</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">向心力</p>
+        <p class="calc-line">m v² / r</p>
+        <p class="calc-line sub">F = <span id="cFcent" class="num-c">—</span> N</p>
+      </div>
+
+      <div class="calc-block" id="orbitBlock">
+        <p class="calc-label">軌道パラメータ</p>
+        <p class="calc-line">r = <span id="cR" class="num-r">—</span> km</p>
+        <p class="calc-line">M = <span id="cM" class="num-m">—</span> × M⊕</p>
+        <p class="calc-line">v = <span id="cV" class="num-v">—</span> km/s</p>
+        <p class="calc-line">T = <span id="cT" class="num-t">—</span></p>
+        <p class="calc-line sub" id="cBalance">—</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">上から見た図 — <span style="color:#ff6677">赤</span> = 万有引力　<span style="color:#66aaff">青</span> = 速度</p>
+      <div class="space-wrap" id="spaceWrap">
+        <canvas id="spaceCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#44aaff">● 地球</span>　
+    淡い円 = 軌道　
+    <span style="color:#ff6677">→ F</span>　
+    <span style="color:#66aaff">→ v</span>　
+    クリックで衛星を選択
+  </div>
+
+  <script>
+    const canvas = document.getElementById("spaceCanvas");
+    const ctx = canvas.getContext("2d");
+    const wrap = document.getElementById("spaceWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const orbitBlock = document.getElementById("orbitBlock");
+
+    const G = 6.67430e-11;
+    const M_EARTH = 5.972e24;
+    const R_EARTH = 6371e3;
+    const SAT_MASS = 1000;
+    const MIN_R_KM = 7000;
+    const MAX_R_KM = 50000;
+    const DEFAULT_R_KM = 7000;
+    const DEFAULT_M_MULT = 1;
+    const TWO_PI = Math.PI * 2;
+    const MAX_DT = 1 / 30;
+    const TIME_SCALE = 800;
+    const SUN_ANGLE = -Math.PI * 0.72;
+
+    const DEFAULTS = { rKm: DEFAULT_R_KM, mMult: DEFAULT_M_MULT };
+
+    let phase = "running";
+    let simTime = 0;
+    let theta = 0;
+    let rTargetKm = DEFAULT_R_KM;
+    let rDisplayKm = DEFAULT_R_KM;
+    let satelliteSelected = false;
+    let layout = { w: 0, h: 0, dpr: 1 };
+    let stars = [];
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getMMult() { return parseFloat(document.getElementById("mSlider").value); }
+    function getRTargetKm() { return parseFloat(document.getElementById("rSlider").value); }
+
+    function computePhysics(rKm, mMult) {
+      const M = M_EARTH * mMult;
+      const r = rKm * 1000;
+      const v = Math.sqrt(G * M / r);
+      const T = TWO_PI * Math.sqrt((r * r * r) / (G * M));
+      const Fgrav = (G * M * SAT_MASS) / (r * r);
+      const Fcent = (SAT_MASS * v * v) / r;
+      const altKm = rKm - R_EARTH / 1000;
+      return { rKm, r, M, mMult, v, T, Fgrav, Fcent, altKm };
+    }
+
+    function formatPeriod(T) {
+      if (T < 3600) return fmt(T / 60, 1) + " 分";
+      if (T < 86400) return fmt(T / 3600, 2) + " 時間";
+      return fmt(T / 86400, 2) + " 日";
+    }
+
+    function syncSliders() {
+      document.getElementById("rValue").textContent = fmt(rTargetKm, 0);
+      document.getElementById("mValue").textContent = fmt(getMMult(), 2);
+    }
+
+    function updateCalcPanel(p) {
+      document.getElementById("cR").textContent = fmt(p.rKm, 0);
+      document.getElementById("cM").textContent = fmt(p.mMult, 2);
+      document.getElementById("cV").textContent = fmt(p.v / 1000, 3);
+      document.getElementById("cT").textContent = formatPeriod(p.T);
+      document.getElementById("cFgrav").textContent = fmt(p.Fgrav, 2);
+      document.getElementById("cFcent").textContent = fmt(p.Fcent, 2);
+
+      const diff = Math.abs(p.Fgrav - p.Fcent) / p.Fgrav;
+      const ok = diff < 1e-10;
+      document.getElementById("cBalance").innerHTML =
+        ok
+          ? `<span class="num-ok">向心力 ≈ 万有引力（相対誤差 ${fmt(diff * 100, 6)} %）</span>`
+          : `差：${fmt(diff * 100, 4)} %`;
+
+      orbitBlock.classList.toggle("highlight", satelliteSelected);
+    }
+
+    function initStars(w, h) {
+      stars = [];
+      for (let i = 0; i < 140; i += 1) {
+        stars.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.1 + 0.25,
+          a: Math.random() * 0.25 + 0.08,
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        initStars(w, h);
+      }
+      layout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, layout.w, layout.h);
+    }
+
+    function getEarthRadiusPx() {
+      const { w, h } = layout;
+      return Math.min(w, h) * 0.11;
+    }
+
+    function rKmToOrbitPx(rKm) {
+      const { w, h } = layout;
+      const earthPx = getEarthRadiusPx();
+      const maxOrbitPx = Math.min(w, h) * 0.42;
+      const t = (rKm - MIN_R_KM) / (MAX_R_KM - MIN_R_KM);
+      return earthPx + 10 + t * (maxOrbitPx - earthPx - 10);
+    }
+
+    function drawBackground(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e28");
+      bg.addColorStop(0.45, "#141038");
+      bg.addColorStop(1, "#1a0850");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const gal = ctx.createRadialGradient(w * 0.7, h * 0.25, 0, w * 0.5, h * 0.5, w * 0.65);
+      gal.addColorStop(0, "rgba(100,60,180,0.12)");
+      gal.addColorStop(1, "rgba(60,30,120,0)");
+      ctx.fillStyle = gal;
+      ctx.fillRect(0, 0, w, h);
+
+      stars.forEach((s) => {
+        ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, TWO_PI);
+        ctx.fill();
+      });
+    }
+
+    function drawEarth(cx, cy, earthPx) {
+      const sunX = Math.cos(SUN_ANGLE);
+      const sunY = Math.sin(SUN_ANGLE);
+
+      ctx.save();
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = "rgba(60,140,255,0.4)";
+
+      const g = ctx.createRadialGradient(
+        cx - sunX * earthPx * 0.35,
+        cy - sunY * earthPx * 0.35,
+        earthPx * 0.08,
+        cx + sunX * earthPx * 0.15,
+        cy + sunY * earthPx * 0.15,
+        earthPx
+      );
+      g.addColorStop(0, "#88ddff");
+      g.addColorStop(0.4, "#3399dd");
+      g.addColorStop(0.75, "#1166aa");
+      g.addColorStop(1, "#0a3355");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, earthPx, 0, TWO_PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const shadow = ctx.createRadialGradient(
+        cx + sunX * earthPx * 0.55,
+        cy + sunY * earthPx * 0.55,
+        earthPx * 0.2,
+        cx + sunX * earthPx * 0.3,
+        cy + sunY * earthPx * 0.3,
+        earthPx * 1.05
+      );
+      shadow.addColorStop(0, "rgba(0,0,0,0.45)");
+      shadow.addColorStop(0.6, "rgba(0,0,0,0.15)");
+      shadow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = shadow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, earthPx, 0, TWO_PI);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.beginPath();
+      ctx.ellipse(cx - sunX * earthPx * 0.2, cy - sunY * earthPx * 0.28, earthPx * 0.32, earthPx * 0.1, SUN_ANGLE - 0.4, 0, TWO_PI);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(120,200,255,0.35)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, earthPx + 5, 0, TWO_PI);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(180,220,255,0.85)";
+      ctx.textAlign = "center";
+      ctx.fillText("地球", cx, cy + earthPx + 14);
+      ctx.textAlign = "left";
+    }
+
+    function drawSunHint(w, h) {
+      const sx = w * 0.88;
+      const sy = h * 0.1;
+      ctx.save();
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = "rgba(255,200,80,0.5)";
+      const g = ctx.createRadialGradient(sx, sy, 2, sx, sy, 14);
+      g.addColorStop(0, "#fff8cc");
+      g.addColorStop(0.5, "#ffcc55");
+      g.addColorStop(1, "rgba(255,150,40,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 14, 0, TWO_PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(255,220,120,0.7)";
+      ctx.textAlign = "center";
+      ctx.fillText("太陽", sx, sy + 22);
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    function drawOrbit(cx, cy, rPx) {
+      ctx.strokeStyle = "rgba(120, 160, 255, 0.22)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rPx, 0, TWO_PI);
+      ctx.stroke();
+    }
+
+    function drawArrow(x, y, dx, dy, len, color, label) {
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const ex = x + ux * len;
+      const ey = y + uy * len;
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      const head = 8;
+      const ang = Math.atan2(uy, ux);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - 0.42), ey - head * Math.sin(ang - 0.42));
+      ctx.lineTo(ex - head * Math.cos(ang + 0.42), ey - head * Math.sin(ang + 0.42));
+      ctx.closePath();
+      ctx.fill();
+
+      if (label) {
+        ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 6 * ux + 4, ey + 6 * uy);
+      }
+    }
+
+    function drawSatellite(x, y, tangentAngle, selected) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(tangentAngle);
+
+      if (selected) {
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = "rgba(120,200,255,0.75)";
+        ctx.strokeStyle = "rgba(180,220,255,0.95)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-14, -10, 28, 20, 4);
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+      const body = ctx.createLinearGradient(-8, -6, 8, 6);
+      body.addColorStop(0, "#ddeeff");
+      body.addColorStop(1, "#8899bb");
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.roundRect(-8, -5, 16, 10, 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#4488cc";
+      ctx.fillRect(-18, -3, 8, 6);
+      ctx.fillRect(10, -3, 8, 6);
+
+      ctx.fillStyle = "#ffcc44";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, TWO_PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    function getRefScales(mMult) {
+      const pMax = computePhysics(MIN_R_KM, mMult);
+      const pMin = computePhysics(MAX_R_KM, mMult);
+      return {
+        vRef: pMax.v,
+        FRef: pMax.Fgrav,
+        vMin: pMin.v,
+      };
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx();
+      const { w, h } = layout;
+      const mMult = getMMult();
+      const panelP = computePhysics(rTargetKm, mMult);
+      const animP = computePhysics(rDisplayKm, mMult);
+      const refs = getRefScales(mMult);
+
+      drawBackground(w, h);
+      drawSunHint(w, h);
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const earthPx = getEarthRadiusPx();
+      const orbitPx = rKmToOrbitPx(rDisplayKm);
+
+      drawEarth(cx, cy, earthPx);
+      drawOrbit(cx, cy, orbitPx);
+
+      const sx = cx + orbitPx * Math.cos(theta);
+      const sy = cy + orbitPx * Math.sin(theta);
+      const tangentAngle = theta + Math.PI / 2;
+
+      const fLen = 16 + (animP.Fgrav / refs.FRef) * 48;
+      const vLen = 16 + ((animP.v - refs.vMin) / (refs.vRef - refs.vMin || 1)) * 48;
+
+      drawArrow(sx, sy, cx - sx, cy - sy, fLen, "rgba(255,80,100,0.92)", "F");
+      drawArrow(sx, sy, -Math.sin(theta), Math.cos(theta), vLen, "rgba(80,160,255,0.92)", "v");
+
+      drawSatellite(sx, sy, tangentAngle, satelliteSelected);
+
+      if (satelliteSelected) {
+        ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#e8f4ff";
+        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        ctx.lineWidth = 3;
+        ctx.textAlign = "center";
+        const lx = sx + Math.cos(theta) * 28;
+        const ly = sy + Math.sin(theta) * 28;
+        const label = `v=${fmt(panelP.v / 1000, 2)} km/s  T=${formatPeriod(panelP.T)}`;
+        ctx.strokeText(label, lx, ly);
+        ctx.fillText(label, lx, ly);
+        ctx.textAlign = "left";
+      }
+
+      ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(140,180,220,0.75)";
+      ctx.textAlign = "center";
+      ctx.fillText(`r = ${fmt(rTargetKm, 0)} km（高度 ≈ ${fmt(panelP.altKm, 0)} km）`, cx, h - 12);
+      ctx.textAlign = "left";
+
+      updateCalcPanel(panelP);
+    }
+
+    function pickSatellite(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const { w, h } = layout;
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const orbitPx = rKmToOrbitPx(rDisplayKm);
+      const sx = cx + orbitPx * Math.cos(theta);
+      const sy = cy + orbitPx * Math.sin(theta);
+      const d = Math.hypot(x - sx, y - sy);
+      if (d < 22) {
+        satelliteSelected = true;
+        const p = computePhysics(rTargetKm, getMMult());
+        statusPanel.textContent =
+          `衛星を選択 — v = ${fmt(p.v / 1000, 3)} km/s、T = ${formatPeriod(p.T)}`;
+      } else {
+        satelliteSelected = false;
+        statusPanel.textContent = phase === "running" ? "公転中 — 衛星をクリックで詳細表示" : "停止中 — 「再生」で再開";
+      }
+    }
+
+    function resetSimulation() {
+      document.getElementById("rSlider").value = DEFAULTS.rKm;
+      document.getElementById("mSlider").value = DEFAULTS.mMult;
+      rTargetKm = DEFAULTS.rKm;
+      rDisplayKm = DEFAULTS.rKm;
+      theta = 0;
+      simTime = 0;
+      phase = "running";
+      satelliteSelected = false;
+      syncSliders();
+      statusPanel.textContent = "リセット — r = 7000 km、公転中";
+    }
+
+    function update(dt) {
+      rTargetKm = getRTargetKm();
+      syncSliders();
+
+      const rDiff = Math.abs(rDisplayKm - rTargetKm);
+      const slowMo = rDiff > 1;
+      if (slowMo) {
+        rDisplayKm += (rTargetKm - rDisplayKm) * Math.min(1, 4 * dt);
+      } else {
+        rDisplayKm = rTargetKm;
+      }
+
+      if (phase === "running" && dt > 0) {
+        const animP = computePhysics(rDisplayKm, getMMult());
+        const omega = animP.v / animP.r;
+        const speedFactor = slowMo ? 0.25 : 1;
+        theta += omega * dt * TIME_SCALE * speedFactor;
+        simTime += dt;
+      }
+    }
+
+    canvas.addEventListener("click", (e) => pickSatellite(e.clientX, e.clientY));
+    canvas.addEventListener("touchend", (e) => {
+      if (e.changedTouches[0]) {
+        pickSatellite(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      }
+    });
+
+    document.getElementById("playBtn").addEventListener("click", () => {
+      phase = "running";
+      statusPanel.textContent = satelliteSelected
+        ? "公転中 — 衛星の v・T を表示中"
+        : "公転中 — 衛星をクリックで詳細表示";
+    });
+
+    document.getElementById("pauseBtn").addEventListener("click", () => {
+      phase = "paused";
+      statusPanel.textContent = "停止中 — 「再生」で再開";
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => resetSimulation());
+
+    document.getElementById("rSlider").addEventListener("input", () => {
+      rTargetKm = getRTargetKm();
+      syncSliders();
+    });
+
+    document.getElementById("mSlider").addEventListener("input", () => syncSliders());
+
+    syncSliders();
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(wrap);
+    }
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

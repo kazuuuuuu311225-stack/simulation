@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>カーブと向心力</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0c1018 0%, #151b28 45%, #1a2030 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8edf5;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #e8edf5;
+      text-shadow: 0 0 20px rgba(167, 139, 250, 0.4);
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #9aa8bc;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(167, 139, 250, 0.22);
+      color: #ede9fe;
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(18, 24, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #b8c4d4;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      accent-color: #a78bfa;
+    }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(167, 139, 250, 0.12);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #9aa8bc;
+      line-height: 1.55;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 120px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #7c3aed, #5b21b6);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(167, 139, 250, 0.35);
+    }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      border: 2px solid rgba(148, 163, 184, 0.28);
+    }
+
+    #statusPanel { display: none; }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(340px, 38vw);
+        max-height: min(520px, 62dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(18, 24, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      color: #e8edf5;
+    }
+
+    .run-status {
+      margin: 0 0 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      text-align: center;
+    }
+
+    .run-status.running {
+      color: #67e8f9;
+      border-color: rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.08);
+    }
+
+    .run-status.danger {
+      color: #fb7185;
+      border-color: rgba(251, 113, 133, 0.4);
+      background: rgba(251, 113, 133, 0.1);
+    }
+
+    .concept {
+      margin: 0 0 12px;
+      font-size: 0.88rem;
+      color: #9aa8bc;
+    }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #a78bfa; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #fb7185; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #38bdf8; }
+    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #6ee7b7; }
+
+    .calc-label {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #c4b5fd;
+    }
+
+    .calc-line {
+      margin: 3px 0;
+      font-size: 0.82rem;
+      color: #e8edf5;
+    }
+
+    .calc-line.sub {
+      margin-left: 0.4rem;
+      font-size: 0.78rem;
+      color: #9aa8bc;
+    }
+
+    .verdict {
+      margin-top: 6px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .verdict.ok {
+      background: rgba(110, 231, 183, 0.12);
+      color: #6ee7b7;
+      border: 1px solid rgba(110, 231, 183, 0.3);
+    }
+
+    .verdict.ng {
+      background: rgba(251, 113, 133, 0.12);
+      color: #fb7185;
+      border: 1px solid rgba(251, 113, 133, 0.3);
+    }
+
+    .num-v { font-weight: 600; color: #a78bfa; }
+    .num-r { font-weight: 600; color: #818cf8; }
+    .num-mu { font-weight: 600; color: #c4b5fd; }
+    .num-fr { font-weight: 600; color: #fb7185; }
+    .num-ff { font-weight: 600; color: #38bdf8; }
+    .num-vmax { font-weight: 600; color: #6ee7b7; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(460px, 56dvh);
+      min-height: 280px;
+    }
+
+    .canvas-caption {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #7a8799;
+      text-align: center;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      background: transparent;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(167, 139, 250, 0.12);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(18, 24, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #9aa8bc;
+    }
+
+    .legend span { font-weight: 600; }
+    .legend-rose { color: #fb7185; }
+    .legend-cyan { color: #38bdf8; }
+    .legend-violet { color: #818cf8; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>カーブと向心力</h2>
+    <p class="chapter-label">8章　等速円運動 — 摩擦力と曲がれる条件</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      速度 v (m/s):
+      <input id="vSlider" type="range" min="0" max="40" step="0.5" value="15">
+      <span id="vValue">15.0</span>
+    </label>
+    <label>
+      カーブ半径 r (m):
+      <input id="rSlider" type="range" min="10" max="200" step="1" value="80">
+      <span id="rValue">80</span>
+    </label>
+    <label>
+      摩擦係数 μ:
+      <input id="muSlider" type="range" min="0.1" max="1.0" step="0.05" value="0.6">
+      <span id="muValue">0.60</span>
+    </label>
+
+    <p class="formula-box">mv²/r ≤ μmg　→　v ≤ √(μgr)</p>
+    <p class="hint">v が v<sub>max</sub> を超えると、摩擦力では曲がれず外側へ直進します。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">v, r, μ を設定して「スタート」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="計算過程">
+      <h3>値の連動</h3>
+      <p id="runStatus" class="run-status">v, r, μ を設定して「スタート」</p>
+      <p class="concept">向心力は mv²/r。路面摩擦が μmg までしか向心力を供給できません。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">入力</p>
+        <p class="calc-line">v = <span id="cV" class="num-v">—</span> m/s</p>
+        <p class="calc-line">r = <span id="cR" class="num-r">—</span> m</p>
+        <p class="calc-line">μ = <span id="cMu" class="num-mu">—</span>　（m = 1000 kg）</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">必要な向心力</p>
+        <p class="calc-line">F<sub>required</sub> = mv² / r</p>
+        <p class="calc-line sub">→ <span id="cFReq" class="num-fr">—</span> N</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">摩擦の最大値</p>
+        <p class="calc-line">F<sub>friction max</sub> = μmg</p>
+        <p class="calc-line sub">→ <span id="cFFric" class="num-ff">—</span> N</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">最大安全速度</p>
+        <p class="calc-line">v<sub>max</sub> = √(μgr)</p>
+        <p class="calc-line sub">→ <span id="cVmax" class="num-vmax">—</span> m/s</p>
+        <div id="verdict" class="verdict ok">判定 —</div>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+      <p class="canvas-caption" id="canvasCaption">カーブ半径 r = 80 m — 車は反時計回りに走行</p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-rose">■ ローズ：必要向心力 F<sub>required</sub></span>　
+    <span class="legend-cyan">■ シアン：摩擦最大 F<sub>friction max</sub></span>　
+    <span class="legend-violet">■ インディゴ：カーブ路面</span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const runStatus = document.getElementById("runStatus");
+    const canvasCaption = document.getElementById("canvasCaption");
+    const verdictEl = document.getElementById("verdict");
+    const startBtn = document.getElementById("startBtn");
+
+    const G = 9.8;
+    const M = 1000;
+    const MAX_DT = 1 / 30;
+    const START_THETA = 0;
+
+    const COL = {
+      fReq: "#fb7185",
+      friction: "#38bdf8",
+      road: "#6366f1",
+      roadEdge: "#818cf8",
+      car: "#FF5252",
+    };
+
+    const DEFAULTS = { v: 15, r: 80, mu: 0.6 };
+
+    let phase = "idle";
+    let mode = "curve";
+    let theta = START_THETA;
+    let flyX = 0;
+    let flyY = 0;
+    let flyVx = 0;
+    let flyVy = 0;
+    let layout = { cx: 0, cy: 0, drawR: 0, ppm: 1, w: 0, h: 0, dpr: 1 };
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getV() { return parseFloat(document.getElementById("vSlider").value); }
+    function getR() { return parseFloat(document.getElementById("rSlider").value); }
+    function getMu() { return parseFloat(document.getElementById("muSlider").value); }
+
+    function computePhysics(v, r, mu) {
+      const fReq = (M * v * v) / r;
+      const fFric = mu * M * G;
+      const vMax = Math.sqrt(mu * G * r);
+      const canTurn = v <= vMax + 1e-6;
+      return { v, r, mu, fReq, fFric, vMax, canTurn };
+    }
+
+    function syncSliders() {
+      document.getElementById("vValue").textContent = fmt(getV(), 1);
+      document.getElementById("rValue").textContent = fmt(getR(), 0);
+      document.getElementById("muValue").textContent = fmt(getMu(), 2);
+    }
+
+    function setRunStatus(text, state) {
+      runStatus.textContent = text;
+      statusPanel.textContent = text;
+      runStatus.classList.remove("running", "danger");
+      if (state) runStatus.classList.add(state);
+    }
+
+    function updateCalcPanel(p) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      set("cV", fmt(p.v, 1));
+      set("cR", fmt(p.r, 0));
+      set("cMu", fmt(p.mu, 2));
+      set("cFReq", fmt(p.fReq, 0));
+      set("cFFric", fmt(p.fFric, 0));
+      set("cVmax", fmt(p.vMax, 2));
+      verdictEl.textContent = p.canTurn ? "✓ 曲がれる" : "✗ 曲がれない";
+      verdictEl.className = "verdict " + (p.canTurn ? "ok" : "ng");
+      canvasCaption.textContent = `カーブ半径 r = ${fmt(p.r, 0)} m — 車は反時計回りに走行`;
+    }
+
+    function carWorldPos(r, th) {
+      return { x: r * Math.cos(th), y: r * Math.sin(th) };
+    }
+
+    function tangentWorld(th) {
+      return { x: -Math.sin(th), y: Math.cos(th) };
+    }
+
+    function toScreen(wx, wy) {
+      return {
+        x: layout.cx + wx * layout.ppm,
+        y: layout.cy - wy * layout.ppm,
+      };
+    }
+
+    function enterFlyoff(v, r, th) {
+      mode = "flyoff";
+      const pos = carWorldPos(r, th);
+      const tan = tangentWorld(th);
+      flyX = pos.x;
+      flyY = pos.y;
+      flyVx = tan.x * v;
+      flyVy = tan.y * v;
+      setRunStatus("摩擦不足 — 外側へ直進中", "danger");
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      mode = "curve";
+      theta = START_THETA;
+      syncSliders();
+      const p = computePhysics(getV(), getR(), getMu());
+      updateCalcPanel(p);
+      setRunStatus("v, r, μ を設定して「スタート」");
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "走行中";
+      const p = computePhysics(getV(), getR(), getMu());
+      if (p.canTurn) {
+        mode = "curve";
+        setRunStatus("カーブを走行中 — 曲がれる", "running");
+      } else {
+        enterFlyoff(p.v, p.r, theta);
+      }
+    }
+
+    function checkTurnCondition() {
+      const p = computePhysics(getV(), getR(), getMu());
+      if (phase === "running" && mode === "curve" && !p.canTurn) {
+        enterFlyoff(p.v, p.r, theta);
+      }
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      const v = getV();
+      const r = getR();
+      checkTurnCondition();
+
+      if (mode === "curve") {
+        theta += (v / r) * dt;
+      } else {
+        flyX += flyVx * dt;
+        flyY += flyVy * dt;
+        const vNow = getV();
+        const tanLen = Math.hypot(flyVx, flyVy);
+        if (tanLen > 1e-6) {
+          const scale = vNow / tanLen;
+          flyVx *= scale;
+          flyVy *= scale;
+        }
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(260, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      const rM = getR();
+      const maxR = Math.min(w, h) * 0.34;
+      layout = {
+        cx: w * 0.5,
+        cy: h * 0.52,
+        drawR: maxR,
+        ppm: maxR / rM,
+        w, h, dpr,
+      };
+    }
+
+    function setupCtx() {
+      const { w, h, dpr } = layout;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, w, h);
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#121824");
+      bg.addColorStop(1, "#181e2c");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.55);
+      glow.addColorStop(0, "rgba(167, 139, 250, 0.1)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, h);
+        ctx.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(w, j);
+        ctx.stroke();
+      }
+    }
+
+    function drawRoad() {
+      const { cx, cy, drawR } = layout;
+      const roadW = 6;
+
+      ctx.save();
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = "rgba(255, 255, 255, 0.55)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.lineWidth = roadW + 10;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "rgba(129, 140, 248, 0.6)";
+      ctx.strokeStyle = COL.roadEdge;
+      ctx.lineWidth = roadW + 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = COL.road;
+      ctx.lineWidth = roadW;
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([10, 12]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      ctx.save();
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(167, 139, 250, 0.7)";
+      ctx.fillStyle = "rgba(167, 139, 250, 0.85)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(196, 181, 253, 0.85)";
+      ctx.fillText("中心", cx - 28, cy + 4);
+      ctx.restore();
+    }
+
+    function drawForceArrow(sx, sy, dx, dy, color, alpha, lineW, label) {
+      const len = Math.hypot(dx, dy);
+      if (len < 4) return;
+      const ex = sx + dx;
+      const ey = sy + dy;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = lineW + 3;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineW;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(13, len * 0.28);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+      if (label) {
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 6, ey - 6);
+      }
+      ctx.restore();
+    }
+
+    function drawCar(sx, sy, screenHeading) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(screenHeading);
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "rgba(255, 82, 82, 0.65)";
+      ctx.fillStyle = COL.car;
+      const cw = 18;
+      const ch = 34;
+      ctx.beginPath();
+      ctx.roundRect(-cw * 0.5, -ch * 0.5, cw, ch, 5);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillRect(-cw * 0.5 + 3, -ch * 0.5 + 4, cw - 6, 8);
+      ctx.strokeStyle = "rgba(255, 120, 120, 0.85)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx();
+      const p = computePhysics(getV(), getR(), getMu());
+      updateCalcPanel(p);
+
+      const { w, h, cx, cy, ppm } = layout;
+
+      drawDarkBg(w, h);
+      drawRoad();
+
+      let wx, wy, screenHeading;
+      if (mode === "curve") {
+        const pos = carWorldPos(p.r, theta);
+        wx = pos.x;
+        wy = pos.y;
+        screenHeading = Math.atan2(-Math.cos(theta), -Math.sin(theta)) + Math.PI / 2;
+      } else {
+        wx = flyX;
+        wy = flyY;
+        screenHeading = Math.atan2(-flyVy, flyVx) + Math.PI / 2;
+      }
+
+      const car = toScreen(wx, wy);
+      const center = toScreen(0, 0);
+
+      const forceMax = Math.max(p.fReq, p.fFric, 1);
+      const arrowScale = Math.min(ppm * 0.55, 90) / forceMax;
+
+      const toCenterX = center.x - car.x;
+      const toCenterY = center.y - car.y;
+      const tcLen = Math.hypot(toCenterX, toCenterY) || 1;
+      const ux = toCenterX / tcLen;
+      const uy = toCenterY / tcLen;
+
+      drawForceArrow(
+        car.x, car.y,
+        ux * p.fReq * arrowScale, uy * p.fReq * arrowScale,
+        COL.fReq, 0.92, 4, "F"
+      );
+      drawForceArrow(
+        car.x, car.y,
+        ux * p.fFric * arrowScale, uy * p.fFric * arrowScale,
+        COL.friction, 0.85, 4, "f"
+      );
+
+      if (mode === "flyoff" && phase === "running") {
+        ctx.strokeStyle = "rgba(251, 113, 133, 0.45)";
+        ctx.setLineDash([6, 5]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(car.x, car.y);
+        ctx.lineTo(car.x + flyVx * 0.08 * ppm, car.y - flyVy * 0.08 * ppm);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      drawCar(car.x, car.y, screenHeading);
+    }
+
+    ["vSlider", "rSlider", "muSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") {
+          updateCalcPanel(computePhysics(getV(), getR(), getMu()));
+        }
+        if (phase === "running" && mode === "curve") {
+          layout.drawR = Math.min(layout.w, layout.h) * 0.34;
+          layout.ppm = layout.drawR / getR();
+        }
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("vSlider").value = DEFAULTS.v;
+      document.getElementById("rSlider").value = DEFAULTS.r;
+      document.getElementById("muSlider").value = DEFAULTS.mu;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => draw()).observe(canvasWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

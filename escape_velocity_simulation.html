@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>脱出速度</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0a0e27 0%, #1a1040 45%, #2a1060 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8f0ff;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #c8e4ff;
+      text-shadow: 0 0 20px rgba(120, 180, 255, 0.5);
+    }
+
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #8aa8cc; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(80, 140, 255, 0.35);
+      color: #eef4ff;
+      border: 1px solid rgba(140, 180, 255, 0.4);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.2);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: #b8cce8; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #6699ff; }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(80, 120, 200, 0.15);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #c8dcff;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint { margin: 0; font-size: 0.82rem; color: #8aa8cc; line-height: 1.55; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #launchBtn {
+      background: linear-gradient(135deg, #4488ff, #6655cc);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(100, 140, 255, 0.45);
+    }
+
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #c8dcff;
+      border: 2px solid rgba(120, 160, 255, 0.35);
+    }
+
+    #statusPanel {
+      width: min(960px, 95vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.25);
+      color: #b8d4ff;
+      transition: border-color 0.3s, color 0.3s;
+    }
+
+    #statusPanel.state-bound { border-color: rgba(100, 160, 255, 0.5); color: #b8d4ff; }
+    #statusPanel.state-escape { border-color: rgba(255, 100, 100, 0.55); color: #ffaaaa; }
+    #statusPanel.state-neutral { border-color: rgba(255, 204, 100, 0.55); color: #ffddaa; }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(320px, 36vw);
+        max-height: min(720px, 82dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(20, 30, 60, 0.6);
+      border: 1px solid rgba(120, 160, 255, 0.2);
+      line-height: 1.6;
+      transition: border-color 0.3s;
+    }
+
+    #calcPanel.energy-bound { border-color: rgba(100, 160, 255, 0.45); }
+    #calcPanel.energy-escape { border-color: rgba(255, 100, 100, 0.45); }
+    #calcPanel.energy-neutral { border-color: rgba(255, 204, 100, 0.45); }
+
+    #calcPanel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c8e4ff; }
+    .concept { margin: 0 0 12px; font-size: 0.88rem; color: #8aa8cc; }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(120, 160, 255, 0.15);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-label { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; color: #88b0ff; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #dce8ff; }
+    .calc-line.sub { margin-left: 0.4rem; font-size: 0.78rem; color: #8aa8cc; }
+
+    .num-v { font-weight: 600; color: #88ffaa; }
+    .num-ve { font-weight: 600; color: #ffcc66; }
+    .num-h { font-weight: 600; color: #cc99ff; }
+    .num-r { font-weight: 600; color: #66ccff; }
+    .num-u { font-weight: 600; color: #ff9966; }
+    .num-k { font-weight: 600; color: #99ddff; }
+    .num-e { font-weight: 600; color: #ff8899; }
+    .num-state { font-weight: 600; }
+
+    .state-box {
+      margin: 0;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .state-box.bound { background: rgba(80, 140, 255, 0.15); color: #a8ccff; }
+    .state-box.escape { background: rgba(255, 80, 80, 0.15); color: #ffaaaa; }
+    .state-box.neutral { background: rgba(255, 200, 80, 0.15); color: #ffddaa; }
+
+    .canvas-section { width: 100%; }
+    .view-label { margin: 0 0 6px; font-size: 0.82rem; font-weight: 600; color: #8aa8cc; text-align: center; }
+
+    .sim-wrap {
+      width: 100%;
+      height: min(580px, 64dvh);
+      min-height: 360px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(80, 120, 255, 0.2);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(20, 30, 60, 0.45);
+      border: 1px solid rgba(120, 160, 255, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #8aa8cc;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>脱出速度</h2>
+    <p class="chapter-label">10章　万有引力 — E = K + U ≥ 0 で脱出</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      初速度 v₀:
+      <input id="v0Slider" type="range" min="0" max="20" step="0.1" value="8">
+      <span id="v0Value">8.0</span> km/s
+    </label>
+    <label>
+      地球の質量 M（倍率）:
+      <input id="mSlider" type="range" min="0.5" max="2" step="0.05" value="1">
+      <span id="mValue">1.00</span> × M⊕
+    </label>
+
+    <p class="formula-box">E = K + U = ½mv² − GMm/r　　v_escape = √(2GM/R)</p>
+    <p class="hint">E &lt; 0 → 束縛（落下）　E = 0 → ちょうど脱出　E &gt; 0 → 脱出成功</p>
+
+    <div class="btn-row">
+      <button id="launchBtn" type="button">発射</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel" class="state-bound">初速度を設定して「発射」— 脱出速度 ≈ 11.2 km/s</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" class="energy-bound" aria-label="脱出速度">
+      <h3>エネルギーと脱出</h3>
+      <p class="concept">全エネルギー E が 0 以上なら物体は無限遠まで到達できます（脱出）。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">速度</p>
+        <p class="calc-line">v₀ = <span id="cV0" class="num-v">—</span> km/s</p>
+        <p class="calc-line">v_escape = √(2GM/R)</p>
+        <p class="calc-line sub">→ <span id="cVesc" class="num-ve">—</span> km/s</p>
+        <p class="calc-line sub">現在 v = <span id="cVnow" class="num-v">—</span> km/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">位置</p>
+        <p class="calc-line">h = <span id="cH" class="num-h">—</span> km</p>
+        <p class="calc-line">r = R + h = <span id="cR" class="num-r">—</span> km</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">エネルギー（m = 1000 kg）</p>
+        <p class="calc-line">U = −GMm/r = <span id="cU" class="num-u">—</span></p>
+        <p class="calc-line">K = ½mv² = <span id="cK" class="num-k">—</span></p>
+        <p class="calc-line">E = K + U = <span id="cE" class="num-e">—</span></p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">状態</p>
+        <p id="cState" class="state-box bound">—</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">上：ロケット軌道　下：U(r) グラフ — <span style="color:#ff6677">赤</span> = 万有引力</p>
+      <div class="sim-wrap" id="simWrap">
+        <canvas id="simCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#44aaff">● 地球</span>　
+    <span style="color:#ddeeff">🚀 ロケット</span>　
+    <span style="color:#6699ff">E &lt; 0 束縛</span>　
+    <span style="color:#ff6666">E &gt; 0 脱出</span>　
+    <span style="color:#ffcc66">E ≈ 0</span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("simCanvas");
+    const ctx = canvas.getContext("2d");
+    const wrap = document.getElementById("simWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const calcPanel = document.getElementById("calcPanel");
+
+    const G = 6.674e-11;
+    const R_EARTH = 6371e3;
+    const M_EARTH = 5.972e24;
+    const ROCKET_MASS = 1000;
+    const MAX_V0_KMS = 20;
+    const MAX_DT = 1 / 30;
+    const TIME_SCALE = 80;
+    const ESCAPE_H_KM = 80000;
+    const TWO_PI = Math.PI * 2;
+    const E_EPS = 1e7;
+    const DEFAULTS = { v0Kms: 8, mMult: 1 };
+
+    let phase = "idle";
+    let hM = 0;
+    let vMs = 0;
+    let v0Kms = DEFAULTS.v0Kms;
+    let peakHM = 0;
+    let trail = [];
+    let layout = { w: 0, h: 0, dpr: 1 };
+    let stars = [];
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getMMult() { return parseFloat(document.getElementById("mSlider").value); }
+    function getV0Kms() { return parseFloat(document.getElementById("v0Slider").value); }
+    function getMass() { return M_EARTH * getMMult(); }
+
+    function escapeVelocityMs() {
+      return Math.sqrt(2 * G * getMass() / R_EARTH);
+    }
+
+    function computeEnergy(h, v) {
+      const M = getMass();
+      const r = R_EARTH + h;
+      const U = -(G * M * ROCKET_MASS) / r;
+      const K = 0.5 * ROCKET_MASS * v * v;
+      return { U, K, E: K + U, r, F: (G * M * ROCKET_MASS) / (r * r) };
+    }
+
+    function formatEnergy(J) {
+      const abs = Math.abs(J);
+      if (abs >= 1e9) return fmt(J / 1e9, 3) + " GJ";
+      if (abs >= 1e6) return fmt(J / 1e6, 2) + " MJ";
+      if (abs >= 1e3) return fmt(J / 1e3, 1) + " kJ";
+      return fmt(J, 0) + " J";
+    }
+
+    function maxHeightBound(v0) {
+      const E0 = 0.5 * ROCKET_MASS * v0 * v0 - (G * getMass() * ROCKET_MASS) / R_EARTH;
+      if (E0 >= 0) return ESCAPE_H_KM * 1000 * 1.5;
+      const rMax = -(G * getMass() * ROCKET_MASS) / E0;
+      return Math.max(0, rMax - R_EARTH);
+    }
+
+    function getGraphMaxRKm(v0) {
+      const hMax = maxHeightBound(v0);
+      const hMaxKm = hMax / 1000;
+      if (hMaxKm > 120000) return 150000;
+      return Math.max(30000, Math.min(150000, hMaxKm * 1.15 + 5000));
+    }
+
+    function getMotionState(p, flying) {
+      const v0 = getV0Kms() * 1000;
+      const vEsc = escapeVelocityMs();
+      if (!flying && phase === "idle") {
+        if (v0 < 0.5) return { key: "bound", label: "待機（v₀ ≈ 0 → 落下）", className: "bound" };
+        if (v0 >= vEsc * 1.002) return { key: "escape", label: "E &gt; 0 → 発射すれば脱出", className: "escape" };
+        if (Math.abs(v0 - vEsc) < vEsc * 0.008) return { key: "neutral", label: "E ≈ 0 → ちょうど脱出", className: "neutral" };
+        return { key: "bound", label: "E &lt; 0 → 上昇後落下", className: "bound" };
+      }
+      if (phase === "escaped") return { key: "escape", label: "脱出成功！", className: "escape" };
+      if (phase === "landed") {
+        return peakHM > 1000
+          ? { key: "bound", label: "上昇後落下（地表に着陸）", className: "bound" }
+          : { key: "bound", label: "落下（地表）", className: "bound" };
+      }
+      if (p.E >= E_EPS) return { key: "escape", label: "脱出中（E &gt; 0）", className: "escape" };
+      if (Math.abs(p.E) < E_EPS && hM / 1000 > 100) {
+        return { key: "neutral", label: "ちょうど脱出（E ≈ 0）", className: "neutral" };
+      }
+      if (vMs > 50) return { key: "bound", label: "上昇中（E &lt; 0）", className: "bound" };
+      if (vMs < -50) return { key: "bound", label: "落下中（E &lt; 0）", className: "bound" };
+      return { key: "bound", label: "上昇後落下", className: "bound" };
+    }
+
+    function syncSliders() {
+      document.getElementById("v0Value").textContent = fmt(getV0Kms(), 1);
+      document.getElementById("mValue").textContent = fmt(getMMult(), 2);
+    }
+
+    function updateCalcPanel(p) {
+      const flying = phase === "running" || phase === "paused" || phase === "escaped" || phase === "landed";
+      const st = getMotionState(p, flying);
+      const vEscKms = escapeVelocityMs() / 1000;
+
+      document.getElementById("cV0").textContent = fmt(getV0Kms(), 1);
+      document.getElementById("cVesc").textContent = fmt(vEscKms, 2);
+      document.getElementById("cVnow").textContent = fmt(vMs / 1000, 2);
+      document.getElementById("cH").textContent = fmt(hM / 1000, 1);
+      document.getElementById("cR").textContent = fmt(p.r / 1000, 1);
+      document.getElementById("cU").textContent = formatEnergy(p.U);
+      document.getElementById("cK").textContent = formatEnergy(p.K);
+      document.getElementById("cE").textContent = formatEnergy(p.E);
+
+      const stateEl = document.getElementById("cState");
+      stateEl.innerHTML = st.label;
+      stateEl.className = "state-box " + st.className;
+
+      calcPanel.className = "energy-" + st.className;
+      statusPanel.className = "state-" + st.className;
+    }
+
+    function accel(h) {
+      const r = R_EARTH + h;
+      return -(G * getMass()) / (r * r);
+    }
+
+    function rk4Step(h, v, dt) {
+      const f = (hh, vv) => [vv, accel(hh)];
+      const k1 = f(h, v);
+      const k2 = f(h + k1[0] * dt * 0.5, v + k1[1] * dt * 0.5);
+      const k3 = f(h + k2[0] * dt * 0.5, v + k2[1] * dt * 0.5);
+      const k4 = f(h + k3[0] * dt, v + k3[1] * dt);
+      return [
+        h + (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
+        v + (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
+      ];
+    }
+
+    function launch() {
+      if (phase === "running") return;
+      hM = 0;
+      vMs = getV0Kms() * 1000;
+      v0Kms = getV0Kms();
+      peakHM = 0;
+      trail = [];
+      phase = "running";
+      const p = computeEnergy(hM, vMs);
+      const st = getMotionState(p, true);
+      statusPanel.textContent = st.key === "escape"
+        ? "発射 — 脱出速度を超えています！"
+        : "発射 — ロケット上昇中";
+    }
+
+    function pauseSimulation() {
+      if (phase === "running") {
+        phase = "paused";
+        statusPanel.textContent = "一時停止 — 「発射」で再開";
+      }
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      hM = 0;
+      vMs = 0;
+      peakHM = 0;
+      trail = [];
+      v0Kms = DEFAULTS.v0Kms;
+      document.getElementById("v0Slider").value = DEFAULTS.v0Kms;
+      document.getElementById("mSlider").value = DEFAULTS.mMult;
+      syncSliders();
+      statusPanel.textContent = "リセット — 初速度を設定して「発射」";
+      statusPanel.className = "state-bound";
+    }
+
+    function update(dt) {
+      if (phase !== "running" || dt <= 0) return;
+
+      const subSteps = 4;
+      const stepDt = (dt * TIME_SCALE) / subSteps;
+      for (let i = 0; i < subSteps; i += 1) {
+        [hM, vMs] = rk4Step(hM, vMs, stepDt);
+      }
+
+      if (hM > peakHM) peakHM = hM;
+
+      if (hM <= 0) {
+        hM = 0;
+        if (vMs <= 0) {
+          vMs = 0;
+          phase = "landed";
+          statusPanel.textContent = peakHM > 1000
+            ? "地表に着陸 — 上昇後落下（E < 0）"
+            : "地表 — 落下";
+        }
+      }
+
+      const p = computeEnergy(hM, vMs);
+      if (p.E >= 0 && hM / 1000 > ESCAPE_H_KM && vMs > 0) {
+        phase = "escaped";
+        statusPanel.textContent = "脱出成功！ — E ≥ 0 で無限遠へ";
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(360, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        stars = [];
+        for (let i = 0; i < 110; i += 1) {
+          stars.push({
+            x: Math.random() * w,
+            y: Math.random() * h * 0.55,
+            r: Math.random() * 1.1 + 0.25,
+            a: Math.random() * 0.22 + 0.08,
+          });
+        }
+      }
+      layout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, layout.w, layout.h);
+    }
+
+    function rocketYFromH(hMeters, ecy, earthPx, maxHKm) {
+      const launchY = ecy - earthPx - 16;
+      const topY = 42;
+      const hKm = hMeters / 1000;
+      const displayMax = Math.max(maxHKm, hKm * 1.05, 500);
+      const t = Math.min(1, Math.max(0, hKm / displayMax));
+      return launchY - t * (launchY - topY);
+    }
+
+    function drawBackground(w, topH) {
+      const bg = ctx.createLinearGradient(0, 0, 0, topH);
+      bg.addColorStop(0, "#0a0e28");
+      bg.addColorStop(0.5, "#141038");
+      bg.addColorStop(1, "#1a0850");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, topH);
+
+      stars.forEach((s) => {
+        if (s.y > topH) return;
+        ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, TWO_PI);
+        ctx.fill();
+      });
+    }
+
+    function drawEarth(cx, cy, earthPx) {
+      ctx.save();
+      ctx.shadowBlur = 24;
+      ctx.shadowColor = "rgba(60,140,255,0.4)";
+      const g = ctx.createRadialGradient(
+        cx - earthPx * 0.35, cy - earthPx * 0.35, earthPx * 0.08,
+        cx, cy, earthPx
+      );
+      g.addColorStop(0, "#88ddff");
+      g.addColorStop(0.45, "#3399dd");
+      g.addColorStop(0.85, "#1166aa");
+      g.addColorStop(1, "#0a3355");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, earthPx, 0, TWO_PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.beginPath();
+      ctx.ellipse(cx - earthPx * 0.22, cy - earthPx * 0.32, earthPx * 0.32, earthPx * 0.1, -0.4, 0, TWO_PI);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(120,200,255,0.35)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, earthPx + 5, 0, TWO_PI);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRocket(x, y, ascending) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+
+      const body = ctx.createLinearGradient(-6, -12, 6, 12);
+      body.addColorStop(0, "#ffffff");
+      body.addColorStop(1, "#99aabb");
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.moveTo(0, -16);
+      ctx.lineTo(7, 8);
+      ctx.lineTo(-7, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#cc4444";
+      ctx.fillRect(-5, 6, 10, 4);
+
+      if (ascending && phase === "running") {
+        ctx.fillStyle = "rgba(255,180,60,0.9)";
+        ctx.beginPath();
+        ctx.moveTo(-4, 10);
+        ctx.lineTo(0, 22);
+        ctx.lineTo(4, 10);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    function drawForceArrow(fromX, fromY, toX, toY, F, F0) {
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const dist = Math.hypot(dx, dy) || 1;
+      const scale = 18 + (F / F0) * 34;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const ex = fromX + ux * scale;
+      const ey = fromY + uy * scale;
+
+      ctx.strokeStyle = "rgba(255,80,100,0.92)";
+      ctx.fillStyle = "rgba(255,80,100,0.92)";
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      const head = 8;
+      const ang = Math.atan2(uy, ux);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - 0.42), ey - head * Math.sin(ang - 0.42));
+      ctx.lineTo(ex - head * Math.cos(ang + 0.42), ey - head * Math.sin(ang + 0.42));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawScene(w, topH, p, maxHKm) {
+      drawBackground(w, topH);
+
+      const earthPx = Math.min(topH * 0.26, w * 0.13);
+      const cx = w * 0.5;
+      const ecy = topH - earthPx - 20;
+      const displayMaxKm = Math.max(maxHKm, hM / 1000 * 1.08, 500);
+      const rocketY = rocketYFromH(hM, ecy, earthPx, displayMaxKm);
+      const rocketX = cx;
+      const surfaceY = ecy - earthPx - 16;
+
+      if (phase === "running" || phase === "paused" || phase === "escaped" || phase === "landed") {
+        trail.push({ x: rocketX, y: rocketY });
+        if (trail.length > 120) trail.shift();
+      }
+
+      drawEarth(cx, ecy, earthPx);
+
+      if (trail.length > 1) {
+        ctx.strokeStyle = "rgba(180,220,255,0.35)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(trail[0].x, trail[0].y);
+        for (let i = 1; i < trail.length; i += 1) ctx.lineTo(trail[i].x, trail[i].y);
+        ctx.stroke();
+      }
+
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "rgba(255,200,100,0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, ecy);
+      ctx.lineTo(rocketX, rocketY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(150,180,220,0.7)";
+      ctx.textAlign = "center";
+      ctx.fillText("r", (cx + rocketX) / 2 + 12, (ecy + rocketY) / 2);
+      ctx.textAlign = "left";
+
+      const F0 = (G * getMass() * ROCKET_MASS) / (R_EARTH * R_EARTH);
+      drawForceArrow(rocketX, rocketY, cx, ecy, p.F, F0);
+      drawRocket(rocketX, rocketY, vMs > 0);
+
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(180,220,255,0.85)";
+      ctx.textAlign = "center";
+      ctx.fillText("地球", cx, ecy + 5);
+      ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(200,220,255,0.8)";
+      ctx.fillText(`h = ${fmt(hM / 1000, 1)} km`, rocketX + 58, rocketY);
+      if (phase === "idle") {
+        ctx.fillStyle = "rgba(255,200,100,0.75)";
+        ctx.fillText("← 発射地点", rocketX + 58, surfaceY + 4);
+      }
+      ctx.textAlign = "left";
+    }
+
+    function drawGraph(w, h, topH, p, maxHKm) {
+      const padL = 54;
+      const padR = 16;
+      const padT = 16;
+      const padB = 36;
+      const gx = padL;
+      const gy = topH + padT;
+      const gw = w - padL - padR;
+      const gh = h - topH - padT - padB;
+
+      const st = getMotionState(p, phase !== "idle");
+      const borderColor = st.className === "escape"
+        ? "rgba(255,100,100,0.55)"
+        : st.className === "neutral"
+          ? "rgba(255,204,100,0.55)"
+          : "rgba(100,160,255,0.45)";
+
+      ctx.fillStyle = "rgba(10,15,35,0.88)";
+      ctx.fillRect(0, topH, w, h - topH);
+
+      const U0 = -(G * getMass() * ROCKET_MASS) / R_EARTH;
+      const uTop = 0;
+      const uBottom = U0;
+      const rMin = R_EARTH;
+      const rMax = R_EARTH + maxHKm * 1000;
+
+      function rToX(r) {
+        return gx + ((r - rMin) / (rMax - rMin)) * gw;
+      }
+      function uToY(u) {
+        return gy + ((u - uTop) / (uBottom - uTop)) * gh;
+      }
+
+      ctx.strokeStyle = "rgba(120,160,255,0.12)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i += 1) {
+        const y = gy + (gh * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx + gw, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(136,255,170,0.75)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(gx + gw, gy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(gx, gy, gw, gh);
+      ctx.clip();
+
+      const samples = 70;
+      const pts = [];
+      for (let i = 0; i <= samples; i += 1) {
+        const r = rMin + ((rMax - rMin) * i) / samples;
+        const u = -(G * getMass() * ROCKET_MASS) / r;
+        pts.push({ x: rToX(r), y: uToY(u) });
+      }
+
+      ctx.strokeStyle = "rgba(255,153,102,0.9)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 0; i < pts.length - 2; i += 1) {
+        const xc = (pts[i].x + pts[i + 1].x) / 2;
+        const yc = (pts[i].y + pts[i + 1].y) / 2;
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      const n = pts.length - 1;
+      ctx.quadraticCurveTo(pts[n - 1].x, pts[n - 1].y, pts[n].x, pts[n].y);
+      ctx.stroke();
+
+      const curX = rToX(p.r);
+      const curY = uToY(p.U);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(curX, gy);
+      ctx.lineTo(curX, gy + gh);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const dotColor = st.className === "escape"
+        ? "rgba(255,100,100,0.95)"
+        : st.className === "neutral"
+          ? "rgba(255,204,100,0.95)"
+          : "rgba(100,160,255,0.95)";
+      ctx.fillStyle = dotColor;
+      ctx.beginPath();
+      ctx.arc(curX, curY, 5, 0, TWO_PI);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(gx, gy, gw, gh);
+
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#c8dcff";
+      ctx.textAlign = "left";
+      ctx.fillText("U(r) グラフ", gx, topH + 6);
+
+      ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "rgba(136,255,170,0.85)";
+      ctx.textAlign = "right";
+      ctx.fillText("U = 0", gx - 6, gy + 4);
+      ctx.fillStyle = "#8aa8cc";
+      ctx.fillText(formatEnergy(U0), gx - 6, gy + gh);
+      ctx.textAlign = "center";
+      ctx.fillText("r = R", gx, gy + gh + 14);
+      ctx.fillText(`R+${fmt(maxHKm, 0)}km`, gx + gw, gy + gh + 14);
+      ctx.fillText(`r=${fmt(p.r / 1000, 0)}km`, curX, gy - 4);
+
+      ctx.save();
+      ctx.translate(14, gy + gh / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("位置エネルギー U", 0, 0);
+      ctx.restore();
+      ctx.textAlign = "left";
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx();
+      const { w, h } = layout;
+      const simP = computeEnergy(hM, vMs);
+      const panelP = phase === "idle"
+        ? computeEnergy(0, getV0Kms() * 1000)
+        : simP;
+      const v0 = (phase === "idle" ? getV0Kms() : v0Kms) * 1000;
+      const maxHKm = Math.max(getGraphMaxRKm(v0), hM / 1000 * 1.08, 500);
+      const topH = Math.round(h * 0.5);
+
+      drawScene(w, topH, simP, maxHKm);
+      drawGraph(w, h, topH, simP, maxHKm);
+      updateCalcPanel(panelP);
+    }
+
+    document.getElementById("launchBtn").addEventListener("click", () => {
+      if (phase === "paused") phase = "running";
+      else launch();
+    });
+
+    document.getElementById("pauseBtn").addEventListener("click", () => pauseSimulation());
+
+    document.getElementById("resetBtn").addEventListener("click", () => resetSimulation());
+
+    document.getElementById("v0Slider").addEventListener("input", () => {
+      syncSliders();
+      if (phase === "idle") {
+        const p = computeEnergy(0, getV0Kms() * 1000);
+        updateCalcPanel(p);
+      }
+    });
+
+    document.getElementById("mSlider").addEventListener("input", () => syncSliders());
+
+    syncSliders();
+    resetSimulation();
+    updateCalcPanel(computeEnergy(0, getV0Kms() * 1000));
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(wrap);
+    }
+
+    let lastTime = null;
+    function loop(t) {
+      if (lastTime === null) {
+        lastTime = t;
+        draw();
+        requestAnimationFrame(loop);
+        return;
+      }
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ビリヤードと運動量保存</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0c1018 0%, #151b28 45%, #1a2030 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8edf5;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #fecdd3;
+      text-shadow: 0 0 20px rgba(251, 113, 133, 0.45);
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #9aa8bc;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(251, 113, 133, 0.22);
+      color: #ffe4e6;
+      border: 1px solid rgba(251, 113, 133, 0.4);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(18, 24, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 500;
+      color: #b8c4d4;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 30px;
+      accent-color: #fb7185;
+    }
+
+    .slider-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 480px) {
+      .slider-grid { grid-template-columns: 1fr; }
+    }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(251, 113, 133, 0.12);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #fda4af;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #9aa8bc;
+      line-height: 1.55;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 10px;
+      min-height: 48px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #shotBtn {
+      background: linear-gradient(135deg, #e11d48, #fb7185);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(251, 113, 133, 0.4);
+    }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      border: 2px solid rgba(148, 163, 184, 0.28);
+    }
+
+    #statusPanel { display: none; }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout {
+        flex-direction: row;
+        align-items: stretch;
+      }
+
+      #calcPanel {
+        flex: 0 0 min(360px, 40vw);
+        max-height: min(460px, 56dvh);
+        overflow-y: auto;
+      }
+
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(18, 24, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      line-height: 1.65;
+    }
+
+    #calcPanel h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      color: #fecdd3;
+    }
+
+    .run-status {
+      margin: 0 0 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fda4af;
+      background: rgba(251, 113, 133, 0.1);
+      border: 1px solid rgba(251, 113, 133, 0.22);
+      text-align: center;
+    }
+
+    .run-status.running {
+      color: #67e8f9;
+      border-color: rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.08);
+    }
+
+    .run-status.collided {
+      color: #6ee7b7;
+      border-color: rgba(110, 231, 183, 0.35);
+      background: rgba(110, 231, 183, 0.08);
+    }
+
+    .concept {
+      margin: 0 0 12px;
+      font-size: 0.88rem;
+      color: #9aa8bc;
+    }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #38bdf8; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #818cf8; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #fb7185; }
+    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #34d399; }
+    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #6ee7b7; }
+    #calcPanel .calc-block:nth-of-type(6) { border-left: 3px solid #fb7185; }
+
+    .calc-label {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fda4af;
+    }
+
+    .calc-line {
+      margin: 3px 0;
+      font-size: 0.84rem;
+      color: #e8edf5;
+    }
+
+    .calc-line.sub {
+      margin-left: 0.4rem;
+      font-size: 0.8rem;
+      color: #9aa8bc;
+    }
+
+    .num-a { font-weight: 600; color: #38bdf8; }
+    .num-b { font-weight: 600; color: #fb7185; }
+    .num-g { font-weight: 600; color: #6ee7b7; }
+    .num-ok { font-weight: 600; color: #6ee7b7; }
+
+    .canvas-section { width: 100%; }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(420px, 52dvh);
+      min-height: 280px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      background: transparent;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(251, 113, 133, 0.12);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(18, 24, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #9aa8bc;
+    }
+
+    .legend span { font-weight: 600; }
+    .lg-a { color: #38bdf8; }
+    .lg-ap { color: #fb7185; }
+    .lg-bp { color: #6ee7b7; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>ビリヤードと運動量保存</h2>
+    <p class="chapter-label">7章　運動量保存の法則と反発係数</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <div class="slider-grid">
+      <label>
+        質量 m<sub>A</sub> (kg):
+        <input id="mASlider" type="range" min="0.1" max="1" step="0.05" value="0.17">
+        <span id="mAValue">0.17</span>
+      </label>
+      <label>
+        質量 m<sub>B</sub> (kg):
+        <input id="mBSlider" type="range" min="0.1" max="1" step="0.05" value="0.17">
+        <span id="mBValue">0.17</span>
+      </label>
+      <label>
+        初速度 v<sub>A</sub> (m/s):
+        <input id="vSlider" type="range" min="0" max="50" step="1" value="8">
+        <span id="vValue">8</span>
+      </label>
+      <label>
+        角度 θ<sub>A</sub> (°):
+        <input id="thetaSlider" type="range" min="0" max="180" step="1" value="0">
+        <span id="thetaValue">0</span>
+      </label>
+    </div>
+
+    <p class="formula-box">
+      p = m v　　K = ½ m v²<br>
+      球同士・木枠とも弾性 → p と K<sub>A</sub>+K<sub>B</sub> は保存
+    </p>
+
+    <p class="hint">
+      球A（手玉・水色）を「ショット」で発射します。球B（的玉・ローズ）は静止。衝突後の運動量ベクトルと計算過程で保存則を確認できます。
+    </p>
+
+    <div class="btn-row">
+      <button id="shotBtn" type="button">ショット</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">角度と速度を設定して「ショット」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="計算過程">
+      <h3>計算過程</h3>
+      <p id="runStatus" class="run-status">角度と速度を設定して「ショット」</p>
+      <p class="concept">衝突方向 n に沿って1次元弾性衝突し、接線成分はそのまま。合成して2Dの v′ を求めます。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">① 衝突方向 n（球心→球心）</p>
+        <p class="calc-line">n = (A − B) / |A − B|</p>
+        <p class="calc-line sub">→ n<sub>x</sub> = <span id="cNx" class="num-a">—</span>、n<sub>y</sub> = <span id="cNy" class="num-a">—</span></p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">② 速度の分解</p>
+        <p class="calc-line">v<sub>n</sub> = (v·n) n　　v<sub>t</sub> = v − v<sub>n</sub></p>
+        <p class="calc-line sub">A: v<sub>A,n</sub> = <span id="cVAn" class="num-a">—</span> m/s</p>
+        <p class="calc-line sub">B: v<sub>B,n</sub> = <span id="cVBn" class="num-a">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">③ 法線方向の弾性衝突</p>
+        <p class="calc-line">v′<sub>A,n</sub> = (m<sub>A</sub>−m<sub>B</sub>)/(m<sub>A</sub>+m<sub>B</sub>) · v<sub>A,n</sub> + 2m<sub>B</sub>/(m<sub>A</sub>+m<sub>B</sub>) · v<sub>B,n</sub></p>
+        <p class="calc-line">v′<sub>B,n</sub> = 2m<sub>A</sub>/(m<sub>A</sub>+m<sub>B</sub>) · v<sub>A,n</sub> + (m<sub>B</sub>−m<sub>A</sub>)/(m<sub>A</sub>+m<sub>B</sub>) · v<sub>B,n</sub></p>
+        <p class="calc-line sub">→ v′<sub>A,n</sub> = <span id="cVApn" class="num-b">—</span>、v′<sub>B,n</sub> = <span id="cVBpn" class="num-g">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">④ 2D への再合成</p>
+        <p class="calc-line">v′ = v′<sub>t</sub> + v′<sub>n</sub> n</p>
+        <p class="calc-line sub">v′<sub>A</sub> = (<span id="cVAxp" class="num-b">—</span>, <span id="cVAyp" class="num-b">—</span>) m/s</p>
+        <p class="calc-line sub">v′<sub>B</sub> = (<span id="cVBxp" class="num-g">—</span>, <span id="cVByp" class="num-g">—</span>) m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">⑤ 運動量保存のチェック</p>
+        <p class="calc-line">p<sub>before</sub> = m<sub>A</sub> v<sub>A</sub></p>
+        <p class="calc-line sub">→ (<span id="cPbx" class="num-a">—</span>, <span id="cPby" class="num-a">—</span>) kg·m/s</p>
+        <p class="calc-line">p<sub>after</sub> = m<sub>A</sub> v′<sub>A</sub> + m<sub>B</sub> v′<sub>B</sub></p>
+        <p class="calc-line sub">→ (<span id="cPax" class="num-ok">—</span>, <span id="cPay" class="num-ok">—</span>) kg·m/s</p>
+        <p class="calc-line sub">誤差 |Δp| = <span id="cErr" class="num-ok">—</span> kg·m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">⑥ 運動エネルギー保存</p>
+        <p class="calc-line">K = ½ m v²　　K<sub>total</sub> = K<sub>A</sub> + K<sub>B</sub></p>
+        <p class="calc-line sub">衝突前 K = <span id="cKbefore" class="num-a">—</span> J</p>
+        <p class="calc-line sub">衝突後 K = <span id="cKafter" class="num-ok">—</span> J</p>
+        <p class="calc-line sub">誤差 |ΔK| = <span id="cKErr" class="num-ok">—</span> J</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="lg-a">■ 水色：衝突前 p<sub>A</sub></span>　
+    <span class="lg-ap">■ ローズ：衝突後 p′<sub>A</sub></span>　
+    <span class="lg-bp">■ ミント：衝突後 p′<sub>B</sub></span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const runStatus = document.getElementById("runStatus");
+
+    const DEG = Math.PI / 180;
+    const MAX_DT = 1 / 30;
+    const BALL_R = 0.06;
+    const TABLE_W = 2.8;
+    const TABLE_H = 1.4;
+    const PX_PER_M = 105;
+    const P_SCALE = 1.8;
+
+    const COLOR_A = "#38bdf8";
+    const COLOR_B = "#fb7185";
+    const COLOR_P_BEFORE = "#38bdf8";
+    const COLOR_P_AFTER_A = "#fb7185";
+    const COLOR_P_AFTER_B = "#6ee7b7";
+
+    const DEFAULTS = {
+      mA: 0.17,
+      mB: 0.17,
+      vA: 8,
+      thetaA: 0,
+      aX: -0.95,
+      aY: 0,
+      bX: 0.55,
+      bY: 0,
+    };
+
+    let phase = "idle";
+    let ballA = { x: DEFAULTS.aX, y: DEFAULTS.aY, vx: 0, vy: 0 };
+    let ballB = { x: DEFAULTS.bX, y: DEFAULTS.bY, vx: 0, vy: 0 };
+    let collisionPt = null;
+    let frozen = null;
+    let collisionArmed = true;
+    let collisionCount = 0;
+    let energyRef = 0;
+    let layout = { cx: 0, cy: 0, w: 0, h: 0, dpr: 1 };
+
+    function kineticEnergy(m, v) {
+      return 0.5 * m * (v.x * v.x + v.y * v.y);
+    }
+
+    function totalKineticEnergy(mA, mB, vA, vB) {
+      return kineticEnergy(mA, vA) + kineticEnergy(mB, vB);
+    }
+
+    function currentTotalEnergy() {
+      const mA = getMA();
+      const mB = getMB();
+      const vA = { x: ballA.vx, y: ballA.vy };
+      const vB = { x: ballB.vx, y: ballB.vy };
+      return totalKineticEnergy(mA, mB, vA, vB);
+    }
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getMA() { return parseFloat(document.getElementById("mASlider").value); }
+    function getMB() { return parseFloat(document.getElementById("mBSlider").value); }
+    function getVA() { return parseFloat(document.getElementById("vSlider").value); }
+    function getThetaDeg() { return parseFloat(document.getElementById("thetaSlider").value); }
+
+    function syncSliders() {
+      document.getElementById("mAValue").textContent = fmt(getMA(), 2);
+      document.getElementById("mBValue").textContent = fmt(getMB(), 2);
+      document.getElementById("vValue").textContent = fmt(getVA(), 0);
+      document.getElementById("thetaValue").textContent = fmt(getThetaDeg(), 0);
+    }
+
+    function setRunStatus(text, state) {
+      runStatus.textContent = text;
+      statusPanel.textContent = text;
+      runStatus.classList.remove("running", "collided");
+      if (state) runStatus.classList.add(state);
+    }
+
+    function dot(a, b) { return a.x * b.x + a.y * b.y; }
+    function len(v) { return Math.hypot(v.x, v.y); }
+    function scale(v, s) { return { x: v.x * s, y: v.y * s }; }
+    function add(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
+    function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
+
+    function velocityFromShot(v, thetaDeg) {
+      const th = thetaDeg * DEG;
+      return { x: v * Math.cos(th), y: v * Math.sin(th) };
+    }
+
+    function predictCollisionNormal() {
+      const dx = ballA.x - ballB.x;
+      const dy = ballA.y - ballB.y;
+      const d = Math.hypot(dx, dy) || 1;
+      return { x: dx / d, y: dy / d };
+    }
+
+    function computeAtImpact(mA, mB, vAvec, vBvec, nIn) {
+      const n = len(nIn) > 0 ? scale(nIn, 1 / len(nIn)) : { x: 1, y: 0 };
+      const vAn = dot(vAvec, n);
+      const vBn = dot(vBvec, n);
+      const vApn = ((mA - mB) / (mA + mB)) * vAn + ((2 * mB) / (mA + mB)) * vBn;
+      const vBpn = ((2 * mA) / (mA + mB)) * vAn + ((mB - mA) / (mA + mB)) * vBn;
+      const vAt = sub(vAvec, scale(n, vAn));
+      const vBt = sub(vBvec, scale(n, vBn));
+      const vAp = add(vAt, scale(n, vApn));
+      const vBp = add(vBt, scale(n, vBpn));
+      const pBefore = add(scale(vAvec, mA), scale(vBvec, mB));
+      const pAfter = add(scale(vAp, mA), scale(vBp, mB));
+      const err = len(sub(pAfter, pBefore));
+      const kBefore = totalKineticEnergy(mA, mB, vAvec, vBvec);
+      const kAfter = totalKineticEnergy(mA, mB, vAp, vBp);
+      const kErr = Math.abs(kAfter - kBefore);
+      return {
+        n, vAn, vBn, vApn, vBpn, vAp, vBp, pBefore, pAfter, err,
+        kBefore, kAfter, kErr, vAvec, vBvec,
+      };
+    }
+
+    function updateCalcPanel(data) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      if (!data) {
+        ["cNx", "cNy", "cVAn", "cVBn", "cVApn", "cVBpn", "cVAxp", "cVAyp", "cVBxp", "cVByp",
+          "cPbx", "cPby", "cPax", "cPay", "cErr", "cKbefore", "cKafter", "cKErr"].forEach((id) => set(id, "—"));
+        return;
+      }
+      set("cNx", fmt(data.n.x, 3));
+      set("cNy", fmt(data.n.y, 3));
+      set("cVAn", fmt(data.vAn, 2));
+      set("cVBn", fmt(data.vBn, 2));
+      set("cVApn", fmt(data.vApn, 2));
+      set("cVBpn", fmt(data.vBpn, 2));
+      set("cVAxp", fmt(data.vAp.x, 2));
+      set("cVAyp", fmt(data.vAp.y, 2));
+      set("cVBxp", fmt(data.vBp.x, 2));
+      set("cVByp", fmt(data.vBp.y, 2));
+      set("cPbx", fmt(data.pBefore.x, 2));
+      set("cPby", fmt(data.pBefore.y, 2));
+      set("cPax", fmt(data.pAfter.x, 2));
+      set("cPay", fmt(data.pAfter.y, 2));
+      set("cErr", fmt(data.err, 4));
+      set("cKbefore", fmt(data.kBefore, 3));
+      set("cKafter", fmt(data.kAfter, 3));
+      set("cKErr", fmt(data.kErr, 4));
+    }
+
+    function setSlidersDisabled(disabled) {
+      ["mASlider", "mBSlider", "vSlider", "thetaSlider"].forEach((id) => {
+        document.getElementById(id).disabled = disabled;
+      });
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      ballA = { x: DEFAULTS.aX, y: DEFAULTS.aY, vx: 0, vy: 0 };
+      ballB = { x: DEFAULTS.bX, y: DEFAULTS.bY, vx: 0, vy: 0 };
+      collisionPt = null;
+      frozen = null;
+      collisionArmed = true;
+      collisionCount = 0;
+      energyRef = 0;
+      setSlidersDisabled(false);
+      syncSliders();
+      updateCalcPanel(null);
+      setRunStatus("角度と速度を設定して「ショット」");
+    }
+
+    function fireShot() {
+      if (phase === "running") return;
+      const v = getVA();
+      if (v < 0.01) {
+        setRunStatus("v_A = 0 — 球Aは動きません");
+        return;
+      }
+      phase = "running";
+      const vel = velocityFromShot(v, getThetaDeg());
+      ballA = { x: DEFAULTS.aX, y: DEFAULTS.aY, vx: vel.x, vy: vel.y };
+      ballB = { x: DEFAULTS.bX, y: DEFAULTS.bY, vx: 0, vy: 0 };
+      collisionPt = null;
+      frozen = null;
+      collisionArmed = true;
+      collisionCount = 0;
+      energyRef = 0.5 * getMA() * getVA() * getVA();
+      setSlidersDisabled(true);
+      setRunStatus("ショット — 衝突待ち", "running");
+    }
+
+    function tryCollision() {
+      const dx = ballA.x - ballB.x;
+      const dy = ballA.y - ballB.y;
+      const dist = Math.hypot(dx, dy);
+      const touchDist = 2 * BALL_R;
+      const sepDist = touchDist + 0.008;
+
+      if (dist > sepDist) {
+        collisionArmed = true;
+        return;
+      }
+      if (!collisionArmed || dist > touchDist + 0.002) return;
+
+      const n = { x: dx / (dist || 1), y: dy / (dist || 1) };
+      const vA = { x: ballA.vx, y: ballA.vy };
+      const vB = { x: ballB.vx, y: ballB.vy };
+      const relN = dot(sub(vA, vB), n);
+      if (relN <= 0.02) return;
+
+      frozen = computeAtImpact(getMA(), getMB(), vA, vB, n);
+      collisionPt = {
+        x: (ballA.x + ballB.x) * 0.5,
+        y: (ballA.y + ballB.y) * 0.5,
+      };
+      ballA.vx = frozen.vAp.x;
+      ballA.vy = frozen.vAp.y;
+      ballB.vx = frozen.vBp.x;
+      ballB.vy = frozen.vBp.y;
+
+      const overlap = touchDist - dist;
+      if (overlap > 0) {
+        const push = overlap * 0.52 + 0.001;
+        ballA.x += n.x * push;
+        ballA.y += n.y * push;
+        ballB.x -= n.x * push;
+        ballB.y -= n.y * push;
+      }
+
+      collisionArmed = false;
+      collisionCount += 1;
+      phase = "collided";
+      updateCalcPanel(frozen);
+      setRunStatus(
+        collisionCount === 1
+          ? "1回目衝突 — 運動量保存を確認（|Δp| ≈ 0）"
+          : `${collisionCount}回目衝突 — 計算過程を更新しました`,
+        "collided"
+      );
+    }
+
+    function clampBall(b) {
+      const minX = -TABLE_W / 2 + BALL_R;
+      const maxX = TABLE_W / 2 - BALL_R;
+      const minY = -TABLE_H / 2 + BALL_R;
+      const maxY = TABLE_H / 2 - BALL_R;
+      if (b.x < minX) { b.x = minX; b.vx = Math.abs(b.vx); }
+      if (b.x > maxX) { b.x = maxX; b.vx = -Math.abs(b.vx); }
+      if (b.y < minY) { b.y = minY; b.vy = Math.abs(b.vy); }
+      if (b.y > maxY) { b.y = maxY; b.vy = -Math.abs(b.vy); }
+    }
+
+    function update(dt) {
+      if (phase !== "running" && phase !== "collided") return;
+      const steps = 5;
+      const sub = dt / steps;
+      for (let i = 0; i < steps; i += 1) {
+        ballA.x += ballA.vx * sub;
+        ballA.y += ballA.vy * sub;
+        ballB.x += ballB.vx * sub;
+        ballB.y += ballB.vy * sub;
+        clampBall(ballA);
+        clampBall(ballB);
+        tryCollision();
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(240, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      layout = {
+        cx: w * 0.5,
+        cy: h * 0.52,
+        w, h, dpr,
+      };
+    }
+
+    function setupCtx() {
+      const { w, h, dpr } = layout;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, w, h);
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#121824");
+      bg.addColorStop(1, "#181e2c");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.55);
+      glow.addColorStop(0, "rgba(251, 113, 133, 0.08)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, h);
+        ctx.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(w, j);
+        ctx.stroke();
+      }
+    }
+
+    function toScreen(lay, x, y) {
+      return {
+        x: lay.cx + x * PX_PER_M,
+        y: lay.cy - y * PX_PER_M,
+      };
+    }
+
+    function drawArrow(sx, sy, px, py, color, label) {
+      const ex = sx + px * P_SCALE;
+      const ey = sy - py * P_SCALE;
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const L = Math.hypot(dx, dy);
+      if (L < 5) return;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      const head = Math.min(12, L * 0.2);
+      const ang = Math.atan2(dy, dx);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 7), ey - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), ey - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+      if (label) {
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 6, ey - 4);
+      }
+    }
+
+    function drawTable(lay) {
+      const tl = toScreen(lay, -TABLE_W / 2, TABLE_H / 2);
+      const tw = TABLE_W * PX_PER_M;
+      const th = TABLE_H * PX_PER_M;
+
+      ctx.save();
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "rgba(20, 83, 45, 0.5)";
+      const felt = ctx.createLinearGradient(tl.x, tl.y, tl.x + tw, tl.y + th);
+      felt.addColorStop(0, "#0f3d24");
+      felt.addColorStop(0.45, "#14532d");
+      felt.addColorStop(1, "#0d4a28");
+      ctx.fillStyle = felt;
+      ctx.fillRect(tl.x, tl.y, tw, th);
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#3d2817";
+      ctx.lineWidth = 14;
+      ctx.strokeRect(tl.x, tl.y, tw, th);
+
+      ctx.strokeStyle = "#5c3d1e";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(tl.x + 5, tl.y + 5, tw - 10, th - 10);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tl.x + 10, tl.y + 10, tw - 20, th - 20);
+
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      ctx.beginPath();
+      ctx.ellipse(lay.cx, lay.cy, tw * 0.22, th * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBall(lay, b, fill, stroke, label) {
+      const p = toScreen(lay, b.x, b.y);
+      const r = BALL_R * PX_PER_M;
+      const grad = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.1, p.x, p.y, r);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.45, fill);
+      grad.addColorStop(1, stroke);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, p.x, p.y + 3);
+      ctx.textAlign = "left";
+      return p;
+    }
+
+    function drawFrame() {
+      resizeCanvas();
+      setupCtx();
+      syncSliders();
+      const lay = layout;
+
+      drawDarkBg(lay.w, lay.h);
+      drawTable(lay);
+
+      const pA = drawBall(lay, ballA, COLOR_A, "#0284c7", "A");
+      drawBall(lay, ballB, COLOR_B, "#be123c", "B");
+
+      if (phase === "idle") {
+        const vPrev = velocityFromShot(getVA(), getThetaDeg());
+        const nPrev = predictCollisionNormal();
+        const prev = computeAtImpact(getMA(), getMB(), vPrev, { x: 0, y: 0 }, nPrev);
+        updateCalcPanel(prev);
+        if (getVA() > 0.01) {
+          drawArrow(pA.x, pA.y, vPrev.x * getMA(), vPrev.y * getMA(), COLOR_P_BEFORE, "p_A");
+        }
+      }
+
+      if (frozen && collisionPt) {
+        const cp = toScreen(lay, collisionPt.x, collisionPt.y);
+        const mA = getMA();
+        const mB = getMB();
+        const vA0 = frozen.vAvec;
+        drawArrow(cp.x, cp.y, vA0.x * mA, vA0.y * mA, COLOR_P_BEFORE, "p_A");
+        drawArrow(cp.x, cp.y, frozen.vAp.x * mA, frozen.vAp.y * mA, COLOR_P_AFTER_A, "p′_A");
+        drawArrow(cp.x, cp.y, frozen.vBp.x * mB, frozen.vBp.y * mB, COLOR_P_AFTER_B, "p′_B");
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fb7185";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    ["mASlider", "mBSlider", "vSlider", "thetaSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        if (phase === "idle") syncSliders();
+      });
+    });
+
+    document.getElementById("shotBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      fireShot();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => drawFrame());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => drawFrame());
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => drawFrame()).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => resetSimulation());
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

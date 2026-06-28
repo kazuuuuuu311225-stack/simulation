@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>円運動の射影と単振動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0a1210 0%, #0f1a18 45%, #1a1428 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8f0ff;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #b8f0e8;
+      text-shadow: 0 0 20px rgba(52, 211, 167, 0.45);
+    }
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #8ab8b0; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(20, 184, 166, 0.35);
+      color: #eefaf8;
+      border: 1px solid rgba(94, 234, 212, 0.45);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.22);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: #a8d0c8; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #2dd4bf; }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(45, 212, 191, 0.12);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #c8f0e8;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint { margin: 0; font-size: 0.82rem; color: #8ab8b0; line-height: 1.55; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #14b8a6, #a855f7);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(45, 212, 191, 0.4);
+    }
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #c8f0e8;
+      border: 2px solid rgba(52, 211, 167, 0.35);
+    }
+
+    #statusPanel {
+      width: min(960px, 95vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.28);
+      color: #b8e8e0;
+    }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(300px, 34vw);
+        max-height: min(640px, 74dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.22);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #b8f0e8; }
+    .concept { margin: 0 0 12px; font-size: 0.88rem; color: #8ab8b0; }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(52, 211, 167, 0.15);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-label { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; color: #5eead4; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e0f5f0; }
+    .calc-line.sub { margin-left: 0.4rem; font-size: 0.78rem; color: #8ab8b0; }
+
+    .num-a { font-weight: 600; color: #cc99ff; }
+    .num-w { font-weight: 600; color: #34d399; }
+    .num-t { font-weight: 600; color: #fbbf24; }
+    .num-x { font-weight: 600; color: #5eead4; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .view-label { margin: 0; font-size: 0.82rem; font-weight: 600; color: #8ab8b0; text-align: center; }
+
+    .circle-wrap { width: 100%; height: min(240px, 30dvh); min-height: 200px; }
+    .graph-wrap { width: 100%; height: min(220px, 28dvh); min-height: 180px; }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(45, 212, 191, 0.18);
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(12, 24, 28, 0.5);
+      border: 1px solid rgba(52, 211, 167, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #8ab8b0;
+    }
+
+    .legend span { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>円運動の射影と単振動</h2>
+    <p class="chapter-label">9章　単振動 — 等速円運動の y 成分</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      振幅 A (px):
+      <input id="aSlider" type="range" min="50" max="200" step="5" value="100">
+      <span id="aValue">100</span>
+    </label>
+    <label>
+      角速度 ω (rad/s):
+      <input id="wSlider" type="range" min="0.5" max="5" step="0.1" value="2">
+      <span id="wValue">2.0</span>
+    </label>
+    <label>
+      初期位相 φ (rad):
+      <input id="phiSlider" type="range" min="-3.14" max="3.14" step="0.05" value="0">
+      <span id="phiValue">0.00</span>
+    </label>
+
+    <p class="formula-box">x(t) = A cos(ωt + φ)　　y(t) = A sin(ωt + φ)</p>
+    <p class="hint">右の縦軸が y、下のグラフと同じ目盛りです。P の高さ → 縦軸の点 → グラフの y と連動します。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">パラメータを設定して「スタート」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="値の連動">
+      <h3>値の連動</h3>
+      <p class="concept">円上の P の y 成分が sin 波になります（φ = 0 で 3 時から反時計回り）。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">パラメータ</p>
+        <p class="calc-line">A = <span id="cA" class="num-a">—</span> px</p>
+        <p class="calc-line">ω = <span id="cW" class="num-w">—</span> rad/s</p>
+        <p class="calc-line">φ = <span id="cPhi" class="num-a">—</span> rad</p>
+        <p class="calc-line">T = 2π / ω = <span id="cT" class="num-t">—</span> s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">現在</p>
+        <p class="calc-line">t = <span id="cTime" class="num-t">—</span> s</p>
+        <p class="calc-line">y = <span id="cYRel" class="num-x">—</span> px</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">円運動と y 射影（縦軸）</p>
+      <div class="circle-wrap" id="circleWrap">
+        <canvas id="circleCanvas"></canvas>
+      </div>
+      <p class="view-label">y − y(0) のグラフ（横軸 t）</p>
+      <div class="graph-wrap" id="graphWrap">
+        <canvas id="graphCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:#2dd4bf">○ 円</span>　
+    <span style="color:#ff6688">● P</span>　
+    <span style="color:#44aaff">— sin 波</span>　
+    点線 = P から y 軸へ
+  </div>
+
+  <script>
+    const circleCanvas = document.getElementById("circleCanvas");
+    const circleCtx = circleCanvas.getContext("2d");
+    const graphCanvas = document.getElementById("graphCanvas");
+    const graphCtx = graphCanvas.getContext("2d");
+    const circleWrap = document.getElementById("circleWrap");
+    const graphWrap = document.getElementById("graphWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const startBtn = document.getElementById("startBtn");
+
+    const MAX_DT = 1 / 30;
+    const TWO_PI = Math.PI * 2;
+    const AXIS_X = 52;
+    const DEFAULTS = { A: 100, omega: 2, phi: 0 };
+
+    let phase = "idle";
+    let simTime = 0;
+    let yOrigin = 0;
+    let circleLayout = { w: 0, h: 0, dpr: 1 };
+    let graphLayout = { w: 0, h: 0, dpr: 1 };
+    let circleStars = [];
+    let graphStars = [];
+
+    function plotMetrics(w, h, amp) {
+      const padL = AXIS_X;
+      const padR = 18;
+      const padT = 22;
+      const padB = 30;
+      const plotW = Math.max(40, w - padL - padR);
+      const plotH = Math.max(40, h - padT - padB);
+      const yScale = Math.min(plotH * 0.4, amp * 0.95);
+      const midY = padT + plotH / 2;
+      return { padL, padR, padT, padB, plotW, plotH, yScale, midY };
+    }
+
+    function yScreen(yRel, m, amp) {
+      return m.midY - (yRel / amp) * m.yScale;
+    }
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getA() { return parseFloat(document.getElementById("aSlider").value); }
+    function getOmega() { return parseFloat(document.getElementById("wSlider").value); }
+    function getPhi() { return parseFloat(document.getElementById("phiSlider").value); }
+
+    function captureOrigin() {
+      yOrigin = getA() * Math.sin(getPhi());
+    }
+
+    function computePhysics(t) {
+      const A = getA();
+      const omega = getOmega();
+      const phi = getPhi();
+      const T = TWO_PI / omega;
+      const theta = omega * t + phi;
+      const x = A * Math.cos(theta);
+      const y = A * Math.sin(theta);
+      const yRel = y - yOrigin;
+      return { A, omega, phi, T, theta, x, y, yRel, yOrigin, t };
+    }
+
+    function syncSliders() {
+      document.getElementById("aValue").textContent = fmt(getA(), 0);
+      document.getElementById("wValue").textContent = fmt(getOmega(), 1);
+      document.getElementById("phiValue").textContent = fmt(getPhi(), 2);
+    }
+
+    function updateCalcPanel(p) {
+      document.getElementById("cA").textContent = fmt(p.A, 0);
+      document.getElementById("cW").textContent = fmt(p.omega, 2);
+      document.getElementById("cPhi").textContent = fmt(p.phi, 2);
+      document.getElementById("cT").textContent = fmt(p.T, 3);
+      document.getElementById("cTime").textContent = fmt(p.t, 2);
+      document.getElementById("cYRel").textContent = fmt(p.yRel, 1);
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      simTime = 0;
+      syncSliders();
+      captureOrigin();
+      updateCalcPanel(computePhysics(0));
+      statusPanel.textContent = "パラメータを設定して「スタート」";
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      if (phase === "idle") captureOrigin();
+      phase = "running";
+      startBtn.textContent = "再開";
+      statusPanel.textContent = "円運動中 — y = A sin(ωt) と連動";
+    }
+
+    function pauseSimulation() {
+      if (phase !== "running") return;
+      phase = "paused";
+      statusPanel.textContent = "一時停止 — 「再開」または「リセット」";
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      simTime += dt;
+    }
+
+    function initStars(w, h) {
+      const stars = [];
+      for (let i = 0; i < 90; i += 1) {
+        stars.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.1 + 0.25,
+          a: Math.random() * 0.2 + 0.06,
+        });
+      }
+      return stars;
+    }
+
+    function drawDarkBg(c, w, h, stars) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e28");
+      bg.addColorStop(0.45, "#141038");
+      bg.addColorStop(1, "#1a0850");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+
+      const gal = c.createRadialGradient(w * 0.65, h * 0.3, 0, w * 0.5, h * 0.5, w * 0.6);
+      gal.addColorStop(0, "rgba(90,50,160,0.12)");
+      gal.addColorStop(1, "rgba(40,20,80,0)");
+      c.fillStyle = gal;
+      c.fillRect(0, 0, w, h);
+
+      stars.forEach((s) => {
+        c.fillStyle = `rgba(255,255,255,${s.a})`;
+        c.beginPath();
+        c.arc(s.x, s.y, s.r, 0, TWO_PI);
+        c.fill();
+      });
+    }
+
+    function drawGlassPanel(c, x, y, pw, ph, r) {
+      c.save();
+      c.fillStyle = "rgba(20, 30, 60, 0.55)";
+      c.strokeStyle = "rgba(52, 211, 167, 0.28)";
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x, y, pw, ph, r);
+      c.fill();
+      c.stroke();
+      c.restore();
+    }
+
+    function resizeCanvas(canvas, wrap, key) {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(260, Math.round(rect.width));
+      const h = Math.max(180, Math.round(rect.height));
+      const sizeChanged = canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr);
+      if (sizeChanged) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      if (key === "circle") {
+        circleLayout = { w, h, dpr };
+        if (sizeChanged || circleStars.length === 0) circleStars = initStars(w, h);
+      } else {
+        graphLayout = { w, h, dpr };
+        if (sizeChanged || graphStars.length === 0) graphStars = initStars(w, h);
+      }
+    }
+
+    function setupCtx(c, layout) {
+      c.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+      c.clearRect(0, 0, layout.w, layout.h);
+    }
+
+    function drawBezierCurve(c, pts) {
+      if (pts.length < 2) return;
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length - 1; i += 1) {
+        const xc = (pts[i].x + pts[i + 1].x) / 2;
+        const yc = (pts[i].y + pts[i + 1].y) / 2;
+        c.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      c.quadraticCurveTo(pts[pts.length - 2].x, pts[pts.length - 2].y, pts[pts.length - 1].x, pts[pts.length - 1].y);
+      c.stroke();
+    }
+
+    function drawYAxis(ctx, m, amp, labels, drawTAxis) {
+      const ax = m.padL;
+      const y0 = yScreen(0, m, amp);
+      ctx.strokeStyle = "rgba(52,211,167,0.45)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ax, m.padT);
+      ctx.lineTo(ax, m.padT + m.plotH);
+      ctx.stroke();
+      if (drawTAxis) {
+        ctx.strokeStyle = "rgba(52,211,167,0.28)";
+        ctx.beginPath();
+        ctx.moveTo(ax, y0);
+        ctx.lineTo(ax + m.plotW, y0);
+        ctx.stroke();
+      }
+      ctx.save();
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(255,100,130,0.5)";
+      ctx.fillStyle = "#ff5577";
+      ctx.beginPath();
+      ctx.arc(ax, y0, 4, 0, TWO_PI);
+      ctx.fill();
+      ctx.restore();
+      if (labels) {
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#ff6688";
+        ctx.fillText("O", ax - 14, y0 + 4);
+        ctx.fillStyle = "#b8f0e8";
+        ctx.fillText("y", ax - 14, m.padT + 6);
+        ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#8ab8b0";
+        ctx.fillText("+A", ax - 22, yScreen(amp, m, amp) + 3);
+        ctx.fillText("−A", ax - 22, yScreen(-amp, m, amp) + 3);
+      }
+    }
+
+    function drawCircleView(p) {
+      resizeCanvas(circleCanvas, circleWrap, "circle");
+      const { w, h } = circleLayout;
+      setupCtx(circleCtx, circleLayout);
+      drawDarkBg(circleCtx, w, h, circleStars);
+
+      const m = plotMetrics(w, h, p.A);
+      const R = Math.min(p.A, Math.min(m.plotW * 0.55, m.plotH * 0.88));
+      const axisX = m.padL;
+      const cy = m.midY;
+      const cx = axisX + 36 + R;
+      const theta = p.theta;
+      const px = cx + R * Math.cos(theta);
+      const py = cy - R * Math.sin(theta);
+
+      drawYAxis(circleCtx, m, p.A, true, false);
+
+      circleCtx.save();
+      circleCtx.shadowBlur = 16;
+      circleCtx.shadowColor = "rgba(80,160,255,0.5)";
+      circleCtx.strokeStyle = "#2dd4bf";
+      circleCtx.lineWidth = 3;
+      circleCtx.beginPath();
+      circleCtx.arc(cx, cy, R, 0, TWO_PI);
+      circleCtx.stroke();
+      circleCtx.restore();
+
+      circleCtx.strokeStyle = "rgba(52,211,167,0.15)";
+      circleCtx.lineWidth = 1;
+      circleCtx.beginPath();
+      circleCtx.moveTo(cx - R, cy);
+      circleCtx.lineTo(cx + R, cy);
+      circleCtx.moveTo(cx, cy - R);
+      circleCtx.lineTo(cx, cy + R);
+      circleCtx.stroke();
+
+      circleCtx.save();
+      circleCtx.shadowBlur = 8;
+      circleCtx.shadowColor = "rgba(100,180,255,0.4)";
+      circleCtx.strokeStyle = "rgba(100,180,255,0.55)";
+      circleCtx.lineWidth = 2;
+      circleCtx.beginPath();
+      circleCtx.moveTo(cx, cy);
+      circleCtx.lineTo(px, py);
+      circleCtx.stroke();
+      circleCtx.restore();
+
+      circleCtx.save();
+      circleCtx.shadowBlur = 10;
+      circleCtx.shadowColor = "rgba(0,220,255,0.45)";
+      circleCtx.strokeStyle = "rgba(0,220,255,0.7)";
+      circleCtx.lineWidth = 1.5;
+      circleCtx.setLineDash([6, 4]);
+      circleCtx.beginPath();
+      circleCtx.moveTo(px, py);
+      circleCtx.lineTo(axisX, py);
+      circleCtx.stroke();
+      circleCtx.setLineDash([]);
+      circleCtx.restore();
+
+      circleCtx.save();
+      circleCtx.shadowBlur = 12;
+      circleCtx.shadowColor = "rgba(255,80,100,0.55)";
+      circleCtx.fillStyle = "#ff5577";
+      circleCtx.beginPath();
+      circleCtx.arc(axisX, py, 8, 0, TWO_PI);
+      circleCtx.fill();
+      circleCtx.strokeStyle = "rgba(255,200,220,0.6)";
+      circleCtx.lineWidth = 2;
+      circleCtx.stroke();
+      circleCtx.restore();
+
+      circleCtx.save();
+      circleCtx.shadowBlur = 18;
+      circleCtx.shadowColor = "rgba(255,80,100,0.6)";
+      circleCtx.fillStyle = "#ff5577";
+      circleCtx.beginPath();
+      circleCtx.arc(px, py, 11, 0, TWO_PI);
+      circleCtx.fill();
+      circleCtx.fillStyle = "#fff";
+      circleCtx.font = "700 10px Inter, sans-serif";
+      circleCtx.textAlign = "center";
+      circleCtx.fillText("P", px, py + 4);
+      circleCtx.textAlign = "left";
+      circleCtx.restore();
+
+      circleCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      circleCtx.fillStyle = "#8ab8b0";
+      circleCtx.fillText("y 射影", axisX - 8, h - 8);
+    }
+
+    function getTimeWindow(t, T, runPhase) {
+      const windowT = T * 2;
+      if (runPhase === "idle" || t <= 0) {
+        return { tStart: 0, tEnd: windowT, tNow: 0, growing: true };
+      }
+      if (t <= windowT) {
+        return { tStart: 0, tEnd: windowT, tNow: t, growing: true };
+      }
+      return { tStart: t - windowT, tEnd: t, tNow: t, growing: false };
+    }
+
+    function drawGraph(p) {
+      resizeCanvas(graphCanvas, graphWrap, "graph");
+      const { w, h } = graphLayout;
+      setupCtx(graphCtx, graphLayout);
+      drawDarkBg(graphCtx, w, h, graphStars);
+
+      const m = plotMetrics(w, h, p.A);
+      const T = p.T;
+      const amp = p.A;
+      const axisX = m.padL;
+      const y0 = yScreen(0, m, amp);
+      const tw = getTimeWindow(p.t, T, phase);
+      const span = tw.tEnd - tw.tStart;
+
+      const tx = (t) => axisX + ((t - tw.tStart) / span) * m.plotW;
+      const yRelAt = (t) => amp * Math.sin(p.omega * t + p.phi) - p.yOrigin;
+
+      drawYAxis(graphCtx, m, amp, true, true);
+
+      const sampleCurve = (tFrom, tTo, steps) => {
+        const pts = [];
+        const range = tTo - tFrom;
+        if (range <= 0) return pts;
+        for (let i = 0; i <= steps; i += 1) {
+          const t = tFrom + (i / steps) * range;
+          pts.push({ x: tx(t), y: yScreen(yRelAt(t), m, amp) });
+        }
+        return pts;
+      };
+
+      const steps = Math.max(80, Math.round(m.plotW * 0.8));
+      const fullPts = sampleCurve(tw.tStart, tw.tEnd, steps);
+      const liveEnd = tw.growing ? tw.tNow : tw.tEnd;
+      const livePts = tw.tNow > 0.001
+        ? sampleCurve(tw.tStart, liveEnd, Math.max(2, Math.round(steps * ((liveEnd - tw.tStart) / span))))
+        : [];
+
+      graphCtx.lineCap = "round";
+      graphCtx.lineJoin = "round";
+
+      graphCtx.save();
+      graphCtx.shadowBlur = 10;
+      graphCtx.shadowColor = "rgba(255,255,255,0.2)";
+      graphCtx.strokeStyle = "rgba(80,160,255,0.25)";
+      graphCtx.lineWidth = 2.5;
+      drawBezierCurve(graphCtx, fullPts);
+      graphCtx.restore();
+
+      if (livePts.length >= 2) {
+        graphCtx.save();
+        graphCtx.shadowBlur = 14;
+        graphCtx.shadowColor = "rgba(255,255,255,0.35)";
+        graphCtx.strokeStyle = "#44aaff";
+        graphCtx.lineWidth = 4;
+        drawBezierCurve(graphCtx, livePts);
+        graphCtx.restore();
+        graphCtx.strokeStyle = "#44aaff";
+        graphCtx.lineWidth = 3;
+        drawBezierCurve(graphCtx, livePts);
+      }
+
+      const curX = tx(tw.tNow);
+      const curY = yScreen(p.yRel, m, amp);
+
+      graphCtx.strokeStyle = "rgba(255,100,130,0.4)";
+      graphCtx.lineWidth = 1.5;
+      graphCtx.setLineDash([4, 4]);
+      graphCtx.beginPath();
+      graphCtx.moveTo(curX, m.padT);
+      graphCtx.lineTo(curX, m.padT + m.plotH);
+      graphCtx.stroke();
+      graphCtx.setLineDash([]);
+
+      graphCtx.save();
+      graphCtx.shadowBlur = 12;
+      graphCtx.shadowColor = "rgba(80,180,255,0.55)";
+      graphCtx.fillStyle = "#44aaff";
+      graphCtx.beginPath();
+      graphCtx.arc(curX, curY, 6, 0, TWO_PI);
+      graphCtx.fill();
+      graphCtx.restore();
+
+      graphCtx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      graphCtx.fillStyle = "#8ab8b0";
+      graphCtx.fillText("t", axisX + m.plotW - 2, y0 + 14);
+      graphCtx.fillText(fmt(tw.tStart, 1), axisX - 10, y0 + 26);
+      if (tw.growing && T <= tw.tEnd) {
+        graphCtx.fillText("T", tx(T) - 3, y0 + 14);
+      } else if (!tw.growing) {
+        graphCtx.fillText(fmt(tw.tEnd, 1), axisX + m.plotW - 28, y0 + 26);
+      }
+    }
+
+    function draw() {
+      const p = computePhysics(simTime);
+      updateCalcPanel(p);
+      drawCircleView(p);
+      drawGraph(p);
+    }
+
+    ["aSlider", "wSlider", "phiSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase === "idle") captureOrigin();
+        if (phase !== "running") updateCalcPanel(computePhysics(simTime));
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("aSlider").value = DEFAULTS.A;
+      document.getElementById("wSlider").value = DEFAULTS.omega;
+      document.getElementById("phiSlider").value = DEFAULTS.phi;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(circleWrap);
+      ro.observe(graphWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

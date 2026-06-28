@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>単振動と正弦波</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #0a1210 0%, #0f1a18 45%, #1a1428 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #e8f0ff;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #b8f0e8;
+      text-shadow: 0 0 20px rgba(52, 211, 167, 0.45);
+    }
+
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #8ab8b0; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(20, 184, 166, 0.35);
+      color: #eefaf8;
+      border: 1px solid rgba(94, 234, 212, 0.45);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.22);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label { display: block; font-size: 14px; font-weight: 500; color: #a8d0c8; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #2dd4bf; }
+
+    .formula-box {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(45, 212, 191, 0.12);
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #c8f0e8;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint { margin: 0; font-size: 0.82rem; color: #8ab8b0; line-height: 1.55; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1;
+      min-width: 90px;
+      padding: 14px 8px;
+      min-height: 48px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #14b8a6, #a855f7);
+      color: white;
+      border: none;
+      box-shadow: 0 0 16px rgba(45, 212, 191, 0.4);
+    }
+
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #c8f0e8;
+      border: 2px solid rgba(52, 211, 167, 0.35);
+    }
+
+    #statusPanel {
+      width: min(960px, 95vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.28);
+      color: #b8e8e0;
+    }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout { flex-direction: row; align-items: stretch; }
+      #calcPanel {
+        flex: 0 0 min(320px, 36vw);
+        max-height: min(620px, 72dvh);
+        overflow-y: auto;
+      }
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 24, 28, 0.65);
+      border: 1px solid rgba(52, 211, 167, 0.22);
+      line-height: 1.6;
+    }
+
+    #calcPanel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #b8f0e8; }
+    .concept { margin: 0 0 12px; font-size: 0.88rem; color: #8ab8b0; }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(52, 211, 167, 0.15);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #2dd4bf; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #34d399; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #fbbf24; }
+
+    .calc-label { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; color: #5eead4; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e0f5f0; }
+    .calc-line.sub { margin-left: 0.4rem; font-size: 0.78rem; color: #8ab8b0; }
+
+    .num-a { font-weight: 600; color: #cc99ff; }
+    .num-k { font-weight: 600; color: #5eead4; }
+    .num-m { font-weight: 600; color: #99f6e4; }
+    .num-w { font-weight: 600; color: #34d399; }
+    .num-t { font-weight: 600; color: #fbbf24; }
+    .num-x { font-weight: 600; color: #f472b6; }
+
+    .canvas-section { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .view-label { margin: 0; font-size: 0.82rem; font-weight: 600; color: #8ab8b0; text-align: center; }
+
+    .spring-wrap { width: 100%; height: min(220px, 28dvh); min-height: 180px; }
+    .graph-wrap { width: 100%; height: min(260px, 32dvh); min-height: 200px; }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      background: transparent;
+      touch-action: none;
+      box-shadow: 0 0 32px rgba(45, 212, 191, 0.18);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>単振動と正弦波</h2>
+    <p class="chapter-label">9章　単振動 — バネ振動と x(t) = A cos(ωt + φ)</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      振幅 A (m):
+      <input id="aSlider" type="range" min="0.05" max="0.5" step="0.01" value="0.2">
+      <span id="aValue">0.20</span>
+    </label>
+    <label>
+      バネ定数 k (N/m):
+      <input id="kSlider" type="range" min="5" max="50" step="1" value="20">
+      <span id="kValue">20</span>
+    </label>
+    <label>
+      質量 m (kg):
+      <input id="mSlider" type="range" min="0.1" max="5" step="0.1" value="1">
+      <span id="mValue">1.0</span>
+    </label>
+    <label>
+      初期位相 φ (rad):
+      <input id="phiSlider" type="range" min="-3.14" max="3.14" step="0.05" value="0">
+      <span id="phiValue">0.00</span>
+    </label>
+
+    <p class="formula-box">ω = √(k/m)　　T = 2π/ω　　x(t) = A cos(ωt + φ)</p>
+    <p class="hint">上のバネ振動と下の正弦波グラフは同じ x(t) で同期しています。</p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">パラメータを設定して「スタート」</div>
+
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="値の連動">
+      <h3>値の連動</h3>
+      <p class="concept">復元力 F = −kx より m d²x/dt² = −kx。解は x(t) = A cos(ωt + φ) です。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">パラメータ</p>
+        <p class="calc-line">A = <span id="cA" class="num-a">—</span> m</p>
+        <p class="calc-line">k = <span id="cK" class="num-k">—</span> N/m</p>
+        <p class="calc-line">m = <span id="cM" class="num-m">—</span> kg</p>
+        <p class="calc-line">φ = <span id="cPhi" class="num-a">—</span> rad</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">角振動数・周期</p>
+        <p class="calc-line">ω = √(k/m)</p>
+        <p class="calc-line sub">→ ω = <span id="cW" class="num-w">—</span> rad/s</p>
+        <p class="calc-line">T = 2π / ω</p>
+        <p class="calc-line sub">→ T = <span id="cT" class="num-t">—</span> s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">現在の変位</p>
+        <p class="calc-line">x(t) = A cos(ωt + φ)</p>
+        <p class="calc-line sub">t = <span id="cTime" class="num-t">—</span> s</p>
+        <p class="calc-line sub">→ x = <span id="cX" class="num-x">—</span> m</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <p class="view-label">単振動（バネ＋質点）</p>
+      <div class="spring-wrap" id="springWrap">
+        <canvas id="springCanvas"></canvas>
+      </div>
+      <p class="view-label">変位 x(t) の正弦波</p>
+      <div class="graph-wrap" id="graphWrap">
+        <canvas id="graphCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const springCanvas = document.getElementById("springCanvas");
+    const springCtx = springCanvas.getContext("2d");
+    const graphCanvas = document.getElementById("graphCanvas");
+    const graphCtx = graphCanvas.getContext("2d");
+    const springWrap = document.getElementById("springWrap");
+    const graphWrap = document.getElementById("graphWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const startBtn = document.getElementById("startBtn");
+
+    const MAX_DT = 1 / 30;
+    const TWO_PI = Math.PI * 2;
+    const bgDots = [];
+    let bgDotsKey = "";
+
+    function ensureBgDots(w, h) {
+      const key = `${w}x${h}`;
+      if (bgDotsKey === key && bgDots.length > 0) return;
+      bgDotsKey = key;
+      bgDots.length = 0;
+      for (let i = 0; i < 90; i += 1) {
+        bgDots.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.1 + 0.25,
+          a: Math.min(Math.random() * 0.22 + 0.06, 0.28),
+        });
+      }
+    }
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#080f0e");
+      bg.addColorStop(1, "#141022");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      ensureBgDots(w, h);
+      bgDots.forEach((d) => {
+        c.fillStyle = `rgba(180,255,230,${d.a})`;
+        c.beginPath();
+        c.arc(d.x, d.y, d.r, 0, TWO_PI);
+        c.fill();
+      });
+    }
+
+    function drawGlassPanel(c, x, y, pw, ph, r) {
+      c.save();
+      c.fillStyle = "rgba(12,24,28,0.72)";
+      c.strokeStyle = "rgba(52,211,167,0.3)";
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x, y, pw, ph, r ?? 10);
+      c.fill();
+      c.stroke();
+      c.restore();
+    }
+
+    function drawHQSpring(c, x1, y1, x2, y2, coils) {
+      const len = x2 - x1;
+      if (len < 8) return;
+      const amp = 10;
+      const steps = coils * 2;
+      c.save();
+      c.lineJoin = "round";
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(x1, y1);
+      for (let i = 1; i <= steps; i += 1) {
+        const t = i / steps;
+        c.lineTo(x1 + len * t, y1 + (i % 2 === 0 ? 0 : (i % 4 === 1 ? -amp : amp)));
+      }
+      c.lineTo(x2, y2);
+      c.strokeStyle = "rgba(45,212,191,0.28)";
+      c.lineWidth = 6;
+      c.shadowBlur = 12;
+      c.shadowColor = "rgba(45,212,191,0.5)";
+      c.stroke();
+      c.shadowBlur = 0;
+      c.strokeStyle = "#5eead4";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.restore();
+    }
+
+    function drawHQMass(c, x, y, r, label) {
+      c.save();
+      c.shadowBlur = 16;
+      c.shadowColor = "rgba(249,115,22,0.5)";
+      const grad = c.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+      grad.addColorStop(0, "#fde68a");
+      grad.addColorStop(0.55, "#f97316");
+      grad.addColorStop(1, "#c2410c");
+      c.fillStyle = grad;
+      c.beginPath();
+      c.arc(x, y, r, 0, TWO_PI);
+      c.fill();
+      c.shadowBlur = 0;
+      c.strokeStyle = "rgba(253,224,71,0.45)";
+      c.lineWidth = 2;
+      c.stroke();
+      if (label) {
+        c.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        c.fillStyle = "#eefaf8";
+        c.textAlign = "center";
+        c.fillText(label, x, y + 4);
+        c.textAlign = "left";
+      }
+      c.restore();
+    }
+
+    const DEFAULTS = { A: 0.2, k: 20, m: 1, phi: 0 };
+
+    let phase = "idle";
+    let simTime = 0;
+    let springLayout = { w: 0, h: 0, dpr: 1 };
+    let graphLayout = { w: 0, h: 0, dpr: 1, pad: { l: 48, r: 16, t: 22, b: 36 } };
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getA() { return parseFloat(document.getElementById("aSlider").value); }
+    function getK() { return parseFloat(document.getElementById("kSlider").value); }
+    function getM() { return parseFloat(document.getElementById("mSlider").value); }
+    function getPhi() { return parseFloat(document.getElementById("phiSlider").value); }
+
+    function computePhysics(t) {
+      const A = getA();
+      const k = getK();
+      const m = getM();
+      const phi = getPhi();
+      const omega = Math.sqrt(k / m);
+      const T = TWO_PI / omega;
+      const x = A * Math.cos(omega * t + phi);
+      return { A, k, m, phi, omega, T, x, t };
+    }
+
+    function syncSliders() {
+      document.getElementById("aValue").textContent = fmt(getA(), 2);
+      document.getElementById("kValue").textContent = fmt(getK(), 0);
+      document.getElementById("mValue").textContent = fmt(getM(), 1);
+      document.getElementById("phiValue").textContent = fmt(getPhi(), 2);
+    }
+
+    function updateCalcPanel(p) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      set("cA", fmt(p.A, 2));
+      set("cK", fmt(p.k, 0));
+      set("cM", fmt(p.m, 1));
+      set("cPhi", fmt(p.phi, 2));
+      set("cW", fmt(p.omega, 3));
+      set("cT", fmt(p.T, 3));
+      set("cTime", fmt(p.t, 2));
+      set("cX", fmt(p.x, 3));
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      simTime = 0;
+      syncSliders();
+      updateCalcPanel(computePhysics(0));
+      statusPanel.textContent = "パラメータを設定して「スタート」";
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "再開";
+      statusPanel.textContent = "単振動中 — バネとグラフが同期";
+    }
+
+    function pauseSimulation() {
+      if (phase !== "running") return;
+      phase = "paused";
+      statusPanel.textContent = "一時停止 — 「再開」または「リセット」";
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      simTime += dt;
+    }
+
+    function resizeCanvas(canvas, wrap, layoutKey) {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(260, Math.round(rect.width));
+      const h = Math.max(160, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      if (layoutKey === "spring") springLayout = { w, h, dpr };
+      else graphLayout = { ...graphLayout, w, h, dpr };
+    }
+
+    function setupCtx(c, layout) {
+      c.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+      c.clearRect(0, 0, layout.w, layout.h);
+    }
+
+    function drawSpring(p) {
+      resizeCanvas(springCanvas, springWrap, "spring");
+      const { w, h } = springLayout;
+      setupCtx(springCtx, springLayout);
+      drawDarkBg(springCtx, w, h);
+
+      const wallX = 36;
+      const eqX = w * 0.5;
+      const trackY = h * 0.55;
+      const maxApx = (w - wallX - 80) * 0.42;
+      const massX = eqX + (p.x / Math.max(p.A, 0.001)) * maxApx;
+
+      springCtx.strokeStyle = "rgba(60,80,120,0.55)";
+      springCtx.lineWidth = 3;
+      springCtx.beginPath();
+      springCtx.moveTo(wallX, trackY + 28);
+      springCtx.lineTo(w - 24, trackY + 28);
+      springCtx.stroke();
+
+      springCtx.strokeStyle = "rgba(0,220,255,0.45)";
+      springCtx.setLineDash([5, 5]);
+      springCtx.lineWidth = 1.5;
+      springCtx.beginPath();
+      springCtx.moveTo(eqX, trackY - 40);
+      springCtx.lineTo(eqX, trackY + 36);
+      springCtx.stroke();
+      springCtx.setLineDash([]);
+      springCtx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      springCtx.fillStyle = "#8ab8b0";
+      springCtx.fillText("平衡位置", eqX - 22, trackY - 44);
+
+      const wallGrad = springCtx.createLinearGradient(wallX - 14, trackY - 50, wallX, trackY + 50);
+      wallGrad.addColorStop(0, "#3a4a66");
+      wallGrad.addColorStop(1, "#2a3548");
+      springCtx.fillStyle = wallGrad;
+      springCtx.fillRect(wallX - 14, trackY - 50, 14, 100);
+
+      drawHQSpring(springCtx, wallX + 4, trackY, massX - 22, trackY, 14);
+      drawHQMass(springCtx, massX, trackY, 22, "m");
+
+      drawGlassPanel(springCtx, 16, 14, 168, 52, 10);
+      springCtx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+      springCtx.fillStyle = "#b8f0e8";
+      springCtx.fillText(`x(t) = ${fmt(p.x, 3)} m`, 28, 36);
+      springCtx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+      springCtx.fillStyle = "#8ab8b0";
+      springCtx.fillText(`t = ${fmt(p.t, 2)} s`, 28, 54);
+    }
+
+    function strokeGlowCurve(c, pts, color, width) {
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i += 1) c.lineTo(pts[i].x, pts[i].y);
+      c.strokeStyle = "rgba(255,255,255,0.35)";
+      c.lineWidth = width + 3;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i += 1) c.lineTo(pts[i].x, pts[i].y);
+      c.strokeStyle = color;
+      c.lineWidth = width;
+      c.stroke();
+    }
+
+    function drawGraph(p) {
+      resizeCanvas(graphCanvas, graphWrap, "graph");
+      const { w, h, pad } = graphLayout;
+      setupCtx(graphCtx, graphLayout);
+      drawDarkBg(graphCtx, w, h);
+
+      const plotL = pad.l;
+      const plotR = w - pad.r;
+      const plotT = pad.t;
+      const plotB = h - pad.b;
+      const plotW = plotR - plotL;
+      const plotH = plotB - plotT;
+
+      const tMax = Math.max(p.T * 2.5, p.t + p.T * 0.4, p.T);
+      const yMax = Math.max(p.A * 1.25, 0.06);
+
+      const tx = (t) => plotL + (t / tMax) * plotW;
+      const ty = (x) => plotT + plotH * 0.5 - (x / yMax) * (plotH * 0.45);
+
+      graphCtx.strokeStyle = "rgba(52,180,160,0.14)";
+      graphCtx.lineWidth = 1;
+      graphCtx.beginPath();
+      graphCtx.moveTo(plotL, plotT + plotH * 0.5);
+      graphCtx.lineTo(plotR, plotT + plotH * 0.5);
+      graphCtx.stroke();
+      for (let i = 0; i <= 4; i += 1) {
+        const y = plotT + (plotH * i) / 4;
+        graphCtx.beginPath();
+        graphCtx.moveTo(plotL, y);
+        graphCtx.lineTo(plotR, y);
+        graphCtx.stroke();
+      }
+
+      const periodStart = Math.floor(p.t / p.T) * p.T;
+      const periodEnd = periodStart + p.T;
+      const steps = Math.max(200, Math.round(plotW));
+
+      const fullPts = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (i / steps) * tMax;
+        const x = p.A * Math.cos(p.omega * t + p.phi);
+        fullPts.push({ x: tx(t), y: ty(x) });
+      }
+      strokeGlowCurve(graphCtx, fullPts, "rgba(94,234,212,0.45)", 2.5);
+
+      const periodPts = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (i / steps) * tMax;
+        if (t < periodStart || t > periodEnd) continue;
+        const x = p.A * Math.cos(p.omega * t + p.phi);
+        periodPts.push({ x: tx(t), y: ty(x) });
+      }
+      if (periodPts.length > 1) strokeGlowCurve(graphCtx, periodPts, "#2dd4bf", 3.5);
+
+      if (periodEnd <= tMax) {
+        graphCtx.fillStyle = "rgba(68,136,255,0.12)";
+        graphCtx.fillRect(tx(periodStart), plotT, tx(periodEnd) - tx(periodStart), plotH);
+        graphCtx.strokeStyle = "rgba(94,234,212,0.45)";
+        graphCtx.lineWidth = 1.5;
+        graphCtx.setLineDash([4, 4]);
+        graphCtx.beginPath();
+        graphCtx.moveTo(tx(periodStart), plotT);
+        graphCtx.lineTo(tx(periodStart), plotB);
+        graphCtx.moveTo(tx(periodEnd), plotT);
+        graphCtx.lineTo(tx(periodEnd), plotB);
+        graphCtx.stroke();
+        graphCtx.setLineDash([]);
+        graphCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        graphCtx.fillStyle = "#2dd4bf";
+        graphCtx.fillText("1周期 T", tx(periodStart) + 4, plotT + 12);
+      }
+
+      const curX = tx(p.t);
+      graphCtx.strokeStyle = "#f472b6";
+      graphCtx.lineWidth = 2;
+      graphCtx.beginPath();
+      graphCtx.moveTo(curX, plotT);
+      graphCtx.lineTo(curX, plotB);
+      graphCtx.stroke();
+
+      graphCtx.fillStyle = "#f472b6";
+      graphCtx.beginPath();
+      graphCtx.arc(curX, ty(p.x), 7, 0, TWO_PI);
+      graphCtx.fill();
+
+      graphCtx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      graphCtx.fillStyle = "#8ab8b0";
+      graphCtx.fillText("t (s)", plotR - 28, plotB + 24);
+      graphCtx.fillStyle = "#b8f0e8";
+      graphCtx.fillText("x (m)", 8, plotT + 4);
+      graphCtx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      graphCtx.fillStyle = "#8ab8b0";
+      graphCtx.fillText(`0`, plotL - 4, plotB + 14);
+      graphCtx.fillText(`${fmt(tMax, 1)}`, plotR - 18, plotB + 14);
+      graphCtx.fillText(`+${fmt(yMax, 2)}`, 6, plotT + 12);
+      graphCtx.fillText(`-${fmt(yMax, 2)}`, 6, plotB - 4);
+    }
+
+    function draw() {
+      const p = computePhysics(simTime);
+      updateCalcPanel(p);
+      drawSpring(p);
+      drawGraph(p);
+    }
+
+    ["aSlider", "kSlider", "mSlider", "phiSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") updateCalcPanel(computePhysics(simTime));
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("aSlider").value = DEFAULTS.A;
+      document.getElementById("kSlider").value = DEFAULTS.k;
+      document.getElementById("mSlider").value = DEFAULTS.m;
+      document.getElementById("phiSlider").value = DEFAULTS.phi;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(springWrap);
+      ro.observe(graphWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
