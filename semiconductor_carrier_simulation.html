@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>半導体キャリア — バンド・pn接合・LED</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --accent: #06b6d4;
+      --accent-light: #22d3ee;
+      --accent-glow: rgba(6, 182, 212, 0.45);
+      --electron: #38bdf8;
+      --hole: #fb7185;
+      --slate-bg: rgba(12, 18, 32, 0.78);
+      --slate-border: rgba(6, 182, 212, 0.22);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1524 38%, #101c30 72%, #0a1018 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text);
+      padding: max(12px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(90px);
+      opacity: 0.4;
+    }
+
+    body::before {
+      width: min(440px, 75vw);
+      height: min(440px, 75vw);
+      top: -140px;
+      left: -100px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.35), transparent 70%);
+    }
+
+    body::after {
+      width: min(360px, 70vw);
+      height: min(360px, 70vw);
+      bottom: -120px;
+      right: -80px;
+      background: radial-gradient(circle, rgba(251, 113, 133, 0.22), transparent 70%);
+    }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: min(980px, 96vw);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    h2 {
+      margin-top: 14px;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-shadow: 0 0 24px var(--accent-glow);
+      letter-spacing: 0.02em;
+    }
+
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: var(--muted); }
+    .page-header { display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: rgba(6, 182, 212, 0.14);
+      color: #cffafe;
+      border: 1px solid rgba(6, 182, 212, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    #back:hover { background: rgba(6, 182, 212, 0.22); box-shadow: 0 0 18px var(--accent-glow); }
+
+    .panel {
+      padding: 16px 18px;
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    #infoPanel h3, #ui h3 {
+      margin: 0 0 12px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--accent-light);
+      letter-spacing: 0.03em;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 8px;
+    }
+
+    .info-item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      transition: border-color 0.15s;
+    }
+
+    .info-item:hover { border-color: rgba(6, 182, 212, 0.25); }
+
+    .info-item .label { color: var(--muted); display: block; margin-bottom: 3px; font-size: 0.72rem; }
+    .info-item .val { font-weight: 700; color: #f1f5f9; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+    .info-item .val.e { color: var(--electron); text-shadow: 0 0 12px rgba(56, 189, 248, 0.35); }
+    .info-item .val.h { color: var(--hole); text-shadow: 0 0 12px rgba(251, 113, 133, 0.35); }
+    .info-item .val.g { color: #34d399; }
+
+    .sim-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 860px) {
+      .sim-layout {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+
+      #ui {
+        flex: 0 0 min(340px, 38vw);
+        position: sticky;
+        top: 12px;
+      }
+
+      .viz-column { flex: 1; min-width: 0; }
+    }
+
+    label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      accent-color: var(--accent);
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      border: 1px solid rgba(6, 182, 212, 0.28);
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .slider-row { grid-template-columns: 1fr; }
+    }
+
+    .formula-box {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.16);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #a5f3fc;
+      text-align: center;
+      line-height: 1.55;
+    }
+
+    .hint {
+      margin: 0 0 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-row button {
+      flex: 1 1 calc(33% - 8px);
+      min-width: 100px;
+      padding: 12px 8px;
+      min-height: 46px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      border: 1px solid rgba(6, 182, 212, 0.28);
+      background: rgba(255, 255, 255, 0.06);
+      color: #cbd5e1;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+
+    .btn-row button:active { transform: scale(0.98); }
+
+    .btn-row button.primary {
+      background: linear-gradient(135deg, #0891b2, var(--accent));
+      color: white;
+      border: none;
+      box-shadow: 0 0 18px var(--accent-glow);
+    }
+
+    .btn-row button.active {
+      background: rgba(6, 182, 212, 0.18);
+      border-color: var(--accent-light);
+      color: #cffafe;
+      box-shadow: 0 0 14px rgba(6, 182, 212, 0.25);
+    }
+
+    .canvas-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .canvas-block {
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(8, 14, 26, 0.92);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .canvas-label {
+      margin: 0;
+      padding: 10px 16px 0;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent-light);
+      letter-spacing: 0.02em;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(260px, 34dvh);
+      min-height: 200px;
+    }
+
+    .canvas-wrap.device {
+      height: min(320px, 42dvh);
+      min-height: 240px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      touch-action: none;
+    }
+
+    #liveReadout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      justify-content: center;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: rgba(8, 14, 26, 0.88);
+      border: 1px solid rgba(6, 182, 212, 0.18);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #liveReadout span { white-space: nowrap; }
+    #liveReadout .e { color: var(--electron); }
+    #liveReadout .h { color: var(--hole); }
+    #liveReadout .on { color: #fbbf24; }
+
+    #runStatus {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: center;
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.16);
+      color: #a5f3fc;
+      line-height: 1.55;
+    }
+
+    #runStatus.led {
+      background: rgba(251, 191, 36, 0.12);
+      border-color: rgba(251, 191, 36, 0.28);
+      color: #fde68a;
+    }
+
+    #motionGuide {
+      border-left: 4px solid var(--accent);
+      background: rgba(6, 182, 212, 0.08);
+      padding: 12px 14px;
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 10px;
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: #cbd5e1;
+    }
+
+    #motionGuide strong { color: var(--accent-light); }
+    #motionGuide .e { color: var(--electron); font-weight: 700; }
+    #motionGuide .h { color: var(--hole); font-weight: 700; }
+
+    .guide-steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .guide-steps { grid-template-columns: 1fr; }
+    }
+
+    .guide-step {
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.76rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      color: var(--muted);
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .guide-step.active {
+      border-color: var(--accent);
+      background: rgba(6, 182, 212, 0.12);
+      color: #e0f2fe;
+      font-weight: 600;
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.15);
+    }
+
+    .canvas-legend {
+      margin: 0;
+      padding: 0 16px 10px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .canvas-legend .e { color: var(--electron); font-weight: 700; }
+    .canvas-legend .h { color: var(--hole); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+  <header class="page-header">
+    <h2>半導体キャリア</h2>
+    <p class="chapter-label">EX章　半導体 — バンド・ドーピング・pn接合・LED</p>
+    <a id="back" href="index.html">← ホームへ戻る</a>
+  </header>
+
+  <section class="panel" id="infoPanel" aria-label="リアルタイム情報">
+    <h3>リアルタイム表示</h3>
+    <div class="info-grid">
+      <div class="info-item"><span class="label">バンドギャップ E<sub>g</sub></span><span class="val" id="iEg">—</span></div>
+      <div class="info-item"><span class="label">n型濃度 n</span><span class="val e" id="iN">—</span></div>
+      <div class="info-item"><span class="label">p型濃度 p</span><span class="val h" id="iP">—</span></div>
+      <div class="info-item"><span class="label">ドリフト v<sub>d</sub>（e / h）</span><span class="val" id="iVd">—</span></div>
+      <div class="info-item"><span class="label">拡散電流密度 J</span><span class="val" id="iJ">—</span></div>
+      <div class="info-item"><span class="label">空乏層幅 W</span><span class="val" id="iW">—</span></div>
+      <div class="info-item"><span class="label">再結合率</span><span class="val g" id="iR">—</span></div>
+      <div class="info-item"><span class="label">発光波長 λ</span><span class="val" id="iLam">—</span></div>
+    </div>
+  </section>
+
+  <div class="sim-layout">
+  <section class="panel" id="ui">
+    <h3>操作パネル</h3>
+    <div id="motionGuide">
+      <strong>見方：</strong>
+      <span class="e">青丸 = 電子 e⁻</span>（負電荷）　
+      <span class="h">赤丸 = 正孔 h⁺</span>（電子が抜けた穴）。<br>
+      電界をかけると <span class="e">e⁻ は E と逆</span>、<span class="h">h⁺ は E と同じ方向</span> に動きます（正孔は「逆方向に動く」ように見える）。
+    </div>
+    <div class="guide-steps" id="guideSteps">
+      <div class="guide-step active" data-step="1">① 励起 → e⁻ が VB→CB、h⁺ が残る</div>
+      <div class="guide-step" data-step="2">② 電界 ON → ドリフト（矢印の方向）</div>
+      <div class="guide-step" data-step="3">③ pn接合 → 境界で再結合・空乏層</div>
+      <div class="guide-step" data-step="4">④ LED → 再結合で光</div>
+    </div>
+    <p class="formula-box">v<sub>d</sub> = μE　　J = −qD Δn/Δx　　λ ≈ 1240 / E<sub>g</sub> (nm)</p>
+    <p class="hint">まず「キャリアの動きを見る」で少ない粒だけゆっくり確認するのがおすすめです。</p>
+
+    <label>
+      材料（E<sub>g</sub>）
+      <select id="materialSelect">
+        <option value="Si">Si（E<sub>g</sub> ≈ 1.12 eV）</option>
+        <option value="GaAs">GaAs（E<sub>g</sub> ≈ 1.42 eV）</option>
+        <option value="InGaN">InGaN（E<sub>g</sub> ≈ 2.5 eV）</option>
+      </select>
+    </label>
+
+    <div class="slider-row">
+      <label>
+        n型ドーピング N<sub>D</sub>
+        <input id="nDopSlider" type="range" min="15" max="19" step="0.1" value="17">
+        <span id="nDopVal">10¹⁷ cm⁻³</span>
+      </label>
+      <label>
+        p型ドーピング N<sub>A</sub>
+        <input id="pDopSlider" type="range" min="15" max="19" step="0.1" value="17">
+        <span id="pDopVal">10¹⁷ cm⁻³</span>
+      </label>
+    </div>
+
+    <label>
+      電界 E (kV/cm)
+      <input id="eSlider" type="range" min="-5" max="5" step="0.1" value="0">
+      <span id="eVal">0.0</span>
+    </label>
+
+    <div class="btn-row">
+      <button type="button" id="demoBtn" class="primary">キャリアの動きを見る</button>
+      <button type="button" id="exciteBtn">励起</button>
+      <button type="button" id="fieldBtn">電界 OFF</button>
+      <button type="button" id="pnBtn">pn接合生成</button>
+      <button type="button" id="ledBtn">LED発光</button>
+      <button type="button" id="resetBtn">リセット</button>
+    </div>
+    <p id="runStatus">材料とドーピングを設定し、各ボタンで現象を確認してください。</p>
+  </section>
+
+  <div class="viz-column">
+  <div class="canvas-stack">
+    <div class="canvas-block">
+      <p class="canvas-label">上段 — エネルギーバンド（CB / E<sub>g</sub> / VB）</p>
+      <p class="canvas-legend"><span class="e">● e⁻</span> 伝導帯 CB　<span class="h">● h⁺</span> 価電子帯 VB　点線 = 同じ位置の e⁻ と h⁺ の対応</p>
+      <div class="canvas-wrap" id="bandWrap">
+        <canvas id="bandCanvas"></canvas>
+      </div>
+    </div>
+    <div class="canvas-block">
+      <p class="canvas-label">下段 — n型 / 空乏層 / p型 とキャリアの動き</p>
+      <p class="canvas-legend">左が n型（<span class="e">e⁻ 多数</span>）右が p型（<span class="h">h⁺ 多数</span>）— 各粒の<span class="e">青矢印</span><span class="h">赤矢印</span>が動く方向</p>
+      <div class="canvas-wrap device" id="deviceWrap">
+        <canvas id="deviceCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="liveReadout" aria-live="polite">
+    <span id="lrField">電界: OFF</span>
+    <span id="lrDrift"><span class="e">e⁻</span> — / <span class="h">h⁺</span> —</span>
+    <span id="lrState">待機</span>
+  </div>
+  </div>
+  </div>
+  </div>
+
+  <script>
+    const bandCanvas = document.getElementById("bandCanvas");
+    const bandCtx = bandCanvas.getContext("2d");
+    const deviceCanvas = document.getElementById("deviceCanvas");
+    const deviceCtx = deviceCanvas.getContext("2d");
+    const bandWrap = document.getElementById("bandWrap");
+    const deviceWrap = document.getElementById("deviceWrap");
+    const runStatus = document.getElementById("runStatus");
+
+    const MATERIALS = {
+      Si: { eg: 1.12, muN: 0.14, muP: 0.05 },
+      GaAs: { eg: 1.42, muN: 0.85, muP: 0.04 },
+      InGaN: { eg: 2.5, muN: 0.1, muP: 0.02 },
+    };
+
+    const Q = 1.602e-19;
+    const MAX_DT = 1 / 40;
+    const HC_EV_NM = 1240;
+
+    let layout = { band: { w: 0, h: 0, dpr: 1 }, dev: { w: 0, h: 0, dpr: 1 } };
+
+    let material = "Si";
+    let nDopLog = 17;
+    let pDopLog = 17;
+    let eField = 0;
+    let fieldOn = false;
+    let pnFormed = false;
+    let ledMode = false;
+    let recombineCount = 0;
+    let recombineRate = 0;
+    let lastRecombineT = 0;
+
+    let bandElectrons = [];
+    let bandHoles = [];
+    let jumpAnims = [];
+    let energyArrows = [];
+
+    let devElectrons = [];
+    let devHoles = [];
+    let photons = [];
+    let demoMode = false;
+    let guideStep = 0;
+
+    function setGuideStep(n) {
+      guideStep = n;
+      document.querySelectorAll(".guide-step").forEach((el) => {
+        el.classList.toggle("active", parseInt(el.dataset.step, 10) === n);
+      });
+    }
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+    function dopFromLog(l) { return Math.pow(10, l); }
+    function fmtSci(v) {
+      if (v >= 1e18) return `${fmt(v / 1e18, 1)}×10¹⁸`;
+      if (v >= 1e17) return `${fmt(v / 1e17, 1)}×10¹⁷`;
+      if (v >= 1e16) return `${fmt(v / 1e16, 1)}×10¹⁶`;
+      return v.toExponential(1);
+    }
+
+    function getMat() { return MATERIALS[material]; }
+    function getEg() { return getMat().eg; }
+    function getW() {
+      if (!pnFormed) return 0;
+      const Nd = dopFromLog(nDopLog);
+      const Na = dopFromLog(pDopLog);
+      const base = 450;
+      const bias = ledMode ? 0.45 : 1;
+      return base * Math.sqrt(1 / Nd + 1 / Na) * 1e9 * bias;
+    }
+    function getWnm() { return getW() * 1e7; }
+
+    function wavelengthNm() {
+      const eg = getEg();
+      return HC_EV_NM / eg;
+    }
+
+    function photonColorFromEg() {
+      const lam = wavelengthNm();
+      if (lam < 450) return "#6366f1";
+      if (lam < 500) return "#3b82f6";
+      if (lam < 570) return "#22c55e";
+      if (lam < 620) return "#eab308";
+      return "#ef4444";
+    }
+
+    function syncSliders() {
+      document.getElementById("nDopVal").textContent = `10^${fmt(nDopLog, 1)} cm⁻³`;
+      document.getElementById("pDopVal").textContent = `10^${fmt(pDopLog, 1)} cm⁻³`;
+      document.getElementById("eVal").textContent = fmt(eField, 1);
+    }
+
+    function updateInfo() {
+      const mat = getMat();
+      const Nd = dopFromLog(nDopLog);
+      const Na = dopFromLog(pDopLog);
+      const E = eField * 1000;
+      const vdE = fieldOn ? mat.muN * E : 0;
+      const vdH = fieldOn ? mat.muP * E : 0;
+      const D = mat.muN * 0.026;
+      const grad = pnFormed ? (Nd - Na) / (getW() * 1e-4 + 1e-6) : 0;
+      const J = pnFormed ? Q * D * grad * 1e-4 : 0;
+      const Wnm = getWnm();
+      const lam = wavelengthNm();
+
+      document.getElementById("iEg").textContent = `${fmt(mat.eg, 2)} eV（${material}）`;
+      document.getElementById("iN").textContent = `${fmtSci(Nd)} cm⁻³`;
+      document.getElementById("iP").textContent = `${fmtSci(Na)} cm⁻³`;
+      document.getElementById("iVd").textContent = fieldOn
+        ? `e: ${fmt(vdE, 1)} / h: ${fmt(vdH, 1)} (cm/s)`
+        : "—（電界 OFF）";
+      document.getElementById("iJ").textContent = pnFormed
+        ? `${J.toExponential(2)} A/m²`
+        : "—";
+      document.getElementById("iW").textContent = pnFormed
+        ? `${fmt(Wnm, 0)} nm（${fmt(Wnm / 1000, 2)} μm）`
+        : "—";
+      document.getElementById("iR").textContent = `${fmt(recombineRate, 1)} /s`;
+      document.getElementById("iLam").textContent = `${fmt(lam, 0)} nm`;
+    }
+
+    function updateLiveReadout() {
+      const drift = getVisualDrift();
+      const lrField = document.getElementById("lrField");
+      const lrDrift = document.getElementById("lrDrift");
+      const lrState = document.getElementById("lrState");
+      if (fieldOn) {
+        const arrow = eField >= 0 ? "→" : "←";
+        lrField.innerHTML = `<span class="on">電界 ON</span> E = ${fmt(eField, 1)} kV/cm ${arrow}`;
+        const eDir = drift.e < 0 ? "←" : drift.e > 0 ? "→" : "—";
+        const hDir = drift.h < 0 ? "←" : drift.h > 0 ? "→" : "—";
+        lrDrift.innerHTML = `<span class="e">e⁻ ${eDir}</span> / <span class="h">h⁺ ${hDir}</span>`;
+      } else {
+        lrField.textContent = "電界: OFF";
+        lrDrift.innerHTML = `<span class="e">e⁻</span> 拡散 / <span class="h">h⁺</span> 拡散`;
+      }
+      if (ledMode) lrState.textContent = "LED 発光中";
+      else if (pnFormed) lrState.textContent = "pn接合";
+      else if (demoMode) lrState.textContent = "デモ";
+      else if (fieldOn) lrState.textContent = "ドリフト";
+      else lrState.textContent = "待機";
+    }
+
+    function resizeCanvases() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      [{ wrap: bandWrap, c: bandCanvas, key: "band" }, { wrap: deviceWrap, c: deviceCanvas, key: "dev" }].forEach(({ wrap, c, key }) => {
+        const rect = wrap.getBoundingClientRect();
+        const w = Math.max(280, Math.round(rect.width));
+        const h = Math.max(160, Math.round(rect.height));
+        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+          c.width = Math.round(w * dpr);
+          c.height = Math.round(h * dpr);
+        }
+        layout[key] = { w, h, dpr };
+      });
+    }
+
+    function setupCtx(ctx, lay) {
+      ctx.setTransform(lay.dpr, 0, 0, lay.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function initBandCarriers(simple) {
+      bandElectrons = [];
+      bandHoles = [];
+      const w = layout.band.w;
+      const count = simple ? 4 : 6 + Math.round((nDopLog - 15) * 2);
+      for (let i = 0; i < count; i += 1) {
+        const x = w * (0.2 + (i + 0.5) / count * 0.6);
+        bandElectrons.push({ x, band: "cb", vx: 0, pairId: i, trail: [] });
+        bandHoles.push({ x, band: "vb", vx: 0, pairId: i, trail: [] });
+      }
+    }
+
+    function spawnDeviceCarriers(simple) {
+      devElectrons = [];
+      devHoles = [];
+      photons = [];
+      const w = layout.dev.w;
+      const h = layout.dev.h;
+      const cx = w * 0.5;
+      const Wpx = pnFormed ? Math.min(w * 0.28, getWnm() * 0.015 + 40) : 0;
+      const nLeft = simple ? 5 : Math.round(12 + (nDopLog - 15) * 8);
+      const pRight = simple ? 5 : Math.round(12 + (pDopLog - 15) * 8);
+
+      for (let i = 0; i < nLeft; i += 1) {
+        const xMax = pnFormed ? cx - Wpx * 0.5 - 8 : w * 0.46;
+        const rows = simple ? 1 : 2;
+        devElectrons.push({
+          x: 24 + (i % 5) * ((xMax - 24) / 4),
+          y: h * (0.38 + (i % rows) * 0.18),
+          vx: 0,
+          vy: 0,
+          highlight: simple && i < 3,
+          trail: [],
+        });
+      }
+      for (let i = 0; i < pRight; i += 1) {
+        const xMin = pnFormed ? cx + Wpx * 0.5 + 8 : w * 0.54;
+        const rows = simple ? 1 : 2;
+        devHoles.push({
+          x: xMin + (i % 5) * ((w - xMin - 24) / 4),
+          y: h * (0.38 + (i % rows) * 0.18),
+          vx: 0,
+          vy: 0,
+          highlight: simple && i < 3,
+          trail: [],
+        });
+      }
+    }
+
+    function resetAll() {
+      material = document.getElementById("materialSelect").value;
+      nDopLog = parseFloat(document.getElementById("nDopSlider").value);
+      pDopLog = parseFloat(document.getElementById("pDopSlider").value);
+      eField = parseFloat(document.getElementById("eSlider").value);
+      fieldOn = false;
+      pnFormed = false;
+      ledMode = false;
+      demoMode = false;
+      recombineCount = 0;
+      recombineRate = 0;
+      jumpAnims = [];
+      energyArrows = [];
+      document.getElementById("fieldBtn").textContent = "電界 OFF";
+      document.getElementById("fieldBtn").classList.remove("active");
+      document.getElementById("ledBtn").classList.remove("active");
+      document.getElementById("pnBtn").classList.remove("active");
+      setGuideStep(0);
+      runStatus.textContent = "リセットしました — 「キャリアの動きを見る」から始めるとわかりやすいです。";
+      runStatus.className = "";
+      syncSliders();
+      initBandCarriers(false);
+      spawnDeviceCarriers(false);
+      updateInfo();
+    }
+
+    function startMotionDemo() {
+      resetAll();
+      demoMode = true;
+      eField = 2.5;
+      fieldOn = true;
+      document.getElementById("eSlider").value = eField;
+      document.getElementById("fieldBtn").textContent = "電界 ON";
+      document.getElementById("fieldBtn").classList.add("active");
+      syncSliders();
+      initBandCarriers(true);
+      spawnDeviceCarriers(true);
+      setGuideStep(2);
+      runStatus.textContent = "デモ中 — 青 e⁻ が左へ、赤 h⁺ が右へ動きます（E→ 方向）。上段の点線で e⁻ と h⁺ が対応しているのがわかります。";
+      updateInfo();
+    }
+
+    function exciteCarrier() {
+      const w = layout.band.w;
+      const x = w * 0.5;
+      jumpAnims.push({ x, t: 0, dur: 0.7, pairId: 0 });
+      energyArrows.push({ x, t: 0, life: 1.5 });
+      setGuideStep(1);
+      runStatus.textContent = "励起 — 中央の e⁻ が VB→CB へジャンプ。同じ x に h⁺（赤）が VB に残ります。";
+    }
+
+    function toggleField() {
+      fieldOn = !fieldOn;
+      const btn = document.getElementById("fieldBtn");
+      btn.textContent = fieldOn ? "電界 ON" : "電界 OFF";
+      btn.classList.toggle("active", fieldOn);
+      if (fieldOn) {
+        setGuideStep(2);
+        if (Math.abs(eField) < 0.5) {
+          eField = 2.5;
+          document.getElementById("eSlider").value = eField;
+          syncSliders();
+        }
+      }
+      runStatus.textContent = fieldOn
+        ? "電界 ON — 矢印の方向に動きます。e⁻（青）は E と逆、h⁺（赤）は E と同じ方向。"
+        : "電界 OFF — キャリアはランダムな拡散だけになります。";
+    }
+
+    function formPn() {
+      pnFormed = true;
+      ledMode = false;
+      document.getElementById("pnBtn").classList.add("active");
+      document.getElementById("ledBtn").classList.remove("active");
+      spawnDeviceCarriers(demoMode);
+      setGuideStep(3);
+      runStatus.textContent = "pn接合 — 青 e⁻ が右へ、赤 h⁺ が左へ広がり（拡散）。中央で出会うと再結合して消えます。";
+      runStatus.className = "";
+    }
+
+    function toggleLed() {
+      if (!pnFormed) {
+        formPn();
+      }
+      ledMode = !ledMode;
+      document.getElementById("ledBtn").classList.toggle("active", ledMode);
+      spawnDeviceCarriers(demoMode);
+      setGuideStep(4);
+      runStatus.textContent = ledMode
+        ? "LED発光 — 順方向で空乏層が狭まり、再結合光（λ ∝ E_g）が出ます。"
+        : "LED OFF — 空乏層が広がります。";
+      runStatus.className = ledMode ? "led" : "";
+    }
+
+    function pushTrail(obj, max) {
+      if (!obj.trail) obj.trail = [];
+      obj.trail.push({ x: obj.x, y: obj.y });
+      if (obj.trail.length > max) obj.trail.shift();
+    }
+
+    function getVisualDrift() {
+      if (!fieldOn) return { e: 0, h: 0 };
+      const sign = Math.sign(eField) || 1;
+      const strength = Math.max(Math.abs(eField), 0.5);
+      const k = demoMode ? 22 : 16;
+      return { e: -sign * strength * k, h: sign * strength * k };
+    }
+
+    function updateBand(dt) {
+      const w = layout.band.w;
+      const drift = getVisualDrift();
+
+      bandElectrons.forEach((e, i) => {
+        const ho = bandHoles.find((h) => h.pairId === e.pairId) || bandHoles[i];
+        if (fieldOn) {
+          e.vx = drift.e;
+          if (ho) ho.vx = drift.h;
+        } else {
+          e.vx *= 0.85;
+          if (ho) ho.vx *= 0.85;
+        }
+        e.x += e.vx * dt;
+        if (e.x < 24) e.x = 24;
+        if (e.x > w - 24) e.x = w - 24;
+        if (ho) ho.x = e.x;
+      });
+
+      jumpAnims = jumpAnims.filter((j) => {
+        j.t += dt;
+        if (j.t >= j.dur) {
+          bandElectrons.push({ x: j.x, band: "cb", vx: fieldOn ? drift.e : 0, pairId: j.pairId ?? 0, trail: [] });
+          const existing = bandHoles.find((h) => h.pairId === (j.pairId ?? 0));
+          if (!existing) {
+            bandHoles.push({ x: j.x, band: "vb", vx: fieldOn ? drift.h : 0, pairId: j.pairId ?? 0, trail: [] });
+          }
+          return false;
+        }
+        return true;
+      });
+
+      energyArrows = energyArrows.filter((a) => {
+        a.t += dt;
+        a.life -= dt;
+        return a.life > 0;
+      });
+    }
+
+    function updateDevice(dt) {
+      const w = layout.dev.w;
+      const h = layout.dev.h;
+      const cx = w * 0.5;
+      const Wpx = pnFormed ? Math.min(w * 0.32, getWnm() * 0.018 + 36) * (ledMode ? 0.55 : 1) : 0;
+      const depL = cx - Wpx * 0.5;
+      const depR = cx + Wpx * 0.5;
+      const drift = getVisualDrift();
+      let recomb = 0;
+
+      devElectrons.forEach((e) => {
+        let vx = drift.e;
+        if (pnFormed && !fieldOn) vx += 28;
+        else if (pnFormed && fieldOn) vx += 6;
+        else if (!fieldOn) vx += (Math.random() - 0.5) * 6;
+        else vx += (Math.random() - 0.5) * 2;
+        e.vx = vx;
+        e.vy = fieldOn && !pnFormed ? 0 : (Math.random() - 0.5) * (pnFormed ? 10 : 4);
+        if (pnFormed && e.x > depL - 16) e.vx -= fieldOn ? 12 : 24 * dt;
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        e.y = Math.max(h * 0.28, Math.min(h * 0.78, e.y));
+        if (e.x < 12) e.x = 12;
+        if (e.x > w - 12) e.x = w - 12;
+        pushTrail(e, fieldOn || demoMode ? 18 : 6);
+      });
+
+      devHoles.forEach((ho) => {
+        let vx = drift.h;
+        if (pnFormed && !fieldOn) vx -= 28;
+        else if (pnFormed && fieldOn) vx -= 6;
+        else if (!fieldOn) vx += (Math.random() - 0.5) * 6;
+        else vx += (Math.random() - 0.5) * 2;
+        ho.vx = vx;
+        ho.vy = fieldOn && !pnFormed ? 0 : (Math.random() - 0.5) * (pnFormed ? 10 : 4);
+        if (pnFormed && ho.x < depR + 16) ho.vx += fieldOn ? 12 : 24 * dt;
+        ho.x += ho.vx * dt;
+        ho.y += ho.vy * dt;
+        ho.y = Math.max(h * 0.28, Math.min(h * 0.78, ho.y));
+        if (ho.x < 12) ho.x = 12;
+        if (ho.x > w - 12) ho.x = w - 12;
+        pushTrail(ho, fieldOn || demoMode ? 18 : 6);
+      });
+
+      if (pnFormed) {
+        const toRemoveE = [];
+        const toRemoveH = [];
+        devElectrons.forEach((e, ei) => {
+          devHoles.forEach((ho, hi) => {
+            const dx = e.x - ho.x;
+            const dy = e.y - ho.y;
+            if (Math.hypot(dx, dy) < 14 && e.x > depL - 30 && e.x < depR + 30) {
+              toRemoveE.push(ei);
+              toRemoveH.push(hi);
+              recomb += 1;
+              if (ledMode || Math.random() < 0.35) {
+                photons.push({
+                  x: (e.x + ho.x) * 0.5,
+                  y: (e.y + ho.y) * 0.5,
+                  life: 0.9,
+                  r: 0,
+                  color: photonColorFromEg(),
+                });
+              }
+            }
+          });
+        });
+        [...new Set(toRemoveE)].sort((a, b) => b - a).forEach((i) => devElectrons.splice(i, 1));
+        [...new Set(toRemoveH)].sort((a, b) => b - a).forEach((i) => devHoles.splice(i, 1));
+      }
+
+      if (recomb > 0) {
+        recombineCount += recomb;
+        const now = performance.now() / 1000;
+        if (now - lastRecombineT > 0.01) {
+          recombineRate = recomb / Math.max(dt, 0.001);
+          lastRecombineT = now;
+        }
+      } else {
+        recombineRate *= 0.92;
+      }
+
+      photons = photons.filter((p) => {
+        p.life -= dt;
+        p.r += 60 * dt;
+        p.y -= 30 * dt;
+        return p.life > 0;
+      });
+
+      const targetN = demoMode ? 5 : Math.round(10 + (nDopLog - 15) * 6);
+      while (devElectrons.length < targetN && devElectrons.length < (demoMode ? 8 : 40)) {
+        devElectrons.push({
+          x: 16 + Math.random() * Math.max(20, depL - 24),
+          y: h * (0.3 + Math.random() * 0.4),
+          vx: 0,
+          vy: 0,
+          highlight: false,
+          trail: [],
+        });
+      }
+      const targetP = demoMode ? 5 : Math.round(10 + (pDopLog - 15) * 6);
+      while (devHoles.length < targetP && devHoles.length < (demoMode ? 8 : 40)) {
+        devHoles.push({
+          x: depR + 8 + Math.random() * Math.max(20, w - depR - 24),
+          y: h * (0.3 + Math.random() * 0.4),
+          vx: 0,
+          vy: 0,
+          highlight: false,
+          trail: [],
+        });
+      }
+    }
+
+    function drawVelArrow(ctx, x, y, vx, vy, color, scale) {
+      const ex = x + vx * scale;
+      const ey = y + vy * scale;
+      if (Math.hypot(ex - x, ey - y) < 3) return;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      const ang = Math.atan2(ey - y, ex - x);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 7 * Math.cos(ang - 0.4), ey - 7 * Math.sin(ang - 0.4));
+      ctx.lineTo(ex - 7 * Math.cos(ang + 0.4), ey - 7 * Math.sin(ang + 0.4));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawTrail(ctx, trail, color) {
+      if (!trail || trail.length < 2) return;
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (let i = 1; i < trail.length; i += 1) ctx.lineTo(trail[i].x, trail[i].y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCanvasGrid(ctx, w, h, step) {
+      const s = step || Math.max(32, Math.round(w / 14));
+      ctx.save();
+      ctx.strokeStyle = "rgba(148,163,184,0.06)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= w; x += s) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= h; y += s) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(w, y + 0.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawBandBg(w, h) {
+      const g = bandCtx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "#0a1424");
+      g.addColorStop(0.5, "#0d1a2e");
+      g.addColorStop(1, "#0a1628");
+      bandCtx.fillStyle = g;
+      bandCtx.fillRect(0, 0, w, h);
+      drawCanvasGrid(bandCtx, w, h, 36);
+    }
+
+    function drawGlowLine(ctx, y, w, color, label, labelY) {
+      ctx.save();
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(20, y);
+      ctx.lineTo(w - 20, y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = color;
+      ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(label, 24, labelY);
+      ctx.restore();
+    }
+
+    function drawBandDiagram() {
+      const lay = layout.band;
+      setupCtx(bandCtx, lay);
+      const w = lay.w;
+      const h = lay.h;
+      const eg = getEg();
+      const cbY = h * 0.26;
+      const vbY = h * 0.74;
+      const gapMid = h * 0.5;
+
+      bandCtx.clearRect(0, 0, w, h);
+      drawBandBg(w, h);
+
+      const gapGrad = bandCtx.createLinearGradient(0, cbY, 0, vbY);
+      gapGrad.addColorStop(0, "rgba(56,189,248,0.08)");
+      gapGrad.addColorStop(0.5, "rgba(167,139,250,0.12)");
+      gapGrad.addColorStop(1, "rgba(251,113,133,0.08)");
+      bandCtx.fillStyle = gapGrad;
+      bandCtx.fillRect(16, cbY, w - 32, vbY - cbY);
+
+      bandCtx.fillStyle = "rgba(56,189,248,0.1)";
+      bandCtx.fillRect(16, cbY - 24, w - 32, 48);
+      bandCtx.fillStyle = "rgba(251,113,133,0.1)";
+      bandCtx.fillRect(16, vbY - 24, w - 32, 48);
+
+      drawGlowLine(bandCtx, cbY, w, "#38bdf8", "伝導帯 CB", cbY - 30);
+      drawGlowLine(bandCtx, vbY, w, "#fb7185", "価電子帯 VB", vbY + 38);
+
+      bandCtx.setLineDash([6, 5]);
+      bandCtx.strokeStyle = "rgba(148,163,184,0.28)";
+      bandCtx.lineWidth = 1;
+      bandCtx.beginPath();
+      bandCtx.moveTo(w * 0.5, cbY);
+      bandCtx.lineTo(w * 0.5, vbY);
+      bandCtx.stroke();
+      bandCtx.setLineDash([]);
+
+      bandCtx.fillStyle = "#a5f3fc";
+      bandCtx.font = "700 14px Inter, Poppins, sans-serif";
+      bandCtx.textAlign = "center";
+      bandCtx.shadowBlur = 10;
+      bandCtx.shadowColor = "rgba(6,182,212,0.5)";
+      bandCtx.fillText(`E_g = ${fmt(eg, 2)} eV`, w * 0.5, gapMid + 5);
+      bandCtx.shadowBlur = 0;
+      bandCtx.textAlign = "left";
+
+      energyArrows.forEach((a) => {
+        const alpha = Math.min(1, a.life);
+        bandCtx.strokeStyle = `rgba(234,179,8,${alpha})`;
+        bandCtx.fillStyle = `rgba(234,179,8,${alpha})`;
+        bandCtx.lineWidth = 2;
+        const ax = a.x;
+        bandCtx.beginPath();
+        bandCtx.moveTo(ax, vbY - 8);
+        bandCtx.lineTo(ax, cbY + 8);
+        bandCtx.stroke();
+        bandCtx.beginPath();
+        bandCtx.moveTo(ax, cbY + 8);
+        bandCtx.lineTo(ax - 6, cbY + 18);
+        bandCtx.lineTo(ax + 6, cbY + 18);
+        bandCtx.closePath();
+        bandCtx.fill();
+        bandCtx.font = "600 10px Inter, sans-serif";
+        bandCtx.fillText("ΔE = E_g", ax + 10, gapMid);
+      });
+
+      function drawCarrier(x, y, color, label, isHole) {
+        bandCtx.save();
+        bandCtx.shadowBlur = 16;
+        bandCtx.shadowColor = color;
+        if (isHole) {
+          bandCtx.strokeStyle = color;
+          bandCtx.lineWidth = 2.5;
+          bandCtx.beginPath();
+          bandCtx.arc(x, y, 8, 0, Math.PI * 2);
+          bandCtx.stroke();
+          const inner = bandCtx.createRadialGradient(x, y, 2, x, y, 7);
+          inner.addColorStop(0, "rgba(251,113,133,0.35)");
+          inner.addColorStop(1, "rgba(251,113,133,0.05)");
+          bandCtx.fillStyle = inner;
+          bandCtx.fill();
+        } else {
+          const grad = bandCtx.createRadialGradient(x - 3, y - 3, 1, x, y, 9);
+          grad.addColorStop(0, "#ffffff");
+          grad.addColorStop(0.45, color);
+          grad.addColorStop(1, color);
+          bandCtx.fillStyle = grad;
+          bandCtx.beginPath();
+          bandCtx.arc(x, y, 8, 0, Math.PI * 2);
+          bandCtx.fill();
+        }
+        bandCtx.shadowBlur = 0;
+        if (label) {
+          bandCtx.fillStyle = "#e2e8f0";
+          bandCtx.font = "700 9px Inter, sans-serif";
+          bandCtx.textAlign = "center";
+          bandCtx.fillText(label, x, y + 3);
+          bandCtx.textAlign = "left";
+        }
+        bandCtx.restore();
+      }
+
+      jumpAnims.forEach((j) => {
+        const p = j.t / j.dur;
+        const y = vbY + (cbY - vbY) * p;
+        const glow = 0.5 + 0.5 * Math.sin(j.t * 12);
+        bandCtx.save();
+        bandCtx.globalAlpha = 0.25 + glow * 0.35;
+        bandCtx.strokeStyle = "#fbbf24";
+        bandCtx.lineWidth = 3;
+        bandCtx.beginPath();
+        bandCtx.moveTo(j.x, vbY);
+        bandCtx.lineTo(j.x, y);
+        bandCtx.stroke();
+        bandCtx.restore();
+        drawCarrier(j.x, y, "#38bdf8", "e⁻", false);
+        if (p < 0.2) drawCarrier(j.x, vbY, "#fb7185", "h⁺", true);
+      });
+
+      bandElectrons.forEach((e) => {
+        const ho = bandHoles.find((h) => h.pairId === e.pairId);
+        if (ho && (demoMode || fieldOn)) {
+          bandCtx.setLineDash([4, 4]);
+          bandCtx.strokeStyle = "rgba(148,163,184,0.35)";
+          bandCtx.lineWidth = 1;
+          bandCtx.beginPath();
+          bandCtx.moveTo(e.x, cbY + 10);
+          bandCtx.lineTo(ho.x, vbY - 10);
+          bandCtx.stroke();
+          bandCtx.setLineDash([]);
+        }
+      });
+
+      bandElectrons.forEach((e) => drawCarrier(e.x, cbY, "#38bdf8", "e⁻", false));
+      bandHoles.forEach((ho) => drawCarrier(ho.x, vbY, "#fb7185", "h⁺", true));
+
+      if (fieldOn || demoMode) {
+        bandElectrons.forEach((e) => {
+          const ho = bandHoles.find((h) => h.pairId === e.pairId);
+          drawVelArrow(bandCtx, e.x, cbY, e.vx, 0, "#38bdf8", 0.25);
+          if (ho) drawVelArrow(bandCtx, ho.x, vbY, ho.vx, 0, "#fb7185", 0.25);
+        });
+      }
+
+      if (fieldOn && Math.abs(eField) > 0.01) {
+        const dir = eField > 0 ? 1 : -1;
+        bandCtx.strokeStyle = "#fbbf24";
+        bandCtx.shadowBlur = 8;
+        bandCtx.shadowColor = "rgba(251,191,36,0.6)";
+        bandCtx.lineWidth = 2.5;
+        bandCtx.beginPath();
+        bandCtx.moveTo(w * 0.5, 18);
+        bandCtx.lineTo(w * 0.5 + dir * 56, 18);
+        bandCtx.stroke();
+        bandCtx.shadowBlur = 0;
+        bandCtx.fillStyle = "#fde68a";
+        bandCtx.font = "600 11px Inter, sans-serif";
+        bandCtx.fillText(`E ${eField > 0 ? "→" : "←"}`, w * 0.5 + dir * 62, 22);
+        bandCtx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+        bandCtx.fillStyle = "#94a3b8";
+        bandCtx.fillText("e⁻ と逆方向 / h⁺ と同方向", 20, h - 12);
+      }
+    }
+
+    function drawDevice() {
+      const lay = layout.dev;
+      setupCtx(deviceCtx, lay);
+      const w = lay.w;
+      const h = lay.h;
+      const cx = w * 0.5;
+      const Wpx = pnFormed ? Math.min(w * 0.32, getWnm() * 0.018 + 36) * (ledMode ? 0.55 : 1) : 0;
+      const depL = cx - Wpx * 0.5;
+      const depR = cx + Wpx * 0.5;
+
+      deviceCtx.clearRect(0, 0, w, h);
+      const bg = deviceCtx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0a1424");
+      bg.addColorStop(0.5, "#0d1a2e");
+      bg.addColorStop(1, "#0a1628");
+      deviceCtx.fillStyle = bg;
+      deviceCtx.fillRect(0, 0, w, h);
+      drawCanvasGrid(deviceCtx, w, h, 40);
+
+      const chipTop = h * 0.14;
+      const chipBot = h * 0.86;
+      deviceCtx.save();
+      deviceCtx.strokeStyle = "rgba(6,182,212,0.25)";
+      deviceCtx.lineWidth = 2;
+      deviceCtx.strokeRect(8, chipTop - 6, w - 16, chipBot - chipTop + 12);
+      deviceCtx.restore();
+
+      const nGrad = deviceCtx.createLinearGradient(0, chipTop, depL, chipBot);
+      nGrad.addColorStop(0, "rgba(56,189,248,0.14)");
+      nGrad.addColorStop(1, "rgba(56,189,248,0.04)");
+      deviceCtx.fillStyle = nGrad;
+      deviceCtx.fillRect(8, chipTop, Math.max(depL - 8, 0), chipBot - chipTop);
+
+      const pGrad = deviceCtx.createLinearGradient(depR, chipTop, w, chipBot);
+      pGrad.addColorStop(0, "rgba(251,113,133,0.04)");
+      pGrad.addColorStop(1, "rgba(251,113,133,0.14)");
+      deviceCtx.fillStyle = pGrad;
+      deviceCtx.fillRect(depR, chipTop, w - depR - 8, chipBot - chipTop);
+
+      if (pnFormed) {
+        const depGrad = deviceCtx.createLinearGradient(depL, 0, depR, 0);
+        depGrad.addColorStop(0, "rgba(148,163,184,0.18)");
+        depGrad.addColorStop(0.5, "rgba(100,116,139,0.28)");
+        depGrad.addColorStop(1, "rgba(148,163,184,0.18)");
+        deviceCtx.fillStyle = depGrad;
+        deviceCtx.fillRect(depL, chipTop, Wpx, chipBot - chipTop);
+        deviceCtx.strokeStyle = "rgba(148,163,184,0.45)";
+        deviceCtx.setLineDash([6, 5]);
+        deviceCtx.lineWidth = 1.5;
+        deviceCtx.strokeRect(depL, chipTop, Wpx, chipBot - chipTop);
+        deviceCtx.setLineDash([]);
+        deviceCtx.fillStyle = "#cbd5e1";
+        deviceCtx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+        deviceCtx.textAlign = "center";
+        deviceCtx.fillText("空乏層", cx, chipTop - 10);
+        deviceCtx.textAlign = "left";
+
+        const intE = (pDopLog - nDopLog) * 0.15;
+        deviceCtx.strokeStyle = "#fbbf24";
+        deviceCtx.shadowBlur = 6;
+        deviceCtx.shadowColor = "rgba(251,191,36,0.5)";
+        deviceCtx.lineWidth = 2;
+        deviceCtx.beginPath();
+        deviceCtx.moveTo(depL, h * 0.9);
+        deviceCtx.lineTo(depR, h * 0.9);
+        deviceCtx.stroke();
+        deviceCtx.shadowBlur = 0;
+        deviceCtx.fillStyle = "#fde68a";
+        deviceCtx.font = "500 10px Inter, sans-serif";
+        deviceCtx.fillText(`内蔵電場 E_int ${intE > 0 ? "→" : "←"}`, cx - 44, h * 0.97);
+      }
+
+      deviceCtx.fillStyle = "#38bdf8";
+      deviceCtx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+      deviceCtx.shadowBlur = 8;
+      deviceCtx.shadowColor = "rgba(56,189,248,0.4)";
+      deviceCtx.fillText("n型", 20, chipTop - 10);
+      deviceCtx.fillStyle = "#fb7185";
+      deviceCtx.shadowColor = "rgba(251,113,133,0.4)";
+      deviceCtx.textAlign = "right";
+      deviceCtx.fillText("p型", w - 20, chipTop - 10);
+      deviceCtx.textAlign = "left";
+      deviceCtx.shadowBlur = 0;
+
+      function drawElectron(x, y, r) {
+        deviceCtx.save();
+        deviceCtx.shadowBlur = 12;
+        deviceCtx.shadowColor = "#38bdf8";
+        const g = deviceCtx.createRadialGradient(x - 2, y - 2, 1, x, y, r + 2);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.5, "#38bdf8");
+        g.addColorStop(1, "#0ea5e9");
+        deviceCtx.fillStyle = g;
+        deviceCtx.beginPath();
+        deviceCtx.arc(x, y, r, 0, Math.PI * 2);
+        deviceCtx.fill();
+        deviceCtx.restore();
+      }
+
+      function drawHole(x, y, r) {
+        deviceCtx.save();
+        deviceCtx.shadowBlur = 12;
+        deviceCtx.shadowColor = "#fb7185";
+        deviceCtx.strokeStyle = "#fb7185";
+        deviceCtx.lineWidth = 2.5;
+        deviceCtx.beginPath();
+        deviceCtx.arc(x, y, r, 0, Math.PI * 2);
+        deviceCtx.stroke();
+        const g = deviceCtx.createRadialGradient(x, y, 1, x, y, r);
+        g.addColorStop(0, "rgba(251,113,133,0.4)");
+        g.addColorStop(1, "rgba(251,113,133,0.05)");
+        deviceCtx.fillStyle = g;
+        deviceCtx.fill();
+        deviceCtx.restore();
+      }
+
+      devElectrons.forEach((e) => {
+        drawTrail(deviceCtx, e.trail, "rgba(56,189,248,0.6)");
+        const r = e.highlight ? 7 : 5.5;
+        drawElectron(e.x, e.y, r);
+        if (fieldOn || demoMode) drawVelArrow(deviceCtx, e.x, e.y - 14, e.vx, 0, "#38bdf8", 0.18);
+      });
+      devHoles.forEach((ho) => {
+        drawTrail(deviceCtx, ho.trail, "rgba(251,113,133,0.6)");
+        const r = ho.highlight ? 7 : 5.5;
+        drawHole(ho.x, ho.y, r);
+        if (fieldOn || demoMode) drawVelArrow(deviceCtx, ho.x, ho.y - 14, ho.vx, 0, "#fb7185", 0.18);
+      });
+
+      photons.forEach((p) => {
+        const alpha = p.life;
+        deviceCtx.save();
+        deviceCtx.globalAlpha = alpha;
+        deviceCtx.shadowBlur = 22;
+        deviceCtx.shadowColor = p.color;
+        deviceCtx.strokeStyle = p.color;
+        deviceCtx.fillStyle = p.color;
+        deviceCtx.lineWidth = 2;
+        deviceCtx.beginPath();
+        deviceCtx.arc(p.x, p.y, p.r + 6, 0, Math.PI * 2);
+        deviceCtx.stroke();
+        deviceCtx.beginPath();
+        deviceCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        deviceCtx.stroke();
+        deviceCtx.shadowBlur = 0;
+        for (let i = 0; i < 8; i += 1) {
+          const ang = (i / 8) * Math.PI * 2 + p.r * 0.1;
+          deviceCtx.beginPath();
+          deviceCtx.moveTo(p.x + Math.cos(ang) * (p.r + 3), p.y + Math.sin(ang) * (p.r + 3));
+          deviceCtx.lineTo(p.x + Math.cos(ang) * (p.r + 10), p.y + Math.sin(ang) * (p.r + 10));
+          deviceCtx.stroke();
+        }
+        deviceCtx.restore();
+      });
+
+      if (fieldOn && Math.abs(eField) > 0.01) {
+        const dir = eField > 0 ? 1 : -1;
+        deviceCtx.strokeStyle = "#fbbf24";
+        deviceCtx.shadowBlur = 10;
+        deviceCtx.shadowColor = "rgba(251,191,36,0.55)";
+        deviceCtx.lineWidth = 2.5;
+        deviceCtx.beginPath();
+        deviceCtx.moveTo(w * 0.5 - dir * 64, h * 0.05);
+        deviceCtx.lineTo(w * 0.5 + dir * 64, h * 0.05);
+        deviceCtx.stroke();
+        deviceCtx.shadowBlur = 0;
+        deviceCtx.fillStyle = "#fde68a";
+        deviceCtx.font = "600 11px Inter, sans-serif";
+        deviceCtx.textAlign = "center";
+        deviceCtx.fillText(`外電界 E = ${fmt(eField, 1)} kV/cm`, w * 0.5, h * 0.035);
+        deviceCtx.textAlign = "left";
+      }
+    }
+
+    document.getElementById("materialSelect").addEventListener("change", () => {
+      material = document.getElementById("materialSelect").value;
+      updateInfo();
+    });
+    ["nDopSlider", "pDopSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        nDopLog = parseFloat(document.getElementById("nDopSlider").value);
+        pDopLog = parseFloat(document.getElementById("pDopSlider").value);
+        syncSliders();
+        spawnDeviceCarriers(demoMode);
+        initBandCarriers(demoMode);
+        updateInfo();
+      });
+    });
+    document.getElementById("eSlider").addEventListener("input", () => {
+      eField = parseFloat(document.getElementById("eSlider").value);
+      syncSliders();
+      updateInfo();
+    });
+    document.getElementById("demoBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startMotionDemo();
+    });
+    document.getElementById("exciteBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      exciteCarrier();
+    });
+    document.getElementById("fieldBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleField();
+      updateInfo();
+    });
+    document.getElementById("pnBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      formPn();
+      updateInfo();
+    });
+    document.getElementById("ledBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleLed();
+      updateInfo();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetAll();
+    });
+
+    window.addEventListener("resize", resizeCanvases);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvases);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvases).observe(bandWrap);
+      new ResizeObserver(resizeCanvases).observe(deviceWrap);
+    }
+
+    resetAll();
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      resizeCanvases();
+      updateBand(dt);
+      updateDevice(dt);
+      updateInfo();
+      updateLiveReadout();
+      drawBandDiagram();
+      drawDevice();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>メスバウアー 3D核スピン — ゼーマン・四極・化学シフト</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #06b6d4; --accent-light: #22d3ee; --accent-glow: rgba(6,182,212,0.45);
+      --electron: #38bdf8; --hole: #fb7185; --gamma: #fbbf24;
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(6,182,212,0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0c1524 38%,#101c30 72%,#0a1018 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+      position: relative; overflow-x: hidden;
+    }
+    body::before,body::after {
+      content: ""; position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+      filter: blur(90px); opacity: 0.4;
+    }
+    body::before { width: min(440px,75vw); height: min(440px,75vw); top: -140px; left: -100px;
+      background: radial-gradient(circle,rgba(6,182,212,0.35),transparent 70%); }
+    body::after { width: min(360px,70vw); height: min(360px,70vw); bottom: -120px; right: -80px;
+      background: radial-gradient(circle,rgba(251,113,133,0.18),transparent 70%); }
+    .page-shell { position: relative; z-index: 1; width: min(980px,96vw); margin: 0 auto;
+      display: flex; flex-direction: column; gap: 10px; }
+    .page-header { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .hero-icon { display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; margin-bottom: 6px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(251,113,133,0.2),rgba(6,182,212,0.28));
+      border: 1px solid rgba(6,182,212,0.3); box-shadow: 0 0 24px var(--accent-glow); font-size: 1.35rem; }
+    h2 { margin: 8px 0 4px; font-weight: 600; color: var(--accent-light);
+      text-shadow: 0 0 24px var(--accent-glow); letter-spacing: 0.02em; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back { display: inline-block; margin-top: 10px; padding: 10px 16px;
+      background: rgba(6,182,212,0.14); color: #cffafe; border: 1px solid rgba(6,182,212,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; }
+    .panel { padding: 16px 18px; border-radius: 16px; backdrop-filter: blur(14px);
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.05); }
+    .panel h3 { margin: 0 0 12px; font-size: 0.92rem; font-weight: 600; color: var(--accent-light); }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(112px,1fr)); gap: 8px; }
+    .info-item { padding: 9px 11px; border-radius: 12px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.12); font-size: 0.72rem; line-height: 1.4; }
+    .info-item .label { color: var(--muted); display: block; margin-bottom: 2px; font-size: 0.66rem; }
+    .info-item .val { font-weight: 700; color: #f1f5f9; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+    .info-item .val.accent { color: var(--accent-light); }
+    .info-item .val.gamma { color: var(--gamma); }
+    .comment-box { margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.16);
+      font-size: 0.8rem; line-height: 1.65; color: #cbd5e1; }
+
+    .view-guide {
+      margin-top: 10px; padding: 14px 16px; border-radius: 12px;
+      background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.18);
+    }
+    .view-guide > strong { display: block; margin-bottom: 10px; font-size: 0.88rem; color: var(--accent-light); }
+    .guide-layout { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px; }
+    @media (min-width: 640px) { .guide-layout { grid-template-columns: 1fr 1fr; } }
+    .guide-card {
+      padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.12); font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .guide-card .tag {
+      display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 6px;
+      font-size: 0.68rem; font-weight: 700; color: #cffafe; background: rgba(6,182,212,0.2);
+    }
+    .guide-card .tag.spec { color: #fde68a; background: rgba(251,191,36,0.15); }
+    .guide-steps { display: grid; grid-template-columns: 1fr; gap: 6px; counter-reset: step; }
+    @media (min-width: 720px) { .guide-steps { grid-template-columns: 1fr 1fr; } }
+    .guide-step {
+      padding: 8px 10px 8px 36px; border-radius: 8px; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(148,163,184,0.1); font-size: 0.76rem; line-height: 1.6;
+      color: #cbd5e1; position: relative;
+    }
+    .guide-step::before {
+      counter-increment: step; content: counter(step); position: absolute; left: 10px; top: 9px;
+      width: 18px; height: 18px; border-radius: 50%; background: rgba(6,182,212,0.25);
+      color: #a5f3fc; font-size: 0.68rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .guide-step em { color: var(--accent-light); font-style: normal; font-weight: 600; }
+
+    .physics-explain {
+      margin-top: 10px; padding: 14px 16px; border-radius: 12px;
+      background: rgba(251,113,133,0.06); border: 1px solid rgba(251,113,133,0.18);
+      font-size: 0.78rem; line-height: 1.7; color: #cbd5e1;
+    }
+    .physics-explain > strong { display: block; margin-bottom: 8px; font-size: 0.88rem; color: #fda4af; }
+    .physics-explain h4 { margin: 12px 0 4px; font-size: 0.82rem; color: #fde68a; font-weight: 600; }
+    .physics-explain p { margin: 0 0 8px; }
+    .physics-explain .formula {
+      display: inline-block; margin: 2px 0; padding: 3px 10px; border-radius: 8px;
+      background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.2);
+      font-weight: 600; color: #a5f3fc; font-variant-numeric: tabular-nums;
+    }
+    .physics-explain ul { margin: 4px 0 8px; padding-left: 1.2rem; }
+    .physics-explain li { margin-bottom: 4px; }
+    .viz-row { display: flex; flex-direction: column; gap: 10px; }
+    @media (min-width: 820px) { .viz-row { flex-direction: row; } .viz-row .viz-block { flex: 1; min-width: 0; } }
+    .viz-block { border-radius: 16px; overflow: hidden; background: rgba(8,14,26,0.92);
+      border: 1px solid rgba(6,182,212,0.2); box-shadow: 0 8px 28px rgba(0,0,0,0.45); margin-bottom: 10px; }
+    .viz-label { margin: 0; padding: 10px 16px 0; font-size: 0.78rem; font-weight: 600; color: var(--accent-light); }
+    .viz-legend { margin: 0; padding: 0 16px 8px; font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
+    .viz-legend .s { color: #fb7185; font-weight: 700; }
+    .viz-legend .b { color: #60a5fa; font-weight: 700; }
+    .viz-legend .q { color: #4ade80; font-weight: 700; }
+    #spin3d { width: 100%; height: min(340px,42dvh); min-height: 240px; touch-action: none; }
+    #spin3d canvas { display: block; width: 100% !important; height: 100% !important; }
+    .canvas-wrap { width: 100%; height: min(340px,42dvh); min-height: 240px; }
+    canvas.spec { display: block; width: 100% !important; height: 100% !important; }
+    .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px 16px; }
+    @media (min-width: 640px) { .controls-grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 900px) { .controls-grid { grid-template-columns: repeat(3,1fr); } }
+    label { display: block; font-size: 0.86rem; font-weight: 500; margin-bottom: 6px; color: #cbd5e1; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
+    .slider-val { display: block; font-size: 0.8rem; font-weight: 600; color: #a5f3fc; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    select { width: 100%; padding: 10px 12px; font-family: inherit; font-size: 0.9rem; border-radius: 10px;
+      border: 1px solid rgba(6,182,212,0.28); background: rgba(255,255,255,0.06); color: #e2e8f0; margin-bottom: 8px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.12); margin-bottom: 8px; }
+    .toggle-row span { font-size: 0.84rem; font-weight: 600; color: #cbd5e1; }
+    .switch { position: relative; width: 52px; height: 28px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch .track { position: absolute; inset: 0; border-radius: 999px; background: rgba(148,163,184,0.25); cursor: pointer; }
+    .switch .track::after { content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
+      border-radius: 50%; background: #e2e8f0; transition: transform 0.2s; }
+    .switch input:checked + .track { background: rgba(6,182,212,0.45); }
+    .switch input:checked + .track::after { transform: translateX(24px); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; margin-top: 4px; }
+    .btn-row button { flex: 1 1 calc(50% - 4px); padding: 12px 10px; min-height: 46px; font-family: inherit;
+      font-size: 0.84rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(6,182,212,0.28); background: rgba(255,255,255,0.06); color: #cbd5e1; }
+    .btn-row button.primary { flex: 1 1 100%; background: linear-gradient(135deg,#0891b2,var(--accent));
+      color: white; border: none; box-shadow: 0 0 18px var(--accent-glow); }
+    .btn-row button.active { background: rgba(6,182,212,0.18); border-color: var(--accent-light); color: #cffafe; }
+    #runStatus { grid-column: 1 / -1; margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 0.82rem;
+      font-weight: 600; text-align: center; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.16);
+      color: #a5f3fc; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">↻</div>
+      <h2>メスバウアー 3D 核スピン</h2>
+      <p class="chapter-label">EX章 — スピン歳差・ゼーマン 6 分裂・四極・化学シフト</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="panel" id="infoPanel">
+      <h3>リアルタイム情報</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">材料</span><span class="val accent" id="infoMat">Fe²⁺</span></div>
+        <div class="info-item"><span class="label">v</span><span class="val" id="infoV">0.00 mm/s</span></div>
+        <div class="info-item"><span class="label">γ エネルギー E</span><span class="val gamma" id="infoE">14.4125 keV</span></div>
+        <div class="info-item"><span class="label">化学シフト δ</span><span class="val" id="infoDelta">—</span></div>
+        <div class="info-item"><span class="label">四極 ΔE</span><span class="val" id="infoQuad">—</span></div>
+        <div class="info-item"><span class="label">磁場 B</span><span class="val" id="infoB">—</span></div>
+        <div class="info-item"><span class="label">線幅 Γ</span><span class="val" id="infoGamma">—</span></div>
+        <div class="info-item"><span class="label">分裂本数</span><span class="val accent" id="infoLines">1 本</span></div>
+        <div class="info-item"><span class="label">スピン角 θ</span><span class="val" id="infoTheta">—</span></div>
+      </div>
+      <div class="comment-box" id="infoComment">核スピンの向きは磁場・電場勾配で変化する</div>
+
+      <div class="view-guide">
+        <strong>分かりやすい見方（3D + スペクトル）</strong>
+        <div class="guide-layout">
+          <div class="guide-card">
+            <span class="tag">左：3D 核スピン</span><br>
+            淡い青の<strong>球＝原子核</strong>、<strong style="color:#fb7185">赤矢印＝核スピン</strong>。
+            <span style="color:#60a5fa">青矢印</span>は磁場 B、<span style="color:#4ade80">緑矢印</span>は電場勾配（EFG）の軸。
+            B を上げると赤矢印が青矢印のまわりを<strong>回転（Larmor 歳差）</strong>。
+            EFG を上げると赤矢印が<strong>緑軸方向</strong>に引き寄せられる。
+          </div>
+          <div class="guide-card">
+            <span class="tag spec">右：吸収スペクトル</span><br>
+            横軸 v＝源の振動速度、縦軸 I＝透過強度（低い＝γ が吸収された）。
+            <span style="color:#f472b6">ピンク縦線</span>＝今の v。
+            dip の本数：1 本＝化学シフトのみ、2 本＝四極分裂、6 本＝ゼーマン（磁性）。
+          </div>
+        </div>
+        <div class="guide-steps">
+          <div class="guide-step"><em>反跳なし</em>のまま左で γ 放出 → 格子がわずかに揺れ Γ が狭いことを確認</div>
+          <div class="guide-step"><em>反跳あり</em>に切替 → 球だけ大きく振動、Γ 広がり共鳴しにくい</div>
+          <div class="guide-step"><em>スキャン開始</em> → v が走査され、右の dip と 3D の源の位置が連動</div>
+          <div class="guide-step"><em>EFG</em> を上げ、B＝低 → 赤スピンが緑軸へ、右に <strong>2 本</strong> dip</div>
+          <div class="guide-step"><em>磁性材料</em>または <em>B</em> を大きく → 歳差が速くなり <strong>6 本</strong> dip</div>
+          <div class="guide-step"><em>Fe²⁺ ↔ Fe³⁺</em> → 核の色（電子密度）と δ の位置が変わる</div>
+        </div>
+      </div>
+
+      <div class="physics-explain">
+        <strong>メスバウアー効果の解説</strong>
+        <p>
+          固体中の原子核は格子に固定されているため、γ 線を出しても<strong>反跳エネルギーを格子全体で受け止め</strong>られ、
+          エネルギーがずれにくい（<strong>反跳なし γ 共鳴＝メスバウアー効果</strong>）。
+          線幅 Γ が極めて狭いので、核まわりの環境の違いを mm/s 単位で読み取れます。
+        </p>
+
+        <h4>① ドップラー走査</h4>
+        <p>
+          源（⁵⁷Co）を振動させ速度 v を変え、γ エネルギーを微調整します：
+          <span class="formula">E = E₀ + (v/c) E₀</span>
+          試料が吸収する v で dip が現れます（右グラフ）。
+        </p>
+
+        <h4>② 化学シフト δ（Isomer shift）</h4>
+        <p>
+          核まわりの<strong>電子密度</strong>が変わると、全体の吸収位置が左右にずれます。
+          <strong>Fe²⁺</strong> は δ が大きめ、<strong>Fe³⁺</strong> は小さめ — 3D では核の色も変化します。
+        </p>
+
+        <h4>③ 四極分裂 ΔE（Quadrupole splitting）</h4>
+        <p>
+          結晶の<strong>非対称性</strong>（電場勾配 EFG）があると、核スピンが特定軸（緑矢印）方向にエネルギーが分裂し、
+          吸収線が <strong>2 本</strong>になります。左 3D では赤スピンが緑軸に引き寄せられます。
+        </p>
+
+        <h4>④ ゼーマン分裂（Magnetic hyperfine）</h4>
+        <p>
+          <strong>磁場 B</strong> があると核スピンは B 方向に整列し、<strong>Larmor 歳差</strong>（赤矢印の回転）が起こります。
+          ⁵⁷Fe では典型的に吸収線が <strong>6 本</strong>に分裂。分裂幅は B に比例します。
+        </p>
+
+        <h4>⑤ 3D 表示とスペクトルの対応</h4>
+        <ul>
+          <li>赤スピンの<strong>向き・回転</strong> … 磁場・EFG が核の状態を決める</li>
+          <li>右の<strong>dip の本数・位置</strong> … その環境がスペクトルに写る</li>
+          <li>反跳なし … Γ 狭い → 超高分解能測定が可能</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="viz-row">
+      <div class="viz-block">
+        <p class="viz-label">3D — 原子核（球）と核スピン（赤矢印）</p>
+        <p class="viz-legend"><span class="b">青矢印</span>＝磁場 B · <span class="q">緑軸</span>＝EFG · <span class="s">赤</span>＝スピン · 黄色＝γ線</p>
+        <div id="spin3d"></div>
+      </div>
+      <div class="viz-block">
+        <p class="viz-label">吸収スペクトル — I vs v</p>
+        <p class="viz-legend">ピンク縦線＝現在の v · 1／2／6 本 dip</p>
+        <div class="canvas-wrap" id="specWrap"><canvas class="spec" id="specCanvas"></canvas></div>
+      </div>
+    </div>
+
+    <section class="panel" id="ui">
+      <h3>操作パネル</h3>
+      <div class="controls-grid">
+        <div>
+          <label for="matSelect">材料（⁵⁷Fe）</label>
+          <select id="matSelect">
+            <option value="fe2">Fe²⁺</option>
+            <option value="fe3">Fe³⁺</option>
+            <option value="magnetic">磁性材料（6 本分裂）</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <span id="recoilLabel">反跳なし（メスバウアー）</span>
+          <label class="switch"><input type="checkbox" id="recoilToggle"><span class="track"></span></label>
+        </div>
+        <label>ドップラー速度 v（±10 mm/s）
+          <input id="vSlider" type="range" min="-100" max="100" value="0">
+          <span class="slider-val" id="vVal">0.00 mm/s</span>
+        </label>
+        <label>電子密度 → 化学シフト δ
+          <input id="shiftSlider" type="range" min="-100" max="100" value="55">
+          <span class="slider-val" id="shiftVal">δ = +1.05 mm/s</span>
+        </label>
+        <label>電場勾配 EFG → 四極分裂
+          <input id="efgSlider" type="range" min="0" max="100" value="48">
+          <span class="slider-val" id="efgVal">ΔE = 2.40 mm/s</span>
+        </label>
+        <label>磁場 B → ゼーマン分裂
+          <input id="bSlider" type="range" min="0" max="100" value="0">
+          <span class="slider-val" id="bVal">B = 0.00 T</span>
+        </label>
+        <div class="btn-row">
+          <button type="button" id="scanBtn" class="primary">スキャン開始</button>
+          <button type="button" id="resetBtn">リセット</button>
+        </div>
+        <p id="runStatus">上の「解説」と「見方」を読んでから操作 — まずスキャンで dip を確認</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const E0_KEV = 14.4125;
+      const C_MMS = 299792458 * 1000;
+      const GAMMA_N = 0.194;
+
+      const MATERIALS = {
+        fe2: { name: "Fe²⁺", shift: 1.05, efg: 0.72, quadMax: 2.8, B: 0, col: 0x5ec8ff, spinBias: [0.2, 0.85, 0.15] },
+        fe3: { name: "Fe³⁺", shift: 0.35, efg: 0.18, quadMax: 0.6, B: 0, col: 0x3b82f6, spinBias: [0.5, 0.6, 0.35] },
+        magnetic: { name: "磁性材料", shift: 0.05, efg: 0.05, quadMax: 0.1, B: 0.55, mag: true, col: 0x67e8f9, spinBias: [0, 0.3, 0.95] }
+      };
+
+      let scanning = false, scanPhase = 0, tAnim = 0;
+      let emitPulse = 0, kick = 0, latticeShake = 0;
+
+      const spin3dEl = document.getElementById("spin3d");
+      const specCanvas = document.getElementById("specCanvas");
+      const specWrap = document.getElementById("specWrap");
+      let specCtx, specW = 400, specH = 300;
+
+      const spinVec = new THREE.Vector3(0, 1, 0);
+      const bDir = new THREE.Vector3(0, 0, 1);
+      const efgAxis = new THREE.Vector3(0.85, 0.35, 0.2).normalize();
+
+      let scene, camera, renderer, nucleus, nucleusMat, lattice, spinArrow, bArrow, efgLine;
+      let gammaLine, sourceMesh, clock = new THREE.Clock();
+
+      function getState() {
+        const matKey = document.getElementById("matSelect").value;
+        const mat = MATERIALS[matKey];
+        const recoilOn = document.getElementById("recoilToggle").checked;
+        const magMode = mat.mag || Number(document.getElementById("bSlider").value) > 25;
+        const v = Number(document.getElementById("vSlider").value) / 10;
+        const shiftNorm = Number(document.getElementById("shiftSlider").value) / 100;
+        const efgNorm = Number(document.getElementById("efgSlider").value) / 100;
+        const bNorm = Number(document.getElementById("bSlider").value) / 100;
+        const delta = shiftNorm * 2.2 - 0.2;
+        const quadSplit = efgNorm * mat.quadMax * 3.2;
+        const B = mat.mag ? Math.max(bNorm * 1.2, mat.B * 0.85) : bNorm * 1.2;
+        const gamma = recoilOn ? 2.8 + efgNorm * 1.5 : GAMMA_N * (1 + efgNorm * 0.15);
+        const E = E0_KEV + E0_KEV * (v / C_MMS);
+        return { matKey, mat, recoilOn, magMode, v, delta, quadSplit, B, gamma, E, efgNorm, shiftNorm, bNorm };
+      }
+
+      function getPeaks(st) {
+        const depth = 0.42;
+        if (st.magMode && st.B > 0.08) {
+          const scale = st.B * 10.6;
+          const rel = [{ o: -5, w: 0.14 }, { o: -3, w: 0.19 }, { o: -1, w: 0.06 },
+            { o: 1, w: 0.06 }, { o: 3, w: 0.19 }, { o: 5, w: 0.14 }];
+          return rel.map((r) => ({ v: st.delta + (r.o * scale) / 5, depth: depth * r.w * 6 }));
+        }
+        if (st.quadSplit > 0.35 && !st.magMode) {
+          const h = st.quadSplit / 2;
+          return [{ v: st.delta - h, depth: depth * 0.55 }, { v: st.delta + h, depth: depth * 0.55 }];
+        }
+        return [{ v: st.delta, depth }];
+      }
+
+      function lineCount(st) { return getPeaks(st).length; }
+
+      function lorentz(v, v0, gamma, amp) {
+        const x = (v - v0) / (gamma / 2);
+        return amp / (1 + x * x);
+      }
+
+      function transmission(v, st) {
+        let a = 0;
+        getPeaks(st).forEach((p) => { a += lorentz(v, p.v, st.gamma, p.depth); });
+        return Math.max(0.05, 1 - a);
+      }
+
+      function initThree() {
+        const w = spin3dEl.clientWidth || 400;
+        const h = spin3dEl.clientHeight || 300;
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1220);
+        scene.fog = new THREE.FogExp2(0x0a1220, 0.12);
+
+        camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 50);
+        camera.position.set(2.8, 2.0, 2.8);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        spin3dEl.innerHTML = "";
+        spin3dEl.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.6));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(3, 4, 2);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x22d3ee, 0.8, 12);
+        rim.position.set(-2, 1, 3);
+        scene.add(rim);
+
+        lattice = new THREE.Group();
+        const box = new THREE.BoxGeometry(1.4, 1.4, 1.4);
+        const edges = new THREE.EdgesGeometry(box);
+        const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.5 }));
+        lattice.add(wire);
+        scene.add(lattice);
+
+        nucleusMat = new THREE.MeshPhysicalMaterial({
+          color: 0x5ec8ff, emissive: 0x0a3040, metalness: 0.15, roughness: 0.35,
+          clearcoat: 0.6, transparent: true, opacity: 0.95
+        });
+        nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.32, 48, 48), nucleusMat);
+        scene.add(nucleus);
+
+        spinArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.95, 0xfb7185, 0.14, 0.08);
+        scene.add(spinArrow);
+
+        bArrow = new THREE.ArrowHelper(bDir, new THREE.Vector3(-0.9, -0.9, 0), 0.7, 0x60a5fa, 0.1, 0.06);
+        scene.add(bArrow);
+
+        const efgPts = [new THREE.Vector3(0, 0, 0), efgAxis.clone().multiplyScalar(0.85)];
+        efgLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(efgPts),
+          new THREE.LineBasicMaterial({ color: 0x4ade80, linewidth: 2 })
+        );
+        scene.add(efgLine);
+        const efgCone = new THREE.ArrowHelper(efgAxis, new THREE.Vector3(0, 0, 0), 0.85, 0x4ade80, 0.08, 0.05);
+        efgCone.name = "efgCone";
+        scene.add(efgCone);
+
+        const gammaMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.9 });
+        gammaLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-1.8, 0.1, 0), new THREE.Vector3(-0.35, 0, 0)
+        ]), gammaMat);
+        scene.add(gammaLine);
+
+        sourceMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.25, 0.15),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, emissive: 0x1e293b })
+        );
+        sourceMesh.position.set(-1.8, 0.1, 0);
+        scene.add(sourceMesh);
+
+        const grid = new THREE.GridHelper(4, 12, 0x1e3a5f, 0x0f172a);
+        grid.position.y = -1.1;
+        scene.add(grid);
+      }
+
+      function updateSpin3D(st, dt) {
+        const bias = new THREE.Vector3(st.mat.spinBias[0], st.mat.spinBias[1], st.mat.spinBias[2]).normalize();
+        if (st.efgNorm > 0.12 && !st.magMode) {
+          const pull = 0.04 + st.efgNorm * 0.08;
+          spinVec.lerp(efgAxis, pull);
+          spinVec.lerp(bias, 0.02);
+        } else {
+          spinVec.lerp(bias, 0.03);
+        }
+        spinVec.normalize();
+
+        if (st.B > 0.05) {
+          const omega = st.B * 3.2 * dt;
+          spinVec.applyAxisAngle(bDir, omega);
+        }
+
+        spinArrow.setDirection(spinVec.clone().normalize());
+        spinArrow.setLength(0.55 + st.B * 0.35, 0.14, 0.08);
+
+        const col = new THREE.Color(st.mat.col);
+        col.lerp(new THREE.Color(0xfbbf24), st.shiftNorm * 0.15);
+        nucleusMat.color.copy(col);
+        nucleusMat.emissive.setHex(0x0a2030).lerp(new THREE.Color(0x422006), st.shiftNorm * 0.2);
+
+        const efgCone = scene.getObjectByName("efgCone");
+        if (efgCone) {
+          efgCone.visible = st.efgNorm > 0.08 && !st.magMode;
+          efgCone.setLength(0.4 + st.efgNorm * 0.7, 0.08, 0.05);
+        }
+        efgLine.visible = efgCone && efgCone.visible;
+
+        bArrow.setLength(0.35 + st.B * 0.85, 0.1, 0.06);
+        bArrow.visible = st.B > 0.03;
+
+        const srcX = -1.8 + st.v * 0.055 + Math.sin(tAnim * 0.05) * 0.02;
+        sourceMesh.position.x = srcX;
+        if (emitPulse > 0.02) {
+          gammaLine.material.opacity = emitPulse;
+          const pts = gammaLine.geometry.attributes.position;
+          pts.setXYZ(0, srcX + 0.08, 0.1, 0);
+          pts.setXYZ(1, -0.35 + (1 - emitPulse) * 0.1, 0, 0);
+          pts.needsUpdate = true;
+        } else {
+          gammaLine.material.opacity = 0.15;
+        }
+
+        if (st.recoilOn && kick > 0.01) {
+          nucleus.position.set(kick * 0.12 * Math.sin(tAnim * 0.8), kick * 0.08 * Math.cos(tAnim * 0.7), 0);
+          lattice.position.set(0, 0, 0);
+        } else if (latticeShake > 0.01) {
+          nucleus.position.set(0, 0, 0);
+          lattice.position.set(
+            latticeShake * 0.015 * Math.sin(tAnim * 0.5),
+            latticeShake * 0.012 * Math.cos(tAnim * 0.45),
+            0
+          );
+        } else {
+          nucleus.position.set(0, 0, 0);
+          lattice.position.set(0, 0, 0);
+        }
+
+        lattice.rotation.y = tAnim * 0.008;
+      }
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.arcTo(x + w, y, x + w, y + rad, rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+        ctx.lineTo(x + rad, y + h);
+        ctx.arcTo(x, y + h, x, y + h - rad, rad);
+        ctx.lineTo(x, y + rad);
+        ctx.arcTo(x, y, x + rad, y, rad);
+        ctx.closePath();
+      }
+
+      function resizeSpec() {
+        const rect = specWrap.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio, 2.5);
+        specW = Math.max(280, Math.floor(rect.width));
+        specH = Math.max(200, Math.floor(rect.height));
+        specCanvas.width = Math.floor(specW * dpr);
+        specCanvas.height = Math.floor(specH * dpr);
+        specCtx = specCanvas.getContext("2d");
+        specCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function resizeThree() {
+        if (!renderer) return;
+        const w = spin3dEl.clientWidth || 400;
+        const h = spin3dEl.clientHeight || 300;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+
+      function drawSpectrum() {
+        if (!specCtx) return;
+        const st = getState();
+        const ctx = specCtx;
+        ctx.clearRect(0, 0, specW, specH);
+        const padL = 48, padR = 16, padT = 28, padB = 40;
+        const plotW = specW - padL - padR, plotH = specH - padT - padB;
+        const x0 = padL, y0 = padT + plotH;
+        const vMin = -10, vMax = 10;
+
+        ctx.fillStyle = "#0a1424";
+        ctx.fillRect(x0, y0 - plotH, plotW, plotH);
+
+        ctx.strokeStyle = "rgba(6,182,212,0.12)";
+        ctx.fillStyle = "rgba(148,163,184,0.75)";
+        ctx.font = "500 9px Inter,sans-serif";
+        for (let i = 0; i <= 5; i++) {
+          const gy = y0 - (plotH * i) / 5;
+          ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x0 + plotW, gy); ctx.stroke();
+          ctx.textAlign = "right"; ctx.fillText((i * 0.2).toFixed(1), x0 - 6, gy + 3);
+        }
+        for (let i = 0; i <= 5; i++) {
+          const gx = x0 + (plotW * i) / 5;
+          ctx.beginPath(); ctx.moveTo(gx, y0); ctx.lineTo(gx, y0 - plotH); ctx.stroke();
+          ctx.textAlign = "center";
+          ctx.fillText((vMin + ((vMax - vMin) * i) / 5).toFixed(0), gx, y0 + 16);
+        }
+
+        ctx.strokeStyle = "rgba(186,230,253,0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y0 - plotH); ctx.lineTo(x0 + plotW, y0 - plotH); ctx.stroke();
+
+        ctx.strokeStyle = "#22d3ee";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "rgba(6,182,212,0.4)";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        for (let i = 0; i <= 200; i++) {
+          const v = vMin + ((vMax - vMin) * i) / 200;
+          const px = x0 + ((v - vMin) / (vMax - vMin)) * plotW;
+          const py = y0 - transmission(v, st) * plotH;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        getPeaks(st).forEach((p) => {
+          const px = x0 + ((p.v - vMin) / (vMax - vMin)) * plotW;
+          ctx.strokeStyle = "rgba(251,191,36,0.35)";
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(px, y0); ctx.lineTo(px, y0 - plotH); ctx.stroke();
+          ctx.setLineDash([]);
+        });
+
+        const curX = x0 + ((st.v - vMin) / (vMax - vMin)) * plotW;
+        const curI = transmission(st.v, st);
+        ctx.strokeStyle = "#f472b6";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(curX, y0); ctx.lineTo(curX, y0 - curI * plotH); ctx.stroke();
+        ctx.fillStyle = "#f472b6";
+        ctx.beginPath(); ctx.arc(curX, y0 - curI * plotH, 5, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = "#a5f3fc";
+        ctx.font = "600 10px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("v [mm/s]", x0 + plotW / 2, specH - 8);
+
+        const n = lineCount(st);
+        ctx.fillStyle = "rgba(8,14,26,0.88)";
+        ctx.strokeStyle = "rgba(6,182,212,0.35)";
+        ctx.beginPath();
+        roundRectPath(ctx, specW - 108, padT, 98, 40, 8);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fde68a";
+        ctx.textAlign = "left";
+        ctx.fillText(n + " 本分裂", specW - 98, padT + 16);
+        ctx.fillStyle = "#a5f3fc";
+        ctx.font = "500 9px Inter,sans-serif";
+        ctx.fillText("δ=" + st.delta.toFixed(2), specW - 98, padT + 30);
+      }
+
+      function syncUI() {
+        const st = getState();
+        document.getElementById("infoMat").textContent = st.mat.name;
+        document.getElementById("infoV").textContent = st.v.toFixed(2) + " mm/s";
+        document.getElementById("infoE").textContent = st.E.toFixed(4) + " keV";
+        document.getElementById("infoDelta").textContent = st.delta.toFixed(2) + " mm/s";
+        document.getElementById("infoQuad").textContent = st.quadSplit.toFixed(2) + " mm/s";
+        document.getElementById("infoB").textContent = st.B.toFixed(2) + " T";
+        document.getElementById("infoGamma").textContent = st.gamma.toFixed(2) + " mm/s";
+        document.getElementById("infoLines").textContent = lineCount(st) + " 本";
+        const theta = Math.acos(Math.max(-1, Math.min(1, spinVec.y))) * 180 / Math.PI;
+        document.getElementById("infoTheta").textContent = theta.toFixed(0) + "°";
+
+        document.getElementById("vVal").textContent = st.v.toFixed(2) + " mm/s";
+        document.getElementById("shiftVal").textContent = "δ = " + (st.delta >= 0 ? "+" : "") + st.delta.toFixed(2) + " mm/s";
+        document.getElementById("efgVal").textContent = "ΔE = " + st.quadSplit.toFixed(2) + " mm/s";
+        document.getElementById("bVal").textContent = "B = " + st.B.toFixed(2) + " T";
+        document.getElementById("recoilLabel").textContent = st.recoilOn ? "反跳あり" : "反跳なし（メスバウアー）";
+
+        const c = document.getElementById("infoComment");
+        if (st.magMode && st.B > 0.08) c.textContent = "ゼーマン分裂では 57Fe の吸収線が典型的 6 本に分裂する";
+        else if (st.quadSplit > 0.35) c.textContent = "EFG により核スピンが緑軸方向に引き寄せられ、2 本 dip が現れる";
+        else if (!st.recoilOn) c.textContent = "反跳なしγ吸収により超高分解能スペクトルが得られる";
+        else c.textContent = "核スピンの向きは磁場・電場勾配で変化する";
+      }
+
+      function applyMaterial(key) {
+        const m = MATERIALS[key];
+        document.getElementById("shiftSlider").value = Math.round((m.shift / 2.2 + 0.2) * 100);
+        document.getElementById("efgSlider").value = Math.round(m.efg * 100);
+        document.getElementById("bSlider").value = Math.round((m.B / 1.2) * 100);
+        spinVec.set(m.spinBias[0], m.spinBias[1], m.spinBias[2]).normalize();
+      }
+
+      function emitGamma() {
+        emitPulse = 1;
+        if (document.getElementById("recoilToggle").checked) { kick = 1; latticeShake = 0.1; }
+        else { kick = 0; latticeShake = 1; }
+      }
+
+      function loop() {
+        requestAnimationFrame(loop);
+        const dt = Math.min(clock.getDelta(), 0.05);
+        tAnim += 1;
+        if (scanning) {
+          scanPhase += 0.012;
+          document.getElementById("vSlider").value = Math.round(Math.sin(scanPhase) * 100);
+        }
+        if (emitPulse > 0) emitPulse = Math.max(0, emitPulse - 0.018);
+        if (kick > 0) kick = Math.max(0, kick - 0.04);
+        if (latticeShake > 0) latticeShake = Math.max(0, latticeShake - 0.025);
+        if (tAnim % 100 === 0) emitGamma();
+
+        const st = getState();
+        if (renderer) {
+          updateSpin3D(st, dt);
+          camera.position.x = 2.8 * Math.cos(tAnim * 0.003);
+          camera.position.z = 2.8 * Math.sin(tAnim * 0.003);
+          camera.lookAt(0, 0, 0);
+          renderer.render(scene, camera);
+        }
+        drawSpectrum();
+        syncUI();
+      }
+
+      document.getElementById("matSelect").addEventListener("change", (e) => applyMaterial(e.target.value));
+      document.getElementById("scanBtn").addEventListener("click", () => {
+        scanning = !scanning;
+        document.getElementById("scanBtn").textContent = scanning ? "スキャン停止" : "スキャン開始";
+        document.getElementById("scanBtn").classList.toggle("active", scanning);
+      });
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        scanning = false;
+        document.getElementById("scanBtn").textContent = "スキャン開始";
+        document.getElementById("scanBtn").classList.remove("active");
+        document.getElementById("vSlider").value = 0;
+        document.getElementById("recoilToggle").checked = false;
+        document.getElementById("matSelect").value = "fe2";
+        applyMaterial("fe2");
+      });
+      ["vSlider", "shiftSlider", "efgSlider", "bSlider", "recoilToggle"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", syncUI);
+      });
+
+      window.addEventListener("resize", () => {
+        clearTimeout(window._mb3d);
+        window._mb3d = setTimeout(() => { resizeThree(); resizeSpec(); }, 120);
+      });
+
+      initThree();
+      applyMaterial("fe2");
+      resizeSpec();
+      loop();
+    })();
+  </script>
+</body>
+</html>

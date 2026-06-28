@@ -3,29 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>水平投射シミュレーション</title>
+  <title>水平投射 — 2章 落体の運動</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
-      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      background: linear-gradient(160deg, #0c1018 0%, #0c1218 48%, #141c28 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      color: #003366;
-      padding: max(12px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom));
+      color: #e2e8f0;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
       touch-action: manipulation;
       -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
     }
 
     h2 {
       margin-top: 16px;
       font-weight: 600;
-      color: #004c99;
-      text-shadow: 0 0 8px #aee0ff;
+      color: #7dd3fc;
+      text-shadow: 0 0 20px rgba(14, 165, 233, 0.45);
+    }
+
+    .chapter-label {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #94a3b8;
     }
 
     .page-header {
@@ -37,152 +46,219 @@
     #back {
       margin-top: 10px;
       padding: 10px 16px;
-      background: #00aaff;
-      color: white;
+      background: rgba(14, 165, 233, 0.18);
+      color: #e0f2fe;
+      border: 1px solid rgba(14, 165, 233, 0.42);
       border-radius: 10px;
       text-decoration: none;
       font-weight: 600;
-      box-shadow: 0 0 10px #66d0ff;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       -webkit-tap-highlight-color: transparent;
     }
 
     #ui {
-      width: 90%;
+      width: min(520px, 92vw);
       margin: 10px;
       padding: 15px;
       border-radius: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(255, 255, 255, 0.4);
-      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: rgba(12, 16, 24, 0.62);
+      border: 1px solid rgba(14, 165, 233, 0.22);
+      box-shadow: 0 4px 28px rgba(0, 0, 0, 0.4);
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
     label {
-      font-size: 16px;
+      display: block;
+      font-size: 15px;
       font-weight: 500;
+      color: #cbd5e1;
     }
 
     input[type="range"] {
       width: 100%;
-      height: 30px;
+      height: 28px;
+      accent-color: #0ea5e9;
     }
 
     .hint {
       margin: 0;
-      font-size: 0.85rem;
-      color: #4a7099;
-      line-height: 1.5;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.55;
     }
 
     #shootBtn {
       margin-top: 4px;
       padding: 14px 20px;
       min-height: 48px;
-      font-size: 18px;
+      font-size: 1rem;
       font-family: inherit;
       font-weight: 600;
-      background: #00aaff;
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
       color: white;
       border: none;
       border-radius: 10px;
-      box-shadow: 0 0 10px #66d0ff;
+      box-shadow: 0 0 18px rgba(14, 165, 233, 0.45);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
 
-    #shootBtn:active {
-      transform: scale(0.98);
+    #shootBtn:active { transform: scale(0.98); }
+
+    #statusPanel,
+    #runStatus {
+      display: none;
+    }
+
+    .sim-layout {
+      width: min(960px, 95vw);
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+      .sim-layout {
+        flex-direction: row;
+        align-items: stretch;
+      }
+
+      #calcPanel {
+        flex: 0 0 min(360px, 40vw);
+        max-height: min(560px, 68dvh);
+        overflow-y: auto;
+      }
+
+      .canvas-section { flex: 1; }
+    }
+
+    @media (max-width: 759px) {
+      .canvas-section { order: -1; }
+    }
+
+    #calcPanel {
+      padding: 16px;
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: rgba(12, 16, 24, 0.62);
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      box-shadow: 0 4px 28px rgba(0, 0, 0, 0.35);
+      line-height: 1.65;
+    }
+
+    #calcPanel h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      color: #7dd3fc;
+    }
+
+    .concept {
+      margin: 0 0 12px;
+      font-size: 0.88rem;
+      color: #94a3b8;
+    }
+
+    .calc-block {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(14, 165, 233, 0.14);
+    }
+
+    .calc-block:last-child { margin-bottom: 0; }
+
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #0ea5e9; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #38bdf8; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #0ea5e9; }
+    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #38bdf8; }
+    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #7dd3fc; }
+
+    .calc-label {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #7dd3fc;
+    }
+
+    .calc-line {
+      margin: 3px 0;
+      font-size: 0.84rem;
+      color: #e2e8f0;
+    }
+
+    .calc-line.sub {
+      margin-left: 0.4rem;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .num { font-weight: 600; color: #0ea5e9; }
+    .num-v { font-weight: 600; color: #38bdf8; }
+
+    .canvas-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(440px, 54dvh);
+      min-height: 280px;
     }
 
     canvas {
       display: block;
-      width: 95vw;
-      max-width: 100%;
-      height: 42vh;
-      height: 42dvh;
-      border-radius: 12px;
-      margin-top: 10px;
-      background: white;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 14px;
+      background: transparent;
       touch-action: none;
-      box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+      box-shadow: 0 0 32px rgba(14, 165, 233, 0.16);
     }
 
-    #formulaPanel {
-      width: 90%;
-      margin: 12px 0 16px;
-      padding: 16px;
-      border-radius: 16px;
+    .canvas-caption {
+      margin: 0;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .legend {
+      width: min(960px, 95vw);
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      background: rgba(255, 255, 255, 0.5);
-      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.12);
-      line-height: 1.7;
-    }
-
-    #formulaPanel h3 {
-      margin: 0 0 8px;
-      font-size: 1.05rem;
-      color: #004c99;
-    }
-
-    .concept {
-      margin: 0 0 14px;
-      font-size: 0.92rem;
-      color: #4a7099;
-    }
-
-    .formula-block {
-      margin-bottom: 14px;
-      padding: 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.55);
-      border: 1px solid rgba(0, 140, 220, 0.15);
-    }
-
-    .formula-block:last-child {
-      margin-bottom: 0;
-    }
-
-    .formula-label {
-      margin: 0 0 6px;
+      background: rgba(12, 16, 24, 0.55);
+      border: 1px solid rgba(14, 165, 233, 0.15);
       font-size: 0.82rem;
-      font-weight: 600;
-      color: #2a7fd4;
-      letter-spacing: 0.04em;
+      line-height: 1.8;
+      color: #94a3b8;
     }
 
-    .formula-line {
-      margin: 4px 0;
-      font-size: 0.95rem;
-      color: #003366;
-    }
-
-    .formula-line.sub {
-      margin-left: 0.5rem;
-      font-size: 0.88rem;
-      color: #4a7099;
-    }
-
-    .formula-line .num {
-      font-weight: 600;
-      color: #0066aa;
-    }
-
-    .formula-line .note {
-      display: block;
-      margin-top: 2px;
-      font-size: 0.8rem;
-      color: #7a9fbf;
-    }
+    .legend span { font-weight: 600; }
+    .lg-path { color: #0ea5e9; }
+    .lg-prev { color: #64748b; }
   </style>
 </head>
 <body>
   <div class="page-header">
     <h2>水平投射シミュレーション</h2>
+    <p class="chapter-label">2章　落体の運動</p>
     <a id="back" href="index.html">← ホームへ戻る</a>
   </div>
 
@@ -209,53 +285,84 @@
     <button id="shootBtn" type="button">発射</button>
   </div>
 
-  <canvas id="canvas"></canvas>
+  <div id="statusPanel">発射ボタンで水平投射</div>
+  <div id="runStatus"></div>
 
-  <section id="formulaPanel" aria-label="水平投射の式">
-    <h3>水平投射の式（高校物理）</h3>
-    <p class="concept">台の端から水平に v₀ で投げ出します。水平方向は等速、鉛直方向は自由落下（初速度 0）です。</p>
+  <div class="sim-layout">
+    <section id="calcPanel" aria-label="水平投射の式">
+      <h3>水平投射の式</h3>
+      <p class="concept">台の端から水平に v₀ で投げ出します。水平方向は等速、鉛直方向は自由落下（初速度 0）です。</p>
 
-    <div class="formula-block">
-      <p class="formula-label">① 初速度（角度 0°）</p>
-      <p class="formula-line">v₀x = v₀ = <span id="fV0x" class="num">—</span> m/s</p>
-      <p class="formula-line">v₀y = 0 m/s</p>
+      <div class="calc-block">
+        <p class="calc-label">現在の値</p>
+        <p class="calc-line">t = <span id="liveT" class="num">0.00</span> s</p>
+        <p class="calc-line">x = <span id="liveX" class="num">0.0</span> m　y = <span id="liveY" class="num-v">60.0</span> m</p>
+        <p class="calc-line">v_x = <span id="liveVx" class="num">80</span> m/s　v_y = <span id="liveVy" class="num-v">0.0</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">① 初速度（角度 0°）</p>
+        <p class="calc-line">v₀x = v₀ = <span id="fV0x" class="num">—</span> m/s</p>
+        <p class="calc-line">v₀y = 0 m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">② 位置の式（時間 t）</p>
+        <p class="calc-line">x = v₀ t</p>
+        <p class="calc-line sub">→ x = <span id="fXsub" class="num">—</span> · t</p>
+        <p class="calc-line">y = H − ½gt²</p>
+        <p class="calc-line sub">→ y = <span id="fHsub" class="num">—</span> − ½ × <span id="fGsub" class="num">—</span> · t²</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">③ 速度の式</p>
+        <p class="calc-line">v_x = v₀（一定）　v_y = gt</p>
+        <p class="calc-line sub">今の v_x = <span id="fVxNow" class="num">—</span> m/s、v_y = <span id="fVyNow" class="num-v">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">④ 軌道の式（x について）</p>
+        <p class="calc-line">y = H − gx² / (2v₀²)</p>
+        <p class="calc-line sub">→ y = <span id="fTrackH" class="num">—</span> − <span id="fTrackB" class="num">—</span> x²</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">⑤ 求まる量</p>
+        <p class="calc-line">H = <span id="fH" class="num">—</span> m</p>
+        <p class="calc-line">T = √(2H/g) = <span id="fT" class="num">—</span> s</p>
+        <p class="calc-line">R = v₀T = <span id="fR" class="num">—</span> m</p>
+      </div>
+    </section>
+
+    <div class="canvas-section">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+      <p class="canvas-caption">
+        <span class="lg-path">— 実軌道</span>　
+        <span class="lg-prev">- - 予測軌道（式④）</span>　
+        <span style="color:#0ea5e9">● ボール</span>
+      </p>
     </div>
+  </div>
 
-    <div class="formula-block">
-      <p class="formula-label">② 位置の式（時間 t で表す）</p>
-      <p class="formula-line">x = v₀ t</p>
-      <p class="formula-line sub">→ x = <span id="fXsub" class="num">—</span> · t</p>
-      <p class="formula-line">y = H − ½gt² （y は地面からの高さ）</p>
-      <p class="formula-line sub">→ y = <span id="fHsub" class="num">—</span> − ½ × <span id="fGsub" class="num">—</span> · t²</p>
-      <p class="formula-line sub">落下変位　s = ½gt²</p>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">③ 速度の式</p>
-      <p class="formula-line">v_x = v₀ （一定）</p>
-      <p class="formula-line">v_y = gt （下向き）</p>
-      <p class="formula-line sub">今の v_x = <span id="fVxNow" class="num">—</span> m/s、v_y = <span id="fVyNow" class="num">—</span> m/s</p>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">④ 軌道の式（x について表す）</p>
-      <p class="formula-line">t = x / v₀ を y = H − ½gt² に代入すると</p>
-      <p class="formula-line">y = H − gx² / (2v₀²)</p>
-      <p class="formula-line sub">→ y = <span id="fTrackH" class="num">—</span> − <span id="fTrackB" class="num">—</span> x²</p>
-      <span class="note formula-line sub">x の2乗の式なので、軌道は放物線になります。</span>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">⑤ 求まる量</p>
-      <p class="formula-line">台の高さ　H = <span id="fH" class="num">—</span> m</p>
-      <p class="formula-line">落下時間　T = √(2H/g) = <span id="fT" class="num">—</span> s</p>
-      <p class="formula-line">飛距離　R = v₀T = <span id="fR" class="num">—</span> m</p>
-    </div>
-  </section>
+  <div class="legend">
+    <span class="lg-path">— 空色：飛行軌道</span>　
+    <span class="lg-prev">- - 点線：放物線 y = H − gx²/(2v₀²)</span>
+  </div>
 
   <script>
+    const COL = {
+      accent: "#0ea5e9",
+      accentLight: "#38bdf8",
+      grid: "rgba(148, 163, 184, 0.08)",
+      axis: "rgba(148, 163, 184, 0.35)",
+      ground: "rgba(14, 165, 233, 0.45)",
+    };
+
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
     const shootBtn = document.getElementById("shootBtn");
     const v0Slider = document.getElementById("v0Slider");
     const heightSlider = document.getElementById("heightSlider");
@@ -265,13 +372,14 @@
     const gravityValue = document.getElementById("gravityValue");
 
     const MAX_DT = 1 / 30;
-    const MARGIN = { left: 44, right: 24, top: 36, bottom: 28 };
+    const MARGIN = { left: 44, right: 24, top: 28, bottom: 28 };
     const PATH_SAMPLES = 80;
 
     let v0 = parseFloat(v0Slider.value);
     let launchHeight = parseFloat(heightSlider.value);
     let g = parseFloat(gravitySlider.value);
     let scale = 1;
+    let layout = { w: 0, h: 0, dpr: 1 };
 
     const projectile = {
       t: 0,
@@ -279,6 +387,62 @@
       landed: false,
       pathWorld: []
     };
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1218");
+      bg.addColorStop(1, "#141c28");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+
+      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(14, 165, 233, 0.1)");
+      glow.addColorStop(0.45, "rgba(56, 189, 248, 0.04)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+
+      c.strokeStyle = "rgba(148, 163, 184, 0.06)";
+      c.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        c.beginPath();
+        c.moveTo(i, 0);
+        c.lineTo(i, h);
+        c.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        c.beginPath();
+        c.moveTo(0, j);
+        c.lineTo(w, j);
+        c.stroke();
+      }
+    }
+
+    function drawGlowBall(c, x, y, r) {
+      c.save();
+      c.shadowBlur = 18;
+      c.shadowColor = COL.accent;
+      const grad = c.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+      grad.addColorStop(0, "#e0f2fe");
+      grad.addColorStop(0.45, COL.accent);
+      grad.addColorStop(1, "#0284c7");
+      c.fillStyle = grad;
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.fill();
+      c.shadowBlur = 0;
+      c.strokeStyle = "rgba(255,255,255,0.5)";
+      c.lineWidth = 1.5;
+      c.stroke();
+      c.restore();
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
 
     function syncSliders() {
       v0 = parseFloat(v0Slider.value);
@@ -320,6 +484,13 @@
       const tText = Number.isFinite(info.tLand) ? info.tLand.toFixed(2) : "—";
       const trackB = g > 0 ? g / (2 * v0 * v0) : 0;
       const vyNow = g * projectile.t;
+      const pos = positionAtTime(projectile.t);
+
+      document.getElementById("liveT").textContent = projectile.t.toFixed(2);
+      document.getElementById("liveX").textContent = pos.x.toFixed(1);
+      document.getElementById("liveY").textContent = pos.y.toFixed(1);
+      document.getElementById("liveVx").textContent = v0;
+      document.getElementById("liveVy").textContent = vyNow.toFixed(1);
 
       document.getElementById("fV0x").textContent = v0;
       document.getElementById("fXsub").textContent = v0;
@@ -336,8 +507,8 @@
 
     function updateScale() {
       const info = flightInfo();
-      const drawW = canvas.width - MARGIN.left - MARGIN.right;
-      const drawH = canvas.height - MARGIN.top - MARGIN.bottom;
+      const drawW = layout.w - MARGIN.left - MARGIN.right;
+      const drawH = layout.h - MARGIN.top - MARGIN.bottom;
       const worldW = Math.max(info.range * 1.08, 1);
       const worldH = Math.max(launchHeight * 1.2, 1);
       scale = Math.min(drawW / worldW, drawH / worldH);
@@ -346,7 +517,7 @@
     function worldToCanvas(x, y) {
       return {
         x: MARGIN.left + x * scale,
-        y: canvas.height - MARGIN.bottom - y * scale
+        y: layout.h - MARGIN.bottom - y * scale
       };
     }
 
@@ -374,11 +545,17 @@
     }
 
     function resizeCanvas() {
-      const viewport = window.visualViewport;
-      const width = viewport ? viewport.width : window.innerWidth;
-      const height = viewport ? viewport.height : window.innerHeight;
-      canvas.width = Math.max(320, Math.floor(width * 0.95));
-      canvas.height = Math.max(220, Math.floor(height * 0.42));
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(320, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      const cw = Math.round(w * dpr);
+      const ch = Math.round(h * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
+      layout = { w, h, dpr };
       updateScale();
     }
 
@@ -413,6 +590,9 @@
     window.addEventListener("resize", resizeCanvas);
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", resizeCanvas);
+    }
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
     }
 
     function update(dt) {
@@ -461,73 +641,59 @@
     function draw() {
       syncSliders();
       updateScale();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      setupCtx();
+      drawDarkBg(ctx, layout.w, layout.h);
 
       const info = flightInfo();
       const groundY = worldToCanvas(0, 0).y;
 
-      ctx.strokeStyle = "#d0e8ff";
+      ctx.strokeStyle = COL.grid;
       ctx.lineWidth = 1;
-      for (let x = MARGIN.left; x <= canvas.width - MARGIN.right; x += 40) {
+      for (let x = MARGIN.left; x <= layout.w - MARGIN.right; x += 40) {
         ctx.beginPath();
         ctx.moveTo(x, MARGIN.top);
-        ctx.lineTo(x, canvas.height - MARGIN.bottom);
+        ctx.lineTo(x, layout.h - MARGIN.bottom);
         ctx.stroke();
       }
       for (let y = groundY; y >= MARGIN.top; y -= 40) {
         ctx.beginPath();
         ctx.moveTo(MARGIN.left, y);
-        ctx.lineTo(canvas.width - MARGIN.right, y);
+        ctx.lineTo(layout.w - MARGIN.right, y);
         ctx.stroke();
       }
 
-      ctx.strokeStyle = "#66bfff";
+      ctx.strokeStyle = COL.ground;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(MARGIN.left - 8, groundY);
-      ctx.lineTo(canvas.width - MARGIN.right + 8, groundY);
+      ctx.lineTo(layout.w - MARGIN.right + 8, groundY);
       ctx.stroke();
 
       const platform = worldToCanvas(0, launchHeight);
-      ctx.fillStyle = "rgba(0, 136, 204, 0.15)";
+      ctx.fillStyle = "rgba(14, 165, 233, 0.12)";
       ctx.fillRect(MARGIN.left - 10, platform.y, 18, groundY - platform.y);
+      ctx.strokeStyle = "rgba(14, 165, 233, 0.35)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(MARGIN.left - 10, platform.y, 18, groundY - platform.y);
 
       const previewPath = buildPathWorld(info.tShow);
       if (!projectile.isFlying && !projectile.landed) {
-        drawPath(previewPath, "rgba(0, 170, 255, 0.45)", 2, true);
+        drawPath(previewPath, "rgba(14, 165, 233, 0.35)", 2, true);
       }
 
       if (projectile.pathWorld.length > 1) {
-        drawPath(projectile.pathWorld, "#00bfff", 2.5, false);
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = COL.accent;
+        drawPath(projectile.pathWorld, COL.accentLight, 2.5, false);
+        ctx.restore();
       }
 
       const ballPos = projectile.isFlying || projectile.landed
         ? positionAtTime(projectile.t)
         : { x: 0, y: launchHeight };
       const ball = worldToCanvas(ballPos.x, ballPos.y);
-
-      ctx.fillStyle = "#00e0ff";
-      ctx.shadowColor = "#66ffff";
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      const vx = v0;
-      const vy = g * projectile.t;
-      const speed = Math.sqrt(vx * vx + vy * vy);
-      const KE = 0.5 * speed * speed;
-      const PE = g * ballPos.y;
-
-      ctx.fillStyle = "#004c99";
-      ctx.font = "14px Inter, Poppins, Noto Sans JP, sans-serif";
-      ctx.fillText(`運動エネルギー: ${KE.toFixed(1)} J`, 10, 18);
-      ctx.fillText(`位置エネルギー: ${PE.toFixed(1)} J`, 10, 38);
-      ctx.fillText(`t = ${projectile.t.toFixed(2)} s`, 10, 58);
-      ctx.fillText(`x = ${ballPos.x.toFixed(1)} m`, 10, 78);
+      drawGlowBall(ctx, ball.x, ball.y, 8);
     }
 
     let last = performance.now();
