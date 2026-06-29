@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>比熱・熱容量と状態変化 — Q = mcΔT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --accent: #22d3ee;
+      --accent-light: #67e8f9;
+      --accent-warm: #fb923c;
+      --accent-glow: rgba(34, 211, 238, 0.42);
+      --slate-bg: rgba(12, 18, 32, 0.78);
+      --slate-border: rgba(34, 211, 238, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1524 38%, #101c30 72%, #0a1018 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 55% 42% at 18% 22%, rgba(251, 146, 60, 0.07), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 82% 78%, rgba(34, 211, 238, 0.08), transparent 55%);
+    }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1080px, 96vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .page-header { text-align: center; }
+
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, rgba(251, 146, 60, 0.22), rgba(34, 211, 238, 0.28));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.3rem;
+    }
+
+    h2 {
+      margin: 6px 0 4px;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+
+    #back {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 16px;
+      color: #cffafe;
+      background: rgba(34, 211, 238, 0.14);
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .panel {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: var(--accent-light);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+      }
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: min(300px, 40dvh);
+      min-height: 240px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(10, 20, 32, 0.98), rgba(6, 12, 20, 0.99));
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      box-shadow: 0 0 32px rgba(34, 211, 238, 0.08);
+    }
+
+    #particleCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(8, 12, 20, 0.75);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      font-size: 0.72rem;
+      line-height: 1.55;
+      color: #cbd5e1;
+      pointer-events: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .phase-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      pointer-events: none;
+    }
+
+    .phase-badge.solid { background: rgba(224, 242, 254, 0.2); color: #e0f2fe; border: 1px solid rgba(224, 242, 254, 0.4); }
+    .phase-badge.liquid { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .phase-badge.gas { background: rgba(203, 213, 225, 0.15); color: #e2e8f0; border: 1px solid rgba(203, 213, 225, 0.35); }
+    .phase-badge.melt { background: rgba(251, 146, 60, 0.2); color: #fed7aa; border: 1px solid rgba(251, 146, 60, 0.45); }
+    .phase-badge.boil { background: rgba(248, 113, 113, 0.18); color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.4); }
+
+    .canvas-caption {
+      margin: 8px 0 0;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .material-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .material-btn {
+      min-height: 48px;
+      padding: 10px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .material-btn span {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .material-btn.active {
+      border-color: rgba(251, 146, 60, 0.55);
+      background: rgba(251, 146, 60, 0.15);
+      color: #fed7aa;
+    }
+
+    label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-warm);
+      height: 8px;
+    }
+
+    .slider-val {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #fdba74;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .preset-row button {
+      flex: 1 1 calc(33% - 6px);
+      min-height: 40px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .preset-row button.active {
+      border-color: rgba(251, 146, 60, 0.45);
+      background: rgba(251, 146, 60, 0.15);
+      color: #fed7aa;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-row button {
+      flex: 1 1 calc(50% - 4px);
+      min-height: 48px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #heatBtn {
+      background: linear-gradient(135deg, #ea580c, #fb923c);
+      color: #fff;
+      border: none;
+      box-shadow: 0 0 16px rgba(251, 146, 60, 0.4);
+    }
+
+    #heatBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(34, 211, 238, 0.35);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .info-item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(125, 211, 252, 0.2);
+    }
+
+    .info-item .label {
+      display: block;
+      font-size: 0.7rem;
+      color: #cbd5e1;
+      margin-bottom: 4px;
+    }
+
+    .info-item .val {
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+    }
+
+    .info-item .val.w { color: #fdba74; }
+    .info-item .val.c { color: #7dd3fc; }
+    .info-item .val.g { color: #6ee7b7; }
+    .info-item .val.p { color: #c4b5fd; }
+
+    .phase-progress {
+      margin-bottom: 10px;
+    }
+
+    .phase-progress .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .phase-progress .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .phase-progress .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #fb923c);
+      transition: width 0.15s linear;
+    }
+
+    .calc-block {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      font-size: 0.84rem;
+      line-height: 1.65;
+      color: #bae6fd;
+    }
+
+    .calc-block .line { margin: 3px 0; }
+    .num-q { color: #fbbf24; font-weight: 700; }
+    .num-m { color: #fdba74; font-weight: 700; }
+    .num-c { color: #7dd3fc; font-weight: 700; }
+    .num-dt { color: #6ee7b7; font-weight: 700; }
+    .num-l { color: #c4b5fd; font-weight: 700; }
+
+    .status-msg {
+      margin: 8px 0 0;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: center;
+      color: #bae6fd;
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.22);
+    }
+
+    .status-msg.heating {
+      color: #fed7aa;
+      background: rgba(251, 146, 60, 0.12);
+      border-color: rgba(251, 146, 60, 0.35);
+    }
+
+    .status-msg.plateau {
+      color: #fecaca;
+      background: rgba(248, 113, 113, 0.1);
+      border-color: rgba(248, 113, 113, 0.3);
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: min(280px, 36dvh);
+      min-height: 220px;
+    }
+
+    .explain-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      line-height: 1.75;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+    }
+
+    .explain-list li + li { margin-top: 0.35rem; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">🔥</div>
+      <h2>比熱・熱容量と状態変化</h2>
+      <p class="chapter-label">12章　熱と比熱 — Q = mcΔT と潜熱</p>
+      <a id="back" href="../index.html">← ホームへ戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <div class="col">
+        <section class="panel" aria-label="粒子運動">
+          <h3>粒子の熱運動と状態（固・液・気）</h3>
+          <div class="canvas-wrap">
+            <canvas id="particleCanvas" aria-label="粒子運動アニメーション"></canvas>
+            <div class="canvas-hud" id="canvasHud">T = 20.0 ℃<br>液体</div>
+            <div class="phase-badge liquid" id="phaseBadge">液体</div>
+          </div>
+          <p class="canvas-caption">3D結晶格子 — 奥行きのある結合が融解とともに順に解け、液体へ移行します</p>
+        </section>
+
+        <section class="panel" aria-label="物質設定">
+          <h3>物質・質量・加熱</h3>
+          <div class="material-grid" id="materialGrid">
+            <button type="button" class="material-btn active" data-material="water">水<span>c=4.2 · 0/100℃で状態変化</span></button>
+            <button type="button" class="material-btn" data-material="iron">鉄<span>c=0.45 · 固体のみ</span></button>
+            <button type="button" class="material-btn" data-material="aluminum">アルミ<span>c=0.90 · 固体のみ</span></button>
+            <button type="button" class="material-btn" data-material="air">空気<span>c=1.0 · 気体のみ</span></button>
+          </div>
+          <label for="initialTempSlider">
+            初期温度 T₀（℃）
+            <input id="initialTempSlider" type="range" min="-200" max="200" step="1" value="-10">
+            <span class="slider-val" id="initialTempValue">−10 ℃</span>
+          </label>
+          <div class="preset-row" id="tempPresets">
+            <button type="button" data-temp="-200">−200 ℃</button>
+            <button type="button" data-temp="-10" class="active">−10 ℃</button>
+            <button type="button" data-temp="0">0 ℃</button>
+            <button type="button" data-temp="20">20 ℃</button>
+            <button type="button" data-temp="100">100 ℃</button>
+          </div>
+          <label>
+            質量 m（g）
+            <input id="massSlider" type="range" min="100" max="2000" step="50" value="500">
+            <span class="slider-val" id="massValue">500 g</span>
+          </label>
+          <label>
+            加熱量 Q（J）
+            <input id="heatSlider" type="range" min="500" max="10000" step="250" value="2000">
+            <span class="slider-val" id="heatValue">2000 J</span>
+          </label>
+          <div class="btn-row">
+            <button type="button" id="heatBtn">加熱（Q = 2000 J）</button>
+            <button type="button" id="resetBtn">リセット</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="panel" aria-label="温度表示">
+          <h3>温度・状態・熱量</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">現在の温度</span>
+              <span class="val w" id="celsiusVal">20.0 ℃</span>
+            </div>
+            <div class="info-item">
+              <span class="label">状態</span>
+              <span class="val p" id="phaseVal">液体</span>
+            </div>
+            <div class="info-item">
+              <span class="label">今回の ΔT</span>
+              <span class="val g" id="deltaTVal">— ℃</span>
+            </div>
+            <div class="info-item">
+              <span class="label">累積熱量 ΣQ</span>
+              <span class="val g" id="totalQVal">0 J</span>
+            </div>
+            <div class="info-item">
+              <span class="label">熱容量 C = mc</span>
+              <span class="val c" id="capacityVal">— J/K</span>
+            </div>
+          </div>
+
+          <div class="phase-progress" id="phaseProgressWrap" hidden>
+            <div class="bar-label">
+              <span id="phaseProgressLabel">状態変化の進み</span>
+              <span id="phaseProgressPct">0%</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill" id="phaseProgressBar"></div></div>
+          </div>
+
+          <div class="calc-block">
+            <p class="line" id="calcMain"><strong>Q = mcΔT</strong></p>
+            <p class="line">Q = <span id="calcQ" class="num-q">2000</span> J · m = <span id="calcM" class="num-m">500</span> g</p>
+            <p class="line" id="calcDetail">c = <span id="calcC" class="num-c">4.2</span> J/(g·K) · ΔT = <span id="calcDt" class="num-dt">—</span> ℃</p>
+            <p class="line" id="calcLatent" style="display:none;color:#ddd6fe;">潜熱 <span id="calcL" class="num-l">334</span> J/g → Q = mL（温度は一定）</p>
+          </div>
+          <p class="status-msg" id="statusMsg">「加熱」で熱量を与えてください</p>
+        </section>
+
+        <section class="panel" aria-label="温度変化グラフ">
+          <h3>温度–熱量グラフ（Q 横軸 · T 縦軸）</h3>
+          <div class="chart-wrap">
+            <canvas id="tempChart" aria-label="与えた熱量に対する温度変化"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel" aria-label="説明">
+      <h3>比熱・熱容量・状態変化</h3>
+      <ul class="explain-list">
+        <li>比熱は物質固有の温まりにくさ。</li>
+        <li>熱容量は物体全体の温まりにくさで、C = mc。</li>
+        <li>同じ熱量を加えても、物質や質量によって温度上昇が異なる（Q = mcΔT）。</li>
+        <li>融解・沸騰では潜熱 Q = mL が使われ、<strong>温度は一定</strong>のまま状態だけが変わる（加熱曲線の平台）。</li>
+        <li>水は 0 ℃で氷→水、100 ℃で水→水蒸気と状態が変化する。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const K_OFFSET = 273.15;
+      const SPEED_K = 0.5;
+      const PARTICLE_COUNT = 25;
+      const PARTICLE_RADIUS = 5;
+      const CUBE_N = 4;
+      const SEGMENT_MS = 1400;
+      const CHART_SAMPLE_DQ = 40;
+
+      // 物質データ
+      const MATERIALS = {
+        water: {
+          name: "水",
+          c: 4.2,
+          cSolid: 2.1,
+          cGas: 2.0,
+          meltAt: 0,
+          boilAt: 100,
+          Lf: 334,
+          Lv: 2260,
+          phases: true,
+          colors: { solid: "#e0f2fe", liquid: "#38bdf8", gas: "#cbd5e1" },
+        },
+        iron: { name: "鉄", c: 0.45, phases: false, colors: { solid: "#94a3b8" } },
+        aluminum: { name: "アルミニウム", c: 0.9, phases: false, colors: { solid: "#e2e8f0" } },
+        air: { name: "空気", c: 1.0, phases: false, gasOnly: true, colors: { gas: "#a5f3fc" } },
+      };
+
+      const canvas = document.getElementById("particleCanvas");
+      const ctx = canvas.getContext("2d");
+      const massSlider = document.getElementById("massSlider");
+      const initialTempSlider = document.getElementById("initialTempSlider");
+      const initialTempValue = document.getElementById("initialTempValue");
+      const heatSlider = document.getElementById("heatSlider");
+      const heatValue = document.getElementById("heatValue");
+      const massValue = document.getElementById("massValue");
+      const heatBtn = document.getElementById("heatBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const statusMsg = document.getElementById("statusMsg");
+      const canvasHud = document.getElementById("canvasHud");
+      const phaseBadge = document.getElementById("phaseBadge");
+      const phaseProgressWrap = document.getElementById("phaseProgressWrap");
+      const phaseProgressBar = document.getElementById("phaseProgressBar");
+      const phaseProgressPct = document.getElementById("phaseProgressPct");
+      const phaseProgressLabel = document.getElementById("phaseProgressLabel");
+      const calcLatent = document.getElementById("calcLatent");
+      const calcMain = document.getElementById("calcMain");
+
+      let width = 0;
+      let height = 0;
+      let materialKey = "water";
+      let mass = Number(massSlider.value);
+      let heatQ = Number(heatSlider.value);
+      let celsius = -10;
+      let simTime = 0;
+      let lastChartSampleQ = 0;
+      let cumulativeQ = 0;
+      let heatSessionStartQ = 0;
+      let heatSessionSize = 0;
+      let segmentsTotal = 0;
+      let segmentsDone = 0;
+      let particles = [];
+      let bonds = [];
+      let particleMode = "free";
+      let camYaw = 0.62;
+      let tempChart = null;
+
+      // 状態：solid | liquid | gas | melting | boiling
+      let phase = "solid";
+      let liquidFrac = 0;
+      let gasFrac = 0;
+      let lastDeltaT = 0;
+      let animating = false;
+      let segmentQueue = [];
+      let currentSegment = null;
+      let segStartTime = 0;
+      let segFrom = {};
+
+      function fmt(v, d) {
+        return Number(v).toFixed(d);
+      }
+
+      function randomAngle() {
+        return Math.random() * Math.PI * 2;
+      }
+
+      function kelvinFromCelsius(c) {
+        return c + K_OFFSET;
+      }
+
+      // 温度に応じて粒子速度を変更（v = k * sqrt(T_K)）
+      function speedFromCelsius(c, phaseScale) {
+        return SPEED_K * Math.sqrt(Math.max(1, kelvinFromCelsius(c))) * phaseScale;
+      }
+
+      function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      }
+
+      function currentMaterial() {
+        return MATERIALS[materialKey];
+      }
+
+      function heatCapacity(m, c) {
+        return m * c;
+      }
+
+      function inferPhaseFromTemp(T, mat) {
+        if (!mat.phases) {
+          if (mat.gasOnly) return "gas";
+          return "solid";
+        }
+        if (T < mat.meltAt) return "solid";
+        if (T < mat.boilAt) return "liquid";
+        return "gas";
+      }
+
+      function phaseLabel(p) {
+        const mat = currentMaterial();
+        if (p === "solid") {
+          if (mat.gasOnly) return "気体";
+          if (mat.phases) return "固体（氷）";
+          return "固体";
+        }
+        if (p === "liquid") return mat.phases ? "液体（水）" : "液体";
+        if (p === "gas") return mat.phases ? "気体（水蒸気）" : "気体";
+        if (p === "melting") return mat.phases ? "融解中（氷→水）" : "融解中";
+        if (p === "boiling") return mat.phases ? "沸騰中（水→蒸気）" : "沸騰中";
+        return p;
+      }
+
+      function formatCelsiusLabel(c) {
+        return `${Math.round(c)} ℃`;
+      }
+
+      function readInitialCelsius() {
+        return Number(initialTempSlider.value);
+      }
+
+      function syncInitialTempUI() {
+        const t = readInitialCelsius();
+        initialTempValue.textContent = formatCelsiusLabel(t);
+        document.querySelectorAll("#tempPresets button").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.temp) === t);
+        });
+      }
+
+      function updateChartYRange() {
+        if (!tempChart) return;
+        const pts = tempChart.data.datasets[0].data;
+        let minT = readInitialCelsius();
+        let maxT = 120;
+        for (let i = 0; i < pts.length; i += 1) {
+          minT = Math.min(minT, pts[i].y);
+          maxT = Math.max(maxT, pts[i].y);
+        }
+        tempChart.options.scales.y.min = Math.floor(minT / 20) * 20 - 20;
+        tempChart.options.scales.y.max = Math.ceil(maxT / 20) * 20 + 20;
+      }
+
+      function phaseBadgeClass(p) {
+        if (p === "melting") return "melt";
+        if (p === "boiling") return "boil";
+        if (p === "solid") return "solid";
+        if (p === "gas") return "gas";
+        return "liquid";
+      }
+
+      function motionScaleForPhase(p, liq, gas) {
+        if (p === "solid") return 0.35;
+        if (p === "melting") return 0.35 + liq * 0.65;
+        if (p === "liquid") return 1;
+        if (p === "boiling") return 1 + gas * 0.8;
+        if (p === "gas") return 1.8;
+        return 1;
+      }
+
+      // 加熱 Q を状態変化込みでセグメント列に分解
+      function planHeatSegments(T, ph, liq, gas, m, Q) {
+        const mat = currentMaterial();
+        if (!mat.phases) {
+          const dT = Q / (m * mat.c);
+          return [{ type: "sensible", fromT: T, toT: T + dT, phase: ph, liq, gas }];
+        }
+
+        let temp = T;
+        let phaseState = ph;
+        let liquidF = liq;
+        let gasF = gas;
+        let remaining = Q;
+        const segments = [];
+
+        while (remaining > 0.5) {
+          if (phaseState === "solid") {
+            if (temp < mat.meltAt) {
+              const need = m * mat.cSolid * (mat.meltAt - temp);
+              if (remaining <= need) {
+                segments.push({
+                  type: "sensible",
+                  fromT: temp,
+                  toT: temp + remaining / (m * mat.cSolid),
+                  phase: "solid",
+                  liq: 0,
+                  gas: 0,
+                });
+                remaining = 0;
+              } else {
+                segments.push({ type: "sensible", fromT: temp, toT: mat.meltAt, phase: "solid", liq: 0, gas: 0 });
+                remaining -= need;
+                temp = mat.meltAt;
+                phaseState = "melting";
+              }
+            } else {
+              phaseState = "liquid";
+              temp = mat.meltAt;
+            }
+            continue;
+          }
+
+          if (phaseState === "melting") {
+            const need = m * mat.Lf * (1 - liquidF);
+            if (need <= 0.001) {
+              phaseState = "liquid";
+              liquidF = 1;
+              continue;
+            }
+            if (remaining <= need) {
+              const dL = remaining / (m * mat.Lf);
+              segments.push({
+                type: "latent",
+                kind: "melt",
+                atT: mat.meltAt,
+                fromL: liquidF,
+                toL: liquidF + dL,
+                phase: "melting",
+              });
+              liquidF += dL;
+              remaining = 0;
+              if (liquidF >= 0.999) phaseState = "liquid";
+            } else {
+              segments.push({
+                type: "latent",
+                kind: "melt",
+                atT: mat.meltAt,
+                fromL: liquidF,
+                toL: 1,
+                phase: "melting",
+              });
+              remaining -= need;
+              liquidF = 1;
+              phaseState = "liquid";
+              temp = mat.meltAt;
+            }
+            continue;
+          }
+
+          if (phaseState === "liquid") {
+            if (temp < mat.boilAt) {
+              const need = m * mat.c * (mat.boilAt - temp);
+              if (remaining <= need) {
+                segments.push({
+                  type: "sensible",
+                  fromT: temp,
+                  toT: temp + remaining / (m * mat.c),
+                  phase: "liquid",
+                  liq: 1,
+                  gas: 0,
+                });
+                remaining = 0;
+              } else {
+                segments.push({ type: "sensible", fromT: temp, toT: mat.boilAt, phase: "liquid", liq: 1, gas: 0 });
+                remaining -= need;
+                temp = mat.boilAt;
+                phaseState = "boiling";
+              }
+            } else {
+              phaseState = "boiling";
+            }
+            continue;
+          }
+
+          if (phaseState === "boiling") {
+            const need = m * mat.Lv * (1 - gasF);
+            if (need <= 0.001) {
+              phaseState = "gas";
+              gasF = 1;
+              continue;
+            }
+            if (remaining <= need) {
+              const dG = remaining / (m * mat.Lv);
+              segments.push({
+                type: "latent",
+                kind: "boil",
+                atT: mat.boilAt,
+                fromG: gasF,
+                toG: gasF + dG,
+                phase: "boiling",
+              });
+              gasF += dG;
+              remaining = 0;
+              if (gasF >= 0.999) phaseState = "gas";
+            } else {
+              segments.push({
+                type: "latent",
+                kind: "boil",
+                atT: mat.boilAt,
+                fromG: gasF,
+                toG: 1,
+                phase: "boiling",
+              });
+              remaining -= need;
+              gasF = 1;
+              phaseState = "gas";
+              temp = mat.boilAt;
+            }
+            continue;
+          }
+
+          if (phaseState === "gas") {
+            const dT = remaining / (m * mat.cGas);
+            segments.push({
+              type: "sensible",
+              fromT: temp,
+              toT: temp + dT,
+              phase: "gas",
+              liq: 1,
+              gas: 1,
+            });
+            remaining = 0;
+            continue;
+          }
+
+          break;
+        }
+
+        return segments;
+      }
+
+      function usesLattice() {
+        if (phase === "solid" || phase === "melting") return true;
+        const mat = currentMaterial();
+        return !mat.phases && !mat.gasOnly;
+      }
+
+      function bondBroken(bond) {
+        return liquidFrac >= bond.breakAt;
+      }
+
+      function bondRemainFraction() {
+        if (bonds.length === 0) return 1;
+        let active = 0;
+        for (let i = 0; i < bonds.length; i += 1) {
+          if (!bondBroken(bonds[i])) active += 1;
+        }
+        return active / bonds.length;
+      }
+
+      function particleFreedom(p) {
+        if (phase === "solid") return 0;
+        if (phase !== "melting") return 1;
+        let broken = 0;
+        let total = 0;
+        for (let i = 0; i < bonds.length; i += 1) {
+          const b = bonds[i];
+          if (b.a !== p.index && b.b !== p.index) continue;
+          total += 1;
+          if (bondBroken(b)) broken += 1;
+        }
+        const fromBonds = total > 0 ? broken / total : liquidFrac;
+        const fromThreshold = liquidFrac <= p.freeThreshold
+          ? 0
+          : (liquidFrac - p.freeThreshold) / Math.max(0.05, 1 - p.freeThreshold);
+        return Math.min(1, Math.max(fromBonds, fromThreshold * 0.85));
+      }
+
+      function buildBonds3D(n) {
+        bonds = [];
+        function idx(x, y, z) {
+          return x + y * n + z * n * n;
+        }
+        for (let z = 0; z < n; z += 1) {
+          for (let y = 0; y < n; y += 1) {
+            for (let x = 0; x < n; x += 1) {
+              const i = idx(x, y, z);
+              if (x < n - 1) bonds.push({ a: i, b: idx(x + 1, y, z), breakAt: 0.04 + Math.random() * 0.88 });
+              if (y < n - 1) bonds.push({ a: i, b: idx(x, y + 1, z), breakAt: 0.04 + Math.random() * 0.88 });
+              if (z < n - 1) bonds.push({ a: i, b: idx(x, y, z + 1), breakAt: 0.04 + Math.random() * 0.88 });
+            }
+          }
+        }
+      }
+
+      // 3D → 2D 等角投影（奥行き付き）
+      function project3D(x, y, z) {
+        const pitch = 0.42;
+        const yaw = camYaw;
+        const cosY = Math.cos(yaw);
+        const sinY = Math.sin(yaw);
+        const cosP = Math.cos(pitch);
+        const sinP = Math.sin(pitch);
+        const rx = x * cosY - z * sinY;
+        const rz1 = x * sinY + z * cosY;
+        const ry = y * cosP - rz1 * sinP;
+        const depth = y * sinP + rz1 * cosP;
+        const unit = Math.min(width, height) / (CUBE_N * 3.8);
+        const sx = width * 0.5 + rx * unit;
+        const sy = height * 0.52 + ry * unit * 0.88;
+        const depthScale = 1 / (1 + depth * 0.14);
+        return { sx, sy, depth, depthScale, unit };
+      }
+
+      function buildLattice() {
+        particles = [];
+        particleMode = "lattice";
+        const n = CUBE_N;
+        const color = particleColor(phase);
+        const total = n * n * n;
+        let index = 0;
+
+        for (let z = 0; z < n; z += 1) {
+          for (let y = 0; y < n; y += 1) {
+            for (let x = 0; x < n; x += 1) {
+              particles.push({
+                index,
+                ix: x,
+                iy: y,
+                iz: z,
+                ax: x - (n - 1) / 2,
+                ay: y - (n - 1) / 2,
+                az: z - (n - 1) / 2,
+                sx: width * 0.5,
+                sy: height * 0.5,
+                depth: 0,
+                depthScale: 1,
+                driftX: 0,
+                driftY: 0,
+                vx: 0,
+                vy: 0,
+                phase: Math.random() * Math.PI * 2,
+                phase2: Math.random() * Math.PI * 2,
+                freeThreshold: 0.05 + (index / total) * 0.5 + Math.random() * 0.28,
+                color,
+              });
+              index += 1;
+            }
+          }
+        }
+        buildBonds3D(n);
+      }
+
+      class FreeParticle {
+        constructor(x, y, color, speed) {
+          this.x = x;
+          this.y = y;
+          this.baseRadius = PARTICLE_RADIUS;
+          this.color = color;
+          const angle = randomAngle();
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+        }
+
+        setSpeed(speed) {
+          const angle = Math.atan2(this.vy, this.vx) || randomAngle();
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+        }
+
+        update(mode) {
+          if (mode === "gas") {
+            this.x += this.vx * 1.15;
+            this.y += this.vy * 1.15;
+          } else {
+            this.x += this.vx;
+            this.y += this.vy;
+          }
+          this.bounceWalls(mode);
+        }
+
+        bounceWalls(mode) {
+          const r = this.baseRadius;
+          if (this.x - r < 0) { this.x = r; this.vx = Math.abs(this.vx); }
+          else if (this.x + r > width) { this.x = width - r; this.vx = -Math.abs(this.vx); }
+          if (this.y - r < 0) { this.y = r; this.vy = Math.abs(this.vy); }
+          else if (this.y + r > height) { this.y = height - r; this.vy = -Math.abs(this.vy); }
+          if (mode === "gas" && Math.random() < 0.01) {
+            this.vx += (Math.random() - 0.5) * 0.8;
+            this.vy += (Math.random() - 0.5) * 0.8;
+          }
+        }
+
+        draw(context, mode, liq, gas) {
+          let r = this.baseRadius;
+          let color = this.color;
+          if (mode === "boiling") {
+            r *= 1 + gas * 0.5;
+            color = gas > 0.5 ? "#e2e8f0" : "#38bdf8";
+          }
+          if (mode === "gas") {
+            r *= 0.75;
+            context.globalAlpha = 0.75;
+          }
+          const g = context.createRadialGradient(this.x - 1, this.y - 1, 0, this.x, this.y, r);
+          g.addColorStop(0, "#f8fafc");
+          g.addColorStop(0.55, color);
+          g.addColorStop(1, "rgba(15, 23, 42, 0.85)");
+          context.beginPath();
+          context.arc(this.x, this.y, r, 0, Math.PI * 2);
+          context.fillStyle = g;
+          context.fill();
+          context.globalAlpha = 1;
+        }
+      }
+
+      function buildFreeParticles() {
+        particles = [];
+        particleMode = "free";
+        const margin = PARTICLE_RADIUS + 4;
+        const scale = motionScaleForPhase(phase, liquidFrac, gasFrac);
+        const speed = speedFromCelsius(celsius, scale);
+        const color = particleColor(phase);
+        for (let i = 0; i < PARTICLE_COUNT; i += 1) {
+          particles.push(new FreeParticle(
+            margin + Math.random() * (width - margin * 2),
+            margin + Math.random() * (height - margin * 2),
+            color,
+            speed
+          ));
+        }
+      }
+
+      function latticePos3D(p, amp) {
+        const wobble = amp * 0.07;
+        return {
+          x: p.ax + Math.cos(p.phase) * wobble,
+          y: p.ay + Math.sin(p.phase * 1.17) * wobble,
+          z: p.az + Math.cos(p.phase2 * 0.93) * wobble,
+        };
+      }
+
+      function updateLatticeParticles() {
+        const amp = 0.8 + speedFromCelsius(celsius, 0.35) * 0.12;
+        const liqSpeed = speedFromCelsius(celsius, 1);
+        const color = particleColor(phase);
+
+        for (let i = 0; i < particles.length; i += 1) {
+          const p = particles[i];
+          p.color = color;
+          p.phase += 0.032 + p.ix * 0.003;
+          p.phase2 += 0.028 + p.iz * 0.003;
+          const f = particleFreedom(p);
+          const pos3 = latticePos3D(p, amp);
+          const proj = project3D(pos3.x, pos3.y, pos3.z);
+          const lx = proj.sx;
+          const ly = proj.sy;
+          p.depth = proj.depth;
+          p.depthScale = proj.depthScale;
+
+          if (f < 0.02) {
+            p.sx = lx;
+            p.sy = ly;
+            p.driftX = 0;
+            p.driftY = 0;
+            p.vx = 0;
+            p.vy = 0;
+          } else {
+            if (Math.hypot(p.vx, p.vy) < liqSpeed * 0.22) {
+              const ang = randomAngle();
+              p.vx = Math.cos(ang) * liqSpeed;
+              p.vy = Math.sin(ang) * liqSpeed;
+            }
+            p.driftX = p.driftX * 0.96 + p.vx * f * 0.08;
+            p.driftY = p.driftY * 0.96 + p.vy * f * 0.08;
+            p.sx = lx * (1 - f) + (lx + p.driftX) * f;
+            p.sy = ly * (1 - f) + (ly + p.driftY) * f;
+            p.sx += p.vx * f * 0.55;
+            p.sy += p.vy * f * 0.55;
+            const r = PARTICLE_RADIUS * 2;
+            if (p.sx < r) { p.sx = r; p.vx = Math.abs(p.vx); }
+            else if (p.sx > width - r) { p.sx = width - r; p.vx = -Math.abs(p.vx); }
+            if (p.sy < r) { p.sy = r; p.vy = Math.abs(p.vy); }
+            else if (p.sy > height - r) { p.sy = height - r; p.vy = -Math.abs(p.vy); }
+          }
+        }
+      }
+
+      function drawCrystalFloor() {
+        const n = CUBE_N;
+        const yFloor = -(n - 1) / 2 - 0.55;
+        const corners = [
+          project3D(-(n - 1) / 2 - 0.4, yFloor, -(n - 1) / 2 - 0.4),
+          project3D((n - 1) / 2 + 0.4, yFloor, -(n - 1) / 2 - 0.4),
+          project3D((n - 1) / 2 + 0.4, yFloor, (n - 1) / 2 + 0.4),
+          project3D(-(n - 1) / 2 - 0.4, yFloor, (n - 1) / 2 + 0.4),
+        ];
+        ctx.beginPath();
+        ctx.moveTo(corners[0].sx, corners[0].sy);
+        for (let i = 1; i < corners.length; i += 1) ctx.lineTo(corners[i].sx, corners[i].sy);
+        ctx.closePath();
+        const fg = ctx.createLinearGradient(corners[0].sx, corners[0].sy, corners[2].sx, corners[2].sy);
+        fg.addColorStop(0, "rgba(14, 116, 144, 0.12)");
+        fg.addColorStop(1, "rgba(8, 47, 73, 0.22)");
+        ctx.fillStyle = fg;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.18)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
+        for (let i = 0; i <= n; i += 1) {
+          const t = i / n;
+          const a = project3D(-(n - 1) / 2 + (n - 1) * t, yFloor, -(n - 1) / 2);
+          const b = project3D(-(n - 1) / 2 + (n - 1) * t, yFloor, (n - 1) / 2);
+          ctx.beginPath();
+          ctx.moveTo(a.sx, a.sy);
+          ctx.lineTo(b.sx, b.sy);
+          ctx.stroke();
+          const c = project3D(-(n - 1) / 2, yFloor, -(n - 1) / 2 + (n - 1) * t);
+          const d = project3D((n - 1) / 2, yFloor, -(n - 1) / 2 + (n - 1) * t);
+          ctx.beginPath();
+          ctx.moveTo(c.sx, c.sy);
+          ctx.lineTo(d.sx, d.sy);
+          ctx.stroke();
+        }
+      }
+
+      function drawLatticeBonds() {
+        const bondList = [];
+        for (let i = 0; i < bonds.length; i += 1) {
+          const bond = bonds[i];
+          if (bondBroken(bond)) continue;
+          const pa = particles[bond.a];
+          const pb = particles[bond.b];
+          if (!pa || !pb) continue;
+          const strength = 1 - Math.max(particleFreedom(pa), particleFreedom(pb));
+          if (strength < 0.04) continue;
+          const depth = (pa.depth + pb.depth) * 0.5;
+          bondList.push({ pa, pb, strength, depth });
+        }
+        bondList.sort((a, b) => a.depth - b.depth);
+
+        for (let i = 0; i < bondList.length; i += 1) {
+          const { pa, pb, strength, depth } = bondList[i];
+          const depthFade = 1 / (1 + depth * 0.12);
+          ctx.beginPath();
+          ctx.moveTo(pa.sx, pa.sy);
+          ctx.lineTo(pb.sx, pb.sy);
+          const grad = ctx.createLinearGradient(pa.sx, pa.sy, pb.sx, pb.sy);
+          grad.addColorStop(0, `rgba(186, 230, 253, ${(0.15 + strength * 0.5) * depthFade})`);
+          grad.addColorStop(1, `rgba(56, 189, 248, ${(0.2 + strength * 0.55) * depthFade})`);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = (0.6 + strength * 1.8) * ((pa.depthScale + pb.depthScale) * 0.5);
+          ctx.stroke();
+        }
+      }
+
+      function drawLatticeParticle(p) {
+        const f = particleFreedom(p);
+        const r = PARTICLE_RADIUS * (1.15 + p.depthScale * 0.55) * (1 - f * 0.1);
+        const sx = p.sx;
+        const sy = p.sy;
+
+        ctx.save();
+        ctx.globalAlpha = 0.22 * p.depthScale;
+        ctx.fillStyle = "#0ea5e9";
+        ctx.beginPath();
+        ctx.ellipse(sx, sy + r * 1.1, r * 1.15, r * 0.38, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        if (f < 0.5) {
+          const hl = ctx.createRadialGradient(sx - r * 0.35, sy - r * 0.4, r * 0.05, sx, sy, r * 1.15);
+          const base = p.color;
+          hl.addColorStop(0, "#ffffff");
+          hl.addColorStop(0.28, "#e0f2fe");
+          hl.addColorStop(0.62, base);
+          hl.addColorStop(1, "#0c4a6e");
+          ctx.beginPath();
+          ctx.arc(sx, sy, r, 0, Math.PI * 2);
+          ctx.fillStyle = hl;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(248, 250, 252, ${0.35 + (1 - f) * 0.4})`;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          ctx.fillStyle = `rgba(255,255,255,${0.45 * p.depthScale})`;
+          ctx.beginPath();
+          ctx.arc(sx - r * 0.32, sy - r * 0.34, r * 0.22, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const g = ctx.createRadialGradient(sx - r * 0.3, sy - r * 0.35, 0, sx, sy, r);
+          g.addColorStop(0, "#f8fafc");
+          g.addColorStop(0.55, f > 0.75 ? "#38bdf8" : p.color);
+          g.addColorStop(1, "rgba(15, 23, 42, 0.88)");
+          ctx.beginPath();
+          ctx.arc(sx, sy, r, 0, Math.PI * 2);
+          ctx.fillStyle = g;
+          ctx.fill();
+        }
+      }
+
+      function drawLatticeScene() {
+        drawCrystalFloor();
+        drawLatticeBonds();
+        const sorted = particles.slice().sort((a, b) => a.depth - b.depth);
+        for (let i = 0; i < sorted.length; i += 1) {
+          drawLatticeParticle(sorted[i]);
+        }
+      }
+
+      function migrateLatticeToFree() {
+        const scale = motionScaleForPhase(phase, liquidFrac, gasFrac);
+        const speed = speedFromCelsius(celsius, scale);
+        const color = particleColor(phase);
+        const old = particles;
+        particles = [];
+        particleMode = "free";
+        for (let i = 0; i < old.length; i += 1) {
+          const p = old[i];
+          const fp = new FreeParticle(p.sx, p.sy, color, speed);
+          if (p.vx || p.vy) {
+            fp.vx = p.vx;
+            fp.vy = p.vy;
+          }
+          particles.push(fp);
+        }
+      }
+
+      function ensureParticleMode() {
+        const want = usesLattice() ? "lattice" : "free";
+        if (particles.length === 0) {
+          if (want === "lattice") buildLattice();
+          else buildFreeParticles();
+          return;
+        }
+        if (want === "free" && particleMode === "lattice") {
+          migrateLatticeToFree();
+          return;
+        }
+        if (want === "lattice" && particleMode === "free") {
+          buildLattice();
+        }
+      }
+
+      function resizeCanvas() {
+        const wrap = canvas.parentElement;
+        const dpr = window.devicePixelRatio || 1;
+        width = Math.max(220, Math.floor(wrap.clientWidth));
+        height = Math.max(220, Math.floor(wrap.clientHeight));
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function particleColor(mode) {
+        const mat = currentMaterial();
+        if (mode === "solid" || mode === "melting") return mat.colors.solid || mat.colors.liquid;
+        if (mode === "gas" || mode === "boiling") return mat.colors.gas || mat.colors.liquid;
+        return mat.colors.liquid || mat.colors.solid;
+      }
+
+      function initParticles() {
+        if (usesLattice()) buildLattice();
+        else buildFreeParticles();
+      }
+
+      function syncParticleMotion() {
+        ensureParticleMode();
+        if (particleMode === "free") {
+          const scale = motionScaleForPhase(phase, liquidFrac, gasFrac);
+          const speed = speedFromCelsius(celsius, scale);
+          const color = particleColor(phase);
+          for (let i = 0; i < particles.length; i += 1) {
+            particles[i].setSpeed(speed);
+            particles[i].color = color;
+          }
+        }
+      }
+
+      function drawBackground() {
+        const mat = currentMaterial();
+        let top = "rgba(8, 16, 28, 0.98)";
+        if (phase === "melting") top = "rgba(12, 24, 40, 0.98)";
+        if (phase === "boiling" || phase === "gas") top = "rgba(28, 16, 12, 0.98)";
+        const bg = ctx.createLinearGradient(0, 0, 0, height);
+        bg.addColorStop(0, top);
+        bg.addColorStop(1, "rgba(4, 10, 18, 0.99)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        if (particleMode === "lattice" && phase === "melting") {
+          const glow = ctx.createRadialGradient(
+            width * 0.5, height * 0.5, 20,
+            width * 0.5, height * 0.5, Math.max(width, height) * 0.55
+          );
+          glow.addColorStop(0, "rgba(251, 146, 60, 0.07)");
+          glow.addColorStop(1, "transparent");
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        if (mat.phases && phase === "boiling") {
+          ctx.fillStyle = "rgba(255,255,255,0.04)";
+          for (let i = 0; i < 6; i += 1) {
+            const bx = (width * 0.15) + i * (width * 0.12);
+            const by = height - 20 - Math.sin(simTime * 3 + i) * 6;
+            ctx.beginPath();
+            ctx.arc(bx, by, 4 + gasFrac * 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        ctx.strokeStyle = animating ? "rgba(251, 146, 60, 0.5)" : "rgba(34, 211, 238, 0.35)";
+        ctx.lineWidth = animating ? 2 : 1.5;
+        ctx.strokeRect(1, 1, width - 2, height - 2);
+      }
+
+      function drawFrame() {
+        if (width <= 0 || height <= 0 || particles.length === 0) return;
+        ensureParticleMode();
+        drawBackground();
+
+        if (particleMode === "lattice") {
+          updateLatticeParticles();
+          drawLatticeScene();
+          return;
+        }
+
+        for (let i = 0; i < particles.length; i += 1) {
+          particles[i].update(phase);
+          particles[i].draw(ctx, phase, liquidFrac, gasFrac);
+        }
+      }
+
+      // グラフ横軸：与えた累積熱量 Q（J）
+      function getChartQ() {
+        if (!animating || segmentsTotal === 0) return cumulativeQ;
+        let t = 0;
+        if (currentSegment) {
+          t = Math.min(1, (performance.now() - segStartTime) / SEGMENT_MS);
+        }
+        return heatSessionStartQ + heatSessionSize * ((segmentsDone + t) / segmentsTotal);
+      }
+
+      function chartXMax(q) {
+        return Math.max(800, q * 1.15 + 400);
+      }
+
+      function updateChartReferenceLines(qNow) {
+        const xMax = chartXMax(qNow);
+        tempChart.data.datasets[1].data = [{ x: 0, y: 0 }, { x: xMax, y: 0 }];
+        tempChart.data.datasets[2].data = [{ x: 0, y: 100 }, { x: xMax, y: 100 }];
+      }
+      function buildChart() {
+        tempChart = new Chart(document.getElementById("tempChart"), {
+          type: "line",
+          data: {
+            datasets: [
+              {
+                label: "温度（℃）",
+                data: [],
+                borderColor: "#fb923c",
+                backgroundColor: "rgba(251, 146, 60, 0.12)",
+                fill: true,
+                tension: 0.08,
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+              {
+                label: "0 ℃（融解）",
+                data: [{ x: 0, y: 0 }, { x: 2000, y: 0 }],
+                borderColor: "rgba(125, 211, 252, 0.35)",
+                borderDash: [6, 4],
+                pointRadius: 0,
+                borderWidth: 1,
+              },
+              {
+                label: "100 ℃（沸騰）",
+                data: [{ x: 0, y: 100 }, { x: 2000, y: 100 }],
+                borderColor: "rgba(248, 113, 113, 0.35)",
+                borderDash: [6, 4],
+                pointRadius: 0,
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            parsing: false,
+            plugins: {
+              legend: { labels: { color: "#cbd5e1", font: { size: 10 }, boxWidth: 10 } },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    return `Q = ${fmt(ctx.parsed.x, 0)} J → T = ${fmt(ctx.parsed.y, 2)} ℃`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                type: "linear",
+                title: { display: true, text: "与えた熱量 Q（J）", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8" },
+                grid: { color: "rgba(148, 163, 184, 0.12)" },
+                min: 0,
+              },
+              y: {
+                title: { display: true, text: "温度（℃）", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8" },
+                grid: { color: "rgba(148, 163, 184, 0.12)" },
+                suggestedMin: -220,
+                suggestedMax: 120,
+              },
+            },
+          },
+        });
+      }
+
+      function pushChartPoint(force) {
+        if (!tempChart) return;
+        const qNow = getChartQ();
+        if (!force && qNow - lastChartSampleQ < CHART_SAMPLE_DQ) return;
+        lastChartSampleQ = qNow;
+        tempChart.data.datasets[0].data.push({ x: qNow, y: celsius });
+        updateChartReferenceLines(qNow);
+        updateChartYRange();
+        tempChart.update("none");
+      }
+
+      function updateUI() {
+        const mat = currentMaterial();
+        const cap = heatCapacity(mass, mat.c);
+        const scale = motionScaleForPhase(phase, liquidFrac, gasFrac);
+
+        document.getElementById("celsiusVal").textContent = `${fmt(celsius, 2)} ℃`;
+        document.getElementById("phaseVal").textContent = phaseLabel(phase);
+        document.getElementById("deltaTVal").textContent =
+          lastDeltaT > 0.001 ? `${fmt(lastDeltaT, 3)} ℃` : (phase === "melting" || phase === "boiling" ? "0 ℃（平台）" : "— ℃");
+        document.getElementById("capacityVal").textContent = `${fmt(cap, 0)} J/K`;
+        document.getElementById("totalQVal").textContent = `${fmt(getChartQ(), 0)} J`;
+        document.getElementById("calcQ").textContent = String(heatQ);
+        document.getElementById("calcM").textContent = String(mass);
+        document.getElementById("calcC").textContent = String(mat.c);
+        massValue.textContent = `${mass} g`;
+        heatValue.textContent = `${heatQ} J`;
+        heatBtn.textContent = `加熱（Q = ${heatQ} J）`;
+
+        phaseBadge.textContent = phaseLabel(phase);
+        phaseBadge.className = `phase-badge ${phaseBadgeClass(phase)}`;
+        canvasHud.innerHTML = `T = ${fmt(celsius, 1)} ℃<br>${phaseLabel(phase)}<br>${
+          particleMode === "lattice"
+            ? (phase === "melting"
+              ? `結合 ${fmt(bondRemainFraction() * 100, 0)}% · 3D`
+              : "3D 格子振動")
+            : `v×${fmt(scale, 2)}`
+        }`;
+
+        const isLatent = phase === "melting" || phase === "boiling";
+        phaseProgressWrap.hidden = !isLatent;
+        calcLatent.style.display = isLatent ? "block" : "none";
+        calcMain.innerHTML = isLatent ? "<strong>Q = mL</strong>（温度一定 · 潜熱）" : "<strong>Q = mcΔT</strong>";
+
+        if (phase === "melting" && currentMaterial().phases) {
+          phaseProgressLabel.textContent = "氷 → 水（融解）";
+          phaseProgressBar.style.width = `${liquidFrac * 100}%`;
+          phaseProgressPct.textContent = `${fmt(liquidFrac * 100, 0)}%`;
+          document.getElementById("calcL").textContent = String(mat.Lf);
+          document.getElementById("calcDt").textContent = "0（一定）";
+        } else if (phase === "boiling" && currentMaterial().phases) {
+          phaseProgressLabel.textContent = "水 → 水蒸気（沸騰）";
+          phaseProgressBar.style.width = `${gasFrac * 100}%`;
+          phaseProgressPct.textContent = `${fmt(gasFrac * 100, 0)}%`;
+          document.getElementById("calcL").textContent = String(mat.Lv);
+          document.getElementById("calcDt").textContent = "0（一定）";
+        } else {
+          const dt = heatQ / (mass * mat.c);
+          document.getElementById("calcDt").textContent = fmt(dt, 3);
+        }
+
+        statusMsg.classList.remove("heating", "plateau");
+        if (animating) {
+          if (isLatent) {
+            statusMsg.classList.add("plateau");
+            statusMsg.textContent = `${fmt(celsius, 1)} ℃ で ${phaseLabel(phase)} — 熱は潜熱 Q=mL に使われます`;
+          } else {
+            statusMsg.classList.add("heating");
+            statusMsg.textContent = `加熱中… 温度 ${fmt(celsius, 1)} ℃ · ${phaseLabel(phase)}`;
+          }
+        } else {
+          statusMsg.textContent = mat.phases
+            ? `${mat.name} · 加熱を繰り返すと 0 ℃・100 ℃ で平台（状態変化）が現れます`
+            : `${mat.name} · 加熱で Q = mcΔT のみ（状態変化なし）`;
+        }
+      }
+
+      function applySegmentState(seg, t) {
+        if (seg.type === "sensible") {
+          celsius = seg.fromT + (seg.toT - seg.fromT) * t;
+          phase = seg.phase;
+          liquidFrac = seg.liq ?? liquidFrac;
+          gasFrac = seg.gas ?? gasFrac;
+          lastDeltaT = Math.abs(seg.toT - seg.fromT) * t;
+        } else if (seg.type === "latent") {
+          celsius = seg.atT;
+          phase = seg.phase;
+          if (seg.kind === "melt") {
+            liquidFrac = seg.fromL + (seg.toL - seg.fromL) * t;
+            lastDeltaT = 0;
+          } else {
+            gasFrac = seg.fromG + (seg.toG - seg.fromG) * t;
+            lastDeltaT = 0;
+          }
+        }
+        syncParticleMotion();
+      }
+
+      function startNextSegment() {
+        if (segmentQueue.length === 0) {
+          animating = false;
+          heatBtn.disabled = false;
+          heatSlider.disabled = false;
+          initialTempSlider.disabled = false;
+          cumulativeQ = heatSessionStartQ + heatSessionSize;
+          segmentsDone = segmentsTotal;
+          pushChartPoint(true);
+          if (phase === "melting" && liquidFrac >= 0.999) {
+            phase = "liquid";
+            liquidFrac = 1;
+          }
+          if (phase === "boiling" && gasFrac >= 0.999) {
+            phase = "gas";
+            gasFrac = 1;
+          }
+          ensureParticleMode();
+          syncParticleMotion();
+          updateUI();
+          return;
+        }
+        currentSegment = segmentQueue.shift();
+        segStartTime = performance.now();
+        segFrom = { celsius, phase, liquidFrac, gasFrac };
+        applySegmentState(currentSegment, 0);
+      }
+
+      function applyHeat() {
+        if (animating) return;
+        const planned = planHeatSegments(celsius, phase, liquidFrac, gasFrac, mass, heatQ);
+        if (planned.length === 0) return;
+        segmentQueue = planned;
+        segmentsTotal = planned.length;
+        segmentsDone = 0;
+        heatSessionStartQ = cumulativeQ;
+        heatSessionSize = heatQ;
+        animating = true;
+        heatBtn.disabled = true;
+        heatSlider.disabled = true;
+        initialTempSlider.disabled = true;
+        lastDeltaT = 0;
+        startNextSegment();
+      }
+
+      function setupInitialState() {
+        const mat = currentMaterial();
+        celsius = readInitialCelsius();
+        syncInitialTempUI();
+        if (mat.gasOnly) {
+          phase = "gas";
+          gasFrac = 1;
+          liquidFrac = 0;
+        } else if (!mat.phases) {
+          phase = "solid";
+          liquidFrac = 0;
+          gasFrac = 0;
+        } else if (celsius < mat.meltAt) {
+          phase = "solid";
+          liquidFrac = 0;
+          gasFrac = 0;
+        } else if (celsius < mat.boilAt) {
+          phase = "liquid";
+          liquidFrac = 1;
+          gasFrac = 0;
+        } else {
+          phase = "gas";
+          liquidFrac = 1;
+          gasFrac = 1;
+        }
+        lastDeltaT = 0;
+      }
+
+      function resetSim() {
+        animating = false;
+        heatBtn.disabled = false;
+        heatSlider.disabled = false;
+        initialTempSlider.disabled = false;
+        segmentQueue = [];
+        currentSegment = null;
+        simTime = 0;
+        lastChartSampleQ = 0;
+        cumulativeQ = 0;
+        segmentsTotal = 0;
+        segmentsDone = 0;
+        camYaw = 0.62;
+        setupInitialState();
+        initParticles();
+        syncParticleMotion();
+        if (tempChart) {
+          tempChart.data.datasets[0].data = [{ x: 0, y: celsius }];
+          updateChartReferenceLines(0);
+          updateChartYRange();
+          tempChart.update("none");
+        }
+        updateUI();
+      }
+
+      function tick(now, prevNow) {
+        const dt = Math.min(0.05, (now - prevNow) / 1000);
+        simTime += dt;
+        if (particleMode === "lattice") camYaw += dt * 0.16;
+
+        if (animating && currentSegment) {
+          const t = Math.min(1, (now - segStartTime) / SEGMENT_MS);
+          applySegmentState(currentSegment, easeInOut(t));
+          if (t >= 1) {
+            applySegmentState(currentSegment, 1);
+            if (currentSegment.type === "sensible") {
+              lastDeltaT = Math.abs(currentSegment.toT - currentSegment.fromT);
+            }
+            segmentsDone += 1;
+            startNextSegment();
+          }
+        }
+
+        drawFrame();
+        pushChartPoint(false);
+        updateUI();
+        requestAnimationFrame((next) => tick(next, now));
+      }
+
+      document.querySelectorAll(".material-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          materialKey = btn.dataset.material;
+          document.querySelectorAll(".material-btn").forEach((b) => b.classList.toggle("active", b === btn));
+          resetSim();
+        });
+      });
+
+      initialTempSlider.addEventListener("input", () => {
+        if (animating) return;
+        syncInitialTempUI();
+        resetSim();
+      });
+
+      document.querySelectorAll("#tempPresets button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (animating) return;
+          initialTempSlider.value = btn.dataset.temp;
+          syncInitialTempUI();
+          resetSim();
+        });
+      });
+
+      massSlider.addEventListener("input", () => {
+        mass = Number(massSlider.value);
+        updateUI();
+      });
+
+      heatSlider.addEventListener("input", () => {
+        if (animating) return;
+        heatQ = Number(heatSlider.value);
+        updateUI();
+      });
+
+      heatBtn.addEventListener("click", applyHeat);
+      resetBtn.addEventListener("click", resetSim);
+
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        initParticles();
+        syncParticleMotion();
+      });
+
+      function boot() {
+        resizeCanvas();
+        setupInitialState();
+        initParticles();
+        buildChart();
+        if (tempChart) {
+          tempChart.data.datasets[0].data = [{ x: 0, y: celsius }];
+          updateChartReferenceLines(0);
+          updateChartYRange();
+          tempChart.update("none");
+        }
+        updateUI();
+        requestAnimationFrame((now) => tick(now, now));
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      } else {
+        requestAnimationFrame(boot);
+      }
+    })();
+  </script>
+</body>
+</html>

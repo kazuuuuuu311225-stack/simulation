@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>℃ と K — セルシウス温度と絶対温度</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --accent: #22d3ee;
+      --accent-light: #67e8f9;
+      --accent-warm: #fb923c;
+      --accent-glow: rgba(34, 211, 238, 0.42);
+      --slate-bg: rgba(12, 18, 32, 0.78);
+      --slate-border: rgba(34, 211, 238, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1524 38%, #101c30 72%, #0a1018 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 55% 42% at 18% 22%, rgba(251, 146, 60, 0.07), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 82% 78%, rgba(34, 211, 238, 0.08), transparent 55%);
+    }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1080px, 96vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .page-header { text-align: center; }
+
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, rgba(251, 146, 60, 0.22), rgba(34, 211, 238, 0.28));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.3rem;
+    }
+
+    h2 {
+      margin: 6px 0 4px;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+
+    #back {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 16px;
+      color: #cffafe;
+      background: rgba(34, 211, 238, 0.14);
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .panel {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: var(--accent-light);
+    }
+
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 860px) {
+      .sim-grid {
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        align-items: stretch;
+      }
+    }
+
+    .canvas-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 320px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      flex: 1;
+      min-height: min(420px, 52dvh);
+      border-radius: 14px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(10, 20, 32, 0.98), rgba(6, 12, 20, 0.99));
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      box-shadow: 0 0 32px rgba(34, 211, 238, 0.08);
+    }
+
+    #particleCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-caption {
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .canvas-hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(8, 12, 20, 0.75);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      font-size: 0.72rem;
+      line-height: 1.55;
+      color: #cbd5e1;
+      pointer-events: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .side-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .temp-readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .readout-card {
+      padding: 14px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      text-align: center;
+    }
+
+    .readout-card.warm { border-color: rgba(251, 146, 60, 0.35); }
+
+    .readout-label {
+      display: block;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .readout-value {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .readout-value.celsius { color: #fdba74; text-shadow: 0 0 12px rgba(251, 146, 60, 0.35); }
+    .readout-value.kelvin { color: #7dd3fc; text-shadow: 0 0 12px rgba(56, 189, 248, 0.35); }
+
+    .readout-unit {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-left: 2px;
+    }
+
+    .formula-box {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      font-size: 0.92rem;
+      font-weight: 600;
+      text-align: center;
+      color: #bae6fd;
+      margin-bottom: 10px;
+    }
+
+    .formula-box span { color: #fdba74; }
+    .formula-box strong { color: #7dd3fc; }
+
+    .motion-note {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .motion-note strong { color: #67e8f9; }
+
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+      margin-top: 4px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      accent-color: var(--accent-warm);
+      cursor: pointer;
+    }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .slider-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fdba74;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .preset-row button {
+      flex: 1 1 calc(50% - 4px);
+      min-height: 42px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      background: rgba(255, 255, 255, 0.07);
+      color: #e2e8f0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .preset-row button.active {
+      background: rgba(251, 146, 60, 0.2);
+      border-color: rgba(251, 146, 60, 0.45);
+      color: #fed7aa;
+    }
+
+    .marker-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .marker-row span {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .explain-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      line-height: 1.75;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+    }
+
+    .explain-list li + li { margin-top: 0.35rem; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">🌡</div>
+      <h2>セルシウス温度と絶対温度</h2>
+      <p class="chapter-label">12章　熱と比熱 — ℃ と K の関係</p>
+      <a id="back" href="../index.html">← ホームへ戻る</a>
+    </header>
+
+    <div class="sim-grid">
+      <!-- 左：粒子運動アニメーション -->
+      <section class="panel canvas-panel" aria-label="粒子運動">
+        <h3>粒子の熱運動（温度が高いほど速く動く）</h3>
+        <div class="canvas-wrap">
+          <canvas id="particleCanvas" aria-label="粒子運動アニメーション"></canvas>
+          <div class="canvas-hud" id="canvasHud">
+            v = k√T<br>
+            T = <strong id="hudK">273 K</strong>
+          </div>
+        </div>
+        <p class="canvas-caption">粒子の速度 v は絶対温度 T（K）の平方根に比例します（v = k√T）</p>
+      </section>
+
+      <aside class="side-column">
+        <!-- 右上：温度表示パネル -->
+        <section class="panel" aria-label="温度表示">
+          <h3>温度表示</h3>
+          <div class="temp-readout">
+            <div class="readout-card warm">
+              <span class="readout-label">セルシウス温度</span>
+              <span class="readout-value celsius" id="celsiusDisplay">0.0<span class="readout-unit">℃</span></span>
+            </div>
+            <div class="readout-card">
+              <span class="readout-label">絶対温度</span>
+              <span class="readout-value kelvin" id="kelvinDisplay">273.15<span class="readout-unit">K</span></span>
+            </div>
+          </div>
+
+          <div class="formula-box">
+            <strong>K</strong> = <span>℃</span> + 273.15
+            &nbsp;→&nbsp;
+            <strong id="formulaResult">273.15 K</strong>
+          </div>
+
+          <p class="motion-note">
+            現在の粒子速度：<strong id="speedDisplay">—</strong> px/frame
+            （<strong id="speedRatio">—</strong> 倍 · 0℃ を基準）
+          </p>
+
+          <div class="chart-wrap">
+            <canvas id="tempChart" aria-label="℃ と K の対応グラフ"></canvas>
+          </div>
+        </section>
+
+        <!-- 右下：温度スライダー -->
+        <section class="panel" aria-label="温度スライダー">
+          <h3>セルシウス温度スライダー</h3>
+          <div class="slider-row">
+            <label for="tempSlider">温度（℃）</label>
+            <span class="slider-value" id="sliderValue">0.0 ℃</span>
+          </div>
+          <input type="range" id="tempSlider" min="-50" max="200" step="1" value="0">
+          <div class="marker-row">
+            <span>−50 ℃</span>
+            <span>0 ℃（水の氷点）</span>
+            <span>100 ℃（水の沸点）</span>
+            <span>200 ℃</span>
+          </div>
+          <div class="preset-row">
+            <button type="button" class="temp-preset" data-c="-50">−50 ℃ 極寒</button>
+            <button type="button" class="temp-preset active" data-c="0">0 ℃ 氷点</button>
+            <button type="button" class="temp-preset" data-c="100">100 ℃ 沸点</button>
+            <button type="button" class="temp-preset" data-c="200">200 ℃ 高温</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 説明テキスト -->
+    <section class="panel" aria-label="説明">
+      <h3>℃ と K の違い</h3>
+      <ul class="explain-list">
+        <li>セルシウス温度は水の状態変化を基準にした温度。</li>
+        <li>絶対温度は粒子の運動エネルギーを基準にした温度。</li>
+        <li>絶対温度は K = ℃ + 273.15 で変換できる。</li>
+        <li>0 K は粒子の運動が最小になる温度（絶対零度）。0 ℃ とは異なり、0 K = −273.15 ℃ です。</li>
+        <li>温度が高いほど粒子は激しく動く。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const K_OFFSET = 273.15;
+      const SPEED_K = 0.5;
+      const PARTICLE_COUNT = 25;
+      const PARTICLE_RADIUS = 5;
+      const MIN_KELVIN = 1;
+
+      const canvas = document.getElementById("particleCanvas");
+      const ctx = canvas.getContext("2d");
+      const tempSlider = document.getElementById("tempSlider");
+      const celsiusDisplay = document.getElementById("celsiusDisplay");
+      const kelvinDisplay = document.getElementById("kelvinDisplay");
+      const formulaResult = document.getElementById("formulaResult");
+      const sliderValue = document.getElementById("sliderValue");
+      const speedDisplay = document.getElementById("speedDisplay");
+      const speedRatio = document.getElementById("speedRatio");
+      const hudK = document.getElementById("hudK");
+
+      let width = 0;
+      let height = 0;
+      let celsius = Number(tempSlider.value);
+      let kelvin = celsiusToKelvin(celsius);
+      let particles = [];
+      let tempChart = null;
+      let lastStatTime = 0;
+
+      // セルシウス → 絶対温度
+      function celsiusToKelvin(c) {
+        return c + K_OFFSET;
+      }
+
+      // 温度に応じて粒子速度を変更（v = k * sqrt(T)）
+      function speedFromKelvin(T) {
+        const safeT = Math.max(MIN_KELVIN, T);
+        return SPEED_K * Math.sqrt(safeT);
+      }
+
+      function fmt(v, digits) {
+        return Number(v).toFixed(digits);
+      }
+
+      function randomAngle() {
+        return Math.random() * Math.PI * 2;
+      }
+
+      class Particle {
+        constructor(x, y, T) {
+          this.x = x;
+          this.y = y;
+          this.radius = PARTICLE_RADIUS;
+          const angle = randomAngle();
+          const speed = speedFromKelvin(T);
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+        }
+
+        setKelvin(T) {
+          const speed = speedFromKelvin(T);
+          const angle = Math.atan2(this.vy, this.vx) || randomAngle();
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+        }
+
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          this.bounceWalls();
+        }
+
+        bounceWalls() {
+          if (this.x - this.radius < 0) {
+            this.x = this.radius;
+            this.vx = Math.abs(this.vx);
+          } else if (this.x + this.radius > width) {
+            this.x = width - this.radius;
+            this.vx = -Math.abs(this.vx);
+          }
+          if (this.y - this.radius < 0) {
+            this.y = this.radius;
+            this.vy = Math.abs(this.vy);
+          } else if (this.y + this.radius > height) {
+            this.y = height - this.radius;
+            this.vy = -Math.abs(this.vy);
+          }
+        }
+
+        draw(context) {
+          const gradient = context.createRadialGradient(
+            this.x - 1.5,
+            this.y - 1.5,
+            0,
+            this.x,
+            this.y,
+            this.radius
+          );
+          gradient.addColorStop(0, "rgba(224, 242, 254, 0.98)");
+          gradient.addColorStop(0.55, "rgba(34, 211, 238, 0.9)");
+          gradient.addColorStop(1, "rgba(14, 116, 144, 0.95)");
+          context.beginPath();
+          context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          context.fillStyle = gradient;
+          context.fill();
+        }
+      }
+
+      function resizeCanvas() {
+        const wrap = canvas.parentElement;
+        const dpr = window.devicePixelRatio || 1;
+        width = Math.max(240, Math.floor(wrap.clientWidth));
+        height = Math.max(240, Math.floor(wrap.clientHeight));
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function initParticles() {
+        particles = [];
+        const margin = PARTICLE_RADIUS + 4;
+        for (let i = 0; i < PARTICLE_COUNT; i += 1) {
+          const x = margin + Math.random() * (width - margin * 2);
+          const y = margin + Math.random() * (height - margin * 2);
+          particles.push(new Particle(x, y, kelvin));
+        }
+      }
+
+      function averageSpeed() {
+        if (particles.length === 0) return 0;
+        let sum = 0;
+        for (let i = 0; i < particles.length; i += 1) {
+          sum += Math.hypot(particles[i].vx, particles[i].vy);
+        }
+        return sum / particles.length;
+      }
+
+      function drawBackground() {
+        const bg = ctx.createLinearGradient(0, 0, 0, height);
+        bg.addColorStop(0, "rgba(8, 16, 28, 0.98)");
+        bg.addColorStop(1, "rgba(4, 10, 18, 0.99)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.08)";
+        ctx.lineWidth = 1;
+        const step = 36;
+        for (let x = step; x < width; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = step; y < height; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(1, 1, width - 2, height - 2);
+
+        if (kelvin <= K_OFFSET + 5) {
+          ctx.fillStyle = "rgba(125, 211, 252, 0.12)";
+          ctx.font = "600 12px Inter, sans-serif";
+          ctx.fillText("低温 — 粒子はゆっくり", 12, height - 14);
+        }
+      }
+
+      function drawFrame() {
+        if (width <= 0 || height <= 0) return;
+        drawBackground();
+        for (let i = 0; i < particles.length; i += 1) {
+          particles[i].update();
+          particles[i].draw(ctx);
+        }
+      }
+
+      function updateTemperatureUI() {
+        kelvin = celsiusToKelvin(celsius);
+        const speed = speedFromKelvin(kelvin);
+        const baseSpeed = speedFromKelvin(K_OFFSET);
+        const ratio = speed / baseSpeed;
+
+        celsiusDisplay.innerHTML = `${fmt(celsius, 1)}<span class="readout-unit">℃</span>`;
+        kelvinDisplay.innerHTML = `${fmt(kelvin, 2)}<span class="readout-unit">K</span>`;
+        formulaResult.textContent = `${fmt(kelvin, 2)} K`;
+        sliderValue.textContent = `${fmt(celsius, 1)} ℃`;
+        tempSlider.value = String(Math.round(celsius));
+        speedDisplay.textContent = fmt(speed, 2);
+        speedRatio.textContent = fmt(ratio, 2);
+        hudK.textContent = `${fmt(kelvin, 1)} K`;
+
+        document.querySelectorAll(".temp-preset").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.c) === Math.round(celsius));
+        });
+
+        for (let i = 0; i < particles.length; i += 1) {
+          particles[i].setKelvin(kelvin);
+        }
+
+        updateChart();
+      }
+
+      function setCelsius(c) {
+        celsius = Math.max(Number(tempSlider.min), Math.min(Number(tempSlider.max), c));
+        updateTemperatureUI();
+      }
+
+      function buildChart() {
+        const chartCanvas = document.getElementById("tempChart");
+
+        // 0 K（−273.15 ℃）から右端まで一直線を描く
+        const linePoints = [];
+        for (let c = -K_OFFSET; c <= 210; c += 5) {
+          linePoints.push({ x: c, y: c + K_OFFSET });
+        }
+
+        // スライダー操作範囲（−50〜200 ℃）を強調
+        const sliderRangePoints = [];
+        for (let c = -50; c <= 200; c += 5) {
+          sliderRangePoints.push({ x: c, y: c + K_OFFSET });
+        }
+
+        tempChart = new Chart(chartCanvas, {
+          type: "scatter",
+          data: {
+            datasets: [
+              {
+                type: "line",
+                label: "K = ℃ + 273.15",
+                data: linePoints,
+                borderColor: "rgba(56, 189, 248, 0.55)",
+                backgroundColor: "transparent",
+                pointRadius: 0,
+                borderWidth: 2,
+                tension: 0,
+              },
+              {
+                type: "line",
+                label: "スライダー範囲（−50〜200 ℃）",
+                data: sliderRangePoints,
+                borderColor: "rgba(251, 146, 60, 0.75)",
+                backgroundColor: "transparent",
+                pointRadius: 0,
+                borderWidth: 3,
+                tension: 0,
+              },
+              {
+                label: "現在の温度",
+                data: [{ x: celsius, y: kelvin }],
+                backgroundColor: "#fb923c",
+                borderColor: "#fdba74",
+                pointRadius: 7,
+                pointHoverRadius: 8,
+              },
+              {
+                label: "0 ℃（氷点）",
+                data: [{ x: 0, y: K_OFFSET }],
+                backgroundColor: "#94a3b8",
+                pointRadius: 5,
+              },
+              {
+                label: "0 K（−273.15 ℃）",
+                data: [{ x: -K_OFFSET, y: 0 }],
+                backgroundColor: "#67e8f9",
+                pointRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: {
+              legend: {
+                labels: { color: "#cbd5e1", boxWidth: 10, font: { size: 10 } },
+              },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    if (ctx.dataset.pointRadius === 0) return null;
+                    return `${ctx.dataset.label}: ${fmt(ctx.parsed.x, 1)} ℃ → ${fmt(ctx.parsed.y, 2)} K`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                type: "linear",
+                title: { display: true, text: "℃", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8", maxTicksLimit: 8 },
+                grid: { color: "rgba(148, 163, 184, 0.12)" },
+                min: -280,
+                max: 210,
+              },
+              y: {
+                title: { display: true, text: "K", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8", maxTicksLimit: 6 },
+                grid: { color: "rgba(148, 163, 184, 0.12)" },
+                min: 0,
+                max: 500,
+              },
+            },
+          },
+        });
+      }
+
+      function updateChart() {
+        if (!tempChart) return;
+        tempChart.data.datasets[2].data = [{ x: celsius, y: kelvin }];
+        tempChart.update("none");
+      }
+
+      function tick(now) {
+        drawFrame();
+        if (now - lastStatTime > 250) {
+          lastStatTime = now;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      tempSlider.addEventListener("input", () => {
+        setCelsius(Number(tempSlider.value));
+      });
+
+      document.querySelectorAll(".temp-preset").forEach((btn) => {
+        btn.addEventListener("click", () => setCelsius(Number(btn.dataset.c)));
+      });
+
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        initParticles();
+        updateTemperatureUI();
+      });
+
+      function boot() {
+        resizeCanvas();
+        initParticles();
+        buildChart();
+        updateTemperatureUI();
+        requestAnimationFrame(tick);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      } else {
+        requestAnimationFrame(boot);
+      }
+    })();
+  </script>
+</body>
+</html>
