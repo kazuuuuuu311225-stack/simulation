@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>格子振動と電子励起</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #2dd4bf;
+      --accent-light: #5eead4;
+      --slate-bg: rgba(12, 18, 32, 0.82);
+      --slate-border: rgba(45, 212, 191, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1520 40%, #101828 75%, #0a0e14 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 97vw); margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(45,212,191,0.22), rgba(192,132,252,0.2));
+      border: 1px solid rgba(45,212,191,0.35); font-size: 1rem; color: var(--accent-light);
+    }
+    h1 { margin: 6px 0 4px; font-size: clamp(1.1rem, 3.5vw, 1.45rem); font-weight: 700; color: #bef264; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ecfccb; background: rgba(163,230,53,0.12);
+      border: 1px solid rgba(163,230,53,0.35); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .quad-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 900px) {
+      .quad-grid { grid-template-columns: 1.05fr 0.95fr; }
+    }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .panel {
+      border-radius: 14px; background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .panel-head { padding: 12px 14px 8px; border-bottom: 1px solid rgba(148,163,184,0.1); }
+    .panel-head h2 { margin: 0; font-size: 0.92rem; font-weight: 700; color: #99f6e4; }
+    .panel-sub { margin: 4px 0 0; font-size: 0.74rem; color: var(--muted); }
+    .canvas-wrap {
+      padding: 8px 10px 10px;
+      min-height: 280px;
+    }
+    .canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 280px;
+      min-height: 240px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(6, 12, 22, 0.98), rgba(4, 8, 14, 0.99));
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    #levelCanvas { height: 300px; min-height: 260px; }
+    .mode-banner {
+      margin: 0 12px 10px; padding: 8px 12px; border-radius: 10px;
+      font-size: 0.8rem; line-height: 1.5;
+      background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #99f6e4;
+    }
+    .mode-banner.warn {
+      background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: #fde68a;
+    }
+    .controls { padding: 14px 16px; }
+    .btn-label { display: block; margin: 10px 0 6px; font-size: 0.72rem; font-weight: 600; color: #64748b; }
+    .btn-label:first-child { margin-top: 0; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ctrl-btn {
+      flex: 1; min-width: 100px; padding: 10px 12px; min-height: 44px;
+      border-radius: 10px; border: 1px solid rgba(148,163,184,0.25);
+      background: rgba(255,255,255,0.04); color: #cbd5e1;
+      font-family: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    }
+    .ctrl-btn.active {
+      background: rgba(45,212,191,0.18); border-color: rgba(45,212,191,0.45); color: #99f6e4;
+    }
+    .ctrl-btn.active.opt {
+      background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.4); color: #fca5a5;
+    }
+    input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
+    .readout-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;
+    }
+    .readout-box {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .readout-box .lbl { display: block; font-size: 0.66rem; color: var(--muted); }
+    .readout-box .val { font-size: 0.92rem; font-weight: 700; color: #ecfccb; font-variant-numeric: tabular-nums; }
+    .chart-wrap { padding: 8px 10px 12px; min-height: 220px; flex: 1; }
+    .chart-wrap canvas { max-height: min(280px, 34dvh); }
+    .formula-note {
+      margin: 10px 16px 14px; padding: 8px 10px; border-radius: 8px;
+      font-size: 0.78rem; color: #94a3b8; background: rgba(255,255,255,0.03);
+      font-family: "Cambria Math", "Times New Roman", serif; line-height: 1.6;
+    }
+    .explain {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.65); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .explain h3 { margin: 0 0 10px; font-size: 0.92rem; font-weight: 700; color: #cbd5e1; }
+    .explain ul { margin: 0; padding-left: 1.2em; font-size: 0.86rem; line-height: 1.75; color: #94a3b8; }
+    .explain strong { color: #5eead4; }
+    .flow-guide {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 4px;
+      padding: 12px 14px; border-radius: 14px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(45,212,191,0.28);
+      font-size: 0.82rem; font-weight: 600; line-height: 1.5; text-align: center;
+    }
+    .flow-step {
+      padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+    }
+    .flow-step.s3 { background: rgba(163,230,53,0.16); color: #ecfccb; border: 1px solid rgba(163,230,53,0.38); }
+    .flow-step.s1 { background: rgba(45,212,191,0.16); color: #99f6e4; border: 1px solid rgba(45,212,191,0.38); }
+    .flow-step.s2 { background: rgba(192,132,252,0.14); color: #e9d5ff; border: 1px solid rgba(192,132,252,0.35); }
+    .flow-step.s4 { background: rgba(253,230,138,0.14); color: #fde68a; border: 1px solid rgba(253,230,138,0.35); }
+    .flow-arrow { color: #64748b; font-size: 1.1rem; padding: 0 2px; }
+    .connect-banner {
+      margin: 0; padding: 12px 14px; border-radius: 14px;
+      background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.28);
+      font-size: 0.86rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .connect-banner strong { color: #5eead4; }
+    .connect-banner em { font-style: normal; color: #fde68a; font-weight: 600; }
+    .try-box {
+      padding: 12px 14px; border-radius: 14px;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.28);
+      font-size: 0.84rem; line-height: 1.65; color: #fde68a;
+    }
+    .try-box strong { color: #fef3c7; }
+    .panel-head-row {
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .step-badge {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 800; color: #052e16;
+    }
+    .step-badge.b1 { background: #5eead4; box-shadow: 0 0 10px rgba(45,212,191,0.45); }
+    .step-badge.b2 { background: #c084fc; box-shadow: 0 0 10px rgba(192,132,252,0.4); }
+    .step-badge.b3 { background: #bef264; box-shadow: 0 0 10px rgba(163,230,53,0.4); }
+    .step-badge.b4 { background: #fde68a; box-shadow: 0 0 10px rgba(253,230,138,0.4); color: #422006; }
+    .panel-head-text { flex: 1; min-width: 0; }
+    .panel-role {
+      margin: 0 12px 8px; padding: 7px 10px; border-radius: 8px;
+      font-size: 0.76rem; line-height: 1.5; color: #94a3b8;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .panel-role strong { color: #e2e8f0; font-weight: 600; }
+    .panel-role .link-tag {
+      display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 999px;
+      font-size: 0.68rem; font-weight: 700; vertical-align: middle;
+    }
+    .panel-role .link-tag.from3 { background: rgba(163,230,53,0.18); color: #ecfccb; }
+    .panel-role .link-tag.to2 { background: rgba(192,132,252,0.16); color: #e9d5ff; }
+    .panel-role .link-tag.to4 { background: rgba(253,230,138,0.14); color: #fde68a; }
+    .explain-flow {
+      margin: 0; padding: 0; list-style: none; counter-reset: flow;
+    }
+    .explain-flow li {
+      counter-increment: flow; position: relative;
+      margin: 0 0 10px; padding: 10px 12px 10px 42px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.1);
+      font-size: 0.84rem; line-height: 1.65; color: #94a3b8;
+    }
+    .explain-flow li::before {
+      content: counter(flow); position: absolute; left: 10px; top: 10px;
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 800; color: #052e16; background: #5eead4;
+    }
+    .explain-flow li:nth-child(1)::before { background: #bef264; }
+    .explain-flow li:nth-child(2)::before { background: #5eead4; }
+    .explain-flow li:nth-child(3)::before { background: #c084fc; color: #fff; }
+    .explain-flow li:nth-child(4)::before { background: #fde68a; color: #422006; }
+    .explain-flow li strong { color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">~</div>
+      <h1>格子振動と電子励起</h1>
+      <p class="chapter-label">蛍光・燐光 · フォノンが寿命に与える影響</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="flow-guide" aria-label="4つの画面のつながり">
+      <span class="flow-step s3">③ A を変える</span><span class="flow-arrow">→</span>
+      <span class="flow-step s1">① 原子が揺れる</span><span class="flow-arrow">→</span>
+      <span class="flow-step s2">② 電子の寿命が変わる</span><span class="flow-arrow">→</span>
+      <span class="flow-step s4">④ 光の減衰が変わる</span>
+    </div>
+
+    <p class="connect-banner" id="connectMsg" role="status">
+      <strong>いまの状態：</strong>振幅 A = 0.50 → ① の揺れは中程度 → 蛍光寿命 <em>0.50 s</em>、燐光寿命 <em>1.50 s</em> → ④ の曲線と同じ速さで光が弱まる
+    </p>
+
+    <p class="try-box">
+      <strong>まず試す：</strong>③ のスライダー「振幅 A」を左右に動かしてください。
+      ① の揺れ・② の電子の動き・④ のグラフが<strong style="color:#ecfccb">同時に</strong>変わります（同じ A でつながっています）。
+    </p>
+
+    <div class="quad-grid">
+      <div class="left-col">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-head-row">
+              <span class="step-badge b1" aria-hidden="true">①</span>
+              <div class="panel-head-text">
+                <h2>1 次元格子の振動</h2>
+                <p class="panel-sub" id="chainSub">単原子鎖 · 音響モード</p>
+              </div>
+            </div>
+          </div>
+          <p class="panel-role">
+            <span class="link-tag from3">← ③ の A</span>
+            <strong>フォノン（格子の揺れ）</strong>を見る場所。A が大きいほど原子の振幅が大きく、揺れが激しくなります。
+          </p>
+          <p class="mode-banner" id="modeBanner">x<sub>i</sub>(t) = A sin(ωt + iφ) — 音響：同じ向きに揺れる</p>
+          <div class="canvas-wrap">
+            <canvas id="chainCanvas" aria-label="格子振動"></canvas>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-head-row">
+              <span class="step-badge b2" aria-hidden="true">②</span>
+              <div class="panel-head-text">
+                <h2>電子励起（S₀ / S₁ / T₁）</h2>
+                <p class="panel-sub" id="levelSub">フォノン強度で寿命が変化 — 自動遷移</p>
+              </div>
+            </div>
+          </div>
+          <p class="panel-role">
+            <span class="link-tag from3">← ③ の A</span>
+            <strong>電子の寿命</strong>が変わる場所。揺れが強い（A 大）→ 電子が乱されやすい → 蛍光・燐光が早く終わる（② の遷移が速くなる）。
+          </p>
+          <div class="canvas-wrap">
+            <canvas id="levelCanvas" aria-label="電子励起準位"></canvas>
+          </div>
+        </section>
+      </div>
+
+      <div class="right-col">
+        <section class="panel controls">
+          <div class="panel-head">
+            <div class="panel-head-row">
+              <span class="step-badge b3" aria-hidden="true">③</span>
+              <div class="panel-head-text">
+                <h2>格子振動の設定</h2>
+                <p class="panel-sub">ここを操作すると ① ② ④ が連動</p>
+              </div>
+            </div>
+          </div>
+          <p class="panel-role">
+            <strong>操作パネル。</strong>振幅 A ＝ フォノン強度。スライダーを動かすと、下の τ_f・τ_p が変わり、① ② ④ に同時に反映されます。
+          </p>
+          <div style="padding:0 16px 14px">
+            <span class="btn-label">鎖の種類</span>
+            <div class="btn-row">
+              <button type="button" class="ctrl-btn active" id="btnMono">単原子鎖</button>
+              <button type="button" class="ctrl-btn" id="btnDi">双原子鎖</button>
+            </div>
+            <span class="btn-label">振動モード</span>
+            <div class="btn-row">
+              <button type="button" class="ctrl-btn active" id="btnAcoustic">音響モード</button>
+              <button type="button" class="ctrl-btn" id="btnOptical">光学モード</button>
+            </div>
+            <label class="btn-label" for="ampSlider">振幅 A（フォノン強度）0.1〜2.0</label>
+            <input type="range" id="ampSlider" min="0.1" max="2" value="0.5" step="0.05">
+            <div class="readout-grid">
+              <div class="readout-box">
+                <span class="lbl">振幅 A</span>
+                <span class="val" id="dispA">0.50</span>
+              </div>
+              <div class="readout-box">
+                <span class="lbl">ω</span>
+                <span class="val" id="dispOmega">2.00</span>
+              </div>
+              <div class="readout-box">
+                <span class="lbl">蛍光寿命 τ_f</span>
+                <span class="val" id="dispTauF">0.80 s</span>
+              </div>
+              <div class="readout-box">
+                <span class="lbl">燐光寿命 τ_p</span>
+                <span class="val" id="dispTauP">2.40 s</span>
+              </div>
+            </div>
+          </div>
+          <p class="formula-note">τ_f = τ_f0/(1+kA),　τ_p = τ_p0/(1+kA)　　τ_f0=1.0 s, τ_p0=3.0 s, k=2.0</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-head-row">
+              <span class="step-badge b4" aria-hidden="true">④</span>
+              <div class="panel-head-text">
+                <h2>発光強度の時間減衰</h2>
+                <p class="panel-sub">I(t) = exp(−t/τ) — ③ の τ_f / τ_p と一致</p>
+              </div>
+            </div>
+          </div>
+          <p class="panel-role">
+            <span class="link-tag to2">← ② の寿命</span>
+            <strong>グラフで確認。</strong>黄＝蛍光、青緑＝燐光。A が大きいほど曲線が急に下がる（光が早く消える）。
+          </p>
+          <div class="chart-wrap">
+            <canvas id="decayChart" aria-label="蛍光・燐光減衰"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="explain">
+      <h3>①～④ のつながり（読み方）</h3>
+      <ol class="explain-flow">
+        <li><strong>③ で振幅 A を決める</strong> — A は「格子がどれだけ激しく揺れているか」の目安（フォノン強度）。</li>
+        <li><strong>① で揺れを見る</strong> — A が大きいと原子の振幅が大きく、鎖全体が大きく揺れます。</li>
+        <li><strong>② で電子の動きが変わる</strong> — 揺れが強いと電子励起状態（S₁・T₁）の寿命 τ が短くなり、電子の上下の動きが速くなります。</li>
+        <li><strong>④ で光の減衰を数値化</strong> — ③ で求めた τ_f（蛍光）・τ_p（燐光）どおりに、発光強度 I(t) が時間とともに弱まります。</li>
+      </ol>
+      <h3 style="margin-top:14px">覚えておくこと</h3>
+      <ul>
+        <li>格子振動＝原子がバネでつながれたように<strong>揺れる</strong>現象（その量子＝フォノン）。</li>
+        <li>振動が強いほど電子は<strong>散乱</strong>されやすく、励起状態が早く解ける。</li>
+        <li>だから <strong>A ↑ → 寿命 ↓ → ④ のグラフは急降下</strong> という一本の流れになります。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    // ── 物理パラメータ ──
+    const TAU_F0 = 1.0;
+    const TAU_P0 = 3.0;
+    const K_PHONON = 2.0;
+    const OMEGA_AC = 2.0;
+    const OMEGA_OPT = 3.2;
+    const PHI_AC = 0.35;
+    const N_ATOMS = 18;
+    const CHART_T = 5;
+
+    const chainCanvas = document.getElementById("chainCanvas");
+    const chainCtx = chainCanvas.getContext("2d");
+    const levelCanvas = document.getElementById("levelCanvas");
+    const levelCtx = levelCanvas.getContext("2d");
+
+    let chainType = "mono";
+    let vibrMode = "acoustic";
+    let amplitude = 0.5;
+    let animTime = 0;
+    let lastFrame = 0;
+    let playing = true;
+
+    let ePhase = "s0";
+    let eProgress = 0;
+    let ePhaseStart = 0;
+    let nextPath = "fluor";
+    let decayChart = null;
+
+    function tauF() { return TAU_F0 / (1 + K_PHONON * amplitude); }
+    function tauP() { return TAU_P0 / (1 + K_PHONON * amplitude); }
+
+    function shakeLabel(a) {
+      if (a < 0.4) return "小さい";
+      if (a < 0.9) return "中程度";
+      if (a < 1.4) return "大きい";
+      return "とても大きい";
+    }
+
+    function updateConnectMessage() {
+      const tf = tauF();
+      const tp = tauP();
+      const shake = shakeLabel(amplitude);
+      document.getElementById("connectMsg").innerHTML =
+        `<strong>いまの状態：</strong>振幅 A = ${amplitude.toFixed(2)} → ` +
+        `① の揺れは<strong>${shake}</strong> → ` +
+        `蛍光寿命 <em>${tf.toFixed(2)} s</em>、燐光寿命 <em>${tp.toFixed(2)} s</em> → ` +
+        `② の電子遷移と ④ のグラフが<strong>同じ τ</strong>で連動`;
+    }
+
+    function modeValid() {
+      return !(chainType === "mono" && vibrMode === "optical");
+    }
+
+    function currentOmega() {
+      if (!modeValid()) return OMEGA_AC;
+      return vibrMode === "optical" ? OMEGA_OPT : OMEGA_AC;
+    }
+
+    // 音響モードの振動 / 光学モードの振動
+    function displacement(i, t) {
+      if (!modeValid()) return 0;
+      const w = currentOmega();
+      if (vibrMode === "acoustic") {
+        return amplitude * Math.sin(w * t + i * PHI_AC);
+      }
+      // 光学モード：隣原子が逆向き
+      const sign = i % 2 === 0 ? 1 : -1;
+      return sign * amplitude * Math.sin(w * t);
+    }
+
+    function updateUI() {
+      document.getElementById("dispA").textContent = amplitude.toFixed(2);
+      document.getElementById("dispOmega").textContent = currentOmega().toFixed(2);
+      document.getElementById("dispTauF").textContent = `${tauF().toFixed(2)} s`;
+      document.getElementById("dispTauP").textContent = `${tauP().toFixed(2)} s`;
+
+      const banner = document.getElementById("modeBanner");
+      if (!modeValid()) {
+        banner.className = "mode-banner warn";
+        banner.innerHTML = "<strong>光学モードは存在しません</strong>（単原子鎖）— 音響モードを選んでください。";
+        document.getElementById("chainSub").textContent = "単原子鎖 — 光学モードなし";
+      } else if (vibrMode === "acoustic") {
+        banner.className = "mode-banner";
+        banner.innerHTML = "x<sub>i</sub>(t) = A sin(ωt + iφ) — <strong>音響</strong>：同じ向きに揺れる（φ 小）";
+        document.getElementById("chainSub").textContent =
+          chainType === "mono" ? "単原子鎖 · 音響モード" : "双原子鎖 · 音響モード";
+      } else {
+        banner.className = "mode-banner";
+        banner.innerHTML = "x<sub>i</sub>(t) = ±A sin(ωt) — <strong>光学</strong>：隣原子が逆向き（φ ≈ π）";
+        document.getElementById("chainSub").textContent = "双原子鎖 · 光学モード";
+      }
+
+      document.getElementById("btnMono").classList.toggle("active", chainType === "mono");
+      document.getElementById("btnDi").classList.toggle("active", chainType === "di");
+      document.getElementById("btnAcoustic").classList.toggle("active", vibrMode === "acoustic");
+      const btnOptical = document.getElementById("btnOptical");
+      btnOptical.classList.toggle("active", vibrMode === "optical");
+      btnOptical.classList.toggle("opt", vibrMode === "optical");
+      updateConnectMessage();
+      updateDecayChart();
+    }
+
+    function resizeCanvas(cnv) {
+      const rect = cnv.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(220, Math.round(rect.height));
+      if (cnv.width !== Math.round(w * dpr) || cnv.height !== Math.round(h * dpr)) {
+        cnv.width = Math.round(w * dpr);
+        cnv.height = Math.round(h * dpr);
+      }
+      return { w, h, dpr };
+    }
+
+    // 格子振動を描画（lattice_vibration_simulation と同方式）
+    function drawChain(t) {
+      const { w, h, dpr } = resizeCanvas(chainCanvas);
+      chainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      chainCtx.clearRect(0, 0, w, h);
+
+      const bg = chainCtx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0a1420");
+      bg.addColorStop(1, "#060c14");
+      chainCtx.fillStyle = bg;
+      chainCtx.fillRect(0, 0, w, h);
+
+      const padX = w * 0.06;
+      const cy = h * 0.52;
+      const span = w - padX * 2;
+      const spacing = span / (N_ATOMS - 1);
+      const pxScale = spacing * 0.42;
+
+      if (!modeValid()) {
+        chainCtx.fillStyle = "#fde68a";
+        chainCtx.font = "600 14px sans-serif";
+        chainCtx.textAlign = "center";
+        chainCtx.fillText("光学モードは存在しません", w / 2, h / 2);
+        chainCtx.textAlign = "left";
+        return;
+      }
+
+      const positions = [];
+      for (let i = 0; i < N_ATOMS; i++) {
+        positions.push({ x: padX + i * spacing + displacement(i, t) * pxScale, i });
+      }
+
+      chainCtx.strokeStyle = "rgba(148,163,184,0.45)";
+      chainCtx.lineWidth = 2;
+      for (let i = 0; i < N_ATOMS - 1; i++) {
+        chainCtx.beginPath();
+        chainCtx.moveTo(positions[i].x, cy);
+        chainCtx.lineTo(positions[i + 1].x, cy);
+        chainCtx.stroke();
+      }
+
+      positions.forEach((p) => {
+        const isM2 = chainType === "di" && p.i % 2 === 1;
+        const r = chainType === "di" ? (isM2 ? 10 : 12) : 11;
+        const col = chainType === "di" ? (isM2 ? "#f87171" : "#38bdf8") : "#2dd4bf";
+        chainCtx.save();
+        chainCtx.shadowBlur = 12;
+        chainCtx.shadowColor = col;
+        const g = chainCtx.createRadialGradient(p.x - 3, cy - 3, 1, p.x, cy, r + 2);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.4, col);
+        g.addColorStop(1, col);
+        chainCtx.fillStyle = g;
+        chainCtx.beginPath();
+        chainCtx.arc(p.x, cy, r, 0, Math.PI * 2);
+        chainCtx.fill();
+        chainCtx.restore();
+      });
+
+      chainCtx.fillStyle = "#94a3b8";
+      chainCtx.font = "500 11px sans-serif";
+      chainCtx.fillText("③ A = " + amplitude.toFixed(2) + "（揺れ" + shakeLabel(amplitude) + "）", 12, 22);
+    }
+
+    function ease(t) {
+      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function levelYs(h) {
+      return { s1: h * 0.18, t1: h * 0.48, s0: h * 0.78 };
+    }
+
+    function drawLevels() {
+      const { w, h, dpr } = resizeCanvas(levelCanvas);
+      levelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      levelCtx.clearRect(0, 0, w, h);
+
+      const bg = levelCtx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0a1420");
+      bg.addColorStop(1, "#060c14");
+      levelCtx.fillStyle = bg;
+      levelCtx.fillRect(0, 0, w, h);
+
+      const Y = levelYs(h);
+      const lineL = w * 0.1;
+      const lineR = w * 0.88;
+      const ex = w * 0.5;
+      let eY = Y.s0;
+      let color = "#38bdf8";
+
+      if (ePhase === "s1") { eY = Y.s1; color = "#c084fc"; }
+      else if (ePhase === "t1") { eY = Y.t1; color = "#2dd4bf"; }
+      else if (ePhase === "rise") {
+        eY = Y.s0 + (Y.s1 - Y.s0) * ease(eProgress);
+        color = "#c084fc";
+      } else if (ePhase === "fluor") {
+        eY = Y.s1 + (Y.s0 - Y.s1) * ease(eProgress);
+        color = "#fde68a";
+      } else if (ePhase === "isc") {
+        eY = Y.s1 + (Y.t1 - Y.s1) * ease(eProgress);
+        color = "#2dd4bf";
+      } else if (ePhase === "phos") {
+        eY = Y.t1 + (Y.s0 - Y.t1) * ease(eProgress);
+        color = "#5eead4";
+      }
+
+      function drawLevel(y, label, sym, col, dash) {
+        levelCtx.save();
+        levelCtx.strokeStyle = col;
+        levelCtx.lineWidth = 3;
+        levelCtx.shadowBlur = 10;
+        levelCtx.shadowColor = col;
+        levelCtx.setLineDash(dash || []);
+        levelCtx.beginPath();
+        levelCtx.moveTo(lineL, y);
+        levelCtx.lineTo(lineR, y);
+        levelCtx.stroke();
+        levelCtx.setLineDash([]);
+        levelCtx.shadowBlur = 0;
+        levelCtx.fillStyle = "#e2e8f0";
+        levelCtx.font = "600 12px sans-serif";
+        levelCtx.fillText(label, lineL, y - 8);
+        levelCtx.font = "600 11px sans-serif";
+        levelCtx.fillStyle = col;
+        levelCtx.fillText(sym, lineR - 28, y - 6);
+        levelCtx.restore();
+      }
+
+      drawLevel(Y.s1, "S1 励起（高い段）", "S1", "#c084fc");
+      drawLevel(Y.t1, "T1 三重項", "T1", "#2dd4bf", [5, 4]);
+      drawLevel(Y.s0, "S0 基底（低い段）", "S0", "#38bdf8");
+
+      levelCtx.fillStyle = "#94a3b8";
+      levelCtx.font = "500 10px sans-serif";
+      levelCtx.fillText("③→② 蛍光 τ_f = " + tauF().toFixed(2) + " s", lineL, h - 36);
+      levelCtx.fillText("③→② 燐光 τ_p = " + tauP().toFixed(2) + " s", lineL, h - 20);
+      levelCtx.fillText("A = " + amplitude.toFixed(2), lineR - 100, h - 28);
+
+      const eRad = 12;
+      levelCtx.shadowBlur = 16;
+      levelCtx.shadowColor = color;
+      const eg = levelCtx.createRadialGradient(ex - 2, eY - 2, 1, ex, eY, eRad);
+      eg.addColorStop(0, "#fff");
+      eg.addColorStop(0.5, color);
+      eg.addColorStop(1, color);
+      levelCtx.fillStyle = eg;
+      levelCtx.beginPath();
+      levelCtx.arc(ex, eY, eRad, 0, Math.PI * 2);
+      levelCtx.fill();
+      levelCtx.shadowBlur = 0;
+
+      levelCtx.fillStyle = "#cbd5e1";
+      levelCtx.font = "500 10px sans-serif";
+      levelCtx.textAlign = "center";
+      levelCtx.fillText(
+        ePhase === "s0" ? "待機（基底）"
+        : ePhase === "fluor" ? "蛍光 → ④ 黄線"
+        : ePhase === "phos" ? "燐光 → ④ 青緑線"
+        : ePhase === "rise" ? "励起中"
+        : ePhase === "isc" ? "項間交差"
+        : ePhase === "s1" ? "S1 に滞在"
+        : ePhase === "t1" ? "T1 に滞在"
+        : ePhase,
+        ex, eY + eRad + 16
+      );
+      levelCtx.textAlign = "left";
+    }
+
+    // 電子遷移のタイムライン（寿命に連動）
+    function phaseDuration(phase) {
+      const scale = 0.35;
+      if (phase === "rise") return 0.45;
+      if (phase === "s1") return 0.25;
+      if (phase === "fluor") return Math.max(0.25, tauF() * scale);
+      if (phase === "isc") return 0.35;
+      if (phase === "phos") return Math.max(0.4, Math.min(3.5, tauP() * scale));
+      if (phase === "s0") return 0.5;
+      return 0.4;
+    }
+
+    function advanceElectron(now) {
+      const dur = phaseDuration(ePhase);
+      eProgress = Math.min(1, (now - ePhaseStart) / (dur * 1000));
+
+      if (eProgress < 1) return;
+
+      if (ePhase === "s0") {
+        ePhase = "rise";
+      } else if (ePhase === "rise") {
+        ePhase = "s1";
+      } else if (ePhase === "s1") {
+        ePhase = nextPath;
+        nextPath = nextPath === "fluor" ? "isc" : "fluor";
+      } else if (ePhase === "fluor" || ePhase === "phos") {
+        ePhase = "s0";
+      } else if (ePhase === "isc") {
+        ePhase = "t1";
+      } else if (ePhase === "t1") {
+        ePhase = "phos";
+      }
+      ePhaseStart = now;
+      eProgress = 0;
+      document.getElementById("levelSub").textContent =
+        ePhase === "fluor" ? `蛍光 S₁→S₀（τ_f=${tauF().toFixed(2)}s）`
+        : ePhase === "phos" ? `燐光 T₁→S₀（τ_p=${tauP().toFixed(2)}s）`
+        : ePhase === "isc" ? "項間交差 S₁→T₁"
+        : ePhase === "rise" ? "励起 S₀→S₁"
+        : "フォノン強度で寿命が変化";
+    }
+
+    function buildDecayChart() {
+      if (typeof Chart === "undefined") return;
+      decayChart = new Chart(document.getElementById("decayChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "蛍光 I_f(t) ← ② τ_f",
+              data: [],
+              borderColor: "#fde68a",
+              backgroundColor: "rgba(253,230,138,0.1)",
+              fill: true, tension: 0.2, pointRadius: 0, borderWidth: 2,
+            },
+            {
+              label: "燐光 I_p(t) ← ② τ_p",
+              data: [],
+              borderColor: "#5eead4",
+              backgroundColor: "rgba(94,234,212,0.08)",
+              fill: true, tension: 0.2, pointRadius: 0, borderWidth: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              type: "linear", min: 0, max: CHART_T,
+              title: { display: true, text: "時間 t (s)", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              min: 0, max: 1.05,
+              title: { display: true, text: "I(t)（相対）", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+          },
+          plugins: { legend: { labels: { color: "#94a3b8", boxWidth: 12, font: { size: 10 } } } },
+        },
+      });
+      updateDecayChart();
+    }
+
+    function updateDecayChart() {
+      if (!decayChart) return;
+      const tf = tauF();
+      const tp = tauP();
+      const fluor = [];
+      const phos = [];
+      for (let t = 0; t <= CHART_T; t += 0.05) {
+        fluor.push({ x: t, y: Math.exp(-t / tf) });
+        phos.push({ x: t, y: Math.exp(-t / tp) });
+      }
+      decayChart.data.datasets[0].data = fluor;
+      decayChart.data.datasets[1].data = phos;
+      decayChart.update("none");
+    }
+
+    function loop(now) {
+      if (playing) {
+        if (!lastFrame) lastFrame = now;
+        if (!ePhaseStart) ePhaseStart = now;
+        const dt = Math.min((now - lastFrame) / 1000, 0.05);
+        animTime += dt;
+        lastFrame = now;
+        advanceElectron(now);
+      }
+      drawChain(animTime);
+      drawLevels();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById("btnMono").addEventListener("click", () => {
+      chainType = "mono";
+      if (vibrMode === "optical") vibrMode = "acoustic";
+      updateUI();
+    });
+    document.getElementById("btnDi").addEventListener("click", () => {
+      chainType = "di";
+      updateUI();
+    });
+    document.getElementById("btnAcoustic").addEventListener("click", () => {
+      vibrMode = "acoustic";
+      updateUI();
+    });
+    document.getElementById("btnOptical").addEventListener("click", () => {
+      if (chainType === "mono") return;
+      vibrMode = "optical";
+      updateUI();
+    });
+    document.getElementById("ampSlider").addEventListener("input", () => {
+      amplitude = parseFloat(document.getElementById("ampSlider").value);
+      updateUI();
+    });
+
+    window.addEventListener("resize", () => {
+      drawChain(animTime);
+      drawLevels();
+    });
+
+    buildDecayChart();
+    updateUI();
+    lastFrame = performance.now();
+    ePhaseStart = lastFrame;
+    drawChain(0);
+    drawLevels();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

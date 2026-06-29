@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>蛍光光度計 — 蛍光測定</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #22c55e; --accent-light: #4ade80; --accent-glow: rgba(34,197,94,0.45);
+      --ex-color: #38bdf8; --em-color: #a3e635;
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(34,197,94,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0a120e 38%,#0c1810 72%,#0a100a 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1220px,97vw); margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(74,222,128,0.25),rgba(34,197,94,0.3));
+      border: 1px solid rgba(74,222,128,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); text-shadow: 0 0 20px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #dcfce7;
+      background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .intro {
+      border-radius: 14px; padding: 14px 16px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      font-size: 0.86rem; line-height: 1.7; color: #cbd5e1;
+    }
+    .intro p { margin: 0 0 8px; }
+    .flow-guide {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px;
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(34,197,94,0.22);
+      font-size: 0.78rem; font-weight: 600; text-align: center;
+    }
+    .flow-step { padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+    .flow-step.s1 { background: rgba(56,189,248,0.15); color: #bae6fd; border: 1px solid rgba(56,189,248,0.3); }
+    .flow-step.s2 { background: rgba(96,165,250,0.12); color: #bfdbfe; border: 1px solid rgba(96,165,250,0.28); }
+    .flow-step.s3 { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.28); }
+    .flow-step.s4 { background: rgba(163,230,53,0.12); color: #d9f99d; border: 1px solid rgba(163,230,53,0.28); }
+    .flow-arrow { color: #64748b; }
+    .main-grid {
+      display: grid; grid-template-columns: 1fr; gap: 10px;
+    }
+    @media (min-width:960px) {
+      .main-grid { grid-template-columns: 1.05fr 0.72fr 1.2fr; align-items: stretch; }
+    }
+    .panel {
+      border-radius: 14px; padding: 12px 14px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .panel h3 { margin: 0 0 6px; font-size: 0.88rem; font-weight: 600; color: var(--accent-light); }
+    .panel-sub { margin: 0 0 8px; font-size: 0.72rem; color: var(--muted); line-height: 1.45; }
+    #animCanvas {
+      display: block; width: 100%; height: min(320px,38dvh); min-height: 240px;
+      border-radius: 12px;
+      background: #060a12;
+      border: 1px solid rgba(34,197,94,0.28);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.55), 0 4px 24px rgba(0,0,0,0.35);
+    }
+    .light-readout { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .light-box {
+      padding: 8px 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .light-box .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 3px; }
+    .light-box .val { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .light-box.ex .val { color: #7dd3fc; }
+    .light-box.em .val { color: #bef264; }
+    .center-panel { text-align: center; }
+    .dual-swatch {
+      display: flex; justify-content: center; gap: 16px; margin-bottom: 10px;
+    }
+    .swatch-item { text-align: center; }
+    .swatch {
+      width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 4px;
+      border: 2px solid rgba(255,255,255,0.25);
+    }
+    .swatch-label { font-size: 0.68rem; color: var(--muted); }
+    .swatch-color {
+      display: block; margin-top: 2px;
+      font-size: 0.82rem; font-weight: 700; line-height: 1.3;
+    }
+    .swatch-item.ex .swatch-color { color: #7dd3fc; }
+    .swatch-item.em .swatch-color { color: #bef264; }
+    .fluor-color-hero {
+      margin-bottom: 12px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      text-align: center;
+    }
+    .fluor-color-hero .hero-tag {
+      display: block; font-size: 0.68rem; font-weight: 600; color: var(--muted); margin-bottom: 6px;
+    }
+    .fluor-color-bar {
+      height: 28px; border-radius: 8px; margin-bottom: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: inset 0 0 12px rgba(255,255,255,0.15);
+    }
+    .fluor-color-hero .hero-name {
+      font-size: clamp(1.15rem,3vw,1.45rem); font-weight: 700; line-height: 1.35;
+    }
+    .fluor-color-hero .hero-sub {
+      margin-top: 4px; font-size: 0.74rem; color: var(--muted); line-height: 1.45;
+    }
+    .lambda-box .color-tag {
+      margin-top: 4px; font-size: 0.72rem; font-weight: 700; line-height: 1.3;
+    }
+    .lambda-box.ex .color-tag { color: #7dd3fc; }
+    .lambda-box.em .color-tag { color: #bef264; }
+    .lambda-pair {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+    }
+    .lambda-box {
+      padding: 8px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .lambda-box .tag { font-size: 0.66rem; color: var(--muted); }
+    .lambda-box .num { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lambda-box.ex .num { color: #7dd3fc; }
+    .lambda-box.em .num { color: #bef264; }
+    .info-item.color-chip .val { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .info-item .mini-swatch {
+      width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.35);
+    }
+    .daily-color-row {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(163,230,53,0.08); border: 1px solid rgba(163,230,53,0.22);
+    }
+    .daily-color-row .daily-swatch {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0;
+    }
+    .daily-color-row .daily-color-text { flex: 1; min-width: 160px; }
+    .daily-color-row .daily-color-label {
+      display: block; font-size: 0.68rem; color: #bef264; font-weight: 600; margin-bottom: 2px;
+    }
+    .daily-color-row .daily-color-name {
+      font-size: 1.05rem; font-weight: 700; color: #ecfccb; line-height: 1.35;
+    }
+    .daily-color-row .daily-color-nm {
+      font-size: 0.76rem; color: #94a3b8; margin-top: 2px;
+    }
+    .daily-spec {
+      margin-top: 6px; padding: 7px 10px; border-radius: 8px;
+      background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.78rem; font-weight: 600; color: #bae6fd; line-height: 1.45;
+    }
+    .tab-row button .tab-dot {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      margin-right: 5px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.35);
+    }
+    .light-box .color-hint {
+      display: block; margin-top: 3px; font-size: 0.68rem; font-weight: 600;
+    }
+    .light-box.ex .color-hint { color: #7dd3fc; }
+    .light-box.em .color-hint { color: #bef264; }
+    .f-display {
+      font-size: clamp(2rem,5vw,2.8rem); font-weight: 700; color: #86efac;
+      text-shadow: 0 0 24px var(--accent-glow); font-variant-numeric: tabular-nums;
+    }
+    .stokes-box {
+      margin-top: 10px; padding: 9px 11px; border-radius: 10px;
+      background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.22);
+      font-size: 0.78rem; line-height: 1.55; color: #fde68a;
+    }
+    .charts-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .chart-wrap { flex: 1; min-height: 160px; position: relative; }
+    .chart-wrap canvas { max-height: min(200px,24dvh); }
+    .info-panel { border-radius: 14px; padding: 12px 14px; background: var(--slate-bg); border: 1px solid var(--slate-border); }
+    .info-panel h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--accent-light); }
+    .info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+    @media (min-width:720px) { .info-grid { grid-template-columns: repeat(4,1fr); } }
+    .info-item {
+      padding: 9px 11px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(34,197,94,0.16);
+    }
+    .info-item .label { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 3px; }
+    .info-item .val { font-size: 0.84rem; font-weight: 700; color: #f1f5f9; font-variant-numeric: tabular-nums; }
+    .comment-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(74,222,128,0.25);
+      font-size: 0.82rem; line-height: 1.65; color: #bbf7d0;
+    }
+    .controls-panel { border-radius: 14px; padding: 14px 16px; background: var(--slate-bg); border: 1px solid var(--slate-border); }
+    .controls-panel h3 { margin: 0 0 10px; font-size: 0.92rem; color: var(--accent-light); }
+    .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width:640px) { .controls-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (min-width:960px) { .controls-grid { grid-template-columns: repeat(3,1fr); } }
+    label { display: block; font-size: 0.84rem; font-weight: 500; margin-bottom: 5px; }
+    select, input[type="range"] { width: 100%; }
+    select {
+      padding: 10px 12px; border-radius: 10px; font-family: inherit; font-size: 0.86rem;
+      color: #e2e8f0; background: rgba(255,255,255,0.07); border: 1px solid rgba(34,197,94,0.35);
+    }
+    input[type="range"] { accent-color: var(--accent); height: 8px; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #86efac; font-variant-numeric: tabular-nums; }
+    .label-hint { display: block; margin-top: 3px; font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+    .btn-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn-row button {
+      flex: 1 1 calc(25% - 6px); min-height: 46px; padding: 10px 8px;
+      font-family: inherit; font-size: 0.8rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(34,197,94,0.35); background: rgba(255,255,255,0.07); color: #e2e8f0;
+    }
+    .btn-row button.primary {
+      background: linear-gradient(135deg,#16a34a,#22c55e); color: #fff; border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .btn-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #statusMsg {
+      grid-column: 1 / -1; margin: 0; padding: 10px 12px; border-radius: 10px;
+      font-size: 0.82rem; text-align: center; line-height: 1.55;
+      background: rgba(34,197,94,0.12); color: #bbf7d0;
+    }
+    .bleach-bar {
+      margin-top: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden;
+    }
+    .bleach-fill {
+      height: 100%; width: 100%; border-radius: 999px;
+      background: linear-gradient(90deg,#22c55e,#84cc16);
+      transition: width 0.15s linear;
+    }
+    .daily-panel {
+      border-radius: 14px; padding: 14px 16px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    .daily-panel > h3 { margin: 0 0 4px; font-size: 0.92rem; color: var(--accent-light); }
+    .tab-label {
+      margin: 0 0 8px; font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    }
+    .tab-row {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 12px;
+    }
+    .tab-row button {
+      flex: 0 0 auto; padding: 8px 12px; min-height: 40px;
+      font-family: inherit; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid rgba(34,197,94,0.28); border-radius: 999px;
+      background: rgba(255,255,255,0.06); color: #cbd5e1;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .tab-row button.active {
+      background: linear-gradient(135deg,#15803d,#22c55e);
+      color: #fff; border-color: var(--accent);
+      box-shadow: 0 0 14px var(--accent-glow);
+    }
+    .daily-content {
+      padding: 14px 16px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(34,197,94,0.2);
+      line-height: 1.65; font-size: 0.84rem; color: #cbd5e1;
+    }
+    .daily-content .daily-title {
+      margin: 0 0 10px; font-size: 1rem; font-weight: 600; color: #86efac;
+    }
+    .formal-block {
+      margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
+    }
+    .formal-block .formal-tag {
+      display: block; font-size: 0.68rem; font-weight: 600; color: #7dd3fc; margin-bottom: 4px;
+    }
+    .formal-block .formal-name {
+      font-size: 0.92rem; font-weight: 700; color: #e0f2fe; line-height: 1.5;
+    }
+    .formal-block .formal-sub {
+      margin-top: 6px; font-size: 0.78rem; color: #94a3b8; line-height: 1.5;
+    }
+    .example-block { margin-bottom: 10px; }
+    .example-block .ex-tag {
+      display: block; font-size: 0.68rem; font-weight: 600; color: #bef264; margin-bottom: 6px;
+    }
+    .example-block ul {
+      margin: 0; padding-left: 1.2em; color: #d1fae5;
+    }
+    .example-block li { margin-bottom: 4px; }
+    .daily-note {
+      margin: 0; padding: 9px 11px; border-radius: 8px;
+      background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2);
+      font-size: 0.78rem; color: #fde68a; line-height: 1.55;
+    }
+    .daily-load {
+      margin-top: 10px; padding: 8px 14px;
+      font-family: inherit; font-size: 0.78rem; font-weight: 600;
+      border-radius: 8px; cursor: pointer;
+      border: 1px solid rgba(34,197,94,0.4);
+      background: rgba(34,197,94,0.15); color: #bbf7d0;
+    }
+    .daily-load:hover { background: rgba(34,197,94,0.25); }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">✦</div>
+      <h2>蛍光光度計 — 蛍光測定</h2>
+      <p class="chapter-label">EX章 · 励起 Ex / 蛍光 Em / ストークスシフト</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="intro">
+      <p>
+        <strong style="color:#86efac">蛍光光度計</strong>は、試料に<strong style="color:#7dd3fc">励起光</strong>を当て、
+        透過光ではなく<strong style="color:#bef264">90° 方向に出る蛍光</strong>を測ります。
+        蛍光は励起より<strong style="color:#fde68a">長い波長</strong>（ストークスシフト）側に現れます。
+      </p>
+    </section>
+
+    <div class="flow-guide">
+      <span class="flow-step s1">励起光源</span><span class="flow-arrow">→</span>
+      <span class="flow-step s2">励起モノクロメータ</span><span class="flow-arrow">→</span>
+      <span class="flow-step s3">試料</span><span class="flow-arrow">→</span>
+      <span class="flow-step s4">90° 蛍光検出</span>
+    </div>
+
+    <section class="daily-panel">
+      <h3>身近な蛍光の例</h3>
+      <p class="tab-label">日常のもの → 主成分（正式名称）とその例 · タブで切り替え</p>
+      <div class="tab-row" id="dailyTabRow" role="tablist" aria-label="身近な蛍光の例"></div>
+      <div class="daily-content" id="dailyContent" role="tabpanel"></div>
+    </section>
+
+    <div class="main-grid">
+      <section class="panel">
+        <h3>① 蛍光光度計（光路）</h3>
+        <p class="panel-sub" id="animColorHint">励起光＝左から直進 · 蛍光＝試料から横（90°）へ</p>
+        <canvas id="animCanvas" width="640" height="320" aria-label="蛍光光度計アニメーション"></canvas>
+        <div class="light-readout">
+          <div class="light-box ex">
+            <span class="lbl">励起光 I_ex</span>
+            <span class="val" id="dispIex">100</span>
+            <span class="color-hint" id="animExColor">—</span>
+          </div>
+          <div class="light-box em">
+            <span class="lbl">蛍光 F</span>
+            <span class="val" id="dispF">0</span>
+            <span class="color-hint" id="animEmColor">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel center-panel">
+        <h3>② いまの測定値</h3>
+        <div class="dual-swatch">
+          <div class="swatch-item ex">
+            <div class="swatch" id="exSwatch"></div>
+            <div class="swatch-label">励起 Ex</div>
+            <span class="swatch-color" id="exColorName">—</span>
+          </div>
+          <div class="swatch-item em">
+            <div class="swatch" id="emSwatch"></div>
+            <div class="swatch-label">蛍光 Em</div>
+            <span class="swatch-color" id="emColorName">—</span>
+          </div>
+        </div>
+        <div class="fluor-color-hero" id="emColorHero">
+          <span class="hero-tag">いま見える蛍光の色</span>
+          <div class="fluor-color-bar" id="emColorBar"></div>
+          <div class="hero-name" id="emColorHeroName">—</div>
+          <div class="hero-sub" id="emColorHeroSub">—</div>
+        </div>
+        <div class="lambda-pair">
+          <div class="lambda-box ex">
+            <div class="tag">λ_ex</div>
+            <div class="num" id="dispLex">488</div>
+            <div class="color-tag" id="dispExColor">—</div>
+          </div>
+          <div class="lambda-box em">
+            <div class="tag">λ_em</div>
+            <div class="num" id="dispLem">509</div>
+            <div class="color-tag" id="dispEmColor">—</div>
+          </div>
+        </div>
+        <div class="panel-sub">蛍光強度 F（相対）</div>
+        <div class="f-display" id="dispFbig">0.00</div>
+        <div class="stokes-box" id="stokesBox">ストークスシフト Δλ = 21 nm</div>
+        <div class="bleach-bar" id="bleachBarWrap" hidden>
+          <div class="bleach-fill" id="bleachFill"></div>
+        </div>
+      </section>
+
+      <div class="charts-col">
+        <section class="panel">
+          <h3>③ 励起スペクトル Ex(λ)</h3>
+          <p class="panel-sub">λ_ex を走査 · 縦軸＝蛍光（λ_em 固定）</p>
+          <div class="chart-wrap"><canvas id="exChart"></canvas></div>
+        </section>
+        <section class="panel">
+          <h3>④ 蛍光スペクトル Em(λ)</h3>
+          <p class="panel-sub" id="emChartSub">λ_em を走査 · グラフの色＝蛍光の色</p>
+          <div class="chart-wrap"><canvas id="emChart"></canvas></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="info-panel">
+      <h3>測定情報</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">蛍光物質</span><span class="val" id="infoMat">—</span></div>
+        <div class="info-item"><span class="label">λ_ex</span><span class="val" id="infoLex">—</span></div>
+        <div class="info-item"><span class="label">λ_em</span><span class="val" id="infoLem">—</span></div>
+        <div class="info-item color-chip"><span class="label">励起の色</span><span class="val" id="infoExColor">—</span></div>
+        <div class="info-item color-chip"><span class="label">蛍光の色</span><span class="val" id="infoEmColor">—</span></div>
+        <div class="info-item"><span class="label">F（相対）</span><span class="val" id="infoF">—</span></div>
+        <div class="info-item"><span class="label">濃度 c</span><span class="val" id="infoC">—</span></div>
+        <div class="info-item"><span class="label">量子収率 QY</span><span class="val" id="infoQy">—</span></div>
+        <div class="info-item"><span class="label">ストークスシフト</span><span class="val" id="infoStokes">—</span></div>
+        <div class="info-item"><span class="label">モード</span><span class="val" id="infoMode">—</span></div>
+      </div>
+      <div class="comment-box" id="infoComment">—</div>
+    </section>
+
+    <section class="controls-panel">
+      <h3>操作</h3>
+      <div class="controls-grid">
+        <label>蛍光物質
+          <select id="fluorSelect">
+            <optgroup label="海・生き物">
+              <option value="gfp">GFP — クラゲ（緑 488 / 509 nm）</option>
+              <option value="coral_green">サンゴ FP（緑）— 488 / 509 nm</option>
+              <option value="coral_red">サンゴ FP（DsRed）— 558 / 583 nm（橙に見える）</option>
+              <option value="coral_blue">サンゴ FP（青）— 440 / 480 nm</option>
+              <option value="guanine">グアニン — 魚の鱗（UV → 青白）</option>
+            </optgroup>
+            <optgroup label="鉱物・その他">
+              <option value="calcite">方解石（カルサイト）— 620 nm（赤）</option>
+              <option value="fluorite">蛍石（フローライト）— 450 nm（青）</option>
+              <option value="scorpion">サソリ — UV → 青緑（450–500 nm）</option>
+            </optgroup>
+            <optgroup label="身近なもの（主成分）">
+              <option value="fluorescein">フルオレセイン — 蛍光ペン（黄緑）</option>
+              <option value="brightener">DSBP 系蛍光増白剤 — 洗剤（437 nm 青白）</option>
+              <option value="quinine">キニーネ — トニックウォーター（青）</option>
+              <option value="riboflavin">リボフラビン — バナナ・卵白・B₂（黄緑）</option>
+              <option value="chlorophyll">クロロフィル a — 葉っぱ（深赤）</option>
+              <option value="teeth">トリプトファン — 歯（紫外〜紫）</option>
+            </optgroup>
+            <optgroup label="研究・標準試料">
+              <option value="gfp">GFP — 研究用（緑 488 / 509 nm）</option>
+              <option value="fitc">FITC — 黄緑</option>
+              <option value="rhodamine">Rhodamine B — 赤</option>
+              <option value="dapi">DAPI — 青</option>
+            </optgroup>
+          </select>
+        </label>
+        <label>濃度 c（相対 0〜1.0）
+          <input type="range" id="concSlider" min="0" max="1000" value="500" step="1">
+          <span class="slider-val" id="concVal">0.50</span>
+          <span class="label-hint">高濃度では自己消光で F が飽和しにくくなる</span>
+        </label>
+        <label>励起光 I_ex（相対）
+          <input type="range" id="iexSlider" min="20" max="100" value="100" step="1">
+          <span class="slider-val" id="iexVal">100</span>
+        </label>
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnExScan">励起スペクトル測定</button>
+          <button type="button" id="btnEmScan">蛍光スペクトル測定</button>
+          <button type="button" id="btnBleach">連続測定（光退色）</button>
+          <button type="button" id="btnReset">リセット</button>
+        </div>
+        <p id="statusMsg">物質を選び、「蛍光スペクトル測定」または「励起スペクトル測定」でグラフを描画できます。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const F_SCALE = 100;
+    const IEX_BASE = 100;
+    const SCAN_STEP = 2;
+    const EX_MIN = 300;
+    const EX_MAX = 650;
+    const EM_MIN = 400;
+    const EM_MAX = 750;
+
+    const FLUOROPHORES = {
+      fluorescein: {
+        name: "フルオレセイン（fluorescein）",
+        exPeak: 494, emPeak: 521, sigmaEx: 20, sigmaEm: 22, qy: 0.79,
+        exMin: 400, emMin: 450,
+        comment: "蛍光ペン・ハイライターのインク成分。UV や青励起で黄緑色に光る代表例です。",
+      },
+      brightener: {
+        name: "4,4'-ジスチルベン-2,2'-ジスルホン酸ナトリウム（DSBP 系）",
+        exPeak: 348, emPeak: 437, sigmaEx: 18, sigmaEm: 24, qy: 0.75,
+        exMin: 300, emMin: 380,
+        fluorDisplay: true,
+        comment: "洗剤に含まれる蛍光増白剤。UV 近傍で励起し、437 nm 付近の青白い蛍光で白さを強調します。",
+      },
+      quinine: {
+        name: "キニーネ（quinine, C₂₀H₂₄N₂O₂）",
+        exPeak: 350, emPeak: 450, sigmaEx: 16, sigmaEm: 28, qy: 0.55,
+        exMin: 300, emMin: 390,
+        comment: "トニックウォーターの主成分の一つ。UV 下で青白く光る有名なデモです。",
+      },
+      riboflavin: {
+        name: "リボフラビン（Riboflavin / ビタミンB₂, C₁₇H₂₀N₄O₆）",
+        exPeak: 444, emPeak: 525, sigmaEx: 22, sigmaEm: 26, qy: 0.31,
+        exMin: 380, emMin: 460,
+        comment: "バナナの皮・卵白・ビタミン剤に含まれる。黄〜緑の蛍光で B₂ 検出にも使われます。",
+      },
+      chlorophyll: {
+        name: "クロロフィル a（Chlorophyll a, C₅₅H₇₂MgN₄O₅）",
+        exPeak: 430, emPeak: 685, sigmaEx: 25, sigmaEm: 38, qy: 0.15,
+        exMin: 380, emMin: 600,
+        comment: "葉の緑色素。赤色光付近で励起すると深赤（685 nm 付近）の蛍光が観察されます。",
+      },
+      teeth: {
+        name: "L-トリプトファン（tryptophan — エナメル質・タンパク質）",
+        exPeak: 280, emPeak: 348, sigmaEx: 10, sigmaEm: 14, qy: 0.13,
+        exMin: 260, emMin: 300,
+        comment: "歯のエナメル質・デンチン中の芳香族アミノ酸。紫外励起で青紫側に弱い蛍光。",
+      },
+      guanine: {
+        name: "グアニン（guanine, C₅H₅N₅O）",
+        exPeak: 360, emPeak: 450, sigmaEx: 18, sigmaEm: 30, qy: 0.42,
+        exMin: 300, emMin: 390,
+        comment: "魚の鱗・皮のイリドフォアに結晶として蓄積。UV 励起で青白い蛍光を示します。",
+      },
+      calcite: {
+        name: "方解石（calcite, CaCO₃）— Mn²⁺ 等による赤蛍光",
+        exPeak: 365, emPeak: 620, sigmaEx: 28, sigmaEm: 32, qy: 0.38,
+        exMin: 300, emMin: 560,
+        comment: "UV 励起で赤（620 nm 付近）に光る代表例。鉱物鑑定・産地判別に蛍光色が使われます。",
+      },
+      fluorite: {
+        name: "蛍石（fluorite, CaF₂）",
+        exPeak: 360, emPeak: 450, sigmaEx: 20, sigmaEm: 26, qy: 0.52,
+        exMin: 300, emMin: 390,
+        comment: "fluorescence（蛍光）の語源となった鉱物。UV 下で青（450 nm 付近）に光り、鑑定に不可欠。",
+      },
+      scorpion: {
+        name: "サソリ甲羅（キチン質層 — ヒアルロン酸誘導体等）",
+        exPeak: 365, emPeak: 475, sigmaEx: 18, sigmaEm: 30, qy: 0.40,
+        exMin: 320, emMin: 420,
+        comment: "UV（350–380 nm）励起で青緑（450–500 nm）に光る。サソリ採集に UV ライトが使われます。",
+      },
+      coral_green: {
+        name: "サンゴ緑色蛍光タンパク質（GFP 型 / zFP538 等）",
+        exPeak: 488, emPeak: 509, sigmaEx: 22, sigmaEm: 18, qy: 0.58,
+        comment: "サンゴ・共生藻に含まれる緑 FP。励起 488 nm・蛍光 509 nm で緑色に光ります。",
+      },
+      coral_red: {
+        name: "サンゴ赤色蛍光タンパク質（DsRed 型）",
+        exPeak: 558, emPeak: 583, sigmaEx: 24, sigmaEm: 28, qy: 0.50,
+        emMin: 530,
+        bioColor: "赤 FP",
+        comment: "生物学では「赤 FP」と呼ばれるが、583 nm の光は目には橙に見える（真っ赤は 620 nm 以長）。",
+      },
+      coral_blue: {
+        name: "サンゴ青色蛍光タンパク質（青 FP / cyan FP 型）",
+        exPeak: 440, emPeak: 480, sigmaEx: 20, sigmaEm: 22, qy: 0.45,
+        exMin: 380, emMin: 420,
+        comment: "サンゴに見られる青 FP。励起 440 nm 付近・蛍光 480 nm 付近で青〜青緑に光ります。",
+      },
+      gfp: {
+        name: "GFP（Green Fluorescent Protein / 緑色蛍光タンパク質）",
+        exPeak: 488, emPeak: 509, sigmaEx: 22, sigmaEm: 18, qy: 0.60,
+        comment: "ミズクラゲ（Aequorea victoria）由来。励起 488 nm・蛍光 509 nm の緑色蛍光で生物学研究の定番。",
+      },
+      fitc: {
+        name: "FITC（フルオレセインイソチオシアネート）",
+        exPeak: 495, emPeak: 520, sigmaEx: 20, sigmaEm: 20, qy: 0.65,
+        comment: "抗体・タンパク質標識の定番。免疫染色やフローサイトメトリーで広く使われます。",
+      },
+      rhodamine: {
+        name: "Rhodamine B",
+        exPeak: 540, emPeak: 625, sigmaEx: 26, sigmaEm: 32, qy: 0.70,
+        comment: "赤色蛍光染料。レーザー励起や顕微鏡イメージングで使われる代表例です。",
+      },
+      dapi: {
+        name: "DAPI",
+        exPeak: 358, emPeak: 461, sigmaEx: 18, sigmaEm: 24, qy: 0.50,
+        exMin: 300, emMin: 400,
+        comment: "DNA に結合して青く光る染色剤。細胞核の観察に不可欠な蛍光色素です。",
+      },
+    };
+
+    const DAILY_EXAMPLES = [
+      {
+        id: "pen",
+        label: "蛍光ペン",
+        fluorId: "fluorescein",
+        formalName: "フルオレセイン（fluorescein）",
+        formalSub: "3',6'-ジヒドロキシフルオレセイン — 蛍光マーカー・pH 指示薬として知られる有機蛍光色素",
+        examples: [
+          "蛍光ペン・ハイライターのインク（UV 下で黄緑に光る）",
+          "実験室の pH 試験紙・フルオレセイン溶液",
+          "生物・化学の蛍光ラベル（FITC の前駆体とも）",
+        ],
+        note: "身近な「光るペン」の正体は、多くの場合この蛍光色素です。",
+      },
+      {
+        id: "detergent",
+        label: "洗剤",
+        fluorId: "brightener",
+        specLine: "蛍光 437 nm（青白）— UV 近傍で励起",
+        formalName: "4,4'-ジスチルベン-2,2'-ジスルホン酸ナトリウム（DSBP など）",
+        formalSub: "ジスチルベン系蛍光増白剤（Optical Brightening Agent）— 洗剤・紙・繊維に添加",
+        examples: [
+          "粉末・液体洗剤に含まれる「白さ増強」成分",
+          "UV 下で白い布・紙が青白く光って見える",
+          "同系統：チモール系・クマリン系増白剤も市販品に使用",
+        ],
+        note: "可視光では白く見せ、紫外線近傍で青蛍光を出して白度を高めます。",
+      },
+      {
+        id: "tonic",
+        label: "トニックウォーター",
+        fluorId: "quinine",
+        formalName: "キニーネ（quinine, C₂₀H₂₄N₂O₂）",
+        formalSub: "キナ木皮アルカロイド — トニックウォーターの苦味・蛍光の主成分",
+        examples: [
+          "キニネ入りトニックウォーター（UV ライトで青白く光る定番実験）",
+          "歴史的にはマラリア治療薬としても使用",
+          "炭酸飲料中の希薄溶液でも蛍光が観察できる",
+        ],
+        note: "教室デモで最も有名な「飲み物の蛍光」例の一つです。",
+      },
+      {
+        id: "banana",
+        label: "バナナ",
+        fluorId: "riboflavin",
+        formalName: "リボフラビン（Riboflavin / ビタミンB₂, C₁₇H₂₀N₄O₆）",
+        formalSub: "フラビン環を持つ水溶性ビタミン — 熟したバナナの皮などに含まれる",
+        examples: [
+          "熟したバナナの皮の斑点（UV 下で黄緑の蛍光）",
+          "未熟な緑バナナではクロロフィル由来の蛍光も混在",
+          "食品中の B₂ 定量に蛍光法が使われる",
+        ],
+        note: "「バナナが光る」の主因の一つは B₂（リボフラビン）です。",
+      },
+      {
+        id: "eggwhite",
+        label: "卵白",
+        fluorId: "riboflavin",
+        formalName: "リボフラビン（Riboflavin）＋ L-トリプトファン（tryptophan）",
+        formalSub: "卵白タンパク質（オボアルブミン等）に結合した B₂ と、芳香族アミノ酸トリプトファン",
+        examples: [
+          "生卵白 — 283 nm 付近励起で青白い内在蛍光（トリプトファン）",
+          "リボフラビンによる黄緑蛍光（444 / 525 nm 付近）",
+          "加熱でタンパク質変性し蛍光パターンが変化",
+        ],
+        note: "主に B₂ とタンパク質のトリプトファンが蛍光の源です。シミュでは B₂ モデルを表示。",
+      },
+      {
+        id: "vitamin",
+        label: "ビタミン剤",
+        fluorId: "riboflavin",
+        formalName: "リボフラビン（Riboflavin / ビタミンB₂, C₁₇H₂₀N₄O₆）",
+        formalSub: "IUPAC 名：7,8-ジメチル-10-[(2S,3S,4R)-2,3,4,5-テトラヒドロキシペンチル]ベンzo[g]pteridine-2,4(3H,10H)-ジオン",
+        examples: [
+          "黄色い B₂ 錠剤・Multivitamin 中の B₂",
+          "水に溶かすと黄緑色に蛍光（光で分解しやすい）",
+          "欠乏症診断・尿中 B₂ 測定に蛍光分析が利用される",
+        ],
+        note: "ビタミン剤で最も蛍光が目立つのは B₂（リボフラビン）です。",
+      },
+      {
+        id: "leaf",
+        label: "葉っぱ",
+        fluorId: "chlorophyll",
+        formalName: "クロロフィル a（Chlorophyll a, C₅₅H₇₂MgN₄O₅）",
+        formalSub: "マグネシウム配位型ポルフィリン — 光合成の主色素（葉緑体に存在）",
+        examples: [
+          "緑葉を赤色光（≈630 nm）で照らすと深赤蛍光（≈685 nm）",
+          "ストレス・病斑で蛍光強度が変化（植物生理調査）",
+          "枯れ葉ではクロロフィル分解で蛍光パターンが変わる",
+        ],
+        note: "吸収は青・赤、蛍光は長波長側（深赤）に現れます。",
+      },
+      {
+        id: "teeth",
+        label: "歯",
+        fluorId: "teeth",
+        formalName: "L-トリプトファン（tryptophan, C₁₁H₁₂N₂O₂）— エナメル質・デンチン中",
+        formalSub: "ヒドロキシアパタイト（Ca₁₀(PO₄)₆(OH)₂）基質中のタンパク質・有機基に含まれる芳香族アミノ酸",
+        examples: [
+          "歯科 — 青紫光励起でエナメル・デンチンの青白蛍光（う蝕診断補助）",
+          "プラーク中のポルフィリン（細菌由来）も赤蛍光を示すことがある",
+          "ホワイトニング前後で蛍光強度が変化",
+        ],
+        note: "可視光デモでは青紫励起の総合蛍光として観察されます。紫外域モデルを表示。",
+      },
+      {
+        id: "jellyfish",
+        label: "クラゲ",
+        fluorId: "gfp",
+        specLine: "励起 488 nm · 蛍光 509 nm",
+        formalName: "GFP（Green Fluorescent Protein / 緑色蛍光タンパク質）",
+        formalSub: "ミズクラゲ Aequorea victoria の発光器官に天然存在 — ノーベル賞にも結びついた分子",
+        examples: [
+          "ミズクラゲの触手・傘 — 青励起で緑に光る（488 / 509 nm）",
+          "GFP 遺伝子導入で細胞・生物を緑色に標識（蛍光イメージング）",
+          "クラゲの生物発光（エクイン）と GFP は別系統だが、GFP 発見の源",
+        ],
+        note: "「クラゲ＝GFP」の代表例。励起 488 nm・蛍光 509 nm で緑色に光ります。",
+      },
+      {
+        id: "coral_green",
+        label: "サンゴ（緑）",
+        fluorId: "coral_green",
+        specLine: "励起 488 nm · 蛍光 509 nm",
+        formalName: "緑色蛍光タンパク質（GFP 型 / zFP538 等）",
+        formalSub: "サンゴ・共生藻（ゾオキセラエ）に含まれる緑 FP — Anthozoa の代表蛍光タンパク質の一つ",
+        examples: [
+          "サンゴポリプの緑色蛍光 — 青〜緑光励起で緑に光る",
+          "zFP538（サンゴ由来 GFP ホモログ）— 488 / 509 nm",
+          "ダイバーライト下のサンゴ礁で最も目立つ色の一つ",
+        ],
+        note: "サンゴの「緑」の正体。クラゲ GFP と同系統の緑色 FP です。",
+      },
+      {
+        id: "coral_red",
+        label: "サンゴ（赤 FP）",
+        fluorId: "coral_red",
+        specLine: "励起 558 nm · 蛍光 583 nm",
+        bioTag: "赤色 FP（DsRed 型）— 生物学の名称",
+        formalName: "赤色蛍光タンパク質（DsRed 型）",
+        formalSub: "Discosoma 系サンゴ由来 DsRed — サンゴ組織・共生藻に見られる赤 FP",
+        examples: [
+          "サンゴの赤〜橙の蛍光 — ストレス応答で強度が変化",
+          "DsRed — 励起 558 nm · 蛍光 583 nm（目には橙に見える）",
+          "多色イメージングで緑 FP と組み合わせて使用",
+        ],
+        note: "「赤 FP」と呼ばれますが、583 nm はスペクトル上は橙〜黄橙。真っ赤（620 nm 以長）より短い波長です。",
+      },
+      {
+        id: "coral_blue",
+        label: "サンゴ（青）",
+        fluorId: "coral_blue",
+        specLine: "励起 440 nm · 蛍光 480 nm",
+        formalName: "青色蛍光タンパク質（青 FP / cyan FP 型）",
+        formalSub: "サンゴに天然存在する短波長側 FP — EBFP・cyan FP 系に近い",
+        examples: [
+          "サンゴの青〜青緑の蛍光（短波長側 FP）",
+          "440 nm 付近励起 · 480 nm 付近の青い蛍光",
+          "緑・赤 FP と波長を分けて多色観察できる",
+        ],
+        note: "サンゴの「青」。3 色のうち最も短波長側に蛍光が出ます。",
+      },
+      {
+        id: "fishscale",
+        label: "魚の鱗",
+        fluorId: "guanine",
+        specLine: "励起 UV · 蛍光 青白（≈450 nm）",
+        formalName: "グアニン（guanine, C₅H₅N₅O）",
+        formalSub: "プリン塩基 — 魚のイリドフォア（虹色細胞）に板状結晶として蓄積",
+        examples: [
+          "魚の鱗・皮 — UV 下で青白く光る（グアニン結晶の構造色＋蛍光）",
+          "サケ・イワシなどの銀色の鱗（グアニン＋イリドエッセンス）",
+          "化粧品・マイカの珠光剤にもグアニンが使われる",
+        ],
+        note: "励起は紫外（≈360 nm）域。目で見えるのは青白い蛍光です。",
+      },
+      {
+        id: "calcite",
+        label: "カルサイト",
+        fluorId: "calcite",
+        specLine: "蛍光 620 nm（赤）— UV 励起",
+        formalName: "方解石（calcite, CaCO₃）",
+        formalSub: "炭酸カルシウム — Mn²⁺ などの微量不純物が赤蛍光の中心（置換・欠陥発光）",
+        examples: [
+          "UV ランプ下で赤く光る方解石（産地・不純物で色が変わる）",
+          "蛍光色は鉱物鑑定の重要手がかり（同じ方解石でも白・赤・青など）",
+          "石灰岩洞窟の方解石結晶 — 観光地の UV ショーケース",
+        ],
+        note: "620 nm は目に真っ赤に見える波長。鉱物鑑定の定番デモです。",
+      },
+      {
+        id: "fluorite",
+        label: "フローライト",
+        fluorId: "fluorite",
+        specLine: "蛍光 450 nm（青）— UV 励起",
+        formalName: "蛍石（fluorite, CaF₂）",
+        formalSub: "フッ化カルシウム — 英語 fluorescence（蛍光）の語源となった鉱物",
+        examples: [
+          "UV 下で青く光る蛍石 — 鑑定の基本試料",
+          "Eu²⁺ 等の不純物で青〜紫の蛍光（産地で変化）",
+          "光学レンズ・フッ素化学の原料としても重要",
+        ],
+        note: "「蛍光」の語源そのもの。450 nm ははっきり青に見えます。",
+      },
+      {
+        id: "scorpion",
+        label: "サソリ",
+        fluorId: "scorpion",
+        specLine: "励起 UV（350–380 nm）· 蛍光 青緑（450–500 nm）",
+        formalName: "サソリ外骨格（キチン質層 — β-グルカン・ヒアルロン酸誘導体等）",
+        formalSub: "甲羅（外骨格）の有機成分が UV 励起で青緑蛍光 — Scorpion とも呼ばれる",
+        examples: [
+          "UV ライト（ブラックライト）でサソリ探し — 暗闇で甲羅が青緑に光る",
+          "生きたサソリの外骨格・脱皮殻で観察できる",
+          "クモ・カニなど他の節足動物でも似た蛍光がある場合がある",
+        ],
+        note: "甲羅の成分由来の蛍光。シミュでは代表ピーク 365 / 475 nm で近似します。",
+      },
+    ];
+
+    let fluorId = "fluorescein";
+    let activeDailyId = "pen";
+    let concentration = 0.5;
+    let iex = 100;
+    let lambdaEx = 488;
+    let lambdaEm = 509;
+    let fixLambdaEm = 509;
+    let fixLambdaEx = 488;
+    let bleachFactor = 1;
+    let bleachTimer = null;
+    let scanTimer = null;
+    let mode = "idle";
+    let exScanData = [];
+    let emScanData = [];
+    let exChart = null;
+    let emChart = null;
+    let excPhotons = [];
+    let emPhotons = [];
+    let animTime = 0;
+
+    const canvas = document.getElementById("animCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function mat() { return FLUOROPHORES[fluorId]; }
+
+    function displayRGB(nm, forEmission = false) {
+      if (forEmission && mat().fluorDisplay) {
+        return nmToFluorDisplayRGB(nm);
+      }
+      return nmToRGB(nm);
+    }
+
+    function spectrumBounds() {
+      const m = mat();
+      return {
+        exLo: m.exMin || EX_MIN,
+        exHi: EX_MAX,
+        emLo: m.emMin || EM_MIN,
+        emHi: EM_MAX,
+      };
+    }
+
+    function gauss(l, center, sigma) {
+      const d = (l - center) / sigma;
+      return Math.exp(-0.5 * d * d);
+    }
+
+    function effectiveConc(c) {
+      if (c <= 0.85) return c;
+      return 0.85 + (c - 0.85) * 0.25;
+    }
+
+    function calcF(lambdaExVal, lambdaEmVal) {
+      const m = mat();
+      const exEff = gauss(lambdaExVal, m.exPeak, m.sigmaEx);
+      const emEff = gauss(lambdaEmVal, m.emPeak, m.sigmaEm);
+      const cEff = effectiveConc(concentration);
+      return exEff * emEff * cEff * m.qy * bleachFactor * (iex / IEX_BASE) * F_SCALE;
+    }
+
+    function nmToRGB(nm) {
+      if (nm < 380) {
+        const t = Math.max(0, Math.min(1, (nm - 280) / 100));
+        return { r: Math.round(80 + 100 * t), g: 0, b: Math.round(180 + 50 * t) };
+      }
+      let r = 0, g = 0, b = 0;
+      if (nm < 440) {
+        const t = (nm - 380) / 60;
+        r = Math.round(130 * (1 - t) + 20);
+        g = Math.round(60 * t);
+        b = Math.round(200 + 55 * t);
+      } else if (nm <= 490) { g = (nm - 440) / 50 * 255; b = 255; }
+      else if (nm <= 510) { g = 255; b = (510 - nm) / 20 * 255; }
+      else if (nm <= 580) { r = (nm - 510) / 70 * 255; g = 255; }
+      else if (nm <= 645) { r = 255; g = (645 - nm) / 65 * 255; }
+      else r = 255;
+      return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+    }
+
+    /** 蛍光増白剤など「白地にのる青白い光」用 — 波長色を白と混ぜた表示 */
+    function nmToFluorDisplayRGB(nm) {
+      const pure = nmToRGB(nm);
+      const w = 0.55;
+      return {
+        r: Math.round(pure.r * (1 - w) + 255 * w),
+        g: Math.round(pure.g * (1 - w) + 255 * w),
+        b: Math.round(pure.b * (1 - w) + 255 * w),
+      };
+    }
+
+    function nmToColorName(nm) {
+      if (nm < 380) {
+        return {
+          name: "紫外（UV）",
+          short: "紫外",
+          sub: "目にはほとんど見えない波長（紫ランプ下でわずかに紫）",
+          visible: false,
+        };
+      }
+      if (nm < 430) return { name: "紫", short: "紫", sub: "青紫〜紫に光る", visible: true };
+      if (nm < 445) return { name: "青白", short: "青白", sub: "青白く光る（洗剤の蛍光増白剤 437 nm など）", visible: true };
+      if (nm < 450) return { name: "青", short: "青", sub: "はっきり青く光る", visible: true };
+      if (nm < 490) return { name: "青", short: "青", sub: "はっきり青く光る", visible: true };
+      if (nm < 512) return { name: "青緑", short: "青緑", sub: "シアン〜青緑（480 nm 付近）", visible: true };
+      if (nm < 555) return { name: "緑", short: "緑", sub: "はっきり緑に光る（GFP 509 nm など）", visible: true };
+      if (nm < 570) return { name: "黄緑", short: "黄緑", sub: "黄みがかった緑", visible: true };
+      if (nm < 580) return { name: "黄", short: "黄", sub: "黄色に光る", visible: true };
+      if (nm < 615) return { name: "橙", short: "橙", sub: "橙〜黄橙に光る（DsRed 583 nm など）", visible: true };
+      if (nm < 680) return { name: "赤", short: "赤", sub: "赤く光る（620 nm 以長で真っ赤）", visible: true };
+      return { name: "深赤", short: "深赤", sub: "暗い赤〜深紅（クロロフィル蛍光 685 nm など）", visible: true };
+    }
+
+    function formatColorLabel(nm, withNm = true) {
+      const c = nmToColorName(nm);
+      return withNm ? `${c.name}（${Math.round(nm)} nm）` : c.name;
+    }
+
+    function colorChipHtml(nm, forEmission = false) {
+      const c = displayRGB(nm, forEmission);
+      const info = nmToColorName(nm);
+      return `<span class="mini-swatch" style="background:rgb(${c.r},${c.g},${c.b});box-shadow:0 0 8px rgba(${c.r},${c.g},${c.b},0.55)"></span><span>${formatColorLabel(nm)}</span>`;
+    }
+
+    function applyColorHero(nm) {
+      const rgb = displayRGB(nm, true);
+      const info = nmToColorName(nm);
+      const bar = document.getElementById("emColorBar");
+      const hero = document.getElementById("emColorHero");
+      bar.style.background = `linear-gradient(90deg, rgb(${Math.round(rgb.r * 0.5)},${Math.round(rgb.g * 0.5)},${Math.round(rgb.b * 0.5)}), rgb(${rgb.r},${rgb.g},${rgb.b}), rgb(${Math.min(255, rgb.r + 30)},${Math.min(255, rgb.g + 30)},${Math.min(255, rgb.b + 30)}))`;
+      bar.style.boxShadow = `0 0 20px rgba(${rgb.r},${rgb.g},${rgb.b},0.45)`;
+      hero.style.background = `linear-gradient(180deg, rgba(${rgb.r},${rgb.g},${rgb.b},0.18), rgba(${rgb.r},${rgb.g},${rgb.b},0.06))`;
+      hero.style.borderColor = `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`;
+      document.getElementById("emColorHeroName").textContent = formatColorLabel(nm);
+      document.getElementById("emColorHeroName").style.color = info.visible ? `rgb(${rgb.r},${rgb.g},${rgb.b})` : "#c4b5fd";
+      document.getElementById("emColorHeroSub").textContent = info.sub;
+    }
+
+    function updateEmChartStyle(nm) {
+      if (!emChart) return;
+      const rgb = displayRGB(nm, true);
+      const line = `rgba(${rgb.r},${rgb.g},${rgb.b},0.95)`;
+      const fill = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
+      emChart.data.datasets[0].borderColor = line;
+      emChart.data.datasets[0].backgroundColor = fill;
+      emChart.data.datasets[0].label = `Em(λ_em) — ${nmToColorName(nm).short}`;
+    }
+
+    function rgbStr(c, a = 1) {
+      return `rgba(${c.r},${c.g},${c.b},${a})`;
+    }
+
+    function setSwatch(el, nm, forEmission = false) {
+      const c = displayRGB(nm, forEmission);
+      el.style.background = `radial-gradient(circle at 35% 35%, rgb(${c.r},${c.g},${c.b}), rgb(${Math.round(c.r*0.45)},${Math.round(c.g*0.45)},${Math.round(c.b*0.45)}))`;
+      el.style.boxShadow = `0 0 18px ${rgbStr(c, 0.55)}`;
+    }
+
+    function buildExSpectrum() {
+      const pts = [];
+      const { exLo, exHi } = spectrumBounds();
+      for (let x = exLo; x <= exHi; x += SCAN_STEP) {
+        pts.push({ x, y: calcF(x, fixLambdaEm) });
+      }
+      return pts;
+    }
+
+    function buildEmSpectrum() {
+      const pts = [];
+      const { emLo, emHi } = spectrumBounds();
+      for (let x = emLo; x <= emHi; x += SCAN_STEP) {
+        pts.push({ x, y: calcF(fixLambdaEx, x) });
+      }
+      return pts;
+    }
+
+    function chartOpts(xTitle, xMin, xMax, color) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: {
+            type: "linear", min: xMin, max: xMax,
+            title: { display: true, text: xTitle, color: "#94a3b8" },
+            ticks: { color: "#94a3b8", maxTicksLimit: 10 },
+            grid: { color: "rgba(148,163,184,0.1)" },
+          },
+          y: {
+            min: 0,
+            title: { display: true, text: "蛍光 F（相対）", color: "#94a3b8" },
+            ticks: { color: "#94a3b8" },
+            grid: { color: "rgba(148,163,184,0.1)" },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: "#cbd5e1", font: { size: 10 } } },
+        },
+      };
+    }
+
+    function initCharts() {
+      exChart = new Chart(document.getElementById("exChart").getContext("2d"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Ex(λ_ex)",
+              data: [],
+              borderColor: "rgba(56,189,248,0.95)",
+              backgroundColor: "rgba(56,189,248,0.12)",
+              borderWidth: 2, pointRadius: 0, fill: true, tension: 0.25,
+            },
+            {
+              label: "現在 λ_ex",
+              data: [], type: "scatter",
+              pointRadius: 7, backgroundColor: "#fde68a", borderColor: "#fff", borderWidth: 2,
+            },
+          ],
+        },
+        options: chartOpts("励起波長 λ_ex（nm）", EX_MIN, EX_MAX, "#38bdf8"),
+      });
+
+      emChart = new Chart(document.getElementById("emChart").getContext("2d"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Em(λ_em)",
+              data: [],
+              borderColor: "rgba(163,230,53,0.95)",
+              backgroundColor: "rgba(163,230,53,0.12)",
+              borderWidth: 2, pointRadius: 0, fill: true, tension: 0.25,
+            },
+            {
+              label: "現在 λ_em",
+              data: [], type: "scatter",
+              pointRadius: 7, backgroundColor: "#fde68a", borderColor: "#fff", borderWidth: 2,
+            },
+          ],
+        },
+        options: chartOpts("蛍光波長 λ_em（nm）", EM_MIN, EM_MAX, "#a3e635"),
+      });
+    }
+
+    function updateCharts() {
+      const F = calcF(lambdaEx, lambdaEm);
+      const maxF = Math.max(5, ...exScanData.map((p) => p.y), ...emScanData.map((p) => p.y), F) * 1.15;
+      const bounds = spectrumBounds();
+
+      exChart.data.datasets[0].data = exScanData;
+      exChart.data.datasets[1].data = [{ x: lambdaEx, y: calcF(lambdaEx, fixLambdaEm) }];
+      exChart.options.scales.y.max = maxF;
+      exChart.options.scales.x.min = bounds.exLo;
+      exChart.options.scales.x.max = bounds.exHi;
+      exChart.update("none");
+
+      emChart.data.datasets[0].data = emScanData;
+      emChart.data.datasets[1].data = [{ x: lambdaEm, y: calcF(fixLambdaEx, lambdaEm) }];
+      emChart.options.scales.y.max = maxF;
+      emChart.options.scales.x.min = bounds.emLo;
+      emChart.options.scales.x.max = bounds.emHi;
+      const emRgbPt = displayRGB(lambdaEm, true);
+      emChart.data.datasets[1].backgroundColor = `rgb(${emRgbPt.r},${emRgbPt.g},${emRgbPt.b})`;
+      updateEmChartStyle(lambdaEm);
+      emChart.update("none");
+    }
+
+    function updateColorDisplays() {
+      const m = mat();
+      const exInfo = nmToColorName(lambdaEx);
+      const emInfo = nmToColorName(lambdaEm);
+      const peakEmInfo = nmToColorName(m.emPeak);
+
+      document.getElementById("exColorName").textContent = formatColorLabel(lambdaEx);
+      document.getElementById("emColorName").textContent = formatColorLabel(lambdaEm);
+      document.getElementById("dispExColor").textContent = exInfo.short;
+      document.getElementById("dispEmColor").textContent = emInfo.short;
+      document.getElementById("animExColor").textContent = `${exInfo.short} — ${lambdaEx} nm`;
+      document.getElementById("animEmColor").textContent = `${emInfo.short} — ${lambdaEm} nm`;
+      document.getElementById("animColorHint").textContent =
+        `励起＝${exInfo.short}（直進） · 蛍光＝${emInfo.short}（90° 横方向）`;
+      document.getElementById("infoExColor").innerHTML = colorChipHtml(lambdaEx);
+      document.getElementById("infoEmColor").innerHTML = colorChipHtml(lambdaEm, true);
+
+      applyColorHero(lambdaEm);
+
+      const emChartSub = document.getElementById("emChartSub");
+      if (emChartSub) {
+        emChartSub.textContent =
+          `λ_em 走査 · ピーク付近は ${peakEmInfo.short}（${m.emPeak} nm）— グラフの線色＝蛍光の色`;
+      }
+
+      const exRgb = nmToRGB(lambdaEx);
+      const emRgb = displayRGB(lambdaEm, true);
+      document.getElementById("exColorName").style.color = `rgb(${exRgb.r},${exRgb.g},${exRgb.b})`;
+      document.getElementById("emColorName").style.color = `rgb(${emRgb.r},${emRgb.g},${emRgb.b})`;
+      document.getElementById("dispExColor").style.color = `rgb(${exRgb.r},${exRgb.g},${exRgb.b})`;
+      document.getElementById("dispEmColor").style.color = `rgb(${emRgb.r},${emRgb.g},${emRgb.b})`;
+
+      return { peakEmInfo, emInfo };
+    }
+
+    function updateInfo() {
+      const m = mat();
+      const F = calcF(lambdaEx, lambdaEm);
+      const stokes = m.emPeak - m.exPeak;
+      const modeLabel =
+        mode === "exScan" ? "励起スペクトル走査" :
+        mode === "emScan" ? "蛍光スペクトル走査" :
+        mode === "bleach" ? "連続測定（光退色）" : "待機";
+      const { peakEmInfo, emInfo } = updateColorDisplays();
+
+      document.getElementById("infoMat").textContent = m.name;
+      document.getElementById("infoLex").textContent = `${lambdaEx} nm（${nmToColorName(lambdaEx).short}）`;
+      document.getElementById("infoLem").textContent = `${lambdaEm} nm（${nmToColorName(lambdaEm).short}）`;
+      document.getElementById("infoF").textContent = F.toFixed(2);
+      document.getElementById("infoC").textContent = concentration.toFixed(2);
+      document.getElementById("infoQy").textContent = `${(m.qy * 100).toFixed(0)} %（相対）`;
+      document.getElementById("infoStokes").textContent = `${stokes} nm`;
+      document.getElementById("infoMode").textContent = modeLabel;
+
+      document.getElementById("dispLex").textContent = lambdaEx;
+      document.getElementById("dispLem").textContent = lambdaEm;
+      document.getElementById("dispFbig").textContent = F.toFixed(2);
+      document.getElementById("dispF").textContent = F.toFixed(1);
+      document.getElementById("dispIex").textContent = String(Math.round(iex));
+      document.getElementById("stokesBox").textContent =
+        `ストークスシフト Δλ = ${stokes} nm — 蛍光は ${peakEmInfo.short}（${m.emPeak} nm）`;
+
+      setSwatch(document.getElementById("exSwatch"), lambdaEx, false);
+      setSwatch(document.getElementById("emSwatch"), lambdaEm, true);
+
+      document.getElementById("infoComment").innerHTML =
+        `・${m.comment}<br>` +
+        `・<strong style="color:#bef264">目に見える蛍光の色＝${formatColorLabel(m.emPeak)}</strong>（ピーク）— ${peakEmInfo.sub}` +
+        (m.bioColor ? `<br>・生物学での名称：<strong style="color:#fca5a5">${m.bioColor}</strong>（波長 ${m.emPeak} nm はスペクトル上は${peakEmInfo.short}）` : "") +
+        `<br>・いまの Em 走査位置は <strong style="color:#fde68a">${emInfo.short}（${lambdaEm} nm）</strong><br>` +
+        `・F ∝ Ex(λ_ex) × c × QY — 濃度 ↑ で Em スペクトル全体 ↑（高濃度は自己消光）<br>` +
+        `・蛍光光度計は<strong style="color:#bef264">横方向の蛍光</strong>を測る（透過光ではない）`;
+
+      updateCharts();
+    }
+
+    function applyFluor(reset = true) {
+      stopAll();
+      const m = mat();
+      lambdaEx = m.exPeak;
+      lambdaEm = m.emPeak;
+      fixLambdaEx = m.exPeak;
+      fixLambdaEm = m.emPeak;
+      bleachFactor = 1;
+      document.getElementById("bleachBarWrap").hidden = true;
+      document.getElementById("bleachFill").style.width = "100%";
+      if (reset) {
+        concentration = 0.5;
+        document.getElementById("concSlider").value = 500;
+        document.getElementById("concVal").textContent = "0.50";
+      }
+      exScanData = [];
+      emScanData = [];
+      mode = "idle";
+      updateInfo();
+    }
+
+    function renderDailyTabs() {
+      const row = document.getElementById("dailyTabRow");
+      row.innerHTML = DAILY_EXAMPLES.map((d) => {
+        const peak = FLUOROPHORES[d.fluorId].emPeak;
+        const rgb = nmToRGB(peak);
+        const dotStyle = `background:rgb(${rgb.r},${rgb.g},${rgb.b});box-shadow:0 0 6px rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`;
+        return `<button type="button" class="daily-tab${d.id === activeDailyId ? " active" : ""}" data-daily="${d.id}" role="tab" aria-selected="${d.id === activeDailyId}"><span class="tab-dot" style="${dotStyle}"></span>${d.label}</button>`;
+      }).join("");
+      row.querySelectorAll(".daily-tab").forEach((btn) => {
+        btn.addEventListener("click", () => setDailyTab(btn.dataset.daily, true));
+      });
+    }
+
+    function renderDailyContent() {
+      const d = DAILY_EXAMPLES.find((x) => x.id === activeDailyId) || DAILY_EXAMPLES[0];
+      const fluor = FLUOROPHORES[d.fluorId];
+      const emPeak = fluor.emPeak;
+      const emRgb = fluor.fluorDisplay ? nmToFluorDisplayRGB(emPeak) : nmToRGB(emPeak);
+      const emInfo = nmToColorName(emPeak);
+      const colorName = formatColorLabel(emPeak);
+      const bioTagHtml = d.bioTag
+        ? `<div class="daily-color-nm" style="color:#fca5a5;margin-top:4px">${d.bioTag}</div>`
+        : `<div class="daily-color-nm">${emInfo.sub}</div>`;
+      const specHtml = d.specLine
+        ? `<div class="daily-spec">${d.specLine}</div>${bioTagHtml}`
+        : bioTagHtml;
+      const swatchStyle =
+        `background:radial-gradient(circle at 35% 35%, rgb(${emRgb.r},${emRgb.g},${emRgb.b}), rgb(${Math.round(emRgb.r * 0.4)},${Math.round(emRgb.g * 0.4)},${Math.round(emRgb.b * 0.4)}));box-shadow:0 0 16px rgba(${emRgb.r},${emRgb.g},${emRgb.b},0.55)`;
+      const exList = d.examples.map((e) => `<li>${e}</li>`).join("");
+      document.getElementById("dailyContent").innerHTML =
+        `<h4 class="daily-title">${d.label}</h4>` +
+        `<div class="daily-color-row">` +
+        `<div class="daily-swatch" style="${swatchStyle}"></div>` +
+        `<div class="daily-color-text">` +
+        `<span class="daily-color-label">蛍光の色</span>` +
+        `<div class="daily-color-name">${colorName}</div>` +
+        specHtml +
+        `</div></div>` +
+        `<div class="formal-block">` +
+        `<span class="formal-tag">主成分（正式名称）</span>` +
+        `<div class="formal-name">${d.formalName}</div>` +
+        `<div class="formal-sub">${d.formalSub}</div>` +
+        `</div>` +
+        `<div class="example-block">` +
+        `<span class="ex-tag">その例</span>` +
+        `<ul>${exList}</ul>` +
+        `</div>` +
+        `<p class="daily-note">${d.note}</p>` +
+        `<button type="button" class="daily-load" id="dailyLoadBtn">この主成分でシミュレーションを表示（${emInfo.short} · ${fluor.name.split("（")[0]}）</button>`;
+      document.getElementById("dailyLoadBtn").addEventListener("click", () => {
+        loadDailyFluor(d.fluorId, d.label);
+      });
+    }
+
+    function setDailyTab(id, loadSim) {
+      activeDailyId = id;
+      renderDailyTabs();
+      renderDailyContent();
+      if (!loadSim) return;
+      const d = DAILY_EXAMPLES.find((x) => x.id === id);
+      if (!d) return;
+      if (d.fluorId !== fluorId) {
+        loadDailyFluor(d.fluorId, d.label, false);
+      } else {
+        document.getElementById("statusMsg").textContent =
+          `「${d.label}」— 主成分：${d.formalName}`;
+      }
+    }
+
+    function loadDailyFluor(id, label, showMsg = true) {
+      fluorId = id;
+      document.getElementById("fluorSelect").value = id;
+      applyFluor(false);
+      if (showMsg) {
+        document.getElementById("statusMsg").textContent =
+          `「${label}」の主成分（${mat().name}）で Ex/Em ピークを表示しました。`;
+      }
+    }
+
+    function syncDailyTabFromFluor() {
+      const current = DAILY_EXAMPLES.find((d) => d.id === activeDailyId);
+      if (current && current.fluorId === fluorId) {
+        renderDailyTabs();
+        return;
+      }
+      const match = DAILY_EXAMPLES.find((d) => d.fluorId === fluorId);
+      if (match) {
+        activeDailyId = match.id;
+        renderDailyTabs();
+        renderDailyContent();
+      } else {
+        document.querySelectorAll(".daily-tab").forEach((b) => {
+          b.classList.remove("active");
+          b.setAttribute("aria-selected", "false");
+        });
+      }
+    }
+
+    function stopAll() {
+      if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+      if (bleachTimer) { clearInterval(bleachTimer); bleachTimer = null; }
+      document.querySelectorAll(".btn-row button").forEach((b) => { b.disabled = false; });
+    }
+
+    function runExScan() {
+      stopAll();
+      mode = "exScan";
+      const m = mat();
+      fixLambdaEm = m.emPeak;
+      lambdaEm = m.emPeak;
+      exScanData = [];
+      const full = buildExSpectrum();
+      let i = 0;
+      document.getElementById("btnExScan").disabled = true;
+      document.getElementById("statusMsg").textContent = "λ_ex を走査中… Ex スペクトルを描画します（λ_em 固定）。";
+      scanTimer = setInterval(() => {
+        if (i >= full.length) {
+          stopAll();
+          mode = "idle";
+          document.getElementById("statusMsg").textContent = "励起スペクトル測定完了。ピークが λ_ex,max です。";
+          updateInfo();
+          return;
+        }
+        const pt = full[i];
+        exScanData.push(pt);
+        lambdaEx = pt.x;
+        updateInfo();
+        i++;
+      }, 25);
+    }
+
+    function runEmScan() {
+      stopAll();
+      mode = "emScan";
+      const m = mat();
+      fixLambdaEx = m.exPeak;
+      lambdaEx = m.exPeak;
+      emScanData = [];
+      const full = buildEmSpectrum();
+      let i = 0;
+      document.getElementById("btnEmScan").disabled = true;
+      document.getElementById("statusMsg").textContent = "λ_em を走査中… Em スペクトルを描画します（λ_ex 固定）。";
+      scanTimer = setInterval(() => {
+        if (i >= full.length) {
+          stopAll();
+          mode = "idle";
+          document.getElementById("statusMsg").textContent = "蛍光スペクトル測定完了。ピークが λ_em,max です。";
+          updateInfo();
+          return;
+        }
+        const pt = full[i];
+        emScanData.push(pt);
+        lambdaEm = pt.x;
+        updateInfo();
+        i++;
+      }, 25);
+    }
+
+    function runBleach() {
+      stopAll();
+      mode = "bleach";
+      const m = mat();
+      lambdaEx = m.exPeak;
+      lambdaEm = m.emPeak;
+      fixLambdaEx = m.exPeak;
+      fixLambdaEm = m.emPeak;
+      if (emScanData.length === 0) emScanData = buildEmSpectrum();
+      if (exScanData.length === 0) exScanData = buildExSpectrum();
+      bleachFactor = 1;
+      let t = 0;
+      document.getElementById("bleachBarWrap").hidden = false;
+      document.getElementById("statusMsg").textContent =
+        "連続照射中… フォトブリーチ（光退色）で F が時間とともに減少します。";
+      document.getElementById("btnBleach").disabled = true;
+      bleachTimer = setInterval(() => {
+        t += 0.12;
+        bleachFactor = Math.exp(-t / 8);
+        document.getElementById("bleachFill").style.width = `${bleachFactor * 100}%`;
+        if (bleachFactor < 0.05) {
+          stopAll();
+          mode = "idle";
+          document.getElementById("statusMsg").textContent = "光退色完了 — 蛍光がほぼ消えました。リセットで復元。";
+          updateInfo();
+          return;
+        }
+        updateInfo();
+      }, 120);
+    }
+
+    let instrumentLayout = null;
+
+    function roundRectPath(x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function computeLayout(w, h) {
+      const yMid = h * 0.54;
+      const srcW = Math.max(44, w * 0.11);
+      const monoW = Math.max(58, w * 0.15);
+      const cuvW = Math.max(32, w * 0.075);
+      const srcX = w * 0.04;
+      const monoX = w * 0.24;
+      const cuvX = w * 0.46;
+      const detY = h * 0.11;
+      return {
+        w, h, yMid,
+        srcX, monoX, cuvX, detY,
+        srcW, monoW, cuvW,
+        srcCx: srcX + srcW * 0.5,
+        monoCx: monoX + monoW * 0.5,
+        cuvCx: cuvX + cuvW * 0.5,
+        beamY: yMid,
+        beamEnd: w * 0.78,
+        detCx: cuvX + cuvW * 0.5,
+        detCy: detY + 28,
+      };
+    }
+
+    function drawGlowBeam(x1, y1, x2, y2, rgb, alpha, width) {
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.strokeStyle = rgbStr(rgb, alpha * 0.18);
+      ctx.lineWidth = width * 4;
+      ctx.shadowColor = rgbStr(rgb, 0.65);
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.strokeStyle = rgbStr(rgb, alpha * 0.55);
+      ctx.lineWidth = width * 1.6;
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.strokeStyle = rgbStr(rgb, alpha);
+      ctx.lineWidth = width;
+      ctx.shadowBlur = 4;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLabel(text, x, y, opts = {}) {
+      const { align = "center", size = 10, color = "#94a3b8", bold = false, pill = false, rgb = null } = opts;
+      ctx.save();
+      ctx.font = `${bold ? "700" : "600"} ${size}px "Inter","Noto Sans JP",sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      if (pill) {
+        const padX = 8;
+        const padY = 4;
+        const tw = ctx.measureText(text).width;
+        const bx = align === "center" ? x - tw / 2 - padX : align === "right" ? x - tw - padX * 2 : x;
+        const by = y - size / 2 - padY;
+        roundRectPath(bx, by, tw + padX * 2, size + padY * 2, 6);
+        ctx.fillStyle = rgb ? rgbStr(rgb, 0.15) : "rgba(15,23,42,0.85)";
+        ctx.fill();
+        ctx.strokeStyle = rgb ? rgbStr(rgb, 0.35) : "rgba(148,163,184,0.25)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.fillStyle = rgb ? rgbStr(rgb, 0.95) : color;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function drawPhotonParticle(x, y, rgb, size) {
+      ctx.save();
+      const g = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+      g.addColorStop(0, "rgba(255,255,255,0.95)");
+      g.addColorStop(0.15, rgbStr(rgb, 0.95));
+      g.addColorStop(0.45, rgbStr(rgb, 0.45));
+      g.addColorStop(1, rgbStr(rgb, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, size * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawInstrument(w, h) {
+      const L = computeLayout(w, h);
+      instrumentLayout = L;
+      const exC = nmToRGB(lambdaEx);
+      const emC = displayRGB(lambdaEm, true);
+      const exCol = nmToColorName(lambdaEx);
+      const emCol = nmToColorName(lambdaEm);
+      const Frel = calcF(lambdaEx, lambdaEm) / F_SCALE;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0c1220");
+      bg.addColorStop(0.55, "#080d16");
+      bg.addColorStop(1, "#050810");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, h * 0.15, w * 0.5, h * 0.5, h * 0.85);
+      vignette.addColorStop(0, "rgba(34,197,94,0.04)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(148,163,184,0.06)";
+      ctx.lineWidth = 1;
+      for (let gx = 0; gx < w; gx += 24) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, h);
+        ctx.stroke();
+      }
+      for (let gy = 0; gy < h; gy += 24) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(w, gy);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      drawGlowBeam(L.srcCx + L.srcW * 0.35, L.beamY, L.monoCx - L.monoW * 0.35, L.beamY, exC, 0.35, 2);
+      drawGlowBeam(L.monoCx + L.monoW * 0.35, L.beamY, L.cuvCx - L.cuvW * 0.55, L.beamY, exC, 0.55 + iex / 200, 2.5);
+      drawGlowBeam(L.cuvCx, L.beamY, L.detCx, L.detCy + 18, emC, 0.25 + Frel * 0.55, 2 + Frel * 2);
+
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = "rgba(100,116,139,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(L.cuvCx + L.cuvW * 0.6, L.beamY);
+      ctx.lineTo(L.beamEnd, L.beamY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawLabel("透過光は測らない", L.cuvCx + L.cuvW * 0.6 + (L.beamEnd - L.cuvCx) * 0.35, L.beamY - 14, {
+        size: 9, color: "#64748b", pill: true,
+      });
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(250,204,21,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(L.cuvCx, L.beamY, 22, -Math.PI / 2, 0);
+      ctx.stroke();
+      drawLabel("90°", L.cuvCx + 18, L.beamY - 18, { size: 9, color: "#fde68a", bold: true });
+      ctx.restore();
+
+      const srcH = L.srcW * 1.1;
+      const srcY = L.yMid - srcH / 2;
+      roundRectPath(L.srcX, srcY, L.srcW, srcH, 8);
+      const srcGrad = ctx.createLinearGradient(L.srcX, srcY, L.srcX + L.srcW, srcY + srcH);
+      srcGrad.addColorStop(0, "#1e293b");
+      srcGrad.addColorStop(1, "#0f172a");
+      ctx.fillStyle = srcGrad;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(148,163,184,0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.save();
+      ctx.shadowColor = rgbStr(exC, 0.9);
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath();
+      ctx.arc(L.srcCx, L.yMid, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgbStr(exC, 0.95);
+      ctx.beginPath();
+      ctx.arc(L.srcCx, L.yMid, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      drawLabel("励起光源", L.srcCx, srcY + srcH + 14, { size: 9, bold: true });
+
+      const monoH = L.monoW * 1.15;
+      const monoY = L.yMid - monoH / 2;
+      roundRectPath(L.monoX, monoY, L.monoW, monoH, 8);
+      ctx.fillStyle = "rgba(15,23,42,0.95)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(56,189,248,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      for (let i = 0; i < 7; i++) {
+        const lx = L.monoX + 10 + i * ((L.monoW - 20) / 6);
+        ctx.strokeStyle = "rgba(148,163,184,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(lx, monoY + 8);
+        ctx.lineTo(lx, monoY + monoH - 8);
+        ctx.stroke();
+      }
+      ctx.save();
+      ctx.shadowColor = rgbStr(exC, 0.7);
+      ctx.shadowBlur = 12;
+      const slitGrad = ctx.createLinearGradient(L.monoCx - 8, L.yMid, L.monoCx + 8, L.yMid);
+      slitGrad.addColorStop(0, rgbStr(exC, 0.2));
+      slitGrad.addColorStop(0.5, rgbStr(exC, 1));
+      slitGrad.addColorStop(1, rgbStr(exC, 0.2));
+      ctx.fillStyle = slitGrad;
+      roundRectPath(L.monoCx - 5, L.yMid - 18, 10, 36, 3);
+      ctx.fill();
+      ctx.restore();
+      drawLabel("Ex モノクロメータ", L.monoCx, monoY + monoH + 14, { size: 9, bold: true });
+      drawLabel(`${exCol.short} ${lambdaEx} nm`, L.monoCx, monoY - 10, { size: 9, rgb: exC, pill: true, bold: true });
+
+      const cuvH = L.cuvW * 2.6;
+      const cuvY = L.yMid - cuvH / 2;
+      ctx.save();
+      roundRectPath(L.cuvX - 3, cuvY - 3, L.cuvW + 6, cuvH + 6, 6);
+      ctx.fillStyle = "rgba(30,41,59,0.6)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(148,163,184,0.45)";
+      ctx.lineWidth = 2;
+      roundRectPath(L.cuvX, cuvY, L.cuvW, cuvH, 4);
+      ctx.stroke();
+      const liqGrad = ctx.createLinearGradient(L.cuvX, cuvY, L.cuvX + L.cuvW, cuvY);
+      liqGrad.addColorStop(0, rgbStr(emC, 0.08 + concentration * 0.12));
+      liqGrad.addColorStop(0.5, rgbStr(emC, 0.25 + concentration * 0.45 + Frel * 0.15));
+      liqGrad.addColorStop(1, rgbStr(emC, 0.08 + concentration * 0.12));
+      ctx.fillStyle = liqGrad;
+      roundRectPath(L.cuvX + 3, cuvY + 4, L.cuvW - 6, cuvH - 8, 3);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      ctx.fillRect(L.cuvX + 5, cuvY + 6, 3, cuvH - 12);
+      ctx.restore();
+      drawLabel("試料セル", L.cuvCx, cuvY + cuvH + 14, { size: 9, bold: true });
+
+      const detW = Math.max(52, w * 0.12);
+      const detH = detW * 0.75;
+      const detX = L.detCx - detW / 2;
+      const detBoxY = L.detY;
+      roundRectPath(detX, detBoxY, detW, detH, 8);
+      ctx.fillStyle = "rgba(15,23,42,0.95)";
+      ctx.fill();
+      ctx.strokeStyle = rgbStr(emC, 0.45);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.save();
+      ctx.shadowColor = rgbStr(emC, 0.85);
+      ctx.shadowBlur = 20;
+      const winGrad = ctx.createRadialGradient(L.detCx, detBoxY + detH * 0.55, 2, L.detCx, detBoxY + detH * 0.55, 16);
+      winGrad.addColorStop(0, rgbStr(emC, 0.95));
+      winGrad.addColorStop(0.6, rgbStr(emC, 0.4));
+      winGrad.addColorStop(1, rgbStr(emC, 0.05));
+      ctx.fillStyle = winGrad;
+      ctx.beginPath();
+      ctx.arc(L.detCx, detBoxY + detH * 0.55, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      drawLabel("90° 蛍光検出", L.detCx, detBoxY - 10, { size: 9, bold: true, color: "#bef264" });
+      drawLabel(`${emCol.short} ${lambdaEm} nm`, L.detCx, detBoxY + detH + 12, {
+        size: 9, rgb: emC, pill: true, bold: true,
+      });
+    }
+
+    function spawnPhotons() {
+      if (!instrumentLayout) return;
+      const L = instrumentLayout;
+      const exRgb = nmToRGB(lambdaEx);
+      const emRgb = displayRGB(lambdaEm, true);
+      const Frel = calcF(lambdaEx, lambdaEm) / F_SCALE;
+
+      excPhotons.push({
+        x: L.srcCx,
+        y: L.beamY + (Math.random() - 0.5) * 8,
+        vx: 2.4 + Math.random() * 0.6,
+        rgb: exRgb,
+        alive: true,
+        phase: "toMono",
+        targetX: L.monoCx,
+      });
+
+      if (Math.random() < Frel * 0.4) {
+        emPhotons.push({
+          x: L.cuvCx + (Math.random() - 0.5) * L.cuvW * 0.5,
+          y: L.beamY - 4,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: -2.0 - Math.random() * 1.2,
+          rgb: emRgb,
+          alive: true,
+          life: 0,
+        });
+      }
+    }
+
+    function animate() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      drawInstrument(w, h);
+
+      if (animTime % 3 === 0) spawnPhotons();
+
+      excPhotons.forEach((p) => {
+        if (!p.alive || !instrumentLayout) return;
+        const L = instrumentLayout;
+        p.x += p.vx;
+        if (p.x > L.cuvCx - L.cuvW * 0.3) p.alive = false;
+        if (p.alive) drawPhotonParticle(p.x, p.y, p.rgb, 1.8);
+      });
+
+      emPhotons.forEach((p) => {
+        if (!p.alive) return;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life++;
+        if (p.life > 55 || p.y < 8) p.alive = false;
+        if (p.alive) drawPhotonParticle(p.x, p.y, p.rgb, 2 + Math.max(0, 1 - p.life / 55));
+      });
+
+      excPhotons = excPhotons.filter((p) => p.alive);
+      emPhotons = emPhotons.filter((p) => p.alive);
+      if (excPhotons.length > 80) excPhotons.splice(0, excPhotons.length - 80);
+      if (emPhotons.length > 60) emPhotons.splice(0, emPhotons.length - 60);
+
+      animTime++;
+      requestAnimationFrame(animate);
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    document.getElementById("fluorSelect").addEventListener("change", (e) => {
+      fluorId = e.target.value;
+      applyFluor(true);
+      syncDailyTabFromFluor();
+      document.getElementById("statusMsg").textContent =
+        `${mat().name} に切り替えました。Ex/Em ピーク位置が変わります。`;
+    });
+
+    document.getElementById("concSlider").addEventListener("input", (e) => {
+      concentration = Number(e.target.value) / 1000;
+      document.getElementById("concVal").textContent = concentration.toFixed(2);
+      if (exScanData.length || emScanData.length) {
+        exScanData = buildExSpectrum();
+        emScanData = buildEmSpectrum();
+      }
+      updateInfo();
+    });
+
+    document.getElementById("iexSlider").addEventListener("input", (e) => {
+      iex = Number(e.target.value);
+      document.getElementById("iexVal").textContent = String(iex);
+      if (exScanData.length || emScanData.length) {
+        exScanData = buildExSpectrum();
+        emScanData = buildEmSpectrum();
+      }
+      updateInfo();
+    });
+
+    document.getElementById("btnExScan").addEventListener("click", runExScan);
+    document.getElementById("btnEmScan").addEventListener("click", runEmScan);
+    document.getElementById("btnBleach").addEventListener("click", runBleach);
+    document.getElementById("btnReset").addEventListener("click", () => {
+      fluorId = "fluorescein";
+      activeDailyId = "pen";
+      document.getElementById("fluorSelect").value = "fluorescein";
+      document.getElementById("iexSlider").value = 100;
+      iex = 100;
+      document.getElementById("iexVal").textContent = "100";
+      applyFluor(true);
+      renderDailyTabs();
+      renderDailyContent();
+      excPhotons = [];
+      emPhotons = [];
+      document.getElementById("statusMsg").textContent = "リセットしました。";
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    renderDailyTabs();
+    renderDailyContent();
+    initCharts();
+    document.getElementById("fluorSelect").value = "fluorescein";
+    applyFluor(true);
+    resizeCanvas();
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>励起状態と蛍光・燐光</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a3e635;
+      --accent-light: #bef264;
+      --s0: #38bdf8;
+      --s1: #c084fc;
+      --t1: #2dd4bf;
+      --slate-bg: rgba(12, 18, 32, 0.82);
+      --slate-border: rgba(163, 230, 53, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1520 40%, #101828 75%, #0a0e14 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(1180px, 97vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(192, 132, 252, 0.25), rgba(45, 212, 191, 0.2));
+      border: 1px solid rgba(163, 230, 53, 0.35);
+      font-size: 1.2rem;
+    }
+    h1 {
+      margin: 6px 0 4px;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      font-weight: 700;
+      color: var(--accent-light);
+    }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 9px 16px;
+      color: #ecfccb;
+      background: rgba(163, 230, 53, 0.12);
+      border: 1px solid rgba(163, 230, 53, 0.35);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 920px) {
+      .main-grid { grid-template-columns: 1.05fr 0.95fr; align-items: stretch; }
+    }
+    .panel {
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel-head {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #d9f99d;
+    }
+    .panel-sub { margin: 4px 0 0; font-size: 0.76rem; color: var(--muted); }
+    .canvas-wrap {
+      flex: 1;
+      padding: 8px 10px 10px;
+      min-height: min(440px, 54dvh);
+    }
+    #levelCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(6, 12, 22, 0.98), rgba(4, 8, 14, 0.99));
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .right-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .chart-wrap { flex: 1; padding: 8px 10px 10px; min-height: 220px; }
+    .chart-wrap canvas { max-height: min(260px, 32dvh); }
+    .controls { padding: 14px 16px; }
+    .controls label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
+    .lambda-readout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .readout-box {
+      flex: 1;
+      min-width: 110px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .readout-box .lbl { display: block; font-size: 0.68rem; color: var(--muted); }
+    .readout-box .val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ecfccb;
+      font-variant-numeric: tabular-nums;
+    }
+    .prob-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .prob-box {
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+    .prob-box.fluor {
+      background: rgba(253, 230, 138, 0.08);
+      border: 1px solid rgba(253, 230, 138, 0.28);
+      color: #fde68a;
+    }
+    .prob-box.isc {
+      background: rgba(45, 212, 191, 0.08);
+      border: 1px solid rgba(45, 212, 191, 0.28);
+      color: #99f6e4;
+    }
+    .prob-box strong { display: block; font-size: 1.1rem; margin-bottom: 2px; }
+    .shine-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 12px 16px;
+      min-height: 48px;
+      border-radius: 10px;
+      border: 1px solid rgba(163, 230, 53, 0.45);
+      background: linear-gradient(135deg, rgba(163, 230, 53, 0.25), rgba(74, 222, 128, 0.15));
+      color: #ecfccb;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .shine-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .status-msg {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      background: rgba(163, 230, 53, 0.08);
+      border: 1px solid rgba(163, 230, 53, 0.22);
+      color: #d9f99d;
+    }
+    .status-msg.warn {
+      background: rgba(251, 191, 36, 0.08);
+      border-color: rgba(251, 191, 36, 0.28);
+      color: #fde68a;
+    }
+    .status-msg.ok {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.28);
+      color: #bae6fd;
+    }
+    .status-msg.phos {
+      background: rgba(45, 212, 191, 0.08);
+      border-color: rgba(45, 212, 191, 0.28);
+      color: #99f6e4;
+    }
+    .formula-note {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.03);
+      font-family: "Cambria Math", "Times New Roman", serif;
+    }
+    .legend-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      padding: 0 12px 12px;
+    }
+    .legend-bar span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      font-size: 0.76rem;
+      color: #cbd5e1;
+    }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .term-note {
+      margin: 8px 14px 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: #bae6fd;
+    }
+    .term-note strong { color: #fde68a; }
+    .explain {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .explain h3 { margin: 0 0 10px; font-size: 0.92rem; font-weight: 700; color: #cbd5e1; }
+    .explain ul {
+      margin: 0;
+      padding-left: 1.2em;
+      font-size: 0.86rem;
+      line-height: 1.75;
+      color: #94a3b8;
+    }
+    .explain strong { color: #bef264; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">S₁</div>
+      <h1>励起状態と蛍光・燐光</h1>
+      <p class="chapter-label">EX章 · 蛍光・燐光 — S₀ → S₁ → T₁ の遷移</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <section class="panel" aria-label="原子模型とエネルギー準位">
+        <div class="panel-head">
+          <h2>① 原子の模型とエネルギーの段</h2>
+          <p class="panel-sub" id="levelSub">外側の電子が S₀ — 「光を当てる」で S₁ へ</p>
+        </div>
+        <p class="term-note">
+          <strong>外側の電子</strong>だけが動きます（内側の灰色は動きません）。<br>
+          左＝原子の中、右＝エネルギーの段（S₀ / S₁ / T₁）。
+        </p>
+        <div class="canvas-wrap">
+          <canvas id="levelCanvas" aria-label="原子模型と S0 S1 T1 準位"></canvas>
+        </div>
+        <div class="legend-bar">
+          <span><span class="legend-dot" style="background:#64748b"></span>内側の電子</span>
+          <span><span class="legend-dot" style="background:#38bdf8;box-shadow:0 0 6px #7dd3fc"></span>外側の電子</span>
+          <span><span class="legend-dot" style="background:#38bdf8"></span>S₀</span>
+          <span><span class="legend-dot" style="background:#c084fc"></span>S₁</span>
+          <span><span class="legend-dot" style="background:#2dd4bf"></span>T₁</span>
+          <span><span class="legend-dot" style="background:#fde68a"></span>蛍光</span>
+          <span><span class="legend-dot" style="background:#5eead4"></span>燐光</span>
+        </div>
+      </section>
+
+      <div class="right-col">
+        <section class="panel" aria-label="吸収スペクトル">
+          <div class="panel-head">
+            <h2>② 吸収スペクトル</h2>
+            <p class="panel-sub">ガウス型 — 450 nm 付近で吸収ピーク</p>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="absChart" aria-label="吸収スペクトル"></canvas>
+          </div>
+        </section>
+
+        <section class="panel controls" aria-label="操作">
+          <h2 style="margin:0 0 10px;font-size:0.92rem;color:#d9f99d">③ 操作</h2>
+          <label for="lambdaSlider">光の波長 λ（300〜700 nm）</label>
+          <input type="range" id="lambdaSlider" min="300" max="700" value="450" step="1">
+          <div class="lambda-readout">
+            <div class="readout-box">
+              <span class="lbl">波長 λ</span>
+              <span class="val" id="dispLambda">450 nm</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">Abs(λ)</span>
+              <span class="val" id="dispAbs">1.00</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">励起判定</span>
+              <span class="val" id="dispJudge">可能</span>
+            </div>
+          </div>
+          <div class="prob-grid">
+            <div class="prob-box fluor">
+              <strong>70%</strong>
+              S₁ → S₀（蛍光）<br>速い戻り · 約 0.5 秒
+            </div>
+            <div class="prob-box isc">
+              <strong>30%</strong>
+              S₁ → T₁（項間交差）<br>その後 T₁ → S₀（燐光 · 約 3 秒）
+            </div>
+          </div>
+          <button type="button" class="shine-btn" id="shineBtn">光を当てる</button>
+          <p class="status-msg" id="statusMsg">波長を選んで「光を当てる」を押してください。Abs ≥ 0.3 で S₀ → S₁ へ励起します。</p>
+          <p class="formula-note">Abs(λ) = A · exp(−(λ−λ₀)² / 2σ²)　　λ₀=450 nm, σ=30, 閾値=0.3</p>
+        </section>
+      </div>
+    </div>
+
+    <section class="explain">
+      <h3>ポイント</h3>
+      <ul>
+        <li><strong>外側の電子</strong>が光を吸収すると <strong>S₀</strong> から <strong>S₁</strong> に移動する（左の軌道と右の段が連動）。</li>
+        <li><strong>S₁</strong> からはすぐに <strong>S₀</strong> に戻る場合と、<strong>T₁</strong> に落ちてからゆっくり戻る場合がある。</li>
+        <li><strong>S₁ → S₀</strong> の遷移は<strong>蛍光</strong>の元になる（速い · 黄色の光）。</li>
+        <li><strong>T₁ → S₀</strong> の遷移は<strong>燐光</strong>の元になる（遅い · 青緑の光）。</li>
+        <li><strong>項間交差（S₁ → T₁）</strong>はスピンの向きが変わる遷移。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // ── 吸収スペクトルパラメータ ──
+    const LAMBDA0 = 450;
+    const SIGMA = 30;
+    const A_AMP = 1.0;
+    const ABS_THRESHOLD = 0.3;
+
+    // ── 遷移確率・時間 ──
+    const P_FLUOR = 0.7;
+    const P_ISC = 0.3;
+    const DUR_RISE = 650;
+    const DUR_S1_WAIT = 400;
+    const DUR_FLUOR = 500;
+    const DUR_ISC = 500;
+    const DUR_PHOS = 3000;
+
+    const canvas = document.getElementById("levelCanvas");
+    const ctx = canvas.getContext("2d");
+    const lambdaSlider = document.getElementById("lambdaSlider");
+    const shineBtn = document.getElementById("shineBtn");
+    const statusMsg = document.getElementById("statusMsg");
+    const levelSub = document.getElementById("levelSub");
+
+    let currentLambda = 450;
+    let animating = false;
+    let absChart = null;
+    let markerIdx = -1;
+
+    // 電子の状態: s0 | rising | s1 | fluor | isc | t1 | phos
+    let eState = "s0";
+    let animT = 0;
+    let lightFlash = 0;
+    let emitFlash = 0;
+    let emitKind = ""; // fluor | phos
+
+    function absorption(lambda) {
+      const d = lambda - LAMBDA0;
+      return A_AMP * Math.exp(-(d * d) / (2 * SIGMA * SIGMA));
+    }
+
+    function canExcite(lambda) {
+      return absorption(lambda) >= ABS_THRESHOLD;
+    }
+
+    function nmToRgb(nm) {
+      nm = Math.max(380, Math.min(780, nm));
+      let r = 0; let g = 0; let b = 0;
+      if (nm < 440) { r = -(nm - 440) / (440 - 380); b = 1; }
+      else if (nm < 490) { g = (nm - 440) / (490 - 440); b = 1; }
+      else if (nm < 510) { g = 1; b = -(nm - 510) / (510 - 490); }
+      else if (nm < 580) { r = (nm - 510) / (580 - 510); g = 1; }
+      else if (nm < 645) { r = 1; g = -(nm - 645) / (645 - 580); }
+      else { r = 1; }
+      return { r: Math.round(40 + r * 215), g: Math.round(40 + g * 215), b: Math.round(40 + b * 215) };
+    }
+
+    function rgbStr(rgb, a = 1) {
+      return `rgba(${rgb.r},${rgb.g},${rgb.b},${a})`;
+    }
+
+    function easeInOut(t) {
+      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function setStatus(text, kind = "") {
+      statusMsg.textContent = text;
+      statusMsg.className = "status-msg" + (kind ? ` ${kind}` : "");
+    }
+
+    function updateReadouts() {
+      const abs = absorption(currentLambda);
+      document.getElementById("dispLambda").textContent = `${currentLambda} nm`;
+      document.getElementById("dispAbs").textContent = abs.toFixed(2);
+      const ok = canExcite(currentLambda);
+      const judge = document.getElementById("dispJudge");
+      judge.textContent = ok ? "可能 ✓" : "不可";
+      judge.style.color = ok ? "#86efac" : "#fca5a5";
+      if (absChart && markerIdx >= 0) {
+        absChart.data.datasets[markerIdx].data = [{ x: currentLambda, y: abs }];
+        absChart.update("none");
+      }
+    }
+
+    function buildSpectrumChart() {
+      const pts = [];
+      for (let lam = 300; lam <= 700; lam += 2) {
+        pts.push({ x: lam, y: absorption(lam) });
+      }
+      absChart = new Chart(document.getElementById("absChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Abs(λ)",
+              data: pts,
+              borderColor: "#a3e635",
+              backgroundColor: "rgba(163,230,53,0.12)",
+              fill: true,
+              tension: 0.35,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            {
+              label: "閾値 0.3",
+              data: [{ x: 300, y: ABS_THRESHOLD }, { x: 700, y: ABS_THRESHOLD }],
+              borderColor: "rgba(251,191,36,0.6)",
+              borderDash: [6, 4],
+              pointRadius: 0,
+              borderWidth: 1.5,
+            },
+            {
+              label: "いまの λ",
+              data: [{ x: currentLambda, y: absorption(currentLambda) }],
+              pointRadius: 8,
+              pointBackgroundColor: "#fde68a",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              showLine: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              type: "linear", min: 300, max: 700,
+              title: { display: true, text: "波長 λ (nm)", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              min: 0, max: 1.08,
+              title: { display: true, text: "吸収強度", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+          },
+          plugins: { legend: { labels: { color: "#94a3b8", boxWidth: 12, font: { size: 10 } } } },
+        },
+      });
+      markerIdx = 2;
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(320, Math.round(rect.width));
+      const h = Math.max(320, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      return { w, h, dpr };
+    }
+
+    function fs(w, h, base) {
+      return Math.round(Math.max(base, Math.min(w, h) * 0.028));
+    }
+
+    function roundRect(x, y, rw, rh, r) {
+      const rr = Math.min(r, rw / 2, rh / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + rw, y, x + rw, y + rh, rr);
+      ctx.arcTo(x + rw, y + rh, x, y + rh, rr);
+      ctx.arcTo(x, y + rh, x, y, rr);
+      ctx.arcTo(x, y, x + rw, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBadge(x, y, text, opts = {}) {
+      const {
+        bg = "rgba(15,23,42,0.88)",
+        border = "rgba(148,163,184,0.35)",
+        color = "#e2e8f0",
+        size = 12,
+        padX = 8,
+        padY = 5,
+        align = "left",
+      } = opts;
+      ctx.font = `600 ${size}px Noto Sans JP, sans-serif`;
+      const tw = ctx.measureText(text).width;
+      const bw = tw + padX * 2;
+      const bh = size + padY * 2;
+      let bx = x;
+      if (align === "center") bx = x - bw / 2;
+      if (align === "right") bx = x - bw;
+      roundRect(bx, y, bw, bh, 6);
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.textAlign = "left";
+      ctx.fillText(text, bx + padX, y + padY + size * 0.82);
+      return { x: bx, y, w: bw, h: bh };
+    }
+
+    function drawSectionHeader(x, y, w, h, text, accent) {
+      drawBadge(x, y, text, {
+        bg: accent,
+        border: "transparent",
+        color: "#0f172a",
+        size: fs(w, h, 13),
+        padX: 10,
+        padY: 6,
+      });
+    }
+
+    function levelYs(h) {
+      return { s1: h * 0.2, t1: h * 0.5, s0: h * 0.78 };
+    }
+
+    // 原子模型と外側電子の位置を eState に同期
+    function atomSync() {
+      let valenceT = 0;
+      let spin = "ground";
+      if (eState === "s0") { valenceT = 0; spin = "ground"; }
+      else if (eState === "s1") { valenceT = 1; spin = "singlet"; }
+      else if (eState === "t1") { valenceT = 1; spin = "triplet"; }
+      else if (eState === "rising") { valenceT = easeInOut(animT); spin = "singlet"; }
+      else if (eState === "fluor") { valenceT = 1 - easeInOut(animT); spin = "fluor"; }
+      else if (eState === "isc") {
+        valenceT = 1;
+        spin = animT > 0.45 ? "triplet" : "singlet";
+      } else if (eState === "phos") {
+        valenceT = 1 - easeInOut(animT);
+        spin = "triplet";
+      }
+      return { valenceT, spin };
+    }
+
+    function atomLayout(w, h) {
+      const cx = w * 0.2;
+      const cy = h * 0.56;
+      const rInner = Math.min(w, h) * 0.1;
+      const rOuter = Math.min(w, h) * 0.175;
+      const rExcited = Math.min(w, h) * 0.265;
+      const innerAngle = Math.PI * 0.42;
+      return { cx, cy, rInner, rOuter, rExcited, innerAngle };
+    }
+
+    function valencePos(layout, tNorm) {
+      const { cx, cy, rOuter, rExcited, innerAngle } = layout;
+      if (tNorm <= 0) {
+        return { x: cx + rOuter * Math.cos(innerAngle), y: cy + rOuter * Math.sin(innerAngle) };
+      }
+      if (tNorm >= 1) {
+        const a2 = innerAngle - 0.35;
+        return { x: cx + rExcited * Math.cos(a2), y: cy + rExcited * Math.sin(a2) };
+      }
+      const ease = easeInOut(tNorm);
+      const r = rOuter + (rExcited - rOuter) * ease;
+      const a = innerAngle + (innerAngle - 0.35 - innerAngle) * ease;
+      return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+    }
+
+    function drawNucleus(cx, cy, w, h) {
+      const lbl = fs(w, h, 11);
+      const parts = [
+        { dx: 0, dy: 0, r: 4.5, c: "#ef4444" },
+        { dx: -6, dy: -4, r: 4, c: "#64748b" },
+        { dx: 6, dy: -3, r: 4, c: "#ef4444" },
+        { dx: -4, dy: 5, r: 3.5, c: "#64748b" },
+        { dx: 5, dy: 5, r: 3.5, c: "#ef4444" },
+        { dx: 0, dy: -7, r: 3.5, c: "#64748b" },
+      ];
+      ctx.save();
+      ctx.fillStyle = "rgba(239,68,68,0.12)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+      ctx.fill();
+      parts.forEach((p) => {
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(cx + p.dx, cy + p.dy, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = `500 ${lbl - 1}px Noto Sans JP, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("原子核", cx, cy + 18);
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    function electronGlowColor(valenceT, spin) {
+      if (spin === "fluor") return "#fde68a";
+      if (spin === "triplet") return "#2dd4bf";
+      if (spin === "singlet" || valenceT > 0.5) return "#c084fc";
+      return "#38bdf8";
+    }
+
+    // 原子模型を描画（外側電子は右の段と連動）
+    function drawAtomModel(w, h, valenceT, spin) {
+      const layout = atomLayout(w, h);
+      const { cx, cy, rInner, rOuter, rExcited } = layout;
+      const vp = valencePos(layout, valenceT);
+      const lbl = fs(w, h, 11);
+      const glow = electronGlowColor(valenceT, spin);
+
+      ctx.save();
+      drawNucleus(cx, cy, w, h);
+
+      ctx.strokeStyle = "rgba(100,116,139,0.5)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      [0.5, 2.1, 3.7, 5.2].forEach((a) => {
+        ctx.fillStyle = "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(cx + rInner * 0.88 * Math.cos(a), cy + rInner * 0.88 * Math.sin(a), 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      drawBadge(cx - 42, cy + rInner + 18, "内側（動かない）", {
+        size: lbl - 1, color: "#94a3b8", bg: "rgba(30,41,59,0.85)", border: "rgba(100,116,139,0.4)", align: "center",
+      });
+
+      ctx.strokeStyle = "rgba(56,189,248,0.7)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = spin === "triplet" ? "rgba(45,212,191,0.65)" : "rgba(192,132,252,0.55)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rExcited, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (valenceT < 0.5) {
+        drawBadge(cx + 6, cy + rOuter + 10, "外側・低い軌道", {
+          size: lbl - 1, color: "#7dd3fc", bg: "rgba(12,74,110,0.55)", border: "rgba(56,189,248,0.45)",
+        });
+      } else {
+        const hiLabel = spin === "triplet" ? "外側・T₁ 軌道" : "外側・高い軌道";
+        drawBadge(cx - 58, cy - rExcited - 28, hiLabel, {
+          size: lbl - 1,
+          color: spin === "triplet" ? "#99f6e4" : "#d8b4fe",
+          bg: spin === "triplet" ? "rgba(19,78,74,0.55)" : "rgba(88,28,135,0.45)",
+          border: spin === "triplet" ? "rgba(45,212,191,0.45)" : "rgba(192,132,252,0.45)",
+          align: "center",
+        });
+      }
+
+      const eRad = fs(w, h, 12);
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = glow;
+      const eg = ctx.createRadialGradient(vp.x - 3, vp.y - 3, 1, vp.x, vp.y, eRad);
+      eg.addColorStop(0, "#fff");
+      eg.addColorStop(0.45, glow);
+      eg.addColorStop(1, "#0ea5e9");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(vp.x, vp.y, eRad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (valenceT > 0.02 && valenceT < 0.98 && (eState === "rising" || eState === "fluor" || eState === "phos")) {
+        ctx.strokeStyle = eState === "fluor" ? "rgba(253,230,138,0.85)"
+          : eState === "phos" ? "rgba(94,234,212,0.85)" : "rgba(163,230,53,0.85)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        const start = valencePos(layout, eState === "rising" ? 0 : 1);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(vp.x, vp.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.restore();
+      return { vp };
+    }
+
+    function levelElectronPos(w, h) {
+      const Y = levelYs(h);
+      const splitX = w * 0.43;
+      const ex = splitX + (w - splitX) * 0.42;
+      let eY = Y.s0;
+      let color = "#38bdf8";
+
+      if (eState === "s1") { eY = Y.s1; color = "#c084fc"; }
+      else if (eState === "t1") { eY = Y.t1; color = "#2dd4bf"; }
+      else if (eState === "rising") {
+        eY = Y.s0 + (Y.s1 - Y.s0) * easeInOut(animT);
+        color = "#c084fc";
+      } else if (eState === "fluor") {
+        eY = Y.s1 + (Y.s0 - Y.s1) * easeInOut(animT);
+        color = "#fde68a";
+      } else if (eState === "isc") {
+        eY = Y.s1 + (Y.t1 - Y.s1) * easeInOut(animT);
+        color = "#2dd4bf";
+      } else if (eState === "phos") {
+        eY = Y.t1 + (Y.s0 - Y.t1) * easeInOut(animT);
+        color = "#5eead4";
+      }
+      return { ex, eY, Y, color };
+    }
+
+    // 原子模型とエネルギー準位を描画
+    function drawDiagram() {
+      const { w, h, dpr } = resizeCanvas();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const splitX = w * 0.43;
+      const lbl = fs(w, h, 12);
+
+      ctx.fillStyle = "#060c14";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "rgba(14,116,144,0.14)";
+      ctx.fillRect(0, 0, splitX, h);
+      ctx.fillStyle = "rgba(109,40,217,0.12)";
+      ctx.fillRect(splitX, 0, w - splitX, h);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.28)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(splitX, h * 0.06);
+      ctx.lineTo(splitX, h * 0.94);
+      ctx.stroke();
+
+      drawSectionHeader(12, 12, w, h, "原子の中", "rgba(56,189,248,0.85)");
+      drawSectionHeader(splitX + 12, 12, w, h, "エネルギーの段", "rgba(192,132,252,0.85)");
+
+      const { valenceT, spin } = atomSync();
+      const { vp } = drawAtomModel(w, h, valenceT, spin);
+      const { ex, eY, Y, color } = levelElectronPos(w, h);
+
+      const lineL = splitX + (w - splitX) * 0.06;
+      const lineR = w * 0.9;
+
+      function drawLevel(yLv, main, sub, sym, col, dash = []) {
+        ctx.save();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 4;
+        ctx.setLineDash(dash);
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = col;
+        ctx.beginPath();
+        ctx.moveTo(lineL, yLv);
+        ctx.lineTo(lineR, yLv);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+        const bgMap = {
+          "#38bdf8": "rgba(12,74,110,0.75)",
+          "#c084fc": "rgba(88,28,135,0.65)",
+          "#2dd4bf": "rgba(19,78,74,0.65)",
+        };
+        drawBadge(lineL, yLv - 38, main, { size: lbl, color: "#f8fafc", bg: bgMap[col] || "rgba(15,23,42,0.75)", border: col });
+        drawBadge(lineL, yLv + 10, sub, { size: lbl - 2, color: "#cbd5e1", bg: "rgba(15,23,42,0.7)", border: "rgba(148,163,184,0.25)" });
+        drawBadge(lineR - 36, yLv - 14, sym, { size: lbl - 2, color: col, bg: "rgba(15,23,42,0.75)", border: col, align: "right" });
+        ctx.restore();
+      }
+
+      drawLevel(Y.s1, "高い段（S₁）", "光を吸ったあと", "S₁", "#c084fc");
+      drawLevel(Y.t1, "三重項（T₁）", "項間交差のあと", "T₁", "#2dd4bf", [6, 5]);
+      drawLevel(Y.s0, "低い段（S₀）", "ふだんの状態", "S₀", "#38bdf8");
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = `600 ${lbl}px Noto Sans JP, sans-serif`;
+      ctx.save();
+      ctx.translate(w - 14, h * 0.5);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("エネルギー ↑", 0, 0);
+      ctx.restore();
+
+      if (eState === "s0" && !animating) {
+        ctx.strokeStyle = "rgba(192,132,252,0.35)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(ex + 20, Y.s0);
+        ctx.lineTo(ex + 20, Y.s1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(192,132,252,0.7)";
+        ctx.font = `500 ${lbl - 2}px Noto Sans JP, sans-serif`;
+        ctx.fillText("光吸収", ex + 26, (Y.s0 + Y.s1) * 0.5);
+      }
+
+      // 項間交差を描画
+      if (eState === "isc" && animT > 0.1) {
+        ctx.strokeStyle = "rgba(45,212,191,0.8)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let i = 0; i <= 8; i++) {
+          const t = i / 8;
+          const px = ex + 24 + t * 30;
+          const py = Y.s1 + (Y.t1 - Y.s1) * t + Math.sin(t * Math.PI * 4) * 6;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        drawBadge(ex + 28, Y.s1 + (Y.t1 - Y.s1) * 0.4 - 18, "項間交差", {
+          size: lbl - 2, color: "#99f6e4", bg: "rgba(19,78,74,0.7)", border: "rgba(45,212,191,0.45)",
+        });
+      }
+
+      // 光のビーム（外側の電子へ）
+      if (lightFlash > 0) {
+        const col = nmToRgb(currentLambda);
+        ctx.globalAlpha = Math.min(1, lightFlash);
+        const g = ctx.createLinearGradient(4, vp.y, vp.x - 16, vp.y);
+        g.addColorStop(0, rgbStr(col, 0.15));
+        g.addColorStop(0.5, rgbStr(col, 0.65));
+        g.addColorStop(1, rgbStr(col, 0.2));
+        ctx.fillStyle = g;
+        ctx.fillRect(2, vp.y - 12, vp.x - 18, 24);
+        drawBadge(8, vp.y - 36, `光 ${currentLambda} nm`, {
+          size: lbl - 1, color: rgbStr(col, 1), bg: "rgba(15,23,42,0.8)", border: rgbStr(col, 0.6),
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      // 蛍光・燐光遷移のアニメーション（発光線）
+      const emitting = eState === "fluor" || eState === "phos";
+      if (emitFlash > 0 || emitting) {
+        const isFluor = emitting ? eState === "fluor" : emitKind === "fluor";
+        const emitCol = isFluor ? "#fde68a" : "#5eead4";
+        ctx.globalAlpha = emitting ? 0.35 + 0.65 * Math.sin(animT * Math.PI) : emitFlash;
+        ctx.strokeStyle = emitCol;
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = emitCol;
+        ctx.beginPath();
+        ctx.moveTo(ex + 14, eY);
+        ctx.lineTo(lineR - 10, eY + (isFluor ? -8 : 8));
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        for (let i = 0; i <= 6; i++) {
+          const t = i / 6;
+          const px = ex + 14 + t * (lineR - ex - 24);
+          const py = eY + Math.sin(t * Math.PI * 3) * (isFluor ? 5 : 4);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        drawBadge(lineR - 58, eY - 14, isFluor ? "蛍光" : "燐光", {
+          size: lbl - 2, color: emitCol, bg: "rgba(15,23,42,0.8)", border: emitCol,
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      // 段上の電子
+      const eRad = fs(w, h, 13);
+      ctx.save();
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = color;
+      const eg = ctx.createRadialGradient(ex - 3, eY - 3, 1, ex, eY, eRad);
+      eg.addColorStop(0, "#fff");
+      eg.addColorStop(0.45, color);
+      eg.addColorStop(1, "#0ea5e9");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(ex, eY, eRad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = `600 ${lbl}px Inter, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("e⁻", ex, eY + 4);
+      ctx.textAlign = "left";
+      ctx.restore();
+
+      if (eState === "rising" || eState === "fluor" || eState === "phos" || eState === "isc") {
+        const guideCol = eState === "rising" ? "rgba(163,230,53,0.7)"
+          : eState === "fluor" ? "rgba(253,230,138,0.6)"
+          : eState === "isc" ? "rgba(45,212,191,0.6)" : "rgba(94,234,212,0.6)";
+        ctx.strokeStyle = guideCol;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        const yStart = eState === "rising" ? Y.s0 : eState === "fluor" ? Y.s1 : eState === "isc" ? Y.s1 : Y.t1;
+        ctx.moveTo(ex + 22, yStart);
+        ctx.lineTo(ex + 22, eY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function runAnim(state, duration, onDone) {
+      eState = state;
+      animT = 0;
+      const t0 = performance.now();
+      function frame(now) {
+        animT = Math.min(1, (now - t0) / duration);
+        lightFlash = Math.max(0, lightFlash - 0.03);
+        emitFlash = Math.max(0, emitFlash - 0.025);
+        drawDiagram();
+        if (animT < 1) requestAnimationFrame(frame);
+        else onDone();
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function triggerEmit(kind) {
+      emitKind = kind;
+      emitFlash = 1;
+    }
+
+    // S1 到達後：確率で蛍光 or 項間交差
+    function branchFromS1() {
+      const roll = Math.random();
+      if (roll < P_FLUOR) {
+        levelSub.textContent = "S₁ → S₀（蛍光）— 速い戻り";
+        setStatus("S₁ から S₀ へ — 蛍光（70% の経路）", "ok");
+        eState = "fluor";
+        triggerEmit("fluor");
+        runAnim("fluor", DUR_FLUOR, () => {
+          eState = "s0";
+          animating = false;
+          shineBtn.disabled = false;
+          levelSub.textContent = "S₀ に戻った — もう一度試す";
+          setStatus("蛍光で S₀ に戻りました。");
+        });
+      } else {
+        levelSub.textContent = "S₁ → T₁（項間交差）— スピンが変わる";
+        setStatus("S₁ から T₁ へ — 項間交差（30% の経路）", "phos");
+        eState = "isc";
+        runAnim("isc", DUR_ISC, () => {
+          eState = "t1";
+          levelSub.textContent = "T₁ にいる — ゆっくり S₀ へ（燐光）";
+          setStatus("T₁ から S₀ へ — 燐光（約 3 秒）", "phos");
+          setTimeout(() => {
+            eState = "phos";
+            triggerEmit("phos");
+            // 燐光遷移のアニメーション
+            runAnim("phos", DUR_PHOS, () => {
+              eState = "s0";
+              animating = false;
+              shineBtn.disabled = false;
+              levelSub.textContent = "S₀ に戻った — もう一度試す";
+              setStatus("燐光で S₀ に戻りました。");
+            });
+          }, 300);
+        });
+      }
+    }
+
+    // 光を当てる
+    function shineLight() {
+      if (animating) return;
+      const abs = absorption(currentLambda);
+      lightFlash = 1;
+
+      if (!canExcite(currentLambda)) {
+        setStatus(`Abs = ${abs.toFixed(2)} < 0.3 — この波長では S₀ → S₁ 励起は起こりません。`, "warn");
+        levelSub.textContent = "励起なし — S₀ のまま";
+        eState = "s0";
+        return;
+      }
+
+      animating = true;
+      shineBtn.disabled = true;
+      setStatus(`Abs = ${abs.toFixed(2)} — 光を吸収！S₀ → S₁ へ…`, "ok");
+      levelSub.textContent = "S₀ → S₁（光吸収）";
+
+      // S1 へ移動
+      runAnim("rising", DUR_RISE, () => {
+        eState = "s1";
+        levelSub.textContent = "S₁ — 次の遷移を決定中…";
+        setTimeout(branchFromS1, DUR_S1_WAIT);
+      });
+    }
+
+    function idleLoop() {
+      if (!animating) {
+        lightFlash = Math.max(0, lightFlash - 0.02);
+        emitFlash = Math.max(0, emitFlash - 0.02);
+      }
+      drawDiagram();
+      requestAnimationFrame(idleLoop);
+    }
+
+    lambdaSlider.addEventListener("input", () => {
+      currentLambda = parseInt(lambdaSlider.value, 10);
+      updateReadouts();
+      if (!animating) {
+        const abs = absorption(currentLambda);
+        setStatus(
+          canExcite(currentLambda)
+            ? `λ = ${currentLambda} nm, Abs = ${abs.toFixed(2)} — 励起可能`
+            : `λ = ${currentLambda} nm, Abs = ${abs.toFixed(2)} — 励起しにくい`,
+          canExcite(currentLambda) ? "" : "warn"
+        );
+      }
+    });
+
+    shineBtn.addEventListener("click", shineLight);
+    window.addEventListener("resize", drawDiagram);
+
+    buildSpectrumChart();
+    updateReadouts();
+    drawDiagram();
+    requestAnimationFrame(idleLoop);
+  </script>
+</body>
+</html>

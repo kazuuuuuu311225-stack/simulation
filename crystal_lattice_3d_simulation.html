@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>結晶格子 3D — SC · BCC · FCC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #06b6d4; --accent-light: #22d3ee; --accent-glow: rgba(6,182,212,0.45);
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(6,182,212,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0c1524 38%,#101c30 72%,#0a1018 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      position: relative; z-index: 1; width: min(980px,96vw); margin: 0 auto;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg,rgba(56,189,248,0.25),rgba(6,182,212,0.3));
+      border: 1px solid rgba(56,189,248,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); text-shadow: 0 0 20px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px; color: #cffafe;
+      background: rgba(6,182,212,0.14); border: 1px solid rgba(6,182,212,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .panel {
+      padding: 14px 16px; border-radius: 16px; background: var(--slate-bg);
+      border: 1px solid var(--slate-border); box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+    }
+    .panel h3 { margin: 0 0 10px; font-size: 0.95rem; color: var(--accent-light); }
+    .hs-explain { font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; }
+    .hs-explain p { margin: 0 0 8px; }
+    .hs-explain ul { margin: 0; padding-left: 1.2rem; }
+    .hs-explain li { margin-bottom: 4px; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg,rgba(10,20,32,0.98),rgba(6,12,20,0.99));
+      border: 1px solid rgba(56,189,248,0.3);
+    }
+    .viz-label { margin: 0; padding: 10px 14px 0; font-size: 0.9rem; font-weight: 700; color: #e0f2fe; }
+    .viz-legend { margin: 0; padding: 2px 14px 8px; font-size: 0.76rem; color: #cbd5e1; line-height: 1.45; }
+    #canvasWrap {
+      width: 100%; height: min(420px,52dvh); min-height: 300px; cursor: grab;
+      touch-action: none;
+    }
+    #canvasWrap:active { cursor: grabbing; }
+    .btn-row {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px 14px;
+    }
+    .btn-row button {
+      flex: 1 1 calc(33% - 6px); min-height: 44px; padding: 10px; font-family: inherit;
+      font-size: 0.84rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.07); color: #e2e8f0;
+    }
+    .btn-row button.active {
+      background: linear-gradient(135deg,#0891b2,#06b6d4); color: white; border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+    @media (min-width:640px) { .info-grid { grid-template-columns: repeat(4,1fr); } }
+    .info-item {
+      padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(125,211,252,0.2);
+    }
+    .info-item .label { color: #cbd5e1; display: block; font-size: 0.72rem; margin-bottom: 4px; }
+    .info-item .val { font-weight: 700; font-size: 0.95rem; color: #7dd3fc; }
+    .comment-box {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(6,182,212,0.12); border: 1px solid rgba(56,189,248,0.3);
+      font-size: 0.88rem; line-height: 1.6; color: #bae6fd;
+    }
+    .py-note {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem;
+      color: #94a3b8; background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.2);
+    }
+    .py-note code { color: #7dd3fc; font-size: 0.78rem; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">◇</div>
+      <h2>結晶格子 3D 可視化</h2>
+      <p class="chapter-label">EX章 · SC · BCC · FCC</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="hs-explain">
+        <p>
+          金属などの結晶は、原子が規則正しく並んだ<strong style="color:#e0f2fe">結晶格子</strong>で表せます。
+          下の3D表示で、立方系の代表的な3種類を回転して確かめられます。
+        </p>
+        <ul>
+          <li><strong style="color:#22d3ee">SC</strong>（単純立方）… 立方体の8つの<strong>頂点</strong>だけ</li>
+          <li><strong style="color:#fde68a">BCC</strong>（体心立方）… 頂点 ＋ 立方体の<strong>中心</strong></li>
+          <li><strong style="color:#86efac">FCC</strong>（面心立方）… 頂点 ＋ 各<strong>面の中心</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="viz-block">
+      <p class="viz-label" id="vizTitle">SC（単純立方格子）</p>
+      <p class="viz-legend">ドラッグで回転 · スクロールで拡大 · 1=SC · 2=BCC · 3=FCC</p>
+      <div id="canvasWrap"></div>
+      <div class="btn-row">
+        <button type="button" id="btnSC" class="active">1 · SC（単純立方）</button>
+        <button type="button" id="btnBCC">2 · BCC（体心立方）</button>
+        <button type="button" id="btnFCC">3 · FCC（面心立方）</button>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h3>格子の情報</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">選択中</span><span class="val" id="infoType">SC</span></div>
+        <div class="info-item"><span class="label">格子点数</span><span class="val" id="infoCount">—</span></div>
+        <div class="info-item"><span class="label">単位胞の数</span><span class="val">2 × 2 × 2</span></div>
+        <div class="info-item"><span class="label">配位数（目安）</span><span class="val" id="infoCoord">6</span></div>
+      </div>
+      <div class="comment-box" id="infoComment">
+        SC は最も単純な並び方です。頂点だけに原子があるので、1つの原子は隣の立方体と共有されます。
+      </div>
+      <p class="py-note">
+        Python版（matplotlib）も同梱：<code>python crystal_lattice_3d.py</code> で同じ3種類をターミナルから表示できます。
+      </p>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const CELLS = 2;
+      const wrap = document.getElementById("canvasWrap");
+
+      const META = {
+        SC: {
+          title: "SC（単純立方格子）— 頂点のみ",
+          short: "SC",
+          coord: "6",
+          comment: "SC は最も単純な並び方です。立方体の8つの頂点だけに原子があり、隣の単位胞と頂点を共有します。",
+        },
+        BCC: {
+          title: "BCC（体心立方格子）— 頂点 + 体心",
+          short: "BCC",
+          coord: "8",
+          comment: "BCC は頂点に加え、立方体の真ん中（体心）にも原子があります。α-Fe（鉄）などに近い型です。",
+        },
+        FCC: {
+          title: "FCC（面心立方格子）— 頂点 + 各面の中心",
+          short: "FCC",
+          coord: "12",
+          comment: "FCC は頂点に加え、6つの面の中心にも原子があります。Cu（銅）や Al（アルミ）など多くの金属がこの型です。",
+        },
+      };
+
+      function uniquePoints(points) {
+        const map = new Map();
+        points.forEach(([x, y, z]) => {
+          const key = x.toFixed(4) + "," + y.toFixed(4) + "," + z.toFixed(4);
+          if (!map.has(key)) map.set(key, [x, y, z]);
+        });
+        return Array.from(map.values());
+      }
+
+      function generateSC(cx, cy, cz) {
+        const pts = [];
+        for (let i = 0; i <= cx; i++) {
+          for (let j = 0; j <= cy; j++) {
+            for (let k = 0; k <= cz; k++) pts.push([i, j, k]);
+          }
+        }
+        return pts;
+      }
+
+      function generateBCC(cx, cy, cz) {
+        const pts = [];
+        for (let i = 0; i < cx; i++) {
+          for (let j = 0; j < cy; j++) {
+            for (let k = 0; k < cz; k++) {
+              for (const dx of [0, 1]) {
+                for (const dy of [0, 1]) {
+                  for (const dz of [0, 1]) pts.push([i + dx, j + dy, k + dz]);
+                }
+              }
+              pts.push([i + 0.5, j + 0.5, k + 0.5]);
+            }
+          }
+        }
+        return uniquePoints(pts);
+      }
+
+      function generateFCC(cx, cy, cz) {
+        const pts = [];
+        const faces = [
+          [0.5, 0.5, 0], [0.5, 0.5, 1], [0.5, 0, 0.5], [0.5, 1, 0.5], [0, 0.5, 0.5], [1, 0.5, 0.5],
+        ];
+        for (let i = 0; i < cx; i++) {
+          for (let j = 0; j < cy; j++) {
+            for (let k = 0; k < cz; k++) {
+              for (const dx of [0, 1]) {
+                for (const dy of [0, 1]) {
+                  for (const dz of [0, 1]) pts.push([i + dx, j + dy, k + dz]);
+                }
+              }
+              faces.forEach(([fx, fy, fz]) => pts.push([i + fx, j + fy, k + fz]));
+            }
+          }
+        }
+        return uniquePoints(pts);
+      }
+
+      function getPoints(type) {
+        if (type === "SC") return generateSC(CELLS, CELLS, CELLS);
+        if (type === "BCC") return generateBCC(CELLS, CELLS, CELLS);
+        return generateFCC(CELLS, CELLS, CELLS);
+      }
+
+      let scene, camera, renderer, latticeGroup, currentType = "SC";
+      let rotX = 0.55, rotY = 0.65, zoom = 6.5;
+      let dragging = false, lastX = 0, lastY = 0;
+
+      function addUnitCellWireframes(group) {
+        const mat = new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.45 });
+        for (let i = 0; i < CELLS; i++) {
+          for (let j = 0; j < CELLS; j++) {
+            for (let k = 0; k < CELLS; k++) {
+              const g = new THREE.BoxGeometry(1, 1, 1);
+              const edges = new THREE.EdgesGeometry(g);
+              const wire = new THREE.LineSegments(edges, mat);
+              wire.position.set(i + 0.5, j + 0.5, k + 0.5);
+              group.add(wire);
+              g.dispose();
+              edges.dispose();
+            }
+          }
+        }
+      }
+
+      function buildLattice(type) {
+        while (latticeGroup.children.length) {
+          const child = latticeGroup.children[0];
+          latticeGroup.remove(child);
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        }
+
+        const points = getPoints(type);
+        const sphereMat = new THREE.MeshPhysicalMaterial({
+          color: 0x22d3ee, emissive: 0x0891b2, emissiveIntensity: 0.35,
+          metalness: 0.2, roughness: 0.35,
+        });
+
+        points.forEach(([x, y, z]) => {
+          const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 16), sphereMat.clone());
+          mesh.position.set(x, y, z);
+          latticeGroup.add(mesh);
+        });
+
+        addUnitCellWireframes(latticeGroup);
+
+        document.getElementById("infoType").textContent = META[type].short;
+        document.getElementById("infoCount").textContent = String(points.length);
+        document.getElementById("infoCoord").textContent = META[type].coord;
+        document.getElementById("infoComment").textContent = META[type].comment;
+        document.getElementById("vizTitle").textContent = META[type].title;
+      }
+
+      function setType(type) {
+        currentType = type;
+        buildLattice(type);
+        ["btnSC", "btnBCC", "btnFCC"].forEach((id) => {
+          document.getElementById(id).classList.toggle("active", id === "btn" + type);
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1420);
+
+        const w = wrap.clientWidth;
+        const h = wrap.clientHeight;
+        camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        camera.position.set(0, 0, zoom);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.7));
+        const key = new THREE.DirectionalLight(0xffffff, 1.0);
+        key.position.set(4, 6, 5);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x22d3ee, 0.6, 20);
+        rim.position.set(-4, -2, 3);
+        scene.add(rim);
+
+        latticeGroup = new THREE.Group();
+        latticeGroup.position.set(-CELLS / 2, -CELLS / 2, -CELLS / 2);
+        scene.add(latticeGroup);
+        setType("SC");
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lastX) * 0.01;
+          rotX += (e.clientY - lastY) * 0.01;
+          rotX = Math.max(-1.2, Math.min(1.2, rotX));
+          lastX = e.clientX;
+          lastY = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = Math.max(4, Math.min(12, zoom + e.deltaY * 0.008));
+        }, { passive: false });
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "1") setType("SC");
+          if (e.key === "2") setType("BCC");
+          if (e.key === "3") setType("FCC");
+        });
+
+        document.getElementById("btnSC").addEventListener("click", () => setType("SC"));
+        document.getElementById("btnBCC").addEventListener("click", () => setType("BCC"));
+        document.getElementById("btnFCC").addEventListener("click", () => setType("FCC"));
+
+        window.addEventListener("resize", () => {
+          const rw = wrap.clientWidth;
+          const rh = wrap.clientHeight;
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+          renderer.setSize(rw, rh);
+        });
+
+        function animate() {
+          requestAnimationFrame(animate);
+          latticeGroup.rotation.x = rotX;
+          latticeGroup.rotation.y = rotY;
+          camera.position.z = zoom;
+          camera.lookAt(0, 0, 0);
+          renderer.render(scene, camera);
+        }
+        animate();
+      }
+
+      initThree();
+    })();
+  </script>
+</body>
+</html>

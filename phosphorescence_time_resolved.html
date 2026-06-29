@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>燐光の時間減衰</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a3e635;
+      --accent-light: #bef264;
+      --phos: #2dd4bf;
+      --phos-bright: #5eead4;
+      --slate-bg: rgba(12, 18, 32, 0.82);
+      --slate-border: rgba(45, 212, 191, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1520 40%, #101828 75%, #0a0e14 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(1180px, 97vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.25), rgba(94, 234, 212, 0.15));
+      border: 1px solid rgba(45, 212, 191, 0.4);
+      font-size: 1.1rem;
+      color: var(--phos-bright);
+    }
+    h1 {
+      margin: 6px 0 4px;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      font-weight: 700;
+      color: var(--accent-light);
+    }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 9px 16px;
+      color: #ecfccb;
+      background: rgba(163, 230, 53, 0.12);
+      border: 1px solid rgba(163, 230, 53, 0.35);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 920px) {
+      .main-grid { grid-template-columns: 1.05fr 0.95fr; align-items: stretch; }
+    }
+    .panel {
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel-head {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #d9f99d;
+    }
+    .panel-sub { margin: 4px 0 0; font-size: 0.76rem; color: var(--muted); }
+    .canvas-wrap {
+      flex: 1;
+      padding: 8px 10px 10px;
+      min-height: min(400px, 50dvh);
+    }
+    #glowCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 360px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(4, 12, 18, 0.99), rgba(2, 8, 12, 0.99));
+      border: 1px solid rgba(45, 212, 191, 0.15);
+    }
+    .right-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .chart-wrap { flex: 1; padding: 8px 10px 10px; min-height: 220px; }
+    .chart-wrap canvas { max-height: min(260px, 32dvh); }
+    .controls { padding: 14px 16px; }
+    .controls label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #64748b;
+      margin: 10px 0 6px;
+    }
+    .controls label:first-of-type { margin-top: 0; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: var(--phos); }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .ctrl-btn {
+      padding: 12px 10px;
+      min-height: 48px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(255, 255, 255, 0.04);
+      color: #cbd5e1;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: box-shadow 0.15s, background 0.15s;
+    }
+    .ctrl-btn.on-active {
+      background: linear-gradient(135deg, rgba(253, 230, 138, 0.2), rgba(251, 191, 36, 0.12));
+      border-color: rgba(253, 230, 138, 0.45);
+      color: #fde68a;
+      box-shadow: 0 0 16px rgba(253, 230, 138, 0.15);
+    }
+    .ctrl-btn.off-active {
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.2), rgba(20, 184, 166, 0.12));
+      border-color: rgba(45, 212, 191, 0.45);
+      color: #99f6e4;
+      box-shadow: 0 0 16px rgba(45, 212, 191, 0.15);
+    }
+    .readout-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .readout-box {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .readout-box .lbl { display: block; font-size: 0.68rem; color: var(--muted); }
+    .readout-box .val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--phos-bright);
+      font-variant-numeric: tabular-nums;
+    }
+    .status-msg {
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      background: rgba(45, 212, 191, 0.08);
+      border: 1px solid rgba(45, 212, 191, 0.22);
+      color: #99f6e4;
+    }
+    .status-msg.exciting {
+      background: rgba(253, 230, 138, 0.08);
+      border-color: rgba(253, 230, 138, 0.28);
+      color: #fde68a;
+    }
+    .formula-note {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.03);
+      font-family: "Cambria Math", "Times New Roman", serif;
+    }
+    .explain {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .explain h3 { margin: 0 0 10px; font-size: 0.92rem; font-weight: 700; color: #cbd5e1; }
+    .explain ul {
+      margin: 0;
+      padding-left: 1.2em;
+      font-size: 0.86rem;
+      line-height: 1.75;
+      color: #94a3b8;
+    }
+    .explain strong { color: #5eead4; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">I(t)</div>
+      <h1>燐光の時間減衰</h1>
+      <p class="chapter-label">EX章 · 蛍光・燐光 — 時間分解発光 I(t) = I₀ e^(−t/τ)</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <section class="panel" aria-label="発光アニメーション">
+        <div class="panel-head">
+          <h2>① 発光の明るさ</h2>
+          <p class="panel-sub" id="glowSub">励起光 OFF — 発光なし</p>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="glowCanvas" aria-label="燐光の発光アニメーション"></canvas>
+        </div>
+      </section>
+
+      <div class="right-col">
+        <section class="panel" aria-label="時間減衰グラフ">
+          <div class="panel-head">
+            <h2>② 時間減衰グラフ</h2>
+            <p class="panel-sub">横軸：時間 t（秒）　縦軸：発光強度 I(t)</p>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="decayChart" aria-label="I(t) 減衰曲線"></canvas>
+          </div>
+        </section>
+
+        <section class="panel controls" aria-label="操作">
+          <h2 style="margin:0 0 10px;font-size:0.92rem;color:#d9f99d">③ 操作</h2>
+          <div class="btn-row">
+            <button type="button" class="ctrl-btn" id="btnOn">励起光 ON</button>
+            <button type="button" class="ctrl-btn off-active" id="btnOff">励起光 OFF</button>
+          </div>
+          <label for="tauSlider">発光寿命 τ（0.1〜5 秒）</label>
+          <input type="range" id="tauSlider" min="0.1" max="5" value="1.5" step="0.1">
+          <label for="i0Slider">初期強度 I₀（0.2〜1.0）</label>
+          <input type="range" id="i0Slider" min="0.2" max="1" value="0.9" step="0.05">
+          <div class="readout-grid">
+            <div class="readout-box">
+              <span class="lbl">τ</span>
+              <span class="val" id="dispTau">1.5 s</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">I₀</span>
+              <span class="val" id="dispI0">0.90</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">I(t) 現在</span>
+              <span class="val" id="dispI">0.00</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">経過 t</span>
+              <span class="val" id="dispT">0.0 s</span>
+            </div>
+          </div>
+          <p class="status-msg" id="statusMsg">「励起光 ON」で発光開始 → OFF で指数減衰が始まります。</p>
+          <p class="formula-note">I(t) = I₀ · exp(−t / τ)</p>
+        </section>
+      </div>
+    </div>
+
+    <section class="explain">
+      <h3>ポイント</h3>
+      <ul>
+        <li>励起光を止めても発光が続く現象を<strong>燐光</strong>とする。</li>
+        <li>発光強度は<strong>指数関数的に減衰</strong>する。</li>
+        <li>発光寿命 <strong>τ</strong> が大きいほど、発光が長く続く。</li>
+        <li>励起光 ON/OFF によって発光の<strong>立ち上がり</strong>と<strong>減衰</strong>が切り替わる。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const CHART_T_MAX = 5;
+    const canvas = document.getElementById("glowCanvas");
+    const ctx = canvas.getContext("2d");
+    const btnOn = document.getElementById("btnOn");
+    const btnOff = document.getElementById("btnOff");
+    const tauSlider = document.getElementById("tauSlider");
+    const i0Slider = document.getElementById("i0Slider");
+    const glowSub = document.getElementById("glowSub");
+    const statusMsg = document.getElementById("statusMsg");
+
+    let tau = 1.5;
+    let I0 = 0.9;
+    let excitationOn = false;
+    let hasExcited = false;
+    let phaseStart = performance.now();
+    let decayChart = null;
+    let markerIdx = -1;
+
+    // 指数減衰を計算
+    function intensityAt(elapsedSec) {
+      if (excitationOn) return I0;
+      if (!hasExcited) return 0;
+      return I0 * Math.exp(-elapsedSec / tau);
+    }
+
+    function currentState(now) {
+      const elapsed = (now - phaseStart) / 1000;
+      const I = intensityAt(elapsed);
+      return { elapsed, I };
+    }
+
+    function buildChart() {
+      const theory = [];
+      for (let t = 0; t <= CHART_T_MAX; t += 0.05) {
+        theory.push({ x: t, y: I0 * Math.exp(-t / tau) });
+      }
+      decayChart = new Chart(document.getElementById("decayChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "I(t) 記録",
+              data: [],
+              borderColor: "#5eead4",
+              backgroundColor: "rgba(45,212,191,0.15)",
+              fill: true,
+              tension: 0.2,
+              pointRadius: 0,
+              borderWidth: 2.5,
+            },
+            {
+              label: "理論曲線（参考）",
+              data: theory,
+              borderColor: "rgba(148,163,184,0.35)",
+              borderDash: [5, 5],
+              pointRadius: 0,
+              borderWidth: 1.5,
+            },
+            {
+              label: "現在",
+              data: [{ x: 0, y: 0 }],
+              pointRadius: 8,
+              pointBackgroundColor: "#fde68a",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              showLine: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              type: "linear",
+              min: 0,
+              max: CHART_T_MAX,
+              title: { display: true, text: "時間 t (s)", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              min: 0,
+              max: 1.08,
+              title: { display: true, text: "発光強度 I(t)", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+          },
+          plugins: {
+            legend: { labels: { color: "#94a3b8", boxWidth: 12, font: { size: 10 } } },
+          },
+        },
+      });
+      markerIdx = 2;
+    }
+
+    function updateTheoryCurve() {
+      if (!decayChart) return;
+      const theory = [];
+      for (let t = 0; t <= CHART_T_MAX; t += 0.05) {
+        theory.push({ x: t, y: I0 * Math.exp(-t / tau) });
+      }
+      decayChart.data.datasets[1].data = theory;
+    }
+
+    // グラフデータを更新
+    function updateChartData(elapsed, I) {
+      if (!decayChart) return;
+      const pts = [];
+      const step = 0.04;
+      const tEnd = Math.min(elapsed, CHART_T_MAX);
+      for (let t = 0; t <= tEnd; t += step) {
+        const y = excitationOn ? I0 : I0 * Math.exp(-t / tau);
+        pts.push({ x: t, y });
+      }
+      if (tEnd > 0 || excitationOn) {
+        pts.push({ x: tEnd, y: I });
+      }
+      decayChart.data.datasets[0].data = pts;
+      decayChart.data.datasets[markerIdx].data = [{ x: Math.min(elapsed, CHART_T_MAX), y: I }];
+      decayChart.update("none");
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      return { w, h, dpr };
+    }
+
+    // 発光強度に応じて円の明るさを変更
+    function drawGlow(I) {
+      const { w, h, dpr } = resizeCanvas();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const bg = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.55);
+      bg.addColorStop(0, "rgba(4,16,20,0.5)");
+      bg.addColorStop(1, "rgba(2,6,10,1)");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const cx = w * 0.5;
+      const cy = h * 0.52;
+      const baseR = Math.min(w, h) * 0.22;
+      const alpha = Math.max(0, Math.min(1, I));
+
+      // 励起光ランプ表示
+      ctx.fillStyle = excitationOn ? "rgba(253,230,138,0.9)" : "rgba(100,116,139,0.4)";
+      ctx.font = "600 12px Noto Sans JP, sans-serif";
+      ctx.fillText(excitationOn ? "励起光 ON ●" : "励起光 OFF ○", 16, 28);
+
+      if (alpha < 0.01) {
+        ctx.fillStyle = "#64748b";
+        ctx.font = "500 14px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("発光なし — ON で励起", cx, cy);
+        ctx.textAlign = "left";
+        return;
+      }
+
+      const glowR = baseR * (0.6 + alpha * 0.5);
+      ctx.shadowBlur = 30 + alpha * 50;
+      ctx.shadowColor = `rgba(45,212,191,${alpha * 0.8})`;
+
+      const g = ctx.createRadialGradient(cx, cy, glowR * 0.05, cx, cy, glowR);
+      g.addColorStop(0, `rgba(200,255,240,${alpha})`);
+      g.addColorStop(0.35, `rgba(45,212,191,${alpha * 0.85})`);
+      g.addColorStop(0.7, `rgba(20,120,100,${alpha * 0.35})`);
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = `rgba(240,253,250,${alpha * 0.95})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseR * 0.18 * (0.5 + alpha * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#99f6e4";
+      ctx.font = "700 13px Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`I(t) = ${I.toFixed(2)}`, cx, cy + glowR + 28);
+      ctx.textAlign = "left";
+    }
+
+    function updateReadouts(elapsed, I) {
+      document.getElementById("dispTau").textContent = `${tau.toFixed(1)} s`;
+      document.getElementById("dispI0").textContent = I0.toFixed(2);
+      document.getElementById("dispI").textContent = I.toFixed(2);
+      document.getElementById("dispT").textContent = `${elapsed.toFixed(1)} s`;
+    }
+
+    function setButtons() {
+      btnOn.classList.toggle("on-active", excitationOn);
+      btnOff.classList.toggle("off-active", !excitationOn);
+    }
+
+    function setExcitationOn() {
+      hasExcited = true;
+      excitationOn = true;
+      phaseStart = performance.now();
+      setButtons();
+      glowSub.textContent = "励起光 ON — 最大輝度 I₀ で発光";
+      statusMsg.textContent = "励起中 — I(t) = I₀ に固定。OFF にすると減衰が始まります。";
+      statusMsg.className = "status-msg exciting";
+      updateChartData(0, I0);
+    }
+
+    function setExcitationOff() {
+      if (!hasExcited) return;
+      excitationOn = false;
+      phaseStart = performance.now(); // t = 0 から減衰開始
+      setButtons();
+      glowSub.textContent = "励起光 OFF — 指数減衰中";
+      statusMsg.textContent = `減衰開始 — I(t) = I₀·exp(−t/τ), τ = ${tau.toFixed(1)} s`;
+      statusMsg.className = "status-msg";
+    }
+
+    function loop(now) {
+      const { elapsed, I } = currentState(now);
+      drawGlow(I);
+      updateChartData(elapsed, I);
+      updateReadouts(elapsed, I);
+      requestAnimationFrame(loop);
+    }
+
+    btnOn.addEventListener("click", setExcitationOn);
+    btnOff.addEventListener("click", setExcitationOff);
+
+    tauSlider.addEventListener("input", () => {
+      tau = parseFloat(tauSlider.value);
+      updateTheoryCurve();
+      if (!excitationOn) {
+        statusMsg.textContent = `τ = ${tau.toFixed(1)} s — OFF 中の減衰速度が変わります。`;
+      }
+    });
+
+    i0Slider.addEventListener("input", () => {
+      I0 = parseFloat(i0Slider.value);
+      updateTheoryCurve();
+      if (excitationOn) {
+        updateChartData((performance.now() - phaseStart) / 1000, I0);
+      }
+    });
+
+    window.addEventListener("resize", () => drawGlow(intensityAt((performance.now() - phaseStart) / 1000)));
+
+    buildChart();
+    updateTheoryCurve();
+    setButtons();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

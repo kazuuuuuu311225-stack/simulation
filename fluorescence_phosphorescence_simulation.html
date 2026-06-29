@@ -511,7 +511,7 @@
       <div class="viz-column">
         <div class="canvas-stack">
           <div class="canvas-block" id="jabBlock">
-            <p class="canvas-label">ジャブロンスキー図（S<sub>0</sub> / S<sub>1</sub> / T<sub>1</sub>）</p>
+            <p class="canvas-label">ジャブロンスキー図（S<sub>0</sub> / S<sub>1</sub> / T<sub>1</sub>）<span style="font-weight:500;color:#64748b"> — 分子の移動は見やすい速度で表示（右グラフは実際の τ）</span></p>
             <p class="canvas-legend">
               <span class="f">● 蛍光</span> S<sub>1</sub>→S<sub>0</sub>　
               <span class="o">→ 項間交差</span> S<sub>1</sub>→T<sub>1</sub>　
@@ -635,6 +635,22 @@
     const MAX_DT = 1 / 45;
     const I0 = 1;
 
+    /** 図の動き用（秒）— 実寿命 ns/s とは別に、目で追える速度 */
+    const VIS = {
+      tauF: 0.72,
+      tauPMin: 3.2,
+      tauPMax: 9.5,
+      exciteSpread: 0.55,
+      moveDur: 0.42,
+      arrowAbsorb: 0.95,
+      arrowFluor: 0.85,
+      arrowIsc: 1.05,
+      arrowPhos: 1.15,
+      continuousInterval: 0.42,
+      continuousBatchFrac: 0.22,
+      reExciteDelay: 0.18,
+    };
+
     let layout = { jab: { w: 0, h: 0, dpr: 1 }, graph: { w: 0, h: 0, dpr: 1 } };
     let materialKey = "GFP";
     let tauF_ns = 3.2;
@@ -649,6 +665,7 @@
     let phosAmbient = 0;
     let recentFluor = 0;
     let recentPhos = 0;
+    let continuousAcc = 0;
 
     function fmt(n, d) { return Number(n).toFixed(d); }
 
@@ -667,22 +684,65 @@
 
     function getMat() { return MATERIALS[materialKey]; }
 
-    function initMolecules() {
-      molecules = [];
-      for (let i = 0; i < MOLECULE_COUNT; i += 1) {
-        molecules.push({
-          state: 0,
-          x: 0.12 + (i % 8) * 0.1 + Math.random() * 0.02,
-          yJitter: (Math.random() - 0.5) * 8,
-          phase: Math.random() * Math.PI * 2,
-        });
-      }
+    function visTauP_sec() {
+      if (tauP_s >= 1e8) return Infinity;
+      const logP = Math.log10(Math.max(tauP_s, 1e-4));
+      const t = Math.min(1, Math.max(0, (logP + 3) / 7));
+      return VIS.tauPMin + t * (VIS.tauPMax - VIS.tauPMin);
     }
 
-    function distributeX() {
-      const s0 = molecules.filter((m) => m.state === 0);
-      const s1 = molecules.filter((m) => m.state === 1);
-      const t1 = molecules.filter((m) => m.state === 2);
+    /** 図の経過時間 → グラフ用の物理時間（I(t) カーソル） */
+    function physTimeSincePulse() {
+      if (pulseTime < 0) return -1;
+      const tVis = simTime - pulseTime;
+      const tauF = tauF_ns * 1e-9;
+      if (!isPhosMaterial() || tauP_s >= 1e8) {
+        return (tVis / VIS.tauF) * Math.min(Math.max(tauF * 900, 1e-8), 2e-6);
+      }
+      const vtP = visTauP_sec();
+      return (tVis / vtP) * Math.min(tauP_s * 1.15, 14);
+    }
+
+    function easeInOut(t) {
+      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function effectiveState(m) {
+      if (!m.transition) return m.state;
+      const tr = m.transition;
+      const elapsed = Math.max(0, tr.t - tr.delay);
+      const p = elapsed / Math.max(tr.dur, 0.001);
+      return p < 0.5 ? tr.from : tr.to;
+    }
+
+    function beginTransition(m, toState, arrowType, delay = 0) {
+      m.transition = {
+        from: m.state,
+        to: toState,
+        t: 0,
+        dur: VIS.moveDur * (toState === 2 ? 1.15 : 1),
+        delay,
+        arrow: arrowType,
+        arrowFired: false,
+      };
+    }
+
+    function finishTransition(m) {
+      const tr = m.transition;
+      m.state = tr.to;
+      m.transition = null;
+      if (tr.arrow === "fluor") addFlash(m.x, 1, fluorColor(), "fluor");
+      if (tr.arrow === "phos") addFlash(m.x, 2, phosColor(), "phos");
+      if (continuous && tr.to === 0) {
+        m.reExciteIn = VIS.reExciteDelay + Math.random() * 0.35;
+      }
+      relayoutMolecules();
+    }
+
+    function relayoutMolecules() {
+      const s0 = molecules.filter((m) => m.state === 0 && !m.transition);
+      const s1 = molecules.filter((m) => m.state === 1 && !m.transition);
+      const t1 = molecules.filter((m) => m.state === 2 && !m.transition);
       [s0, s1, t1].forEach((group, gi) => {
         group.forEach((m, i) => {
           m.x = 0.1 + ((i + 0.5) / Math.max(group.length, 1)) * 0.78;
@@ -691,15 +751,46 @@
       });
     }
 
-    function excitePulse(fraction) {
-      const s0 = molecules.filter((m) => m.state === 0);
+    function initMolecules() {
+      molecules = [];
+      for (let i = 0; i < MOLECULE_COUNT; i += 1) {
+        molecules.push({
+          state: 0,
+          x: 0.12 + (i % 8) * 0.1 + Math.random() * 0.02,
+          yJitter: (Math.random() - 0.5) * 8,
+          phase: Math.random() * Math.PI * 2,
+          transition: null,
+          reExciteIn: null,
+        });
+      }
+    }
+
+    function exciteAvailable(fraction, opts = {}) {
+      const { resetGraph = true, spread = VIS.exciteSpread } = opts;
+      const s0 = molecules.filter((m) => m.state === 0 && !m.transition && m.reExciteIn == null);
+      if (s0.length === 0) return 0;
       const n = Math.max(1, Math.round(s0.length * fraction));
       for (let i = 0; i < n && i < s0.length; i += 1) {
-        s0[i].state = 1;
-        activeArrows.push({ type: "absorb", x: s0[i].x, t: 0, life: 0.6 });
+        const delay = spread > 0 ? (i / Math.max(n - 1, 1)) * spread : 0;
+        beginTransition(s0[i], 1, "absorb", delay);
       }
-      pulseTime = simTime;
-      distributeX();
+      if (resetGraph) pulseTime = simTime;
+      return n;
+    }
+
+    function excitePulse(fraction) {
+      exciteAvailable(fraction, { resetGraph: true, spread: VIS.exciteSpread });
+    }
+
+    function tickContinuousExcitation(dt) {
+      if (!continuous) return;
+      if (pulseTime < 0) pulseTime = simTime;
+      continuousAcc += dt;
+      if (continuousAcc >= VIS.continuousInterval) {
+        continuousAcc = 0;
+        exciteAvailable(VIS.continuousBatchFrac, { resetGraph: false, spread: 0.12 });
+      }
+      if (simTime - pulseTime > 12) pulseTime = simTime;
     }
 
     function resetAll() {
@@ -714,10 +805,11 @@
       phosAmbient = 0;
       recentFluor = 0;
       recentPhos = 0;
+      continuousAcc = 0;
       document.getElementById("continuousBtn").textContent = "連続励起 OFF";
       document.getElementById("continuousBtn").classList.remove("active");
       initMolecules();
-      distributeX();
+      relayoutMolecules();
       runStatus.textContent = "リセットしました — 「励起」で S₀→S₁ を確認してください。";
       syncUI();
     }
@@ -752,13 +844,13 @@
     }
 
     function updateInfo() {
-      const tSince = pulseTime >= 0 ? simTime - pulseTime : -1;
+      const tSince = physTimeSincePulse();
       const { iF, iP } = intensityAt(tSince);
       document.getElementById("iIF").textContent = pulseTime >= 0 ? fmt(iF, 4) : "—";
       document.getElementById("iIP").textContent = pulseTime >= 0 && tauP_s < 1e8 ? fmt(iP, 4) : "—";
-      const s0 = molecules.filter((m) => m.state === 0).length;
-      const s1 = molecules.filter((m) => m.state === 1).length;
-      const t1 = molecules.filter((m) => m.state === 2).length;
+      const s0 = molecules.filter((m) => effectiveState(m) === 0).length;
+      const s1 = molecules.filter((m) => effectiveState(m) === 1).length;
+      const t1 = molecules.filter((m) => effectiveState(m) === 2).length;
       document.getElementById("iPop").textContent = `${s0} / ${s1} / ${t1}`;
 
       const p0 = Math.round((s0 / MOLECULE_COUNT) * 100);
@@ -863,56 +955,68 @@
     function updateSimulation(dt) {
       simTime += dt;
       const mat = getMat();
-      const tauF = tauF_ns * 1e-9;
-      const kF = tauF > 0 ? 1 / tauF : 0;
-      const kP = tauP_s < 1e8 && tauP_s > 0 ? 1 / tauP_s : 0;
+      const kF = 1 / VIS.tauF;
+      const vtP = visTauP_sec();
+      const kP = vtP < Infinity ? 1 / vtP : 0;
       const isc = mat.iscRate;
-      const iscBoost = isPhosMaterial() ? 28 : 0;
+      const iscRateVis = isPhosMaterial() ? isc * 0.65 : 0;
 
-      fluorAmbient *= Math.exp(-dt / 0.08);
-      phosAmbient *= Math.exp(-dt / Math.max(tauP_s * 0.35, 0.15));
-      recentFluor *= Math.exp(-dt / 0.12);
-      recentPhos *= Math.exp(-dt / Math.max(tauP_s * 0.4, 0.2));
+      fluorAmbient *= Math.exp(-dt / 0.14);
+      phosAmbient *= Math.exp(-dt / Math.max(visTauP_sec() * 0.45, 0.35));
+      recentFluor *= Math.exp(-dt / 0.18);
+      recentPhos *= Math.exp(-dt / Math.max(visTauP_sec() * 0.5, 0.4));
 
-      const t1Count = molecules.filter((m) => m.state === 2).length;
+      const t1Count = molecules.filter((m) => m.state === 2 || (m.transition && m.transition.to === 2)).length;
       if (isPhosMaterial()) {
         phosAmbient = Math.max(phosAmbient, (t1Count / MOLECULE_COUNT) * 0.92);
       }
 
-      if (continuous) {
-        if (Math.random() < 3.5 * dt) excitePulse(0.12);
-      }
+      tickContinuousExcitation(dt);
 
       molecules.forEach((m) => {
+        if (m.reExciteIn != null) {
+          m.reExciteIn -= dt;
+          if (m.reExciteIn <= 0 && m.state === 0 && !m.transition) {
+            m.reExciteIn = null;
+            beginTransition(m, 1, "absorb", 0);
+          }
+        }
+      });
+
+      molecules.forEach((m) => {
+        if (m.transition) {
+          m.transition.t += dt;
+          const tr = m.transition;
+          if (!tr.arrowFired && tr.t >= tr.delay) {
+            tr.arrowFired = true;
+            const life = tr.arrow === "absorb" ? VIS.arrowAbsorb
+              : tr.arrow === "fluor" ? VIS.arrowFluor
+              : tr.arrow === "isc" ? VIS.arrowIsc
+              : VIS.arrowPhos;
+            activeArrows.push({ type: tr.arrow, x: m.x, t: 0, life });
+          }
+          if (tr.t >= tr.delay + tr.dur) finishTransition(m);
+          return;
+        }
+
         if (m.state === 1) {
-          const pF = 1 - Math.exp(-kF * dt * (isPhosMaterial() ? 0.35 : 1));
-          const pI = isc * dt * iscBoost;
+          const pF = 1 - Math.exp(-kF * dt);
+          const pI = iscRateVis > 0 ? 1 - Math.exp(-iscRateVis * dt / 0.95) : 0;
           const r = Math.random();
           if (r < pF) {
-            m.state = 0;
-            addFlash(m.x, 1, fluorColor(), "fluor");
-            activeArrows.push({ type: "fluor", x: m.x, t: 0, life: 0.45 });
+            beginTransition(m, 0, "fluor");
           } else if (pI > 0 && r < pF + pI) {
-            m.state = 2;
-            activeArrows.push({ type: "isc", x: m.x, t: 0, life: 0.55 });
+            beginTransition(m, 2, "isc");
           }
-        } else if (m.state === 2) {
-          if (kP > 0) {
-            const pP = 1 - Math.exp(-kP * dt);
-            if (Math.random() < pP) {
-              m.state = 0;
-              addFlash(m.x, 2, phosColor(), "phos");
-              activeArrows.push({ type: "phos", x: m.x, t: 0, life: 0.7 });
-            }
-          } else if (Math.random() < 2 * dt) {
-            m.state = 0;
-          }
+        } else if (m.state === 2 && kP > 0) {
+          const pP = 1 - Math.exp(-kP * dt);
+          if (Math.random() < pP) beginTransition(m, 0, "phos");
         }
       });
 
       flashes = flashes.filter((f) => {
         f.life -= dt;
-        f.r += (f.kind === "phos" ? 55 : 120) * dt;
+        f.r += (f.kind === "phos" ? 38 : 85) * dt;
         return f.life > 0;
       });
 
@@ -920,8 +1024,6 @@
         a.t += dt;
         return a.t < a.life;
       });
-
-      distributeX();
     }
 
     function drawCanvasBg(ctx, w, h, mat) {
@@ -1000,8 +1102,8 @@
       const y1 = levelY(h, 1);
       const yT = levelY(h, 2);
       const ax = w * 0.22;
-      const t1n = molecules.filter((m) => m.state === 2).length;
-      const s1n = molecules.filter((m) => m.state === 1).length;
+      const t1n = molecules.filter((m) => effectiveState(m) === 2).length;
+      const s1n = molecules.filter((m) => effectiveState(m) === 1).length;
 
       const gapGrad = jabCtx.createLinearGradient(0, yT, 0, y0);
       gapGrad.addColorStop(0, hexAlpha(mat.phosColor, 0.12));
@@ -1093,17 +1195,27 @@
       });
 
       molecules.forEach((m) => {
-        const y = levelY(h, m.state) + m.yJitter;
+        let drawState = m.state;
+        let y = levelY(h, m.state) + m.yJitter;
+        if (m.transition) {
+          const tr = m.transition;
+          const elapsed = Math.max(0, tr.t - tr.delay);
+          const p = easeInOut(Math.min(1, elapsed / Math.max(tr.dur, 0.001)));
+          const yFrom = levelY(h, tr.from);
+          const yTo = levelY(h, tr.to);
+          y = yFrom + (yTo - yFrom) * p + m.yJitter;
+          drawState = p < 0.45 ? tr.from : tr.to;
+        }
         const x = m.x * w;
         const colors = ["#475569", "#0ea5e9", mat.phosColor];
-        const r = m.state === 2 ? 7 + phosAmbient * 3 : m.state === 1 ? 6 : 5;
+        const r = drawState === 2 ? 7 + phosAmbient * 3 : drawState === 1 ? 6 : 5;
         jabCtx.save();
-        jabCtx.shadowBlur = m.state === 2 ? 18 + phosAmbient * 20 : m.state === 1 ? 14 : 4;
-        jabCtx.shadowColor = colors[m.state];
+        jabCtx.shadowBlur = drawState === 2 ? 18 + phosAmbient * 20 : drawState === 1 ? 14 : 4;
+        jabCtx.shadowColor = colors[drawState];
         const g = jabCtx.createRadialGradient(x - 2, y - 2, 1, x, y, r + 2);
         g.addColorStop(0, "#ffffff");
-        g.addColorStop(0.55, colors[m.state]);
-        g.addColorStop(1, colors[m.state]);
+        g.addColorStop(0.55, colors[drawState]);
+        g.addColorStop(1, colors[drawState]);
         jabCtx.fillStyle = g;
         jabCtx.beginPath();
         jabCtx.arc(x, y, r, 0, Math.PI * 2);
@@ -1226,8 +1338,8 @@
         ? Math.min(Math.max(tauP_s * 1.8, 0.05), 12)
         : Math.min(Math.max(tauF * 800, 1e-7), 0.001);
       const nPts = 240;
-      const tSinceNow = pulseTime >= 0 ? simTime - pulseTime : 0;
-      const preview = pulseTime < 0;
+      const tSinceNow = physTimeSincePulse();
+      const preview = tSinceNow < 0;
 
       function plotCurve(tau, color, width, fill, alpha) {
         const pts = [];
@@ -1376,7 +1488,7 @@
       materialKey = document.getElementById("materialSelect").value;
       applyMaterial(true);
       initMolecules();
-      distributeX();
+      relayoutMolecules();
       pulseTime = -1;
       fluorAmbient = 0;
       phosAmbient = 0;
@@ -1410,6 +1522,10 @@
       const btn = document.getElementById("continuousBtn");
       btn.textContent = continuous ? "連続励起 ON" : "連続励起 OFF";
       btn.classList.toggle("active", continuous);
+      if (continuous) {
+        continuousAcc = 0;
+        exciteAvailable(0.5, { resetGraph: true, spread: VIS.exciteSpread * 0.6 });
+      }
       runStatus.textContent = continuous
         ? "連続励起 — S₁ へ分子が供給され続け、蛍光と燐光が同時に観測されます。"
         : "連続励起 OFF";

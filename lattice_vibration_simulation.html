@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>格子振動（フォノン）シミュレーション</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #2dd4bf;
+      --accent-light: #5eead4;
+      --accent-glow: rgba(45, 212, 191, 0.35);
+      --m1: #38bdf8;
+      --m2: #f87171;
+      --slate-bg: rgba(12, 18, 32, 0.82);
+      --slate-border: rgba(45, 212, 191, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1520 40%, #0f1a24 75%, #0a0e14 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(1100px, 97vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.22), rgba(20, 184, 166, 0.28));
+      border: 1px solid rgba(45, 212, 191, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.2rem;
+    }
+    h1 {
+      margin: 6px 0 4px;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      font-weight: 700;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 9px 16px;
+      color: #ccfbf1;
+      background: rgba(45, 212, 191, 0.12);
+      border: 1px solid rgba(45, 212, 191, 0.35);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .viz-panel {
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+      overflow: hidden;
+    }
+    .viz-head {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .viz-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #99f6e4;
+    }
+    .viz-sub {
+      margin: 4px 0 0;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+    .canvas-wrap {
+      padding: 8px 10px 10px;
+      min-height: min(280px, 38dvh);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: min(300px, 40dvh);
+      min-height: 220px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(6, 12, 22, 0.98), rgba(4, 8, 14, 0.99));
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .mode-banner {
+      margin: 0 14px 10px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.25);
+      color: #99f6e4;
+    }
+    .mode-banner.warn {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.3);
+      color: #fde68a;
+    }
+    .controls {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+    }
+    .controls h3 {
+      margin: 0 0 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent-light);
+    }
+    .btn-group { margin-bottom: 10px; }
+    .btn-group:last-child { margin-bottom: 0; }
+    .btn-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.04em;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .ctrl-btn {
+      padding: 10px 14px;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.04);
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ctrl-btn:hover {
+      background: rgba(45, 212, 191, 0.1);
+      border-color: rgba(45, 212, 191, 0.35);
+    }
+    .ctrl-btn.active {
+      background: rgba(45, 212, 191, 0.2);
+      border-color: rgba(45, 212, 191, 0.5);
+      box-shadow: 0 0 16px rgba(45, 212, 191, 0.18);
+      color: #ccfbf1;
+    }
+    .ctrl-btn.play {
+      border-color: rgba(52, 211, 153, 0.4);
+      color: #6ee7b7;
+    }
+    .ctrl-btn.stop {
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .explain {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .explain h3 {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+    .explain ul {
+      margin: 0;
+      padding-left: 1.2em;
+      font-size: 0.86rem;
+      line-height: 1.75;
+      color: #94a3b8;
+    }
+    .explain li { margin-bottom: 4px; }
+    .explain strong { color: #5eead4; }
+    .math-graph-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 900px) {
+      .math-graph-row { grid-template-columns: 0.95fr 1.05fr; align-items: stretch; }
+    }
+    .formula-panel, .graph-panel {
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      padding: 14px 16px;
+    }
+    .formula-panel h3, .graph-panel h3 {
+      margin: 0 0 8px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #99f6e4;
+    }
+    .formula-sub {
+      margin: 0 0 10px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+    .formula-box {
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: #cbd5e1;
+    }
+    .formula-box:last-child { margin-bottom: 0; }
+    .formula-box .tag {
+      display: inline-block;
+      margin-bottom: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #5eead4;
+      background: rgba(45, 212, 191, 0.12);
+      border: 1px solid rgba(45, 212, 191, 0.28);
+    }
+    .formula-box .tag.opt { color: #fca5a5; background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.28); }
+    .formula-box code, .formula-box .eq {
+      display: block;
+      margin: 6px 0;
+      font-family: "Cambria Math", "Times New Roman", serif;
+      font-size: 1.05rem;
+      color: #f0fdfa;
+    }
+    .formula-box .note { font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
+    .param-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .param-item {
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(45, 212, 191, 0.06);
+      border: 1px solid rgba(45, 212, 191, 0.15);
+      font-size: 0.76rem;
+      color: #94a3b8;
+    }
+    .param-item span { display: block; font-weight: 700; color: #99f6e4; font-size: 0.82rem; }
+    .graph-canvas-wrap { margin-top: 6px; }
+    .graph-canvas-wrap canvas {
+      height: min(220px, 32dvh);
+      min-height: 180px;
+    }
+    .graph-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .graph-legend .swatch {
+      display: inline-block;
+      width: 18px;
+      height: 3px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .graph-readout {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(45, 212, 191, 0.08);
+      border: 1px solid rgba(45, 212, 191, 0.22);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: #bae6fd;
+    }
+    .graph-readout strong { color: #5eead4; }
+    .graph-readout ul {
+      margin: 6px 0 0;
+      padding-left: 1.15em;
+      color: #94a3b8;
+    }
+    .graph-readout li { margin-bottom: 3px; }
+    .page-intro {
+      margin: 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(45, 212, 191, 0.08);
+      border: 1px solid rgba(45, 212, 191, 0.22);
+      font-size: 0.86rem;
+      line-height: 1.7;
+      color: #ccfbf1;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">〜</div>
+      <h1>格子振動（フォノン）</h1>
+      <p class="chapter-label">EX章 · 物性 — 1 次元鎖の音響モードと光学モード</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <p class="page-intro">
+      固体の中では、原子が<strong>バネでつながったように</strong>揺れます。
+      その揺れが波として伝わると<strong>フォノン</strong>と呼ばれます。
+      上のアニメで「揺れ方」を、下のグラフで「波の長さと揺れの速さの関係」を確認できます。
+    </p>
+
+    <section class="viz-panel" aria-label="1次元格子のアニメーション">
+      <div class="viz-head">
+        <h2>① 1 次元格子の揺れ</h2>
+        <p class="viz-sub" id="vizSub">単原子鎖 · 音響モード — 全原子が同じ向きにゆっくり揺れる</p>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="chainCanvas" aria-label="原子鎖のアニメーション"></canvas>
+      </div>
+      <p class="mode-banner" id="modeBanner">音響モード：波長の長い揺れ（低い周波数）</p>
+    </section>
+
+    <section class="controls">
+      <h3>② モードを選ぶ</h3>
+      <div class="btn-group">
+        <span class="btn-label">鎖の種類</span>
+        <div class="btn-row" role="group" aria-label="鎖の種類">
+          <button type="button" class="ctrl-btn active" data-chain="mono" id="btnMono">単原子鎖（同種原子）</button>
+          <button type="button" class="ctrl-btn" data-chain="diatomic" id="btnDiatomic">双原子鎖（2 種類の原子）</button>
+        </div>
+      </div>
+      <div class="btn-group">
+        <span class="btn-label">振動モード</span>
+        <div class="btn-row" role="group" aria-label="振動モード">
+          <button type="button" class="ctrl-btn active" data-mode="acoustic" id="btnAcoustic">音響モード</button>
+          <button type="button" class="ctrl-btn" data-mode="optical" id="btnOptical">光学モード</button>
+        </div>
+      </div>
+      <div class="btn-group">
+        <span class="btn-label">再生</span>
+        <div class="btn-row">
+          <button type="button" class="ctrl-btn play active" id="btnPlay">再生</button>
+          <button type="button" class="ctrl-btn stop" id="btnStop">停止</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="dot" style="background:#38bdf8"></span>同種原子 / 軽い原子 m₁</span>
+        <span class="legend-item"><span class="dot" style="background:#f87171;width:13px;height:13px"></span>重い原子 m₂（双原子鎖）</span>
+        <span class="legend-item"><span style="color:#64748b">—</span> バネ（原子間の結合）</span>
+      </div>
+    </section>
+
+    <div class="math-graph-row">
+      <section class="formula-panel" aria-label="式">
+        <h3>④ 式（いまのモード）</h3>
+        <p class="formula-sub" id="formulaSub">単原子鎖 · 音響モードの変位と分散関係</p>
+        <div id="formulaContent"></div>
+        <div class="param-grid" id="paramGrid"></div>
+      </section>
+
+      <section class="graph-panel" aria-label="分散関係グラフ">
+        <h3>⑤ 分散関係 ω(k)</h3>
+        <p class="formula-sub">「波の模様 k」と「揺れの速さ ω」の対応表 — 曲線上の ● がいまのアニメ</p>
+        <div class="graph-readout" id="graphExplain"></div>
+        <div class="graph-canvas-wrap">
+          <canvas id="dispersionCanvas" aria-label="ω-k グラフ"></canvas>
+        </div>
+        <div class="graph-legend">
+          <span><span class="swatch" style="background:#38bdf8"></span>音響枝</span>
+          <span id="legOpt"><span class="swatch" style="background:#f87171"></span>光学枝（双原子鎖）</span>
+          <span><span class="swatch" style="background:#fde68a;height:8px;width:8px;border-radius:50%"></span> 現在の (k, ω)</span>
+        </div>
+      </section>
+    </div>
+
+    <section class="graph-panel" aria-label="変位グラフ">
+      <h3>⑥ 変位 u<sub>n</sub> の並び（スナップショット）</h3>
+      <p class="formula-sub">各原子の変位を棒グラフで表示 — アニメーションと同期</p>
+      <div class="graph-canvas-wrap">
+        <canvas id="displacementCanvas" aria-label="変位グラフ"></canvas>
+      </div>
+    </section>
+
+    <section class="explain">
+      <h3>⑦ この章のまとめ</h3>
+      <ul>
+        <li><strong>格子振動</strong>＝原子がバネで結ばれて、位置 n について <strong>u<sub>n</sub>(t)</strong> と揺れること。</li>
+        <li><strong>波数 k</strong> … 揺れの「波の詰まり具合」。小さい k → 波長が長い → ゆっくり（音響寄り）。</li>
+        <li><strong>角振動数 ω</strong> … 1 秒あたりの揺れの速さ。グラフ⑤の縦軸。</li>
+        <li><strong>単原子鎖</strong> … 曲線は 1 本だけ。原点 (k=0, ω=0) から始まり、光学枝はない。</li>
+        <li><strong>双原子鎖</strong> … 曲線が 2 本に分かれる。<strong>下＝音響</strong>（k=0 で ω=0）、<strong>上＝光学</strong>（隣の原子が逆向き）。</li>
+        <li>⑤ のグラフと ① のアニメを同時に見ると、「どの k・ω で、どう揺れているか」が対応して分かります。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // ── 物理パラメータ（正規化：a=1, kバネ=1） ──
+    const PHYS = { a: 1, kSpring: 1, m: 1, m1: 1, m2: 2 };
+    const N_ATOMS = 20;
+    const chainCanvas = document.getElementById("chainCanvas");
+    const ctx = chainCanvas.getContext("2d");
+    const dispersionCanvas = document.getElementById("dispersionCanvas");
+    const dispCtx = dispersionCanvas.getContext("2d");
+    const displacementCanvas = document.getElementById("displacementCanvas");
+    const uCtx = displacementCanvas.getContext("2d");
+
+    let chainType = "mono";
+    let vibrMode = "acoustic";
+    let playing = true;
+    let animTime = 0;
+    let lastFrame = 0;
+
+    const UI = {
+      vizSub: document.getElementById("vizSub"),
+      modeBanner: document.getElementById("modeBanner"),
+      formulaSub: document.getElementById("formulaSub"),
+      formulaContent: document.getElementById("formulaContent"),
+      paramGrid: document.getElementById("paramGrid"),
+      legOpt: document.getElementById("legOpt"),
+      graphExplain: document.getElementById("graphExplain"),
+      btnMono: document.getElementById("btnMono"),
+      btnDiatomic: document.getElementById("btnDiatomic"),
+      btnAcoustic: document.getElementById("btnAcoustic"),
+      btnOptical: document.getElementById("btnOptical"),
+      btnPlay: document.getElementById("btnPlay"),
+      btnStop: document.getElementById("btnStop"),
+    };
+
+    // 単原子鎖：ω = 2√(β/m)|sin(ka/2)|  （a＝隣接原子間隔）
+    function monoOmega(k) {
+      return 2 * Math.sqrt(PHYS.kSpring / PHYS.m) * Math.abs(Math.sin((k * PHYS.a) / 2));
+    }
+
+    // 双原子鎖：1 単位胞＝2a（m₁,m₂）。音響枝は k=0 で ω=0 になる正しい式
+    function diatomicBranches(k) {
+      const { kSpring: beta, m1, m2, a } = PHYS;
+      const aCell = 2 * a;
+      const s = Math.sin((k * aCell) / 2);
+      const pref = beta * (1 / m1 + 1 / m2);
+      const cross = (4 * m1 * m2) / ((m1 + m2) ** 2);
+      const inner = Math.max(0, 1 - cross * s * s);
+      const root = Math.sqrt(inner);
+      return {
+        acoustic: Math.sqrt(Math.max(0, pref * (1 - root))),
+        optical: Math.sqrt(Math.max(0, pref * (1 + root))),
+      };
+    }
+
+    function kZoneMax() {
+      return chainType === "mono" ? Math.PI / PHYS.a : Math.PI / (2 * PHYS.a);
+    }
+
+    function currentKOmega() {
+      if (chainType === "mono") {
+        if (vibrMode === "optical") return { k: 0, omega: 0, valid: false };
+        const k = 0.55;
+        return { k, omega: monoOmega(k), valid: true };
+      }
+      if (vibrMode === "acoustic") {
+        const k = 0.35;
+        return { k, omega: diatomicBranches(k).acoustic, valid: true };
+      }
+      // 光学枝：k=0 付近で m₁/m₂ が逆向き（枝の左端）
+      const k = 0;
+      return { k, omega: diatomicBranches(k).optical, valid: true };
+    }
+
+    function fmtNum(x, d = 2) {
+      return Number(x).toFixed(d);
+    }
+
+    function updateFormulas() {
+      const { k, omega, valid } = currentKOmega();
+
+      if (chainType === "mono" && vibrMode === "optical") {
+        UI.formulaSub.textContent = "単原子鎖 — 光学モードなし";
+        UI.formulaContent.innerHTML = `
+          <div class="formula-box">
+            <span class="tag opt">光学モード</span>
+            <span class="eq">単原子鎖では光学枝が存在しません</span>
+            <p class="note">分散関係グラフにも光学枝は描けません。</p>
+          </div>
+          <div class="formula-box">
+            <span class="tag">音響モード（参考）</span>
+            <span class="eq">ω = 2√(k<sub>バネ</sub>/m) · |sin(ka/2)|</span>
+            <span class="eq">u<sub>n</sub>(t) = A sin(ωt − kna)</span>
+          </div>`;
+        UI.paramGrid.innerHTML = `
+          <div class="param-item"><span>m = ${PHYS.m}</span>原子の質量</div>
+          <div class="param-item"><span>k = ${PHYS.kSpring}</span>バネ定数</div>
+          <div class="param-item"><span>a = ${PHYS.a}</span>原子間隔</div>
+          <div class="param-item"><span>—</span>光学 ω</div>`;
+        UI.legOpt.style.opacity = "0.4";
+        updateGraphExplain();
+        return;
+      }
+
+      UI.legOpt.style.opacity = chainType === "diatomic" ? "1" : "0.45";
+
+      if (chainType === "mono") {
+        UI.formulaSub.textContent = "単原子鎖 · 音響モード";
+        UI.formulaContent.innerHTML = `
+          <div class="formula-box">
+            <span class="tag">変位（音響）</span>
+            <span class="eq">u<sub>n</sub>(t) = A sin(ωt − k n a)</span>
+            <p class="note">n 番目の原子が左右に A だけ揺れる。</p>
+          </div>
+          <div class="formula-box">
+            <span class="tag">分散関係</span>
+            <span class="eq">ω = 2√(k<sub>バネ</sub>/m) · |sin(ka/2)|</span>
+            <p class="note">k が小さい → ω も小さい（ゆっくり揺れる）</p>
+          </div>`;
+      } else if (vibrMode === "acoustic") {
+        UI.formulaSub.textContent = "双原子鎖 · 音響モード";
+        UI.formulaContent.innerHTML = `
+          <div class="formula-box">
+            <span class="tag">変位（音響）</span>
+            <span class="eq">u<sub>n</sub>(t) = A sin(ω<sub>−</sub>t − k n a)</span>
+            <p class="note">m₁ と m₂ が同じ向きに揺れる。</p>
+          </div>
+          <div class="formula-box">
+            <span class="tag">分散関係（音響枝 ω<sub>−</sub>）</span>
+            <span class="eq">ω<sub>±</sub>² = β(1/m₁+1/m₂)[1 ± √(1 − 4m₁m₂/(m₁+m₂)² · sin²(ka/2))]</span>
+            <p class="note">a＝単位胞の長さ（＝2×隣接間隔）。<strong>−</strong>が音響枝（k=0 で ω=0）。</p>
+          </div>`;
+      } else {
+        UI.formulaSub.textContent = "双原子鎖 · 光学モード";
+        UI.formulaContent.innerHTML = `
+          <div class="formula-box">
+            <span class="tag opt">変位（光学）</span>
+            <span class="eq">u<sub>2n</sub> = +A sin(ωt),　u<sub>2n+1</sub> = −A sin(ωt)</span>
+            <p class="note">隣り合う原子が逆向き。グラフ⑤では赤い曲線の<strong>左端 (k=0)</strong>に対応。</p>
+          </div>
+          <div class="formula-box">
+            <span class="tag opt">分散関係（光学枝 ω<sub>+</sub>）</span>
+            <span class="eq">ω<sub>±</sub>² = β(1/m₁+1/m₂)[1 ± √(1 − 4m₁m₂/(m₁+m₂)² · sin²(ka/2))]</span>
+            <p class="note"><strong>＋</strong>が光学枝。音響枝より上側。k=0 でも ω≠0。</p>
+          </div>`;
+      }
+
+      UI.paramGrid.innerHTML = `
+        <div class="param-item"><span>k = ${fmtNum(k, 2)}</span>波数（アニメ）</div>
+        <div class="param-item"><span>ω = ${valid ? fmtNum(omega, 2) : "—"}</span>角振動数</div>
+        <div class="param-item"><span>T = ${valid && omega > 0 ? fmtNum((2 * Math.PI) / omega, 2) : "—"}</span>周期 (2π/ω)</div>
+        <div class="param-item"><span>λ ≈ ${valid && k > 0 ? fmtNum((2 * Math.PI) / k, 2) : "—"}</span>波長 (2π/k)</div>`;
+      updateGraphExplain();
+    }
+
+    function updateGraphExplain() {
+      if (chainType === "mono" && vibrMode === "optical") {
+        UI.graphExplain.innerHTML = `
+          <strong>単原子鎖には光学枝がありません。</strong>
+          <ul>
+            <li>グラフに描けるのは音響枝（青）の 1 本だけです。</li>
+            <li>原点 (0,0) を通り、右端 k=π/a で ω が最大になります。</li>
+          </ul>`;
+        return;
+      }
+      if (chainType === "mono") {
+        UI.graphExplain.innerHTML = `
+          <strong>読み方（単原子鎖）</strong>
+          <ul>
+            <li>横軸 <strong>k</strong> … 波の詰まり具合。左ほど波長が長く、揺れはゆっくり。</li>
+            <li>縦軸 <strong>ω</strong> … 揺れの速さ。上に行くほど速い振動。</li>
+            <li>青い曲線は <strong>ω = 2√(β/m)|sin(ka/2)|</strong>。必ず原点を通る（k=0 で全体が同方向に動く）。</li>
+            <li>黄色 ● … いまのアニメの k と ω。曲線上にあるのが正しい状態です。</li>
+          </ul>`;
+        return;
+      }
+      const kEdge = fmtNum(kZoneMax(), 2);
+      UI.graphExplain.innerHTML = `
+        <strong>読み方（双原子鎖）</strong>
+        <ul>
+          <li>横軸 <strong>k</strong> … 0 ～ ${kEdge}（≈ π/2a）。右端が第 1 ブリルアンゾーン境界。</li>
+          <li><strong>下の青い曲線＝音響枝</strong> … k=0 で ω=0。格子全体が同じ向きに揺れる枝。</li>
+          <li><strong>上の赤い曲線＝光学枝</strong> … k=0 でも ω≠0。軽い原子と重い原子が逆向きに揺れる枝。</li>
+          <li>2 本の間のすきまは<strong>周波数ギャップ</strong>（同じ k でも ω の取れる範囲が分かれる）。</li>
+          <li>黄色 ● … いま選んでいるモードの (k, ω)。音響/光学ボタンで ● の位置が変わります。</li>
+        </ul>`;
+    }
+
+    function updateUI() {
+      UI.btnMono.classList.toggle("active", chainType === "mono");
+      UI.btnDiatomic.classList.toggle("active", chainType === "diatomic");
+      UI.btnAcoustic.classList.toggle("active", vibrMode === "acoustic");
+      UI.btnOptical.classList.toggle("active", vibrMode === "optical");
+      UI.btnPlay.classList.toggle("active", playing);
+      UI.btnStop.classList.toggle("active", !playing);
+
+      if (chainType === "mono" && vibrMode === "optical") {
+        UI.vizSub.textContent = "単原子鎖 · 光学モード — この鎖では存在しません";
+        UI.modeBanner.className = "mode-banner warn";
+        UI.modeBanner.textContent = "単原子鎖には光学モードは存在しません。双原子鎖を選ぶと光学モードを見られます。";
+        updateFormulas();
+        return;
+      }
+
+      UI.modeBanner.className = "mode-banner";
+      if (chainType === "mono") {
+        UI.vizSub.textContent = "単原子鎖 · 音響モード — 全原子が同じ向きにゆっくり揺れる";
+        UI.modeBanner.textContent = "音響モード：ω = 2√(k/m)|sin(ka/2)| の低 k 側";
+      } else if (vibrMode === "acoustic") {
+        UI.vizSub.textContent = "双原子鎖 · 音響モード — 青と赤がほぼ同じ向きに揺れる";
+        UI.modeBanner.textContent = "音響枝 ω₋：分散曲線の下側";
+      } else {
+        UI.vizSub.textContent = "双原子鎖 · 光学モード — 隣り合う原子が逆向きに揺れる";
+        UI.modeBanner.textContent = "光学枝 ω₊：k=0 付近（赤い曲線の左端）";
+      }
+      updateFormulas();
+    }
+
+    // 原子 n の変位 — 式 u_n(t) = A sin(ωt − kna) と連動
+    function displacement(n, t) {
+      const { k, omega, valid } = currentKOmega();
+      const A = 14;
+      if (!valid) return 0;
+      if (chainType === "mono" || vibrMode === "acoustic") {
+        return A * Math.sin(omega * t - k * n * PHYS.a);
+      }
+      // 光学モード：k≈0 で部分格子が逆向き
+      const sign = n % 2 === 0 ? 1 : -1;
+      return sign * A * Math.sin(omega * t - k * n * PHYS.a);
+    }
+
+    function atomStyle(i) {
+      if (chainType === "mono") {
+        return { color: "#38bdf8", radius: 11, label: "m" };
+      }
+      const isM1 = i % 2 === 0;
+      return isM1
+        ? { color: "#38bdf8", radius: 10, label: "m₁" }
+        : { color: "#f87171", radius: 13, label: "m₂" };
+    }
+
+    function resizeCanvas(c) {
+      const rect = c.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(180, Math.round(rect.height));
+      if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+        c.width = Math.round(w * dpr);
+        c.height = Math.round(h * dpr);
+      }
+      return { w, h, dpr };
+    }
+
+    function drawChain(t) {
+      const { w, h, dpr } = resizeCanvas(chainCanvas);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0a1420");
+      bg.addColorStop(1, "#060c14");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const padX = w * 0.06;
+      const cy = h * 0.52;
+      const span = w - padX * 2;
+      const spacing = span / (N_ATOMS - 1);
+      const frozen = chainType === "mono" && vibrMode === "optical";
+
+      const positions = [];
+      for (let i = 0; i < N_ATOMS; i += 1) {
+        const x0 = padX + i * spacing;
+        const u = frozen ? 0 : displacement(i, t);
+        positions.push({ x: x0 + u, y: cy, i });
+      }
+
+      // バネを描画（原子の間を線で結ぶ）
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < N_ATOMS - 1; i += 1) {
+        const a = positions[i];
+        const b = positions[i + 1];
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        // バネのコイル風（簡略）
+        const mid = (a.x + b.x) / 2;
+        ctx.strokeStyle = "rgba(45, 212, 191, 0.25)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(a.x + (b.x - a.x) * 0.2, a.y - 4);
+        ctx.lineTo(mid, cy - 7);
+        ctx.lineTo(b.x - (b.x - a.x) * 0.2, b.y - 4);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
+        ctx.lineWidth = 2;
+      }
+
+      // 原子を描画
+      positions.forEach((p) => {
+        const st = atomStyle(p.i);
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = st.color;
+        const g = ctx.createRadialGradient(p.x - 3, p.y - 3, 1, p.x, p.y, st.radius + 2);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.4, st.color);
+        g.addColorStop(1, st.color);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, st.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 矢印で揺れの向き（中央付近）
+      if (!frozen && playing) {
+        const mid = Math.floor(N_ATOMS / 2);
+        const uMid = displacement(mid, t);
+        const dir = uMid >= 0 ? 1 : -1;
+        ctx.strokeStyle = "rgba(94, 234, 212, 0.8)";
+        ctx.fillStyle = "rgba(94, 234, 212, 0.8)";
+        ctx.lineWidth = 2;
+        const ax = positions[mid].x;
+        const ay = positions[mid].y - 28;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + dir * 22, ay);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ax + dir * 22, ay);
+        ctx.lineTo(ax + dir * 16, ay - 5);
+        ctx.lineTo(ax + dir * 16, ay + 5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (frozen) {
+        ctx.fillStyle = "rgba(251, 191, 36, 0.92)";
+        ctx.font = "600 14px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("光学モードは存在しません", w / 2, h * 0.28);
+        ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("「双原子鎖」に切り替えて光学モードを見てください", w / 2, h * 0.28 + 22);
+        ctx.textAlign = "left";
+      }
+
+      ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
+      ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(
+        chainType === "mono" ? `単原子鎖 · N=${N_ATOMS}` : `双原子鎖 · N=${N_ATOMS} (m₁/m₂ 交互)`,
+        12,
+        20
+      );
+    }
+
+    // ω–k 分散関係グラフを描画
+    function drawDispersionGraph() {
+      const { w, h, dpr } = resizeCanvas(dispersionCanvas);
+      dispCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dispCtx.clearRect(0, 0, w, h);
+
+      const padL = 44;
+      const padR = 16;
+      const padT = 24;
+      const padB = 36;
+      const plotW = w - padL - padR;
+      const plotH = h - padT - padB;
+      const kMax = kZoneMax() * 1.02;
+      let omegaMax = 3.2;
+      for (let i = 0; i <= 80; i += 1) {
+        const k = (i / 80) * kMax;
+        omegaMax = Math.max(omegaMax, monoOmega(k), diatomicBranches(k).optical);
+      }
+      omegaMax *= 1.08;
+
+      const toX = (k) => padL + (k / kMax) * plotW;
+      const toY = (om) => padT + plotH - (om / omegaMax) * plotH;
+
+      dispCtx.fillStyle = "#0a1420";
+      dispCtx.fillRect(padL, padT, plotW, plotH);
+
+      dispCtx.strokeStyle = "rgba(148,163,184,0.2)";
+      dispCtx.lineWidth = 1;
+      for (let i = 0; i <= 4; i += 1) {
+        const y = padT + (plotH * i) / 4;
+        dispCtx.beginPath();
+        dispCtx.moveTo(padL, y);
+        dispCtx.lineTo(padL + plotW, y);
+        dispCtx.stroke();
+      }
+
+      dispCtx.strokeStyle = "#64748b";
+      dispCtx.lineWidth = 1.5;
+      dispCtx.beginPath();
+      dispCtx.moveTo(padL, padT);
+      dispCtx.lineTo(padL, padT + plotH);
+      dispCtx.lineTo(padL + plotW, padT + plotH);
+      dispCtx.stroke();
+
+      dispCtx.fillStyle = "#94a3b8";
+      dispCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      dispCtx.textAlign = "center";
+      dispCtx.fillText("波数 k", padL + plotW / 2, h - 6);
+      dispCtx.save();
+      dispCtx.translate(14, padT + plotH / 2);
+      dispCtx.rotate(-Math.PI / 2);
+      dispCtx.fillText("ω", 0, 0);
+      dispCtx.restore();
+      dispCtx.fillText("0", toX(0), padT + plotH + 14);
+      const kEdge = kZoneMax();
+      dispCtx.fillText(
+        chainType === "mono" ? "π/a" : "π/2a",
+        toX(kEdge),
+        padT + plotH + 14
+      );
+
+      // 双原子鎖：2 枝の間を薄く塗ってギャップを示す
+      if (chainType === "diatomic") {
+        dispCtx.fillStyle = "rgba(244, 114, 182, 0.06)";
+        dispCtx.beginPath();
+        for (let i = 0; i <= 80; i += 1) {
+          const k = (i / 80) * kMax;
+          const ya = toY(diatomicBranches(k).acoustic);
+          if (i === 0) dispCtx.moveTo(toX(k), ya);
+          else dispCtx.lineTo(toX(k), ya);
+        }
+        for (let i = 80; i >= 0; i -= 1) {
+          const k = (i / 80) * kMax;
+          dispCtx.lineTo(toX(k), toY(diatomicBranches(k).optical));
+        }
+        dispCtx.closePath();
+        dispCtx.fill();
+      }
+
+      // 単原子鎖（音響のみ）
+      dispCtx.strokeStyle = chainType === "mono" ? "#38bdf8" : "rgba(56,189,248,0.45)";
+      dispCtx.lineWidth = chainType === "mono" ? 2.5 : 1.5;
+      dispCtx.beginPath();
+      for (let i = 0; i <= 100; i += 1) {
+        const k = (i / 100) * kMax;
+        const y = toY(monoOmega(k));
+        if (i === 0) dispCtx.moveTo(toX(k), y);
+        else dispCtx.lineTo(toX(k), y);
+      }
+      dispCtx.stroke();
+
+      // 双原子：音響枝・光学枝
+      if (chainType === "diatomic") {
+        dispCtx.strokeStyle = vibrMode === "acoustic" ? "#38bdf8" : "rgba(56,189,248,0.5)";
+        dispCtx.lineWidth = vibrMode === "acoustic" ? 2.5 : 1.5;
+        dispCtx.beginPath();
+        for (let i = 0; i <= 100; i += 1) {
+          const k = (i / 100) * kMax;
+          const y = toY(diatomicBranches(k).acoustic);
+          if (i === 0) dispCtx.moveTo(toX(k), y);
+          else dispCtx.lineTo(toX(k), y);
+        }
+        dispCtx.stroke();
+
+        dispCtx.strokeStyle = vibrMode === "optical" ? "#f87171" : "rgba(248,113,113,0.45)";
+        dispCtx.lineWidth = vibrMode === "optical" ? 2.5 : 1.5;
+        dispCtx.beginPath();
+        for (let i = 0; i <= 100; i += 1) {
+          const k = (i / 100) * kMax;
+          const y = toY(diatomicBranches(k).optical);
+          if (i === 0) dispCtx.moveTo(toX(k), y);
+          else dispCtx.lineTo(toX(k), y);
+        }
+        dispCtx.stroke();
+      }
+
+      const cur = currentKOmega();
+      if (cur.valid) {
+        const cx = toX(cur.k);
+        const cy = toY(cur.omega);
+        dispCtx.fillStyle = "#fde68a";
+        dispCtx.shadowBlur = 12;
+        dispCtx.shadowColor = "#fde68a";
+        dispCtx.beginPath();
+        dispCtx.arc(cx, cy, 6, 0, Math.PI * 2);
+        dispCtx.fill();
+        dispCtx.shadowBlur = 0;
+        dispCtx.strokeStyle = "rgba(253,230,138,0.5)";
+        dispCtx.setLineDash([4, 4]);
+        dispCtx.beginPath();
+        dispCtx.moveTo(cx, padT);
+        dispCtx.lineTo(cx, padT + plotH);
+        dispCtx.moveTo(padL, cy);
+        dispCtx.lineTo(padL + plotW, cy);
+        dispCtx.stroke();
+        dispCtx.setLineDash([]);
+      }
+
+      dispCtx.textAlign = "left";
+      dispCtx.fillStyle = "#64748b";
+      dispCtx.font = "500 9px Inter, sans-serif";
+      dispCtx.fillText(chainType === "mono" ? "単原子鎖" : "双原子鎖", padL + 4, padT + 12);
+    }
+
+    // 変位 u_n の棒グラフ
+    function drawDisplacementGraph(t) {
+      const { w, h, dpr } = resizeCanvas(displacementCanvas);
+      uCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      uCtx.clearRect(0, 0, w, h);
+
+      const padL = 36;
+      const padR = 12;
+      const padT = 20;
+      const padB = 32;
+      const plotW = w - padL - padR;
+      const plotH = h - padT - padB;
+      const cy = padT + plotH / 2;
+      const barW = plotW / N_ATOMS;
+      const uMax = 16;
+
+      uCtx.fillStyle = "#0a1420";
+      uCtx.fillRect(padL, padT, plotW, plotH);
+
+      uCtx.strokeStyle = "rgba(148,163,184,0.35)";
+      uCtx.lineWidth = 1;
+      uCtx.beginPath();
+      uCtx.moveTo(padL, cy);
+      uCtx.lineTo(padL + plotW, cy);
+      uCtx.stroke();
+
+      uCtx.strokeStyle = "#64748b";
+      uCtx.beginPath();
+      uCtx.moveTo(padL, padT);
+      uCtx.lineTo(padL, padT + plotH);
+      uCtx.lineTo(padL + plotW, padT + plotH);
+      uCtx.stroke();
+
+      uCtx.fillStyle = "#94a3b8";
+      uCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      uCtx.textAlign = "center";
+      uCtx.fillText("原子番号 n", padL + plotW / 2, h - 6);
+      uCtx.save();
+      uCtx.translate(12, padT + plotH / 2);
+      uCtx.rotate(-Math.PI / 2);
+      uCtx.fillText("u_n", 0, 0);
+      uCtx.restore();
+
+      for (let n = 0; n < N_ATOMS; n += 1) {
+        const u = displacement(n, t);
+        const x = padL + n * barW + barW * 0.15;
+        const bw = barW * 0.7;
+        const bh = (u / uMax) * (plotH / 2);
+        const st = atomStyle(n);
+        uCtx.fillStyle = st.color;
+        uCtx.fillRect(x, bh >= 0 ? cy - bh : cy, bw, Math.abs(bh));
+      }
+
+      uCtx.textAlign = "left";
+      uCtx.fillStyle = "#64748b";
+      uCtx.font = "500 9px Inter, sans-serif";
+      const { k, omega } = currentKOmega();
+      uCtx.fillText(
+        `t = ${fmtNum(t, 2)} s　u_n = A sin(ωt − kna)`,
+        padL + 4,
+        padT + 12
+      );
+    }
+
+    function loop(now) {
+      if (playing) {
+        const dt = Math.min((now - lastFrame) / 1000, 0.05);
+        animTime += dt;
+      }
+      lastFrame = now;
+      drawChain(animTime);
+      drawDispersionGraph();
+      drawDisplacementGraph(animTime);
+      requestAnimationFrame(loop);
+    }
+
+    UI.btnMono.addEventListener("click", () => {
+      chainType = "mono";
+      if (vibrMode === "optical") vibrMode = "acoustic";
+      updateUI();
+    });
+
+    UI.btnDiatomic.addEventListener("click", () => {
+      chainType = "diatomic";
+      updateUI();
+    });
+
+    UI.btnAcoustic.addEventListener("click", () => {
+      vibrMode = "acoustic";
+      updateUI();
+    });
+
+    UI.btnOptical.addEventListener("click", () => {
+      vibrMode = "optical";
+      updateUI();
+    });
+
+    UI.btnPlay.addEventListener("click", () => {
+      playing = true;
+      lastFrame = performance.now();
+      updateUI();
+    });
+
+    UI.btnStop.addEventListener("click", () => {
+      playing = false;
+      updateUI();
+    });
+
+    window.addEventListener("resize", () => {
+      drawChain(animTime);
+      drawDispersionGraph();
+      drawDisplacementGraph(animTime);
+    });
+    updateUI();
+    lastFrame = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

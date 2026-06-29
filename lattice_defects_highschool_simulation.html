@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>格子欠陥シミュレーション</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a78bfa;
+      --accent-light: #c4b5fd;
+      --accent-glow: rgba(167, 139, 250, 0.4);
+      --host: #38bdf8;
+      --impurity: #f472b6;
+      --interstitial: #fbbf24;
+      --slate-bg: rgba(12, 18, 32, 0.82);
+      --slate-border: rgba(167, 139, 250, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0f1524 40%, #12182a 75%, #0a0e18 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(1280px, 97vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(139, 92, 246, 0.3));
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.2rem;
+    }
+    h1 {
+      margin: 6px 0 4px;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      font-weight: 700;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 9px 16px;
+      color: #ede9fe;
+      background: rgba(167, 139, 250, 0.14);
+      border: 1px solid rgba(167, 139, 250, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .intro {
+      margin: 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: #ddd6fe;
+      text-align: center;
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 960px) {
+      .main-grid { grid-template-columns: 1fr 0.95fr 1fr; align-items: stretch; }
+    }
+    .panel {
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel-head {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #e9d5ff;
+    }
+    .panel-sub {
+      margin: 4px 0 0;
+      font-size: 0.76rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .canvas-wrap {
+      flex: 1;
+      min-height: min(320px, 42dvh);
+      padding: 8px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 280px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(8, 14, 26, 0.98), rgba(5, 10, 18, 0.99));
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .center-panel { padding: 14px 16px; gap: 12px; }
+    .category-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(255, 255, 255, 0.04);
+      color: #cbd5e1;
+    }
+    .pill.point { border-color: rgba(56, 189, 248, 0.35); color: #7dd3fc; }
+    .pill.line { border-color: rgba(251, 191, 36, 0.35); color: #fde68a; }
+    .pill.plane { border-color: rgba(244, 114, 182, 0.35); color: #f9a8d4; }
+    .defect-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f5f3ff;
+    }
+    .defect-en {
+      margin: 2px 0 0;
+      font-size: 0.78rem;
+      color: #a78bfa;
+      font-weight: 600;
+    }
+    .explain-box {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      font-size: 0.86rem;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+    .explain-box strong { color: #fde68a; }
+    .effect-box {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: #bae6fd;
+    }
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .controls {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+    }
+    .controls h3 {
+      margin: 0 0 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent-light);
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .defect-btn {
+      padding: 10px 14px;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.04);
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .defect-btn:hover {
+      background: rgba(167, 139, 250, 0.12);
+      border-color: rgba(167, 139, 250, 0.35);
+    }
+    .defect-btn.active {
+      background: rgba(167, 139, 250, 0.22);
+      border-color: rgba(167, 139, 250, 0.55);
+      box-shadow: 0 0 18px rgba(167, 139, 250, 0.2);
+      color: #f5f3ff;
+    }
+    .defect-btn.reset {
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #6ee7b7;
+    }
+    .defect-btn.reset:hover { background: rgba(52, 211, 153, 0.1); }
+    .status-bar {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .glossary {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      font-size: 0.8rem;
+      line-height: 1.65;
+      color: #94a3b8;
+    }
+    .glossary dt { font-weight: 700; color: #cbd5e1; margin-top: 6px; }
+    .glossary dt:first-child { margin-top: 0; }
+    .glossary dd { margin: 2px 0 0; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">◇</div>
+      <h1>格子欠陥シミュレーション</h1>
+      <p class="chapter-label">EX章 · 物性 — 理想格子と欠陥のある格子を並べて比較</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <p class="intro">
+      金属や半導体の内部は、原子が<strong>規則正しく並んだ結晶格子</strong>です。
+      しかし現実には「抜け」「入れ替え」「ずれ」などの<strong>格子欠陥</strong>が必ず存在します。
+      左が理想、右が欠陥入り — ボタンで種類を切り替えてください。
+    </p>
+
+    <div class="main-grid">
+      <section class="panel" aria-label="理想的な結晶格子">
+        <div class="panel-head">
+          <h2>① 理想的な結晶格子</h2>
+          <p class="panel-sub">すべての原子が規則正しく並んだ「完璧な」2D正方格子</p>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="idealCanvas" aria-label="理想格子"></canvas>
+        </div>
+      </section>
+
+      <section class="panel center-panel" aria-label="欠陥の説明">
+        <div>
+          <span class="pill point" id="catPill">点欠陥</span>
+          <h2 class="defect-title" id="defectTitle">空孔（vacancy）</h2>
+          <p class="defect-en" id="defectEn">Vacancy — 点欠陥</p>
+        </div>
+        <div class="explain-box" id="defectLook">
+          <strong>見た目：</strong>本来あるはずの原子が1つ抜けている。
+        </div>
+        <div class="effect-box" id="defectEffect">
+          <strong>性質への影響：</strong>金属の電気抵抗が増える。原子が空いた場所へ隣の原子が移動しやすくなり、拡散（じんさん）が起きやすい。
+        </div>
+        <dl class="glossary">
+          <dt>点欠陥</dt>
+          <dd>原子1つぶんの乱れ（空孔・置換・間隙など）</dd>
+          <dt>線欠陥</dt>
+          <dd>原子の並びが線状にずれたもの（転位）</dd>
+          <dt>面欠陥</dt>
+          <dd>向きの違う結晶どうしの境目（粒界）</dd>
+        </dl>
+        <div class="legend-row">
+          <span class="legend-item"><span class="dot" style="background:#38bdf8"></span>母材の原子</span>
+          <span class="legend-item"><span class="dot" style="background:#f472b6"></span>置換原子</span>
+          <span class="legend-item"><span class="dot" style="background:#fbbf24"></span>間隙原子</span>
+          <span class="legend-item"><span class="dot" style="background:rgba(248,113,113,0.9)"></span>欠陥・粒界</span>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="欠陥のある結晶格子">
+        <div class="panel-head">
+          <h2>② 欠陥のある結晶格子</h2>
+          <p class="panel-sub" id="defectPanelSub">空孔を強調表示 — 周りの原子がわずかにゆらぐ</p>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="defectCanvas" aria-label="欠陥入り格子"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <section class="controls">
+      <h3>欠陥の種類を選ぶ</h3>
+      <div class="btn-row" role="group" aria-label="格子欠陥の種類">
+        <button type="button" class="defect-btn active" data-defect="vacancy">空孔</button>
+        <button type="button" class="defect-btn" data-defect="substitutional">置換</button>
+        <button type="button" class="defect-btn" data-defect="interstitial">間隙</button>
+        <button type="button" class="defect-btn" data-defect="dislocation">転位</button>
+        <button type="button" class="defect-btn" data-defect="grainBoundary">粒界</button>
+        <button type="button" class="defect-btn reset" id="resetBtn">理想格子に戻す</button>
+      </div>
+      <p class="status-bar" id="statusBar">空孔 — 原子が1つ欠けた状態を表示中</p>
+    </section>
+  </div>
+
+  <script>
+    // ── 格子の基本設定（2D 正方格子） ──
+    const COLS = 9;
+    const ROWS = 9;
+    const DEFECT_C = 4;
+    const DEFECT_R = 4;
+    const GRAIN_SPLIT = 4.5;
+
+    const DEFECTS = {
+      ideal: {
+        id: "ideal",
+        title: "理想格子（欠陥なし）",
+        en: "Perfect lattice",
+        category: "point",
+        categoryLabel: "—",
+        look: "すべての原子が等間隔に並んでいます。教科書でよく見る「きれいな格子」です。",
+        effect: "実際の材料はこの理想状態だけではなく、必ずいくつかの欠陥を含みます。",
+        panelSub: "欠陥なし — 左と同じ規則正しい並び",
+        status: "理想格子 — 欠陥なしの状態",
+      },
+      vacancy: {
+        id: "vacancy",
+        title: "空孔（vacancy）",
+        en: "Vacancy — 点欠陥",
+        category: "point",
+        categoryLabel: "点欠陥",
+        look: "本来あるはずの原子が<strong>1つ抜けている</strong>欠陥。右図の中央付近に「穴」があります。",
+        effect: "金属の<strong>電気抵抗</strong>が増える。空いた場所へ隣の原子が入り込みやすくなり、<strong>拡散</strong>（原子の移動）が起きやすい。",
+        panelSub: "空孔を強調 — 周りの原子がわずかに引き寄せられる",
+        status: "空孔 — 原子が1つ欠けた状態",
+      },
+      substitutional: {
+        id: "substitutional",
+        title: "置換型不純物（substitutional）",
+        en: "Substitutional impurity — 点欠陥",
+        category: "point",
+        categoryLabel: "点欠陥",
+        look: "もともとの原子の<strong>代わりに別の種類の原子</strong>（ピンク）が格子点に入っています。",
+        effect: "半導体の<strong>ドーピング</strong>（P や B をシリコンに混ぜる）もこのタイプ。電気の流れ方（導電性）を変えられる。",
+        panelSub: "置換原子 — 周囲の並びが少し歪む",
+        status: "置換 — 異種原子が格子点に入った状態",
+      },
+      interstitial: {
+        id: "interstitial",
+        title: "間隙原子（interstitial）",
+        en: "Interstitial atom — 点欠陥",
+        category: "point",
+        categoryLabel: "点欠陥",
+        look: "本来原子がない<strong>「すきま」</strong>に、小さな原子（黄色）が入り込んでいます。",
+        effect: "鉄に炭素が間隙に入ると<strong>鋼（はがね）が強く</strong>なる。一方、格子が押し広げられて硬さ・脆さのバランスが変わる。",
+        panelSub: "間隙原子 — 近くの原子が押し出される",
+        status: "間隙 — すきまに原子が入った状態",
+      },
+      dislocation: {
+        id: "dislocation",
+        title: "転位（dislocation）",
+        en: "Dislocation — 線欠陥",
+        category: "line",
+        categoryLabel: "線欠陥",
+        look: "原子の並びが<strong>1列分ずれた「線」</strong>があります（赤い破線）。転位が横に動くアニメーションを表示。",
+        effect: "金属が<strong>曲げやすく</strong>なる主な理由。転位が動くことで形を変えても結晶が壊れにくい（塑性変形）。",
+        panelSub: "転位線 — ゆっくり右へ移動する様子",
+        status: "転位 — 線状のずれが動いています",
+      },
+      grainBoundary: {
+        id: "grainBoundary",
+        title: "粒界（grain boundary）",
+        en: "Grain boundary — 面欠陥",
+        category: "plane",
+        categoryLabel: "面欠陥",
+        look: "左側と右側で<strong>結晶の向きが違う</strong>2つの領域（結晶粒）があり、その<strong>境目</strong>が粒界（ピンクの帯）です。",
+        effect: "多くの金属は小さな結晶粒の集まり（多結晶）。粒界で<strong>電気抵抗</strong>が増え、<strong>強度</strong>や腐食のされ方も変わる。",
+        panelSub: "粒界 — 向きの違う2つの結晶が接している",
+        status: "粒界 — 結晶粒どうしの境界",
+      },
+    };
+
+    let currentDefect = "vacancy";
+    let animTime = 0;
+    let dislocationShift = 0;
+
+    const idealCanvas = document.getElementById("idealCanvas");
+    const defectCanvas = document.getElementById("defectCanvas");
+    const idealCtx = idealCanvas.getContext("2d");
+    const defectCtx = defectCanvas.getContext("2d");
+
+    function latticeMetrics(w, h) {
+      const pad = Math.min(w, h) * 0.1;
+      const spanX = w - pad * 2;
+      const spanY = h - pad * 2;
+      const spacing = Math.min(spanX / (COLS - 1), spanY / (ROWS - 1));
+      const gridW = spacing * (COLS - 1);
+      const gridH = spacing * (ROWS - 1);
+      const ox = (w - gridW) / 2;
+      const oy = (h - gridH) / 2;
+      return { spacing, ox, oy, w, h };
+    }
+
+    // 理想格子の原子位置を計算
+    function basePosition(c, r, m, extra = {}) {
+      const x = m.ox + c * m.spacing;
+      const y = m.oy + r * m.spacing;
+      return { c, r, x, y, ...extra };
+    }
+
+    function buildIdealAtoms(m) {
+      const atoms = [];
+      for (let r = 0; r < ROWS; r += 1) {
+        for (let c = 0; c < COLS; c += 1) {
+          atoms.push(basePosition(c, r, m, {
+            kind: "host",
+            radius: m.spacing * 0.22,
+            color: "#38bdf8",
+          }));
+        }
+      }
+      return atoms;
+    }
+
+    // 欠陥モードに応じて原子リストを作る
+    function buildDefectAtoms(m, mode, t) {
+      const atoms = [];
+      const wobble = (c, r, amp) => ({
+        dx: Math.sin(t * 2.2 + c * 0.7 + r * 0.5) * amp,
+        dy: Math.cos(t * 1.9 + r * 0.6 + c * 0.4) * amp,
+      });
+
+      if (mode === "ideal") {
+        return buildIdealAtoms(m);
+      }
+
+      if (mode === "vacancy") {
+        for (let r = 0; r < ROWS; r += 1) {
+          for (let c = 0; c < COLS; c += 1) {
+            if (c === DEFECT_C && r === DEFECT_R) continue; // ここで空孔を描画（原子を置かない）
+            const near = Math.abs(c - DEFECT_C) + Math.abs(r - DEFECT_R) <= 2;
+            const w = near ? wobble(c, r, m.spacing * 0.045) : { dx: 0, dy: 0 };
+            atoms.push(basePosition(c, r, m, {
+              kind: "host",
+              radius: m.spacing * 0.22,
+              color: "#38bdf8",
+              dx: w.dx,
+              dy: w.dy,
+              highlightRing: near,
+            }));
+          }
+        }
+        atoms.vacancy = basePosition(DEFECT_C, DEFECT_R, m);
+        return atoms;
+      }
+
+      if (mode === "substitutional") {
+        for (let r = 0; r < ROWS; r += 1) {
+          for (let c = 0; c < COLS; c += 1) {
+            const isImp = c === DEFECT_C && r === DEFECT_R;
+            const near = Math.abs(c - DEFECT_C) + Math.abs(r - DEFECT_R) <= 2;
+            const w = near ? wobble(c, r, m.spacing * 0.035) : { dx: 0, dy: 0 };
+            atoms.push(basePosition(c, r, m, {
+              kind: isImp ? "impurity" : "host",
+              radius: m.spacing * (isImp ? 0.24 : 0.22),
+              color: isImp ? "#f472b6" : "#38bdf8",
+              dx: w.dx,
+              dy: w.dy,
+            }));
+          }
+        }
+        return atoms;
+      }
+
+      if (mode === "interstitial") {
+        for (let r = 0; r < ROWS; r += 1) {
+          for (let c = 0; c < COLS; c += 1) {
+            const near = (c === DEFECT_C || c === DEFECT_C + 1) && (r === DEFECT_R || r === DEFECT_R + 1);
+            const w = near ? wobble(c, r, m.spacing * 0.04) : { dx: 0, dy: 0 };
+            atoms.push(basePosition(c, r, m, {
+              kind: "host",
+              radius: m.spacing * 0.22,
+              color: "#38bdf8",
+              dx: w.dx,
+              dy: w.dy,
+            }));
+          }
+        }
+        // 格子点の間に間隙原子
+        atoms.push({
+          c: DEFECT_C + 0.5,
+          r: DEFECT_R + 0.5,
+          x: m.ox + (DEFECT_C + 0.5) * m.spacing,
+          y: m.oy + (DEFECT_R + 0.5) * m.spacing,
+          kind: "interstitial",
+          radius: m.spacing * 0.16,
+          color: "#fbbf24",
+          dx: Math.sin(t * 3) * m.spacing * 0.02,
+          dy: Math.cos(t * 2.5) * m.spacing * 0.02,
+        });
+        return atoms;
+      }
+
+      if (mode === "dislocation") {
+        // 転位：特定行より上で列を半分ずらす（エッジ転位の簡略モデル）
+        dislocationShift = (Math.sin(t * 0.55) * 0.5 + 0.5) * m.spacing * 1.2;
+        const slipRow = DEFECT_R;
+        const slipCol = DEFECT_C;
+
+        for (let r = 0; r < ROWS; r += 1) {
+          for (let c = 0; c < COLS; c += 1) {
+            let dx = 0;
+            let dy = 0;
+            if (r <= slipRow && c >= slipCol) {
+              dx = m.spacing * 0.48 + dislocationShift * 0.15;
+            }
+            const nearLine = Math.abs(r - slipRow) <= 1 && Math.abs(c - slipCol) <= 2;
+            if (nearLine) {
+              dx += wobble(c, r, m.spacing * 0.03).dx;
+              dy += wobble(c, r, m.spacing * 0.03).dy;
+            }
+            atoms.push(basePosition(c, r, m, {
+              kind: "host",
+              radius: m.spacing * 0.22,
+              color: "#38bdf8",
+              dx,
+              dy,
+            }));
+          }
+        }
+        atoms.dislocation = {
+          x1: m.ox + slipCol * m.spacing - m.spacing * 0.15,
+          y1: m.oy + slipRow * m.spacing + m.spacing * 0.55,
+          x2: m.ox + slipCol * m.spacing - m.spacing * 0.15 + dislocationShift,
+          y2: m.oy + (slipRow - 2.2) * m.spacing,
+        };
+        return atoms;
+      }
+
+      if (mode === "grainBoundary") {
+        for (let r = 0; r < ROWS; r += 1) {
+          for (let c = 0; c < COLS; c += 1) {
+            const leftGrain = c < GRAIN_SPLIT;
+            const shear = (c - GRAIN_SPLIT) * m.spacing * 0.06;
+            const tilt = leftGrain
+              ? -r * m.spacing * 0.028
+              : r * m.spacing * 0.028 + shear;
+            const nearGb = Math.abs(c - GRAIN_SPLIT) < 0.6;
+            const w = nearGb ? wobble(c, r, m.spacing * 0.05) : { dx: 0, dy: 0 };
+            atoms.push(basePosition(c, r, m, {
+              kind: leftGrain ? "grainA" : "grainB",
+              radius: m.spacing * 0.22,
+              color: leftGrain ? "#38bdf8" : "#22d3ee",
+              dx: w.dx,
+              dy: tilt + w.dy,
+            }));
+          }
+        }
+        atoms.grainBoundary = {
+          x: m.ox + GRAIN_SPLIT * m.spacing - m.spacing * 0.05,
+          y0: m.oy - m.spacing * 0.4,
+          y1: m.oy + (ROWS - 1) * m.spacing + m.spacing * 0.4,
+        };
+        return atoms;
+      }
+
+      return buildIdealAtoms(m);
+    }
+
+    function drawAtom(ctx, atom) {
+      const x = atom.x + (atom.dx || 0);
+      const y = atom.y + (atom.dy || 0);
+      ctx.save();
+      if (atom.highlightRing) {
+        ctx.strokeStyle = "rgba(248, 113, 113, 0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, atom.radius + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const g = ctx.createRadialGradient(x - atom.radius * 0.3, y - atom.radius * 0.3, 1, x, y, atom.radius * 1.4);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.35, atom.color);
+      g.addColorStop(1, atom.color);
+      ctx.fillStyle = g;
+      ctx.shadowBlur = atom.kind === "interstitial" ? 14 : 8;
+      ctx.shadowColor = atom.color;
+      ctx.beginPath();
+      ctx.arc(x, y, atom.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawLattice(ctx, canvas, mode, t) {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(260, Math.round(rect.width));
+      const h = Math.max(260, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0b1528");
+      bg.addColorStop(1, "#070d18");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 10; i += 1) {
+        const gy = (h / 10) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(w, gy);
+        ctx.stroke();
+      }
+
+      const m = latticeMetrics(w, h);
+      const atoms = mode === "ideal" ? buildIdealAtoms(m) : buildDefectAtoms(m, mode, t);
+
+      // 薄い結合線（理想格子のイメージ）
+      ctx.strokeStyle = "rgba(56,189,248,0.08)";
+      ctx.lineWidth = 1;
+      for (let r = 0; r < ROWS; r += 1) {
+        for (let c = 0; c < COLS; c += 1) {
+          const a = atoms.find((at) => at.c === c && at.r === r && at.kind !== "interstitial");
+          if (!a) continue;
+          const x = a.x + (a.dx || 0);
+          const y = a.y + (a.dy || 0);
+          if (c + 1 < COLS) {
+            const b = atoms.find((at) => at.c === c + 1 && at.r === r);
+            if (b) {
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+              ctx.lineTo(b.x + (b.dx || 0), b.y + (b.dy || 0));
+              ctx.stroke();
+            }
+          }
+          if (r + 1 < ROWS) {
+            const b = atoms.find((at) => at.c === c && at.r === r + 1);
+            if (b) {
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+              ctx.lineTo(b.x + (b.dx || 0), b.y + (b.dy || 0));
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      // 空孔：欠けた位置を点線円で表示
+      if (atoms.vacancy) {
+        const v = atoms.vacancy;
+        ctx.save();
+        ctx.strokeStyle = "rgba(248, 113, 113, 0.75)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, m.spacing * 0.24, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(248,113,113,0.15)";
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, m.spacing * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fca5a5";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("空孔", v.x, v.y + m.spacing * 0.55);
+        ctx.textAlign = "left";
+        ctx.restore();
+      }
+
+      // 転位線
+      if (atoms.dislocation) {
+        const d = atoms.dislocation;
+        ctx.save();
+        ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(d.x1, d.y1);
+        ctx.lineTo(d.x2, d.y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#fca5a5";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("転位", d.x2 + 6, d.y2 + 4);
+        ctx.restore();
+      }
+
+      // 粒界
+      if (atoms.grainBoundary) {
+        const gb = atoms.grainBoundary;
+        ctx.save();
+        const band = ctx.createLinearGradient(gb.x - 8, 0, gb.x + 8, 0);
+        band.addColorStop(0, "rgba(244,114,182,0)");
+        band.addColorStop(0.5, "rgba(244,114,182,0.35)");
+        band.addColorStop(1, "rgba(244,114,182,0)");
+        ctx.fillStyle = band;
+        ctx.fillRect(gb.x - 10, gb.y0, 20, gb.y1 - gb.y0);
+        ctx.strokeStyle = "rgba(244, 114, 182, 0.85)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(gb.x, gb.y0);
+        ctx.lineTo(gb.x, gb.y1);
+        ctx.stroke();
+        ctx.fillStyle = "#f9a8d4";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("粒界", gb.x, gb.y0 - 6);
+        ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("左粒", gb.x - m.spacing * 1.6, m.oy + m.spacing);
+        ctx.fillText("右粒", gb.x + m.spacing * 1.6, m.oy + m.spacing * 2);
+        ctx.textAlign = "left";
+        ctx.restore();
+      }
+
+      atoms.forEach((atom) => {
+        if (atom.kind === "interstitial" || atom.kind === "host" || atom.kind === "impurity" || atom.kind === "grainA" || atom.kind === "grainB") {
+          drawAtom(ctx, atom);
+        }
+      });
+
+      ctx.fillStyle = "rgba(148,163,184,0.85)";
+      ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(mode === "ideal" ? "理想格子" : DEFECTS[mode]?.title || "", 12, 20);
+    }
+
+    function updateUI(defectId) {
+      const d = DEFECTS[defectId];
+      if (!d) return;
+      document.getElementById("defectTitle").textContent = d.title;
+      document.getElementById("defectEn").textContent = d.en;
+      document.getElementById("defectLook").innerHTML = `<strong>見た目：</strong>${d.look}`;
+      document.getElementById("defectEffect").innerHTML = `<strong>性質への影響：</strong>${d.effect}`;
+      document.getElementById("defectPanelSub").textContent = d.panelSub;
+      document.getElementById("statusBar").textContent = d.status;
+      const pill = document.getElementById("catPill");
+      pill.textContent = d.categoryLabel;
+      pill.className = "pill";
+      if (d.category === "point") pill.classList.add("point");
+      if (d.category === "line") pill.classList.add("line");
+      if (d.category === "plane") pill.classList.add("plane");
+      document.querySelectorAll(".defect-btn[data-defect]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.defect === defectId);
+      });
+    }
+
+    function setDefect(id) {
+      currentDefect = id;
+      updateUI(id);
+    }
+
+    document.querySelectorAll(".defect-btn[data-defect]").forEach((btn) => {
+      btn.addEventListener("click", () => setDefect(btn.dataset.defect));
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      currentDefect = "ideal";
+      updateUI("ideal");
+      document.querySelectorAll(".defect-btn[data-defect]").forEach((btn) => btn.classList.remove("active"));
+    });
+
+    function animate(now) {
+      animTime = now * 0.001;
+      drawLattice(idealCtx, idealCanvas, "ideal", animTime);
+      const drawMode = currentDefect === "ideal" ? "ideal" : currentDefect;
+      drawLattice(defectCtx, defectCanvas, drawMode, animTime);
+      requestAnimationFrame(animate);
+    }
+
+    setDefect("vacancy");
+    requestAnimationFrame(animate);
+    window.addEventListener("resize", () => {
+      drawLattice(idealCtx, idealCanvas, "ideal", animTime);
+      drawLattice(defectCtx, defectCanvas, currentDefect === "ideal" ? "ideal" : currentDefect, animTime);
+    });
+  </script>
+</body>
+</html>

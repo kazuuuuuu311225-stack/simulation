@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>フィックの法則 — 拡散（高校生物・化学）</title>
+  <title>フィックの法則 — 拡散</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
@@ -92,7 +92,8 @@
     #particleCanvas { height: min(340px,40dvh); min-height: 260px; }
     #concCanvas { height: min(340px,40dvh); min-height: 260px; }
     .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    @media (min-width:640px) { .controls-grid { grid-template-columns: repeat(3,1fr); } }
+    @media (min-width:640px) { .controls-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (min-width:900px) { .controls-grid { grid-template-columns: repeat(4,1fr); } }
     label { display: block; font-size: 0.88rem; color: #e2e8f0; margin-bottom: 5px; font-weight: 500; }
     input[type="range"] { width: 100%; accent-color: var(--accent); height: 8px; }
     .slider-val { font-size: 0.84rem; font-weight: 700; color: #7dd3fc; font-variant-numeric: tabular-nums; }
@@ -164,7 +165,7 @@
     <header class="page-header">
       <div class="hero-icon" aria-hidden="true">〜</div>
       <h2>フィックの法則 — 拡散</h2>
-      <p class="chapter-label">EX章 · 高校生物・化学 — 拡散とフィックの法則</p>
+      <p class="chapter-label">EX章 · 拡散とフィックの法則</p>
       <a id="back" href="index.html">← メニューに戻る</a>
     </header>
 
@@ -191,7 +192,7 @@
         <h4>この画面の見方</h4>
         <ul>
           <li><strong style="color:#22d3ee">左の図</strong>：1 粒ずつ分子を追った「ミクロ」の様子。シアン＝左側由来、オレンジ＝右側由来。</li>
-          <li><strong style="color:#38bdf8">右のグラフ</strong>：位置 x ごとの平均濃度 C の「マクロ」の変化。青太線が第2法則の予測。</li>
+          <li><strong style="color:#38bdf8">右のグラフ</strong>：左の粒子数を x 方向に数えた濃度 C（青太線）。点線は同じ D から求めた第2法則の予測で、両者が連動します。</li>
           <li><strong style="color:#fde68a">黄色の矢印 J</strong>：第1法則で求めた拡散の向きと強さ（勾配が大きいほど J も大きい）。</li>
         </ul>
         <h4>フィックの法則（高校で使う形）</h4>
@@ -206,7 +207,7 @@
           <span class="plain">左が高く右が低いと、左の濃度は下がり右の濃度は上がる → 右グラフの段差がなだらかになる。D や温度を上げると、この変化は速くなります。</span>
         </div>
         <div class="tip">
-          <strong>操作のコツ：</strong>まず「開始」→ D を大きくして右グラフの変化を速くする → 勾配・J が 0 に近づくと「平衡」（濃度がそろった状態）です。
+          <strong>操作のコツ：</strong>まず「開始」→ 速すぎる場合は「再生速度」を下げる → D を上げると広がりは速くなります → 勾配・J が 0 に近づくと「平衡」です。
         </div>
       </div>
     </section>
@@ -245,7 +246,7 @@
       </div>
       <div class="viz-block">
         <p class="viz-label">濃度分布 C(x, t)</p>
-        <p class="viz-legend">青太線＝第2法則 · 点線＝粒子推定 · 塗り＝左/右粒子 · 灰破線＝初期</p>
+        <p class="viz-legend">青太線＝粒子から求めた C(x) · 点線＝第2法則の予測 · 塗り＝左/右粒子 · 灰破線＝開始時</p>
         <canvas id="concCanvas"></canvas>
       </div>
     </div>
@@ -259,6 +260,8 @@
           <span class="slider-val" id="concVal">—</span></label>
         <label>温度<input id="tempSlider" type="range" min="0" max="40" value="20">
           <span class="slider-val" id="tempVal">20 °C</span></label>
+        <label>再生速度<input id="speedSlider" type="range" min="5" max="150" value="25">
+          <span class="slider-val" id="speedVal">0.25×</span></label>
         <div class="btn-row">
           <button type="button" id="startBtn" class="primary">シミュレーション開始</button>
           <button type="button" id="pauseBtn">一時停止</button>
@@ -276,6 +279,7 @@
       "use strict";
 
       const NX = 64;
+      const VIS_SPEED = 0.07;
       const particleCanvas = document.getElementById("particleCanvas");
       const particleCtx = particleCanvas.getContext("2d");
       const concCanvas = document.getElementById("concCanvas");
@@ -284,7 +288,9 @@
       let particles = [];
       let C = new Float64Array(NX);
       let C0 = new Float64Array(NX);
+      let Cfdm = new Float64Array(NX);
       let Cparticle = new Float64Array(NX);
+      let particleProfiles = { total: C, left: new Float64Array(NX), right: new Float64Array(NX) };
       let running = false;
       let paused = false;
       let simTime = 0;
@@ -304,17 +310,35 @@
         return { dBase, concRatio, tempC, tempF, D };
       }
 
-      function initField() {
+      function getPlaybackSpeed() {
+        return Number(document.getElementById("speedSlider").value) / 100;
+      }
+
+      function getConcBounds() {
         const p = getParams();
         const cHigh = 0.55 + p.concRatio * 0.4;
         const cLow = 0.15 + (1 - p.concRatio) * 0.15;
+        return { cHigh, cLow, avg: (cHigh + cLow) / 2 };
+      }
+
+      function binIndex(x) {
+        return Math.max(0, Math.min(NX - 1, Math.round(x * (NX - 1))));
+      }
+
+      function effectiveD() {
+        return getParams().D * VIS_SPEED * VIS_SPEED;
+      }
+
+      function initField() {
+        const { cHigh, cLow } = getConcBounds();
         for (let i = 0; i < NX; i++) {
           const x = i / (NX - 1);
           const v = x < 0.5 ? cHigh : cLow;
           C[i] = v;
           C0[i] = v;
+          Cfdm[i] = v;
         }
-        computeGradAndJ(p.D);
+        computeGradAndJ(effectiveD());
       }
 
       function spawnParticles(n) {
@@ -334,8 +358,7 @@
         particles.forEach((pt) => {
           if (pt.side !== "left") return;
           leftTotal++;
-          const i = Math.max(0, Math.min(NX - 1, Math.floor(pt.x * NX)));
-          hist[i] += 1;
+          hist[binIndex(pt.x)] += 1;
         });
         if (leftTotal < 1) return { hist, leftTotal, max: 1 };
         let max = 0;
@@ -366,7 +389,11 @@
         fluxJ = 0;
         initField();
         spawnParticles(targetCount);
-        particleConcProfile();
+        syncConcFromParticles();
+        for (let i = 0; i < NX; i++) {
+          C0[i] = C[i];
+          Cfdm[i] = C[i];
+        }
         document.getElementById("startBtn").classList.remove("active");
         document.getElementById("pauseBtn").classList.remove("active");
         document.getElementById("pauseBtn").textContent = "一時停止";
@@ -374,39 +401,51 @@
         updateInfo();
       }
 
-      function particleHistogram() {
-        const hist = new Float64Array(NX);
-        particles.forEach((pt) => {
-          const i = Math.max(0, Math.min(NX - 1, Math.floor(pt.x * NX)));
-          hist[i] += 1;
-        });
-        let max = 0;
-        for (let i = 0; i < NX; i++) max = Math.max(max, hist[i]);
-        if (max < 1) return hist;
-        for (let i = 0; i < NX; i++) hist[i] /= max;
-        return hist;
-      }
-
-      function particleConcProfile() {
-        const raw = new Float64Array(NX);
+      function buildParticleBins() {
+        const counts = new Float64Array(NX);
         const left = new Float64Array(NX);
         const right = new Float64Array(NX);
         particles.forEach((pt) => {
-          const i = Math.max(0, Math.min(NX - 1, Math.floor(pt.x * (NX - 1))));
-          raw[i] += 1;
+          const i = binIndex(pt.x);
+          counts[i] += 1;
           if (pt.side === "left") left[i] += 1;
           else right[i] += 1;
         });
-        let max = 0;
-        for (let i = 0; i < NX; i++) max = Math.max(max, raw[i]);
-        const norm = (arr) => {
-          const out = new Float64Array(NX);
-          if (max < 1) return out;
-          for (let i = 0; i < NX; i++) out[i] = arr[i] / max;
-          return out;
+        return {
+          counts: smoothProfile(counts),
+          left: smoothProfile(left),
+          right: smoothProfile(right),
         };
-        Cparticle = norm(raw);
-        return { total: Cparticle, left: norm(left), right: norm(right), max: max || 1 };
+      }
+
+      function countsToConc(smoothedCounts) {
+        const out = new Float64Array(NX);
+        const { avg } = getConcBounds();
+        let mean = 0;
+        for (let i = 0; i < NX; i++) mean += smoothedCounts[i];
+        mean /= NX;
+        if (mean < 1e-6) {
+          for (let i = 0; i < NX; i++) out[i] = avg;
+          return out;
+        }
+        for (let i = 0; i < NX; i++) out[i] = avg * smoothedCounts[i] / mean;
+        return out;
+      }
+
+      function syncConcFromParticles() {
+        const bins = buildParticleBins();
+        const total = countsToConc(bins.counts);
+        const leftC = countsToConc(bins.left);
+        const rightC = countsToConc(bins.right);
+        for (let i = 0; i < NX; i++) C[i] = total[i];
+        Cparticle = total;
+        particleProfiles = { total, left: leftC, right: rightC };
+        computeGradAndJ(effectiveD());
+        return particleProfiles;
+      }
+
+      function particleConcProfile() {
+        return particleProfiles;
       }
 
       function smoothProfile(arr) {
@@ -445,8 +484,7 @@
         return x;
       }
 
-      function fdmStep(dt) {
-        const D = getParams().D;
+      function fdmStep(dt, D, field) {
         if (!Number.isFinite(D) || D <= 0 || dt <= 0) return;
         const dx = 1 / (NX - 1);
         const r = D * dt / (dx * dx);
@@ -458,31 +496,30 @@
           a[i] = -r;
           b[i] = 1 + 2 * r;
           c[i] = -r;
-          rhs[i] = C[i];
+          rhs[i] = field[i];
         }
         b[0] = 1 + 2 * r;
         c[0] = -2 * r;
-        rhs[0] = C[0];
+        rhs[0] = field[0];
         a[NX - 1] = -2 * r;
         b[NX - 1] = 1 + 2 * r;
-        rhs[NX - 1] = C[NX - 1];
+        rhs[NX - 1] = field[NX - 1];
         const next = solveTridiagonal(a, b, c, rhs, NX);
         for (let i = 0; i < NX; i++) {
           const v = next[i];
-          C[i] = Number.isFinite(v) ? Math.max(0, Math.min(1.2, v)) : C[i];
+          field[i] = Number.isFinite(v) ? Math.max(0, Math.min(1.2, v)) : field[i];
         }
-        computeGradAndJ(D);
       }
 
       function stepSimulation(dt) {
-        fdmStep(dt);
         updateParticles(dt);
-        particleConcProfile();
+        syncConcFromParticles();
+        fdmStep(dt, effectiveD(), Cfdm);
       }
 
       function updateParticles(dt) {
         const p = getParams();
-        const step = Math.sqrt(2 * p.D * dt) * 0.035;
+        const step = Math.sqrt(6 * p.D * dt) * VIS_SPEED;
         particles.forEach((pt) => {
           pt.x += (Math.random() - 0.5) * 2 * step;
           pt.y += (Math.random() - 0.5) * 2 * step;
@@ -660,9 +697,9 @@
         const x0 = padL, y0 = padT + plotH;
         const cMax = 1.05;
 
-        const profiles = particleConcProfile();
-        const leftSm = smoothProfile(profiles.left);
-        const rightSm = smoothProfile(profiles.right);
+        const profiles = particleProfiles;
+        const leftSm = profiles.left;
+        const rightSm = profiles.right;
 
         concCtx.fillStyle = "#0a1420";
         concCtx.fillRect(x0, y0 - plotH, plotW, plotH);
@@ -719,12 +756,12 @@
         concCtx.stroke();
         concCtx.setLineDash([]);
 
-        concCtx.strokeStyle = "rgba(125,211,252,0.45)";
+        concCtx.strokeStyle = "rgba(125,211,252,0.55)";
         concCtx.lineWidth = 2;
         concCtx.setLineDash([3, 3]);
         concCtx.beginPath();
         for (let i = 0; i < NX; i++) {
-          const px = xAt(i), py = yAt(profiles.total[i]);
+          const px = xAt(i), py = yAt(Cfdm[i]);
           if (i === 0) concCtx.moveTo(px, py);
           else concCtx.lineTo(px, py);
         }
@@ -779,9 +816,9 @@
 
         const legendY = y0 - plotH + 14;
         const legendItems = [
-          { color: "#38bdf8", text: "━ 第2法則" },
-          { color: "#94a3b8", text: "- - 初期 C₀" },
-          { color: "rgba(125,211,252,0.85)", text: "· · 粒子推定" },
+          { color: "#38bdf8", text: "━ 粒子→C(x)" },
+          { color: "rgba(125,211,252,0.85)", text: "- - 第2法則" },
+          { color: "#94a3b8", text: "- - 開始時" },
           { color: "#22d3ee", text: "▤ 左" },
           { color: "#fb923c", text: "▤ 右" },
         ];
@@ -804,7 +841,7 @@
           concCtx.fillStyle = "rgba(186,230,253,0.85)";
           concCtx.font = "600 12px Inter,sans-serif";
           concCtx.textAlign = "center";
-          concCtx.fillText("開始後、青線が右へ下がり均一化", x0 + plotW / 2, y0 - plotH * 0.45);
+          concCtx.fillText("開始後、青線（粒子）と点線（第2法則）がそろって平坦化", x0 + plotW / 2, y0 - plotH * 0.45);
           concCtx.textAlign = "left";
         }
       }
@@ -822,6 +859,9 @@
         document.getElementById("dVal").textContent = "D = " + p.D.toFixed(2);
         document.getElementById("concVal").textContent = Math.round(p.concRatio * 100) + " %（左優位）";
         document.getElementById("tempVal").textContent = p.tempC.toFixed(0) + " °C";
+        const speed = getPlaybackSpeed();
+        document.getElementById("speedVal").textContent =
+          speed >= 1 ? speed.toFixed(2) + "×" : speed.toFixed(2) + "×（ゆっくり）";
 
         const c = document.getElementById("infoComment");
         if (Math.abs(gradEst) < 0.05 && simTime > 2) {
@@ -831,7 +871,7 @@
         } else if (running && spreadPct > 15) {
           c.textContent = "左由来（シアン）の粒子が右半分に入る割合が増えています。ミクロ（粒子）とマクロ（グラフ）の両方で拡散を確認できます。";
         } else if (running) {
-          c.textContent = "右の青線は第2法則の計算結果。段差がなだらかになるほど、左の高濃度が右へ移っています。";
+          c.textContent = "右の青線は左の粒子数から求めた C(x)。点線は第2法則の予測で、同じ D なので形がそろって変化します。";
         } else {
           c.textContent = "開始前：左が高濃度・右が低濃度。開始すると第1法則の矢印 J の向き（高→低）に物質が流れます。";
         }
@@ -842,8 +882,9 @@
         let dt = Math.min(0.04, (ts - lastTs) / 1000);
         lastTs = ts;
         if (running && !paused) {
-          simTime += dt;
-          stepSimulation(dt);
+          const simDt = dt * getPlaybackSpeed();
+          simTime += simDt;
+          stepSimulation(simDt);
         }
         drawParticles();
         drawConcGraph();
@@ -875,21 +916,29 @@
           particles.push({ x, y: Math.random(), side: fromLeft ? "left" : "right" });
         }
         targetCount = particles.length;
+        syncConcFromParticles();
       });
       document.getElementById("lessBtn").addEventListener("click", () => {
         particles = particles.slice(0, Math.max(100, particles.length - 200));
         targetCount = particles.length;
+        syncConcFromParticles();
       });
       ["dSlider", "concSlider", "tempSlider"].forEach((id) => {
         document.getElementById(id).addEventListener("input", () => {
           if (!running) {
             initField();
             spawnParticles(targetCount);
+            syncConcFromParticles();
+            for (let i = 0; i < NX; i++) {
+              C0[i] = C[i];
+              Cfdm[i] = C[i];
+            }
           }
-          computeGradAndJ(getParams().D);
+          computeGradAndJ(effectiveD());
           updateInfo();
         });
       });
+      document.getElementById("speedSlider").addEventListener("input", updateInfo);
       window.addEventListener("resize", () => {
         clearTimeout(window._fickR);
         window._fickR = setTimeout(() => {

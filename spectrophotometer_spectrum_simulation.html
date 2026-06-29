@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>分光光度計 — 吸収スペクトル</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #14b8a6; --accent-light: #2dd4bf; --accent-glow: rgba(20,184,166,0.45);
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(20,184,166,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0a1218 38%,#0c1818 72%,#0a1010 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1200px,97vw); margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(45,212,191,0.25),rgba(20,184,166,0.3));
+      border: 1px solid rgba(45,212,191,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); text-shadow: 0 0 20px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #ccfbf1;
+      background: rgba(20,184,166,0.14); border: 1px solid rgba(20,184,166,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .intro {
+      border-radius: 14px; padding: 14px 16px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      font-size: 0.86rem; line-height: 1.7; color: #cbd5e1;
+    }
+    .intro p { margin: 0 0 8px; }
+    .flow-guide {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px;
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(20,184,166,0.22);
+      font-size: 0.78rem; font-weight: 600; line-height: 1.5; text-align: center;
+    }
+    .flow-step { padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+    .flow-step.s1 { background: rgba(250,204,21,0.15); color: #fde68a; border: 1px solid rgba(250,204,21,0.3); }
+    .flow-step.s2 { background: rgba(96,165,250,0.15); color: #bfdbfe; border: 1px solid rgba(96,165,250,0.3); }
+    .flow-step.s3 { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.28); }
+    .flow-step.s4 { background: rgba(251,146,60,0.12); color: #fdba74; border: 1px solid rgba(251,146,60,0.28); }
+    .flow-step.s5 { background: rgba(20,184,166,0.15); color: #99f6e4; border: 1px solid rgba(20,184,166,0.3); }
+    .flow-arrow { color: #64748b; }
+    .main-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width:960px) { .main-grid { grid-template-columns: 1.15fr 0.8fr 1.15fr; } }
+    .panel {
+      border-radius: 14px; padding: 12px 14px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .panel h3 { margin: 0 0 6px; font-size: 0.9rem; font-weight: 600; color: var(--accent-light); }
+    .panel-sub { margin: 0 0 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.45; }
+    #animCanvas {
+      display: block; width: 100%; height: min(320px,38dvh); min-height: 240px;
+      border-radius: 12px; background: #060a12;
+      border: 1px solid rgba(20,184,166,0.28);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.55), 0 4px 24px rgba(0,0,0,0.35);
+    }
+    .light-readout { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .light-box {
+      padding: 8px 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .light-box .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 3px; }
+    .light-box .val { font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #fde68a; }
+    .light-box.trans .val { color: #7dd3fc; }
+    .center-panel { text-align: center; }
+    .lambda-display {
+      width: 72px; height: 72px; margin: 0 auto 10px; border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.25);
+      box-shadow: 0 0 24px rgba(255,255,255,0.15);
+    }
+    .lambda-val { font-size: clamp(1.6rem,4vw,2.2rem); font-weight: 700; color: #99f6e4; font-variant-numeric: tabular-nums; }
+    .lambda-unit { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+    .absorb-val {
+      margin-top: 14px; font-size: clamp(2.2rem,6vw,3rem); font-weight: 700;
+      color: #5eead4; text-shadow: 0 0 24px var(--accent-glow); font-variant-numeric: tabular-nums;
+    }
+    .absorb-label { font-size: 0.82rem; color: var(--muted); }
+    .formula-box {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px; text-align: left;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(20,184,166,0.2);
+      font-size: 0.78rem; line-height: 1.55; color: #cbd5e1;
+    }
+    .formula-box strong { color: #99f6e4; }
+    .chart-wrap { flex: 1; min-height: 240px; position: relative; }
+    .chart-wrap canvas { max-height: min(300px,36dvh); }
+    .peak-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .peak-tag {
+      padding: 4px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+      background: rgba(20,184,166,0.12); border: 1px solid rgba(45,212,191,0.3); color: #99f6e4;
+    }
+    .info-panel { border-radius: 14px; padding: 12px 14px; background: var(--slate-bg); border: 1px solid var(--slate-border); }
+    .info-panel h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--accent-light); }
+    .info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+    @media (min-width:720px) { .info-grid { grid-template-columns: repeat(3,1fr); } }
+    .info-item {
+      padding: 9px 11px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(20,184,166,0.16);
+    }
+    .info-item .label { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 3px; }
+    .info-item .val { font-size: 0.84rem; font-weight: 700; color: #f1f5f9; font-variant-numeric: tabular-nums; line-height: 1.35; }
+    .comment-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(20,184,166,0.1); border: 1px solid rgba(45,212,191,0.25);
+      font-size: 0.82rem; line-height: 1.65; color: #99f6e4;
+    }
+    .controls-panel { border-radius: 14px; padding: 14px 16px; background: var(--slate-bg); border: 1px solid var(--slate-border); }
+    .controls-panel h3 { margin: 0 0 10px; font-size: 0.92rem; color: var(--accent-light); }
+    .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width:640px) { .controls-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (min-width:960px) { .controls-grid { grid-template-columns: repeat(4,1fr); } }
+    label { display: block; font-size: 0.84rem; font-weight: 500; color: #e2e8f0; margin-bottom: 5px; }
+    select, input[type="range"] { width: 100%; }
+    select {
+      padding: 10px 12px; border-radius: 10px; font-family: inherit; font-size: 0.86rem;
+      color: #e2e8f0; background: rgba(255,255,255,0.07); border: 1px solid rgba(20,184,166,0.35);
+    }
+    input[type="range"] { accent-color: var(--accent); height: 8px; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #5eead4; font-variant-numeric: tabular-nums; }
+    .label-hint { display: block; margin-top: 3px; font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+    .btn-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn-row button {
+      flex: 1 1 calc(33% - 6px); min-height: 46px; padding: 10px; font-family: inherit;
+      font-size: 0.84rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(20,184,166,0.35); background: rgba(255,255,255,0.07); color: #e2e8f0;
+    }
+    .btn-row button.primary {
+      background: linear-gradient(135deg,#0d9488,#14b8a6); color: #fff; border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .btn-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #statusMsg {
+      grid-column: 1 / -1; margin: 0; padding: 10px 12px; border-radius: 10px;
+      font-size: 0.82rem; text-align: center; line-height: 1.55;
+      background: rgba(20,184,166,0.12); color: #99f6e4;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">📈</div>
+      <h2>分光光度計 — 吸収スペクトル</h2>
+      <p class="chapter-label">EX章 · 波長を走査して A(λ) を測る</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="intro">
+      <p>
+        <strong style="color:#99f6e4">分光光度計</strong>は、光を<strong style="color:#fde68a">1 色ずつ</strong>試料に当て、
+        波長ごとの吸光度 <strong>A(λ)</strong> を測ります。得られた
+        <strong style="color:#7dd3fc">吸収スペクトル</strong>は物質の「指紋」のようなものです。
+      </p>
+      <p>濃度を上げるとスペクトル全体が<strong style="color:#fde68a">縦に伸びる</strong>（A ∝ c）様子も確認できます。</p>
+    </section>
+
+    <div class="flow-guide">
+      <span class="flow-step s1">光源</span><span class="flow-arrow">→</span>
+      <span class="flow-step s2">分光器</span><span class="flow-arrow">→</span>
+      <span class="flow-step s3">試料</span><span class="flow-arrow">→</span>
+      <span class="flow-step s4">検出器</span><span class="flow-arrow">→</span>
+      <span class="flow-step s5">A(λ) スペクトル</span>
+    </div>
+
+    <div class="main-grid">
+      <section class="panel">
+        <h3>① 分光光度計（光路）</h3>
+        <p class="panel-sub">白い光 → 選んだ λ だけ通す → 試料で吸収 → 残りを検出</p>
+        <canvas id="animCanvas" width="640" height="320" aria-label="光路アニメーション"></canvas>
+        <div class="light-readout">
+          <div class="light-box"><span class="lbl">I₀(λ)</span><span class="val" id="dispI0">100</span></div>
+          <div class="light-box trans"><span class="lbl">I(λ)</span><span class="val" id="dispI">—</span></div>
+        </div>
+      </section>
+
+      <section class="panel center-panel">
+        <h3>② いま測っている波長</h3>
+        <p class="panel-sub">スキャン中は λ が 200→800 nm まで動きます</p>
+        <div class="lambda-display" id="lambdaSwatch" title="いまの光の色"></div>
+        <div class="lambda-val" id="dispLambda">340</div>
+        <div class="lambda-unit">nm（ナノメートル）</div>
+        <div class="absorb-label" style="margin-top:16px">吸光度 A(λ)</div>
+        <div class="absorb-val" id="dispA">0.000</div>
+        <div class="formula-box">
+          <strong>A(λ) = −log₁₀(I/I₀) = ε(λ)·c·l</strong><br>
+          l = 1 cm 固定 · 濃度 c を上げると全波長で A が比例して増える
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>③ 吸収スペクトル A(λ)</h3>
+        <p class="panel-sub">横軸＝波長、縦軸＝吸光度。峰の位置が λ<sub>max</sub></p>
+        <div class="chart-wrap"><canvas id="spectrumChart"></canvas></div>
+        <div class="peak-tags" id="peakTags"></div>
+      </section>
+    </div>
+
+    <section class="info-panel">
+      <h3>測定情報</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">分野</span><span class="val" id="infoCategory">—</span></div>
+        <div class="info-item"><span class="label">物質</span><span class="val" id="infoMaterial">—</span></div>
+        <div class="info-item"><span class="label">波長 λ</span><span class="val" id="infoLambda">—</span></div>
+        <div class="info-item"><span class="label">A(λ)</span><span class="val" id="infoA">—</span></div>
+        <div class="info-item"><span class="label">濃度 c</span><span class="val" id="infoConc">—</span></div>
+        <div class="info-item"><span class="label">λ<sub>max</sub></span><span class="val" id="infoLmax">—</span></div>
+        <div class="info-item"><span class="label">モード</span><span class="val" id="infoMode">—</span></div>
+      </div>
+      <div class="comment-box" id="infoComment">—</div>
+    </section>
+
+    <section class="controls-panel">
+      <h3>操作</h3>
+      <div class="controls-grid">
+        <label>物質
+          <select id="materialSelect"></select>
+          <span class="label-hint">分野別に 24 種類から選択</span>
+        </label>
+        <label>濃度 c（µM）
+          <input type="range" id="concSlider" min="0" max="1000" value="400" step="1">
+          <span class="slider-val" id="concVal">40.0 µM</span>
+          <span class="label-hint" id="concHint">0〜100 µM</span>
+        </label>
+        <label>単一波長用 λ（nm）
+          <input type="range" id="lambdaSlider" min="200" max="800" value="340" step="1">
+          <span class="slider-val" id="lambdaVal">340 nm</span>
+          <span class="label-hint">「単一波長測定」でこの λ を使います</span>
+        </label>
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnScan">スペクトルスキャン開始</button>
+          <button type="button" id="btnSingle">単一波長測定</button>
+          <button type="button" id="btnReset">リセット</button>
+        </div>
+        <p id="statusMsg">「スペクトルスキャン開始」で 200〜800 nm を走査し、右のグラフが描かれます。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const PATH_LEN = 1;
+    const UM_TO_MOL = 1e-6;
+    const LAMBDA_MIN = 200;
+    const LAMBDA_MAX = 800;
+    const LAMBDA_STEP = 2;
+    const I0 = 100;
+
+    const MATERIAL_CATEGORIES = [
+      {
+        label: "生化学・分子生物学",
+        items: ["tryptophan", "tyrosine", "fad", "nadh", "atp", "dna"],
+      },
+      {
+        label: "光合成・植物科学",
+        items: ["chlorophyll_a", "chlorophyll_b", "carotene", "anthocyanin"],
+      },
+      {
+        label: "医療・生体分析",
+        items: ["hemoglobin", "bilirubin", "myoglobin"],
+      },
+      {
+        label: "化学反応・環境分析",
+        items: ["permanganate", "dichromate", "phenol", "nitrobenzene"],
+      },
+      {
+        label: "材料科学・ナノ材料",
+        items: ["agnp", "aunp", "tio2", "zno"],
+      },
+      {
+        label: "食品・化粧品",
+        items: ["caffeine", "riboflavin", "curcumin"],
+      },
+    ];
+
+    const MATERIALS = {
+      tryptophan: {
+        name: "トリプトファン",
+        category: "生化学・分子生物学",
+        concMaxUm: 80,
+        defaultConcUm: 30,
+        peaks: [{ nm: 280, sigma: 20, eps: 5600, label: "280 nm" }],
+        lmaxNote: "λmax 280 nm — タンパク質 UV 吸収の主因",
+        comment: "芳香族アミノ酸。タンパク質はトリプトファン・チロシン・フェニルアラニンが 280 nm 付近で吸収し、純度チェックに使われます。",
+      },
+      tyrosine: {
+        name: "チロシン",
+        category: "生化学・分子生物学",
+        concMaxUm: 100,
+        defaultConcUm: 40,
+        peaks: [{ nm: 275, sigma: 18, eps: 1400, label: "275 nm" }],
+        lmaxNote: "λmax 275 nm — トリプトファンとともにタンパク質吸収を構成",
+        comment: "トリプトファンより ε は小さいが、タンパク質の UV 吸収に重要なアミノ酸です。",
+      },
+      fad: {
+        name: "FAD（フラビンアデニンジヌクレオチド）",
+        category: "生化学・分子生物学",
+        concMaxUm: 40,
+        defaultConcUm: 15,
+        peaks: [{ nm: 450, sigma: 32, eps: 11300, label: "450 nm（黄）" }],
+        lmaxNote: "λmax 450 nm — 黄色の補酵素",
+        comment: "酸化還元酵素の補酵素。光に弱く分解しやすいため、測定は素早く行います。",
+      },
+      nadh: {
+        name: "NADH",
+        category: "生化学・分子生物学",
+        concMaxUm: 100,
+        defaultConcUm: 40,
+        peaks: [{ nm: 340, sigma: 22, eps: 6220, label: "340 nm" }],
+        lmaxNote: "λmax 340 nm — 酵素反応の“王様”",
+        comment: "生化学実験で最もよく使われる指標の一つ。340 nm の吸光度で酵素反応の進みを追います。",
+      },
+      atp: {
+        name: "ATP",
+        category: "生化学・分子生物学",
+        concMaxUm: 50,
+        defaultConcUm: 20,
+        peaks: [{ nm: 259, sigma: 18, eps: 15400, label: "259 nm" }],
+        lmaxNote: "λmax 259 nm — 核酸系と似た吸収",
+        comment: "アデニン部分が UV を吸収。核酸（DNA/RNA）と近い波長域にピークがあります。",
+      },
+      dna: {
+        name: "DNA / RNA",
+        category: "生化学・分子生物学",
+        concMaxUm: 60,
+        defaultConcUm: 25,
+        peaks: [{ nm: 260, sigma: 18, eps: 6600, label: "260 nm" }],
+        lmaxNote: "λmax 260 nm — 核酸濃度の標準",
+        comment: "A260 で核酸量を測定。A260/A280 の比でタンパク質混入（純度）を評価します。",
+      },
+      chlorophyll_a: {
+        name: "クロロフィル a",
+        category: "光合成・植物科学",
+        concMaxUm: 15,
+        defaultConcUm: 8,
+        peaks: [
+          { nm: 430, sigma: 28, eps: 90000, label: "430 nm（青）" },
+          { nm: 660, sigma: 32, eps: 75000, label: "660 nm（赤）" },
+        ],
+        lmaxNote: "430 / 660 nm の二峰 — 光合成の主色素",
+        comment: "青と赤を強く吸収し緑を反射するため、葉が緑に見えます。光合成の中心色素です。",
+      },
+      chlorophyll_b: {
+        name: "クロロフィル b",
+        category: "光合成・植物科学",
+        concMaxUm: 15,
+        defaultConcUm: 8,
+        peaks: [
+          { nm: 453, sigma: 28, eps: 85000, label: "453 nm（青）" },
+          { nm: 642, sigma: 30, eps: 70000, label: "642 nm（赤）" },
+        ],
+        lmaxNote: "453 / 642 nm — クロロフィル a より少しシフト",
+        comment: "クロロフィル a と似た二峰性ですが、ピーク位置がやや青側・赤側にずれます。",
+      },
+      carotene: {
+        name: "β-カロテン（カロテノイド）",
+        category: "光合成・植物科学",
+        concMaxUm: 30,
+        defaultConcUm: 12,
+        peaks: [{ nm: 450, sigma: 38, eps: 105000, label: "450 nm" }],
+        lmaxNote: "λmax 450 nm — 光合成補助色素",
+        comment: "青〜緑を吸収してオレンジ色に見えます。光合成で光エネルギーをクロロフィルへ伝えます。",
+      },
+      anthocyanin: {
+        name: "アントシアニン",
+        category: "光合成・植物科学",
+        concMaxUm: 40,
+        defaultConcUm: 15,
+        peaks: [{ nm: 530, sigma: 42, eps: 38000, label: "520–540 nm（赤紫）" }],
+        lmaxNote: "λmax 520–540 nm — pH で色が変わる",
+        comment: "酸性で赤、中性で紫、アルカリ性で青に変化。ベリー類や紅葉の色素です（本 sim では代表波長 530 nm）。",
+      },
+      hemoglobin: {
+        name: "ヘモグロビン（Hb）",
+        category: "医療・生体分析",
+        concMaxUm: 20,
+        defaultConcUm: 8,
+        peaks: [
+          { nm: 415, sigma: 18, eps: 125000, label: "415 nm（Soret）" },
+          { nm: 540, sigma: 22, eps: 14000, label: "540 nm" },
+          { nm: 575, sigma: 22, eps: 12000, label: "575 nm" },
+        ],
+        lmaxNote: "415 nm（Soret）＋ 540 / 575 nm の小ピーク",
+        comment: "酸素結合（酸素化 Hb）と非結合（デオキシ Hb）でスペクトル形状が変わり、血中酸素測定に関わります。",
+      },
+      bilirubin: {
+        name: "ビリルビン",
+        category: "医療・生体分析",
+        concMaxUm: 25,
+        defaultConcUm: 10,
+        peaks: [{ nm: 450, sigma: 35, eps: 48000, label: "450 nm" }],
+        lmaxNote: "λmax 450 nm — 黄疸の指標",
+        comment: "赤血球の分解産物。血中濃度が上がると黄疸となり、450 nm 付近の吸収で定量されます。",
+      },
+      myoglobin: {
+        name: "ミオグロビン",
+        category: "医療・生体分析",
+        concMaxUm: 25,
+        defaultConcUm: 10,
+        peaks: [{ nm: 409, sigma: 20, eps: 98000, label: "409 nm（Soret）" }],
+        lmaxNote: "λmax 409 nm — 筋肉の酸素貯蔵タンパク",
+        comment: "ヘモグロビンに似たヘム色素。酸素結合状態で Soret 帯の形状が変化します。",
+      },
+      permanganate: {
+        name: "過マンガン酸イオン（MnO₄⁻）",
+        category: "化学反応・環境分析",
+        concMaxUm: 50,
+        defaultConcUm: 20,
+        peaks: [{ nm: 525, sigma: 30, eps: 2400, label: "525 nm（紫）" }],
+        lmaxNote: "λmax 525 nm — 紫色の酸化剤",
+        comment: "滴定や反応追跡に使われる強力な酸化剤。紫の色は 525 nm 付近の吸収によるものです。",
+      },
+      dichromate: {
+        name: "二クロム酸イオン（Cr₂O₇²⁻）",
+        category: "化学反応・環境分析",
+        concMaxUm: 40,
+        defaultConcUm: 15,
+        peaks: [
+          { nm: 350, sigma: 25, eps: 3200, label: "350 nm" },
+          { nm: 450, sigma: 32, eps: 1800, label: "450 nm（橙）" },
+        ],
+        lmaxNote: "350 / 450 nm — 橙色の酸化剤",
+        comment: "環境分析や COD 測定などに使われる。Cr(VI) の橙黄色は可視域吸収のためです。",
+      },
+      phenol: {
+        name: "フェノール類",
+        category: "化学反応・環境分析",
+        concMaxUm: 80,
+        defaultConcUm: 30,
+        peaks: [{ nm: 270, sigma: 20, eps: 1300, label: "270 nm" }],
+        lmaxNote: "λmax 270 nm — 水質汚濁の指標",
+        comment: "河川・排水の有機汚染指標の一つ。芳香族 OH 基が UV を吸収します。",
+      },
+      nitrobenzene: {
+        name: "ニトロベンゼン",
+        category: "化学反応・環境分析",
+        concMaxUm: 50,
+        defaultConcUm: 18,
+        peaks: [{ nm: 350, sigma: 28, eps: 9500, label: "350 nm（黄）" }],
+        lmaxNote: "λmax 350 nm — 黄色の化合物",
+        comment: "環境化学・工業排水分析の対象。ニトロ基が可視〜UV 吸収を与えます。",
+      },
+      agnp: {
+        name: "銀ナノ粒子（AgNP）",
+        category: "材料科学・ナノ材料",
+        concMaxUm: 5,
+        defaultConcUm: 2,
+        peaks: [{ nm: 400, sigma: 35, eps: 420000, label: "400 nm（プラズモン）" }],
+        lmaxNote: "λmax ≈400 nm — 表面プラズモン共鳴",
+        comment: "粒径が大きいほどピークは赤側へシフト。ナノ材料の定番的な UV-Vis シグナルです。",
+      },
+      aunp: {
+        name: "金ナノ粒子（AuNP）",
+        category: "材料科学・ナノ材料",
+        concMaxUm: 5,
+        defaultConcUm: 2,
+        peaks: [{ nm: 520, sigma: 38, eps: 380000, label: "520 nm（赤）" }],
+        lmaxNote: "λmax ≈520 nm — 表面プラズモン共鳴",
+        comment: "凝集するとピークが赤〜近赤外側へシフト（色が青みがかる）。医療診断・センサーに利用。",
+      },
+      tio2: {
+        name: "酸化チタン（TiO₂）",
+        category: "材料科学・ナノ材料",
+        concMaxUm: 200,
+        defaultConcUm: 50,
+        peaks: [{ nm: 330, sigma: 40, eps: 8500, label: "330 nm" }],
+        lmaxNote: "λmax 330 nm 付近 — UV 吸収",
+        comment: "光触媒（太陽光で反応を促進）や UV カットコーティングに使われます。",
+      },
+      zno: {
+        name: "酸化亜鉛（ZnO）",
+        category: "材料科学・ナノ材料",
+        concMaxUm: 200,
+        defaultConcUm: 50,
+        peaks: [{ nm: 360, sigma: 38, eps: 7200, label: "360 nm" }],
+        lmaxNote: "λmax 360 nm 付近 — UV 吸収",
+        comment: "日焼け止め・化粧品の UV カット、光触媒材料として広く使われます。",
+      },
+      caffeine: {
+        name: "カフェイン",
+        category: "食品・化粧品",
+        concMaxUm: 100,
+        defaultConcUm: 35,
+        peaks: [{ nm: 273, sigma: 18, eps: 9800, label: "273 nm" }],
+        lmaxNote: "λmax 273 nm — 飲料分析",
+        comment: "コーヒー・お茶・エナジードリンクなどの UV 定量分析に使われます。",
+      },
+      riboflavin: {
+        name: "ビタミン B2（リボフラビン）",
+        category: "食品・化粧品",
+        concMaxUm: 40,
+        defaultConcUm: 15,
+        peaks: [
+          { nm: 450, sigma: 30, eps: 12500, label: "450 nm（黄）" },
+          { nm: 370, sigma: 22, eps: 6000, label: "370 nm" },
+        ],
+        lmaxNote: "λmax 450 nm — 黄色、光劣化しやすい",
+        comment: "FAD の前駆体に近い蛍光色素。光に当てると分解しやすいため遮光保存します。",
+      },
+      curcumin: {
+        name: "クルクミン（ターメリック）",
+        category: "食品・化粧品",
+        concMaxUm: 35,
+        defaultConcUm: 12,
+        peaks: [{ nm: 425, sigma: 40, eps: 55000, label: "425 nm（黄）" }],
+        lmaxNote: "λmax 425 nm — pH で色が変わる",
+        comment: "ターメリック（ウコン）の黄色成分。抗酸化作用が知られ、pH で吸収・色が変化します。",
+      },
+    };
+
+    function fillMaterialSelect() {
+      const sel = document.getElementById("materialSelect");
+      sel.innerHTML = "";
+      MATERIAL_CATEGORIES.forEach((cat) => {
+        const grp = document.createElement("optgroup");
+        grp.label = cat.label;
+        cat.items.forEach((id) => {
+          const m = MATERIALS[id];
+          const opt = document.createElement("option");
+          opt.value = id;
+          const peaks = m.peaks.map((p) => `${p.nm} nm`).join(" / ");
+          opt.textContent = `${m.name}（${peaks}）`;
+          grp.appendChild(opt);
+        });
+        sel.appendChild(grp);
+      });
+    }
+
+    let materialId = "nadh";
+    let concMaxUm = 100;
+    let concentrationUm = 40;
+    let currentLambda = 340;
+    let scanData = [];
+    let scanning = false;
+    let scanIndex = 0;
+    let mode = "idle";
+    let photons = [];
+    let animTime = 0;
+    let spectrumChart = null;
+
+    const canvas = document.getElementById("animCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function gaussianEps(lambda, peak) {
+      const d = (lambda - peak.nm) / peak.sigma;
+      return peak.eps * Math.exp(-0.5 * d * d);
+    }
+
+    function epsilonAt(lambda) {
+      const mat = MATERIALS[materialId];
+      return mat.peaks.reduce((s, p) => s + gaussianEps(lambda, p), 0);
+    }
+
+    function absorbanceAt(lambda, cUm = concentrationUm) {
+      const cMol = cUm * UM_TO_MOL;
+      return epsilonAt(lambda) * cMol * PATH_LEN;
+    }
+
+    function transmissionFromA(A) {
+      return Math.pow(10, -A);
+    }
+
+    function computeAtLambda(lambda) {
+      const A = absorbanceAt(lambda);
+      const T = transmissionFromA(A);
+      const I = I0 * T;
+      return { A, T, I };
+    }
+
+    function buildFullSpectrum(cUm = concentrationUm) {
+      const pts = [];
+      for (let lm = LAMBDA_MIN; lm <= LAMBDA_MAX; lm += LAMBDA_STEP) {
+        pts.push({ x: lm, y: absorbanceAt(lm, cUm) });
+      }
+      return pts;
+    }
+
+    function nmToRGB(nm) {
+      if (nm < 380) {
+        const t = Math.max(0, Math.min(1, (nm - 280) / 100));
+        return { r: Math.round(80 + 100 * t), g: 0, b: Math.round(180 + 50 * t) };
+      }
+      let r = 0, g = 0, b = 0;
+      if (nm < 440) {
+        const t = (nm - 380) / 60;
+        r = Math.round(130 * (1 - t) + 20);
+        g = Math.round(60 * t);
+        b = Math.round(200 + 55 * t);
+      } else if (nm <= 490) { g = (nm - 440) / 50 * 255; b = 255; }
+      else if (nm <= 510) { g = 255; b = (510 - nm) / 20 * 255; }
+      else if (nm <= 580) { r = (nm - 510) / 70 * 255; g = 255; }
+      else if (nm <= 645) { r = 255; g = (645 - nm) / 65 * 255; }
+      else r = 255;
+      return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+    }
+
+    function rgbStr(c, a = 1) {
+      return `rgba(${c.r},${c.g},${c.b},${a})`;
+    }
+
+    function formatUm(um) {
+      return `${um.toFixed(1)} µM`;
+    }
+
+    function concUmFromSlider(v) {
+      return (v / 1000) * concMaxUm;
+    }
+
+    function sliderFromConcUm(um) {
+      return Math.round((um / concMaxUm) * 1000);
+    }
+
+    function updateLambdaSwatch() {
+      const c = nmToRGB(currentLambda);
+      document.getElementById("lambdaSwatch").style.background =
+        `radial-gradient(circle at 35% 35%, rgb(${c.r},${c.g},${c.b}), rgb(${Math.round(c.r * 0.5)},${Math.round(c.g * 0.5)},${Math.round(c.b * 0.5)}))`;
+    }
+
+    function initChart() {
+      spectrumChart = new Chart(document.getElementById("spectrumChart").getContext("2d"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "A(λ) スペクトル",
+              data: [],
+              borderColor: "rgba(45,212,191,0.95)",
+              backgroundColor: "rgba(20,184,166,0.12)",
+              borderWidth: 2,
+              pointRadius: 0,
+              fill: true,
+              tension: 0.25,
+            },
+            {
+              label: "いまの λ",
+              data: [],
+              type: "scatter",
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              backgroundColor: "#fde68a",
+              borderColor: "#fff",
+              borderWidth: 2,
+              showLine: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              type: "linear",
+              min: LAMBDA_MIN,
+              max: LAMBDA_MAX,
+              title: { display: true, text: "波長 λ（nm）", color: "#94a3b8" },
+              ticks: { color: "#94a3b8", maxTicksLimit: 12 },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              min: 0,
+              title: { display: true, text: "吸光度 A(λ)", color: "#94a3b8" },
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+          },
+          plugins: {
+            legend: { labels: { color: "#cbd5e1", font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  if (ctx.datasetIndex === 1) return `λ = ${ctx.parsed.x} nm, A = ${ctx.parsed.y.toFixed(3)}`;
+                  return `λ = ${ctx.parsed.x} nm, A = ${ctx.parsed.y.toFixed(3)}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function updateChartMarker() {
+      const { A } = computeAtLambda(currentLambda);
+      spectrumChart.data.datasets[1].data = [{ x: currentLambda, y: A }];
+      const spec = scanData.length > 0 ? scanData : buildFullSpectrum();
+      const maxY = Math.max(0.5, ...spec.map((p) => p.y)) * 1.12;
+      spectrumChart.options.scales.y.max = Math.min(maxY, 3);
+      spectrumChart.update("none");
+    }
+
+    function refreshPeakTags() {
+      const mat = MATERIALS[materialId];
+      document.getElementById("peakTags").innerHTML = mat.peaks
+        .map((p) => `<span class="peak-tag">${p.label} · ε≈${p.eps.toLocaleString()}</span>`)
+        .join("");
+    }
+
+    function updateInfo() {
+      const mat = MATERIALS[materialId];
+      const { A, I } = computeAtLambda(currentLambda);
+      const modeLabel =
+        mode === "scan" ? "連続スキャン中" : mode === "single" ? "単一波長" : "待機";
+
+      document.getElementById("infoCategory").textContent = mat.category;
+      document.getElementById("infoMaterial").textContent = mat.name;
+      document.getElementById("infoLambda").textContent = `${currentLambda} nm`;
+      document.getElementById("infoA").textContent = A.toFixed(3);
+      document.getElementById("infoConc").textContent = formatUm(concentrationUm);
+      document.getElementById("infoLmax").textContent = mat.lmaxNote;
+      document.getElementById("infoMode").textContent = modeLabel;
+
+      document.getElementById("dispLambda").textContent = currentLambda;
+      document.getElementById("dispA").textContent = A.toFixed(3);
+      document.getElementById("dispI0").textContent = String(I0);
+      document.getElementById("dispI").textContent = I.toFixed(1);
+
+      document.getElementById("infoComment").innerHTML =
+        `・${mat.comment}<br>` +
+        `・吸収スペクトルは物質の<strong style="color:#fde68a">“指紋”</strong> — λ<sub>max</sub> が構造の違いを反映<br>` +
+        `・<strong style="color:#fde68a">濃度 ↑ → スペクトル全体 ↑</strong>（A ∝ c）`;
+
+      updateLambdaSwatch();
+      updateChartMarker();
+    }
+
+    function applyMaterial(resetConc = true) {
+      const mat = MATERIALS[materialId];
+      concMaxUm = mat.concMaxUm;
+      if (resetConc) concentrationUm = mat.defaultConcUm;
+      else if (concentrationUm > concMaxUm) concentrationUm = concMaxUm;
+      document.getElementById("concSlider").value = sliderFromConcUm(concentrationUm);
+      document.getElementById("concHint").textContent = `0〜${concMaxUm} µM`;
+      document.getElementById("concVal").textContent = formatUm(concentrationUm);
+
+      const mainPeak = mat.peaks.reduce((a, b) => (a.eps > b.eps ? a : b)).nm;
+      currentLambda = mainPeak;
+      document.getElementById("lambdaSlider").value = mainPeak;
+      document.getElementById("lambdaVal").textContent = `${mainPeak} nm`;
+      document.getElementById("materialSelect").value = materialId;
+
+      scanData = [];
+      spectrumChart.data.datasets[0].data = [];
+      refreshPeakTags();
+      updateInfo();
+    }
+
+    let instrumentLayout = null;
+
+    function roundRectPath(x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function computeLayout(w, h) {
+      const yMid = h * 0.58;
+      const topBand = h * 0.17;
+      const srcW = Math.max(48, w * 0.11);
+      const monoW = Math.max(64, w * 0.15);
+      const cuvW = Math.max(36, w * 0.08);
+      const detW = Math.max(56, w * 0.13);
+      const srcX = w * 0.035;
+      const monoX = w * 0.22;
+      const cuvX = w * 0.44;
+      const detX = w * 0.68;
+      const compH = Math.min(h * 0.34, 108);
+      return {
+        w, h, yMid, topBand, compH,
+        srcX, monoX, cuvX, detX, srcW, monoW, cuvW, detW,
+        srcCx: srcX + srcW * 0.5,
+        monoCx: monoX + monoW * 0.5,
+        cuvCx: cuvX + cuvW * 0.5,
+        detCx: detX + detW * 0.5,
+        cuvStart: cuvX - 4,
+        cuvEnd: cuvX + cuvW + 4,
+        beamStart: srcX + srcW * 0.85,
+        beamEnd: detX + detW * 0.15,
+      };
+    }
+
+    function drawBeamChannel(x1, x2, y, rgb, alpha, halfH = 4) {
+      if (x2 <= x1) return;
+      ctx.save();
+      const g = ctx.createLinearGradient(0, y - halfH, 0, y + halfH);
+      g.addColorStop(0, rgbStr(rgb, 0));
+      g.addColorStop(0.42, rgbStr(rgb, alpha * 0.7));
+      g.addColorStop(0.5, rgbStr(rgb, alpha));
+      g.addColorStop(0.58, rgbStr(rgb, alpha * 0.7));
+      g.addColorStop(1, rgbStr(rgb, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(x1, y - halfH, x2 - x1, halfH * 2);
+      ctx.restore();
+    }
+
+    function drawBenchLine(L) {
+      ctx.strokeStyle = "rgba(148,163,184,0.14)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(L.srcX - 4, L.yMid);
+      ctx.lineTo(L.detX + L.detW + 12, L.yMid);
+      ctx.stroke();
+    }
+
+    function drawTopBanner(text, L, accent) {
+      roundRectPath(L.w * 0.06, 8, L.w * 0.88, 22, 8);
+      ctx.fillStyle = "rgba(15,23,42,0.92)";
+      ctx.fill();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      drawCanvasLabel(text, L.w * 0.5, 19, { size: 9, color: "#99f6e4", bold: true });
+    }
+
+    function drawCanvasLabel(text, x, y, opts = {}) {
+      const { align = "center", size = 10, color = "#94a3b8", bold = false, pill = false, rgb = null } = opts;
+      ctx.save();
+      ctx.font = `${bold ? "700" : "600"} ${size}px "Inter","Noto Sans JP",sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      if (pill) {
+        const padX = 8;
+        const padY = 4;
+        const tw = ctx.measureText(text).width;
+        const bx = align === "center" ? x - tw / 2 - padX : x;
+        roundRectPath(bx, y - size / 2 - padY, tw + padX * 2, size + padY * 2, 6);
+        ctx.fillStyle = rgb ? rgbStr(rgb, 0.14) : "rgba(15,23,42,0.88)";
+        ctx.fill();
+        ctx.strokeStyle = rgb ? rgbStr(rgb, 0.38) : "rgba(45,212,191,0.28)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.fillStyle = rgb ? rgbStr(rgb, 0.95) : color;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function drawPhotonParticle(x, y, rgb, size) {
+      ctx.save();
+      const r = size * 2.2;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(255,255,255,0.9)");
+      g.addColorStop(0.2, rgbStr(rgb, 0.85));
+      g.addColorStop(0.55, rgbStr(rgb, 0.25));
+      g.addColorStop(1, rgbStr(rgb, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function spawnPhoton() {
+      if (!instrumentLayout) return;
+      const L = instrumentLayout;
+      const col = nmToRGB(currentLambda);
+      const { T } = computeAtLambda(currentLambda);
+      photons.push({
+        x: L.beamStart,
+        y: L.yMid + (Math.random() - 0.5) * 5,
+        vx: 2.1 + Math.random() * 0.5,
+        phase: "white",
+        rgb: { r: 255, g: 255, b: 255 },
+        targetRgb: col,
+        alive: true,
+        absorbRoll: Math.random(),
+        T,
+      });
+    }
+
+    function drawInstrument(w, h, waveRgb, T, I) {
+      const L = computeLayout(w, h);
+      instrumentLayout = L;
+      const sampleAlpha = 0.08 + Math.min(0.5, concentrationUm / concMaxUm * 0.5);
+      const beamAlpha = 0.28 + T * 0.42;
+      const compY = L.yMid - L.compH / 2;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0c1220");
+      bg.addColorStop(0.55, "#080d16");
+      bg.addColorStop(1, "#050810");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, h * 0.1, w * 0.5, h * 0.5, h * 0.82);
+      vignette.addColorStop(0, "rgba(20,184,166,0.04)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.5)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.05)";
+      ctx.lineWidth = 1;
+      for (let gx = 0; gx < w; gx += 28) {
+        ctx.beginPath(); ctx.moveTo(gx, 36); ctx.lineTo(gx, h); ctx.stroke();
+      }
+      for (let gy = 36; gy < h; gy += 28) {
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      }
+
+      drawTopBanner("白い光 → 選んだ λ だけ通す → 試料で吸収 → 残りを検出", L, "rgba(45,212,191,0.35)");
+      drawBenchLine(L);
+
+      roundRectPath(L.srcX, compY, L.srcW, L.compH, 10);
+      ctx.fillStyle = "rgba(15,23,42,0.96)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(253,230,138,0.28)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.save();
+      ctx.shadowColor = "rgba(255,255,255,0.65)";
+      ctx.shadowBlur = 16;
+      const lampG = ctx.createRadialGradient(L.srcCx, L.yMid, 1, L.srcCx, L.yMid, 14);
+      lampG.addColorStop(0, "#fff");
+      lampG.addColorStop(0.35, "#e2e8f0");
+      lampG.addColorStop(0.7, "#fde68a");
+      lampG.addColorStop(1, "rgba(253,230,138,0)");
+      ctx.fillStyle = lampG;
+      ctx.beginPath();
+      ctx.arc(L.srcCx, L.yMid, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      roundRectPath(L.monoX, compY, L.monoW, L.compH, 10);
+      ctx.fillStyle = "rgba(15,23,42,0.96)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(45,212,191,0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const lx = L.monoX + 10 + i * ((L.monoW - 20) / 7);
+        ctx.strokeStyle = "rgba(148,163,184,0.14)";
+        ctx.beginPath();
+        ctx.moveTo(lx, compY + 10);
+        ctx.lineTo(lx + 5, compY + L.compH - 10);
+        ctx.stroke();
+      }
+
+      const cuvInnerH = L.compH * 0.88;
+      const cuvY = L.yMid - cuvInnerH / 2;
+      roundRectPath(L.cuvX, cuvY, L.cuvW, cuvInnerH, 6);
+      ctx.fillStyle = "rgba(15,23,42,0.5)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(148,163,184,0.5)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      const liqG = ctx.createLinearGradient(L.cuvX, cuvY, L.cuvX + L.cuvW, cuvY);
+      liqG.addColorStop(0, rgbStr(waveRgb, sampleAlpha * 0.4));
+      liqG.addColorStop(0.5, rgbStr(waveRgb, sampleAlpha));
+      liqG.addColorStop(1, rgbStr(waveRgb, sampleAlpha * 0.4));
+      ctx.fillStyle = liqG;
+      roundRectPath(L.cuvX + 4, cuvY + 5, L.cuvW - 8, cuvInnerH - 10, 4);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(L.cuvX + 6, cuvY + 7, 2, cuvInnerH - 14);
+
+      roundRectPath(L.detX, compY, L.detW, L.compH, 10);
+      ctx.fillStyle = "rgba(15,23,42,0.96)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(45,212,191,0.32)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      const barMax = L.compH * 0.48;
+      const barH = barMax * (I / I0);
+      const barX = L.detCx - 9;
+      const barBase = compY + L.compH - 16;
+      ctx.fillStyle = "rgba(255,255,255,0.07)";
+      roundRectPath(barX, barBase - barMax, 18, barMax, 4);
+      ctx.fill();
+      if (barH > 2) {
+        const barG = ctx.createLinearGradient(barX, barBase - barH, barX, barBase);
+        barG.addColorStop(0, rgbStr(waveRgb, 0.9));
+        barG.addColorStop(1, rgbStr(waveRgb, 0.35));
+        ctx.fillStyle = barG;
+        roundRectPath(barX, barBase - barH, 18, barH, 4);
+        ctx.fill();
+      }
+
+      drawBeamChannel(L.beamStart, L.monoCx - 8, L.yMid, { r: 255, g: 255, b: 255 }, 0.3, 5);
+      drawBeamChannel(L.monoCx + 8, L.cuvStart, L.yMid, waveRgb, beamAlpha * 0.85, 5);
+      drawBeamChannel(L.cuvEnd, L.beamEnd, L.yMid, waveRgb, beamAlpha, 5);
+
+      ctx.save();
+      ctx.shadowColor = rgbStr(waveRgb, 0.7);
+      ctx.shadowBlur = 10;
+      const slitG = ctx.createLinearGradient(L.monoCx - 4, L.yMid - 14, L.monoCx + 4, L.yMid + 14);
+      slitG.addColorStop(0.5, rgbStr(waveRgb, 1));
+      slitG.addColorStop(0, rgbStr(waveRgb, 0.2));
+      slitG.addColorStop(1, rgbStr(waveRgb, 0.2));
+      ctx.fillStyle = slitG;
+      roundRectPath(L.monoCx - 3, L.yMid - 12, 6, 24, 2);
+      ctx.fill();
+      ctx.restore();
+
+      drawCanvasLabel(`${currentLambda} nm`, L.monoCx, L.topBand, { size: 9, rgb: waveRgb, pill: true, bold: true });
+      drawCanvasLabel(`透過 ${(T * 100).toFixed(1)}%`, L.detCx, L.topBand, {
+        size: 8, rgb: waveRgb, pill: true, bold: true,
+      });
+
+      drawCanvasLabel("連続光源", L.srcCx, compY + L.compH + 14, { size: 9, bold: true, color: "#fde68a" });
+      drawCanvasLabel("分光器", L.monoCx, compY + L.compH + 14, { size: 9, bold: true });
+      drawCanvasLabel("試料セル", L.cuvCx, compY + L.compH + 14, { size: 9, bold: true });
+      drawCanvasLabel("検出器", L.detCx, compY + L.compH + 14, { size: 9, bold: true });
+    }
+
+    function animate() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      const { T, I } = computeAtLambda(currentLambda);
+      const waveRgb = nmToRGB(currentLambda);
+
+      drawInstrument(w, h, waveRgb, T, I);
+
+      if (!scanning || animTime % 5 === 0) spawnPhoton();
+
+      const L = instrumentLayout;
+      if (!L) { animTime++; requestAnimationFrame(animate); return; }
+
+      photons.forEach((p) => {
+        if (!p.alive) return;
+        p.x += p.vx;
+        p.y = L.yMid + (p.y - L.yMid) * 0.92 + (Math.random() - 0.5) * 0.5;
+
+        if (p.x > L.monoCx - 6 && p.phase === "white") {
+          p.phase = "mono";
+          p.rgb = { ...p.targetRgb };
+        }
+        if (p.x > L.cuvStart && p.x < L.cuvEnd && p.phase === "mono") {
+          if (p.absorbRoll > p.T) {
+            p.alive = false;
+            drawPhotonParticle(p.x, p.y, p.rgb, 0.9);
+            return;
+          }
+        }
+        if (p.x > L.beamEnd + 20) p.alive = false;
+        if (p.alive) drawPhotonParticle(p.x, p.y, p.rgb, p.phase === "white" ? 1.1 : 1.3);
+      });
+      photons = photons.filter((p) => p.alive);
+      if (photons.length > 70) photons.splice(0, photons.length - 70);
+
+      animTime++;
+      requestAnimationFrame(animate);
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    let scanTimer = null;
+
+    function stopScan() {
+      scanning = false;
+      if (scanTimer) {
+        clearInterval(scanTimer);
+        scanTimer = null;
+      }
+      document.getElementById("btnScan").disabled = false;
+    }
+
+    function startScan() {
+      stopScan();
+      mode = "scan";
+      scanning = true;
+      scanData = [];
+      scanIndex = 0;
+      spectrumChart.data.datasets[0].data = scanData;
+      spectrumChart.update("none");
+
+      document.getElementById("btnScan").disabled = true;
+      document.getElementById("statusMsg").textContent =
+        "200〜800 nm を走査中… 右のグラフに A(λ) が描かれます。";
+
+      const full = buildFullSpectrum();
+      scanTimer = setInterval(() => {
+        if (scanIndex >= full.length) {
+          stopScan();
+          mode = "idle";
+          document.getElementById("statusMsg").textContent =
+            "スキャン完了！ 峰の位置が λmax です。濃度スライダーで高さの変化を試してください。";
+          updateInfo();
+          return;
+        }
+        const pt = full[scanIndex];
+        scanData.push(pt);
+        currentLambda = pt.x;
+        spectrumChart.data.datasets[0].data = scanData.slice();
+        updateInfo();
+        scanIndex++;
+      }, 35);
+    }
+
+    function singleMeasure() {
+      stopScan();
+      mode = "single";
+      currentLambda = Number(document.getElementById("lambdaSlider").value);
+      scanData = buildFullSpectrum();
+      spectrumChart.data.datasets[0].data = scanData;
+      document.getElementById("statusMsg").textContent =
+        `λ = ${currentLambda} nm の A(λ) を測定しました。スライダーで λ を変えられます。`;
+      updateInfo();
+    }
+
+    document.getElementById("materialSelect").addEventListener("change", (e) => {
+      materialId = e.target.value;
+      applyMaterial(true);
+      document.getElementById("statusMsg").textContent =
+        `${MATERIALS[materialId].name} に切り替えました。スペクトルの形が変わります。`;
+    });
+
+    document.getElementById("concSlider").addEventListener("input", (e) => {
+      concentrationUm = concUmFromSlider(Number(e.target.value));
+      document.getElementById("concVal").textContent = formatUm(concentrationUm);
+      if (scanData.length > 0 || mode === "single") {
+        scanData = buildFullSpectrum();
+        spectrumChart.data.datasets[0].data = scanData;
+      }
+      updateInfo();
+    });
+
+    document.getElementById("lambdaSlider").addEventListener("input", (e) => {
+      currentLambda = Number(e.target.value);
+      document.getElementById("lambdaVal").textContent = `${currentLambda} nm`;
+      if (mode === "single") {
+        document.getElementById("dispLambda").textContent = currentLambda;
+        updateInfo();
+      }
+    });
+
+    document.getElementById("btnScan").addEventListener("click", startScan);
+    document.getElementById("btnSingle").addEventListener("click", singleMeasure);
+    document.getElementById("btnReset").addEventListener("click", () => {
+      stopScan();
+      mode = "idle";
+      materialId = "nadh";
+      document.getElementById("materialSelect").value = "nadh";
+      applyMaterial(true);
+      photons = [];
+      document.getElementById("statusMsg").textContent =
+        "リセットしました。「スペクトルスキャン開始」から試してください。";
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    initChart();
+    fillMaterialSelect();
+    applyMaterial(true);
+    resizeCanvas();
+    animate();
+  </script>
+</body>
+</html>

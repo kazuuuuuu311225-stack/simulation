@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>吸光光度計 — 濃度測定</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a855f7; --accent-light: #c084fc; --accent-glow: rgba(168,85,247,0.45);
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(168,85,247,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0f0a18 38%,#12101c 72%,#0a0810 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(1200px,97vw); margin: 0 auto;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(168,85,247,0.25),rgba(139,92,246,0.3));
+      border: 1px solid rgba(192,132,252,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); text-shadow: 0 0 20px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #f3e8ff;
+      background: rgba(168,85,247,0.14); border: 1px solid rgba(168,85,247,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .flow-guide {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px;
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(168,85,247,0.22);
+      font-size: 0.78rem; font-weight: 600; line-height: 1.5; text-align: center;
+    }
+    .flow-step { padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+    .flow-step.s1 { background: rgba(250,204,21,0.15); color: #fde68a; border: 1px solid rgba(250,204,21,0.3); }
+    .flow-step.s2 { background: rgba(96,165,250,0.15); color: #bfdbfe; border: 1px solid rgba(96,165,250,0.3); }
+    .flow-step.s3 { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.28); }
+    .flow-step.s4 { background: rgba(251,146,60,0.12); color: #fdba74; border: 1px solid rgba(251,146,60,0.28); }
+    .flow-step.s5 { background: rgba(168,85,247,0.15); color: #e9d5ff; border: 1px solid rgba(168,85,247,0.3); }
+    .flow-step.s6 { background: rgba(244,114,182,0.12); color: #fbcfe8; border: 1px solid rgba(244,114,182,0.28); }
+    .flow-arrow { color: #64748b; font-size: 0.9rem; }
+    .main-grid {
+      display: grid; grid-template-columns: 1fr; gap: 10px;
+    }
+    @media (min-width:960px) {
+      .main-grid { grid-template-columns: 1.2fr 0.75fr 1fr; align-items: stretch; }
+    }
+    .panel {
+      border-radius: 14px; padding: 12px 14px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .panel h3 {
+      margin: 0 0 8px; font-size: 0.9rem; font-weight: 600; color: var(--accent-light);
+    }
+    .panel-sub {
+      margin: 0 0 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.45;
+    }
+    #animCanvas {
+      display: block; width: 100%; height: min(320px,38dvh); min-height: 240px;
+      border-radius: 12px; background: #060a12;
+      border: 1px solid rgba(168,85,247,0.28);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.55), 0 4px 24px rgba(0,0,0,0.35);
+    }
+    .light-readout {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;
+    }
+    .light-box {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.14);
+      text-align: center;
+    }
+    .light-box .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 3px; }
+    .light-box .val { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #fde68a; }
+    .light-box.trans .val { color: #7dd3fc; }
+    .center-panel { text-align: center; justify-content: center; }
+    .absorb-display {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 16px 8px;
+    }
+    .absorb-label { font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+    .absorb-value {
+      font-size: clamp(2.8rem,8vw,4rem); font-weight: 700; line-height: 1;
+      color: #e9d5ff; text-shadow: 0 0 30px var(--accent-glow);
+      font-variant-numeric: tabular-nums;
+    }
+    .absorb-unit { font-size: 1rem; color: #c4b5fd; margin-top: 6px; }
+    .formula-stack {
+      margin-top: 14px; width: 100%; max-width: 280px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .formula-box {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(168,85,247,0.2);
+      font-size: 0.82rem; font-weight: 600; color: #e0f2fe;
+      font-variant-numeric: tabular-nums;
+    }
+    .formula-box .name { display: block; font-size: 0.68rem; color: #a78bfa; margin-bottom: 4px; font-weight: 700; }
+    .chart-wrap {
+      flex: 1; min-height: 220px; position: relative;
+    }
+    .chart-wrap canvas { max-height: min(280px,34dvh); }
+    .estimate-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(168,85,247,0.1); border: 1px solid rgba(192,132,252,0.28);
+      font-size: 0.82rem; line-height: 1.55; color: #e9d5ff;
+    }
+    .estimate-box strong { color: #f0abfc; }
+    .info-panel {
+      border-radius: 14px; padding: 12px 14px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    .info-panel h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--accent-light); }
+    .info-grid {
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 8px;
+    }
+    @media (min-width:720px) { .info-grid { grid-template-columns: repeat(4,1fr); } }
+    .info-item {
+      padding: 9px 11px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(168,85,247,0.16);
+    }
+    .info-item .label { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 3px; }
+    .info-item .val {
+      font-size: 0.86rem; font-weight: 700; color: #f1f5f9;
+      font-variant-numeric: tabular-nums; line-height: 1.35;
+    }
+    .comment-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(168,85,247,0.1); border: 1px solid rgba(192,132,252,0.25);
+      font-size: 0.82rem; line-height: 1.65; color: #ddd6fe;
+    }
+    .controls-panel {
+      border-radius: 14px; padding: 14px 16px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    .controls-panel h3 { margin: 0 0 10px; font-size: 0.92rem; color: var(--accent-light); }
+    .controls-grid {
+      display: grid; grid-template-columns: 1fr; gap: 10px;
+    }
+    @media (min-width:640px) { .controls-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (min-width:960px) { .controls-grid { grid-template-columns: repeat(4,1fr); } }
+    label { display: block; font-size: 0.84rem; font-weight: 500; color: #e2e8f0; margin-bottom: 5px; }
+    select, input[type="range"] { width: 100%; }
+    select {
+      padding: 10px 12px; border-radius: 10px; font-family: inherit;
+      font-size: 0.86rem; color: #e2e8f0; background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(168,85,247,0.35); cursor: pointer;
+    }
+    input[type="range"] { accent-color: var(--accent); height: 8px; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c4b5fd; font-variant-numeric: tabular-nums; }
+    .btn-row {
+      grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .btn-row button {
+      flex: 1 1 calc(33% - 6px); min-height: 46px; padding: 10px 12px;
+      font-family: inherit; font-size: 0.84rem; font-weight: 600;
+      border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(168,85,247,0.35);
+      background: rgba(255,255,255,0.07); color: #e2e8f0;
+    }
+    .btn-row button.primary {
+      background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .btn-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #statusMsg {
+      grid-column: 1 / -1; margin: 0; padding: 10px 12px; border-radius: 10px;
+      font-size: 0.82rem; text-align: center; line-height: 1.55;
+      background: rgba(168,85,247,0.12); color: #e9d5ff;
+    }
+    .hs-guide {
+      border-radius: 14px; padding: 14px 16px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      font-size: 0.86rem; line-height: 1.7; color: #cbd5e1;
+    }
+    .hs-guide > p { margin: 0 0 10px; }
+    .hs-guide h4 {
+      margin: 12px 0 6px; font-size: 0.84rem; font-weight: 700; color: var(--accent-light);
+    }
+    .hs-guide h4:first-of-type { margin-top: 0; }
+    .hs-guide ul { margin: 0 0 8px; padding-left: 1.2rem; }
+    .hs-guide li { margin-bottom: 4px; }
+    .hs-steps {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+    }
+    .hs-step {
+      flex: 1 1 140px; padding: 8px 10px; border-radius: 10px;
+      background: rgba(168,85,247,0.1); border: 1px solid rgba(192,132,252,0.22);
+      font-size: 0.78rem; line-height: 1.5; color: #e9d5ff;
+    }
+    .hs-step strong { color: #f0abfc; }
+    .label-hint {
+      display: block; margin-top: 3px; font-size: 0.72rem; font-weight: 400; color: var(--muted);
+    }
+    .val-sub {
+      display: block; margin-top: 2px; font-size: 0.68rem; font-weight: 500; color: var(--muted);
+    }
+    .plain-meaning {
+      margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+      background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2);
+      font-size: 0.78rem; line-height: 1.55; color: #fde68a; text-align: center;
+    }
+    .btn-reveal {
+      margin-top: 8px; padding: 8px 12px; font-family: inherit; font-size: 0.78rem;
+      font-weight: 600; border-radius: 8px; cursor: pointer;
+      border: 1px solid rgba(250,204,21,0.35); background: rgba(250,204,21,0.12); color: #fde68a;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">☀</div>
+      <h2>吸光光度計 — 濃度測定</h2>
+      <p class="chapter-label">EX章 · 光の減り方から濃度を調べる</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="hs-guide">
+      <p>
+        <strong style="color:#e9d5ff">吸光光度計</strong>は、溶液に光を当てて
+        <strong style="color:#fde68a">どれだけ光が弱くなったか</strong>を測り、そこから
+        <strong style="color:#7dd3fc">濃度</strong>を求める装置です。
+        生物の実験（酵素・タンパク質・DNA など）でよく使います。
+      </p>
+      <h4>3 ステップで試す</h4>
+      <div class="hs-steps">
+        <div class="hs-step"><strong>① 物質を選ぶ</strong><br>NADH など測りたいものを選択</div>
+        <div class="hs-step"><strong>② 濃度を動かす</strong><br>スライダーで濃度を変える</div>
+        <div class="hs-step"><strong>③ A を見る</strong><br>濃度 ↑ → 吸光度 A ↑（比例）</div>
+      </div>
+      <h4>覚えておきたいこと</h4>
+      <ul>
+        <li><strong style="color:#fde68a">A（吸光度）</strong>… 数字が大きいほど「濃い・光を吸いやすい」</li>
+        <li><strong style="color:#7dd3fc">A = ε × c × l</strong>… 濃度 c が 2 倍 → A も 2 倍（ l はキュベットの厚さ = 1 cm ）</li>
+        <li>物質ごとに <strong>測る波長</strong> と <strong>ε（吸いやすさ）</strong> が決まっている</li>
+      </ul>
+    </section>
+
+    <div class="flow-guide" aria-label="測定の流れ">
+      <span class="flow-step s1">① 光を出す</span><span class="flow-arrow">→</span>
+      <span class="flow-step s2">② 1 色にそろえる</span><span class="flow-arrow">→</span>
+      <span class="flow-step s3">③ 試料を通す</span><span class="flow-arrow">→</span>
+      <span class="flow-step s4">④ 残った光を測る</span><span class="flow-arrow">→</span>
+      <span class="flow-step s5">⑤ A を計算</span><span class="flow-arrow">→</span>
+      <span class="flow-step s6">⑥ 濃度を求める</span>
+    </div>
+
+    <div class="main-grid">
+      <section class="panel">
+        <h3>① 光の通り道</h3>
+        <p class="panel-sub">黄色い点＝光の粒。試料で消えるほど、出てくる光 I が少なくなる</p>
+        <canvas id="animCanvas" width="640" height="320" aria-label="光路アニメーション"></canvas>
+        <div class="light-readout">
+          <div class="light-box">
+            <span class="lbl">入る前の光 I₀</span>
+            <span class="val" id="dispI0">100.0</span>
+          </div>
+          <div class="light-box trans">
+            <span class="lbl">出てきた光 I</span>
+            <span class="val" id="dispI">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel center-panel">
+        <h3>② 吸光度 A</h3>
+        <p class="panel-sub">A が大きいほど濃い（光をたくさん吸収している）</p>
+        <div class="absorb-display">
+          <span class="absorb-label">いまの吸光度</span>
+          <div class="absorb-value" id="dispA">0.000</div>
+          <div class="absorb-unit">A（Abs）</div>
+          <div class="plain-meaning" id="absorbMeaning">A ≈ 0 … 薄い溶液（光がよく通る）</div>
+          <div class="formula-stack">
+            <div class="formula-box">
+              <span class="name">光の減り方から</span>
+              A = −log₁₀(I ÷ I₀)
+              <span class="label-hint">I が小さいほど A は大きい</span>
+            </div>
+            <div class="formula-box">
+              <span class="name">濃度との関係（l = 1 cm）</span>
+              A = ε × c × l
+              <span class="label-hint">c が 2 倍 → A も 2 倍</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>③ 検量線（グラフ）</h3>
+        <p class="panel-sub">横軸＝濃度、縦軸＝A。直線上なら濃度が求められる</p>
+        <div class="chart-wrap">
+          <canvas id="calibChart"></canvas>
+        </div>
+        <div class="estimate-box" id="estimateBox">
+          濃度スライダーを動かすと、グラフ上の黄色い点が動きます。
+        </div>
+      </section>
+    </div>
+
+    <section class="info-panel">
+      <h3>いまの測定値</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">物質</span><span class="val" id="infoMaterial">—</span></div>
+        <div class="info-item"><span class="label">波長 λ</span><span class="val" id="infoLambda">—</span></div>
+        <div class="info-item"><span class="label">ε（吸いやすさ）</span><span class="val" id="infoEpsilon">—</span></div>
+        <div class="info-item"><span class="label">濃度 c</span><span class="val" id="infoConc">—</span></div>
+        <div class="info-item"><span class="label">吸光度 A</span><span class="val" id="infoA">—</span></div>
+        <div class="info-item"><span class="label">入る前 I₀</span><span class="val" id="infoI0">—</span></div>
+        <div class="info-item"><span class="label">出た光 I</span><span class="val" id="infoI">—</span></div>
+        <div class="info-item"><span class="label">求めた濃度</span><span class="val" id="infoEstC">—</span></div>
+      </div>
+      <div class="comment-box" id="infoComment">
+        濃度が高いほど A は大きくなります。物質が変わると、使う波長と ε も変わります。
+      </div>
+    </section>
+
+    <section class="controls-panel">
+      <h3>操作</h3>
+      <div class="controls-grid">
+        <label>① 何を測る？
+          <select id="materialSelect">
+            <option value="nadh">NADH — 酵素の実験でよく使う</option>
+            <option value="chlorophyll">クロロフィル a — 光合成の研究</option>
+            <option value="bradford">Bradford — タンパク質の量を測る</option>
+            <option value="dna">DNA / RNA — 核酸の量を測る</option>
+          </select>
+        </label>
+        <label>② どの波長で測る？（nm）
+          <select id="lambdaSelect"></select>
+          <span class="label-hint">物質を選ぶとおすすめ波長が自動で入ります</span>
+        </label>
+        <label>③ 濃度（µM＝マイクロモル/L）
+          <input type="range" id="concSlider" min="0" max="1000" value="50" step="1">
+          <span class="slider-val" id="concVal">50.0 µM</span>
+          <span class="label-hint" id="concHint">0〜100 µM</span>
+        </label>
+        <label>光の明るさ I₀（比較用）
+          <input type="range" id="i0Slider" min="20" max="100" value="100" step="1">
+          <span class="slider-val" id="i0Val">100</span>
+          <span class="label-hint">I₀ を変えても A は変わりません（濃度だけが A を決める）</span>
+        </label>
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnStart">測定開始</button>
+          <button type="button" id="btnUnknown">未知試料に挑戦</button>
+          <button type="button" id="btnReset">最初から</button>
+        </div>
+        <p id="statusMsg">まず ① 物質を選び、③ 濃度スライダーを動かして A が変わることを確かめてみましょう。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const PATH_LEN = 1;
+    const CONC_SLIDER_STEPS = 1000;
+    const UM_TO_MOL = 1e-6;
+    let concMaxUm = 100;
+
+    const WAVELENGTH_HINT = {
+      260: "紫外（DNA/RNA）",
+      340: "紫外（NADH）",
+      430: "青",
+      595: "黄〜橙",
+      660: "赤",
+    };
+
+    const MATERIALS = {
+      nadh: {
+        name: "NADH",
+        familiar: "酵素反応が進んでいるか調べるときによく使う",
+        lambdas: [{ nm: 340, eps: 6220 }],
+        defaultConcUm: 50,
+        concMaxUm: 100,
+      },
+      chlorophyll: {
+        name: "クロロフィル a",
+        familiar: "光合成の強さを調べるときに使う",
+        lambdas: [
+          { nm: 430, eps: 90000 },
+          { nm: 660, eps: 75000 },
+        ],
+        defaultConcUm: 10,
+        concMaxUm: 20,
+      },
+      bradford: {
+        name: "Bradford（タンパク質）",
+        familiar: "タンパク質の量を調べる定番の試薬",
+        lambdas: [{ nm: 595, eps: 45000 }],
+        defaultConcUm: 8,
+        concMaxUm: 25,
+      },
+      dna: {
+        name: "DNA / RNA",
+        familiar: "DNA や RNA の量を調べる標準的な波長",
+        lambdas: [{ nm: 260, eps: 6600 }],
+        defaultConcUm: 25,
+        concMaxUm: 80,
+      },
+    };
+
+    let materialId = "nadh";
+    let lambdaNm = 340;
+    let epsilon = 6220;
+    let concentrationUm = 50;
+    let i0 = 100;
+    let unknownMode = false;
+    let unknownConcUm = 0;
+    let unknownRevealed = false;
+    let measuring = true;
+    let photons = [];
+    let animTime = 0;
+    let calibChart = null;
+    let markerPoint = null;
+
+    const canvas = document.getElementById("animCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function nmToRGB(nm) {
+      if (nm < 380) {
+        const t = Math.max(0, Math.min(1, (nm - 280) / 100));
+        return { r: Math.round(80 + 100 * t), g: 0, b: Math.round(180 + 50 * t) };
+      }
+      let r = 0, g = 0, b = 0;
+      if (nm < 440) {
+        const t = (nm - 380) / 60;
+        r = Math.round(130 * (1 - t) + 20);
+        g = Math.round(60 * t);
+        b = Math.round(200 + 55 * t);
+      } else if (nm <= 490) { g = (nm - 440) / 50 * 255; b = 255; }
+      else if (nm <= 510) { g = 255; b = (510 - nm) / 20 * 255; }
+      else if (nm <= 580) { r = (nm - 510) / 70 * 255; g = 255; }
+      else if (nm <= 645) { r = 255; g = (645 - nm) / 65 * 255; }
+      else r = 255;
+      return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+    }
+
+    function rgbStr(c, a = 1) {
+      return `rgba(${c.r},${c.g},${c.b},${a})`;
+    }
+
+    function umToMol(um) {
+      return um * UM_TO_MOL;
+    }
+
+    function absorbanceFromConcUm(um, eps = epsilon) {
+      return eps * umToMol(um) * PATH_LEN;
+    }
+
+    function computePhysics() {
+      const cUm = unknownMode ? unknownConcUm : concentrationUm;
+      const A = absorbanceFromConcUm(cUm);
+      const T = transmissionFromA(A);
+      const I = i0 * T;
+      return { cUm, A, T, I };
+    }
+
+    function concUmFromSlider(v) {
+      return (v / CONC_SLIDER_STEPS) * concMaxUm;
+    }
+
+    function sliderFromConcUm(um) {
+      return Math.round((um / concMaxUm) * CONC_SLIDER_STEPS);
+    }
+
+    function formatUm(um) {
+      if (um === 0) return "0 µM";
+      return `${um.toFixed(1)} µM`;
+    }
+
+    function absorbanceMeaning(A) {
+      if (A < 0.05) return "A ≈ 0 … かなり薄い（光がほとんど減らない）";
+      if (A < 0.3) return "A が小さい … 薄めの溶液";
+      if (A < 0.7) return "A が中くらい … 普通の濃さ";
+      if (A < 1.2) return "A が大きい … 濃い溶液";
+      return "A がとても大きい … とても濃い（光が強く吸われる）";
+    }
+
+    function transmissionFromA(A) {
+      return Math.pow(10, -A);
+    }
+
+    function refreshLambdaSelect() {
+      const sel = document.getElementById("lambdaSelect");
+      const mat = MATERIALS[materialId];
+      sel.innerHTML = "";
+      mat.lambdas.forEach((item) => {
+        const opt = document.createElement("option");
+        opt.value = String(item.nm);
+        const hint = WAVELENGTH_HINT[item.nm] || "";
+        opt.textContent = hint ? `${item.nm} nm（${hint}）` : `${item.nm} nm`;
+        sel.appendChild(opt);
+      });
+      const match = mat.lambdas.find((x) => x.nm === lambdaNm) || mat.lambdas[0];
+      lambdaNm = match.nm;
+      epsilon = match.eps;
+      sel.value = String(lambdaNm);
+    }
+
+    function applyMaterial(resetConc = false) {
+      const mat = MATERIALS[materialId];
+      concMaxUm = mat.concMaxUm;
+      refreshLambdaSelect();
+      if (resetConc) {
+        concentrationUm = Math.min(mat.defaultConcUm, concMaxUm);
+        document.getElementById("concSlider").value = sliderFromConcUm(concentrationUm);
+      } else if (concentrationUm > concMaxUm) {
+        concentrationUm = concMaxUm;
+        document.getElementById("concSlider").value = sliderFromConcUm(concentrationUm);
+      }
+      document.getElementById("concHint").textContent =
+        `0〜${concMaxUm} µM（${mat.name}向けの目安範囲）`;
+      unknownMode = false;
+      unknownRevealed = false;
+      markerPoint = null;
+      updateAll();
+    }
+
+    function initChart() {
+      const ctxChart = document.getElementById("calibChart").getContext("2d");
+      calibChart = new Chart(ctxChart, {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "検量線（A = ε·c·l）",
+              data: [],
+              showLine: true,
+              borderColor: "rgba(192,132,252,0.9)",
+              backgroundColor: "rgba(168,85,247,0.15)",
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0,
+            },
+            {
+              label: "いまの試料",
+              data: [],
+              showLine: false,
+              pointRadius: 7,
+              pointHoverRadius: 9,
+              backgroundColor: "rgba(250,204,21,0.95)",
+              borderColor: "#fff",
+              borderWidth: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: "linear",
+              title: { display: true, text: "濃度（µM）", color: "#94a3b8" },
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(148,163,184,0.12)" },
+              max: concMaxUm,
+            },
+            y: {
+              title: { display: true, text: "吸光度 A", color: "#94a3b8" },
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(148,163,184,0.12)" },
+              min: 0,
+            },
+          },
+          plugins: {
+            legend: { labels: { color: "#cbd5e1", font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const p = ctx.raw;
+                  return `濃度 ${p.x.toFixed(1)} µM, A = ${p.y.toFixed(3)}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function updateChart() {
+      const line = [];
+      const steps = 40;
+      for (let i = 0; i <= steps; i++) {
+        const um = (i / steps) * concMaxUm;
+        line.push({ x: um, y: absorbanceFromConcUm(um) });
+      }
+      calibChart.data.datasets[0].data = line;
+
+      const { cUm, A } = computePhysics();
+      markerPoint = { x: cUm, y: A };
+      calibChart.data.datasets[1].data = [markerPoint];
+
+      const maxA = absorbanceFromConcUm(concMaxUm) * 1.1;
+      calibChart.options.scales.x.max = concMaxUm;
+      calibChart.options.scales.y.max = Math.max(0.4, Math.min(maxA, 2.5));
+      calibChart.update("none");
+    }
+
+    function updateInfoPanel() {
+      const mat = MATERIALS[materialId];
+      const { cUm, A, I } = computePhysics();
+      const estUm = (A / (epsilon * PATH_LEN)) / UM_TO_MOL;
+      const lambdaHint = WAVELENGTH_HINT[lambdaNm] || "";
+
+      document.getElementById("infoMaterial").innerHTML =
+        `${mat.name}<span class="val-sub">${mat.familiar}</span>`;
+      document.getElementById("infoLambda").innerHTML =
+        `${lambdaNm} nm` + (lambdaHint ? `<span class="val-sub">${lambdaHint}</span>` : "");
+      document.getElementById("infoEpsilon").innerHTML =
+        `${epsilon.toLocaleString()}<span class="val-sub">大きいほど少ない濃度でも A が大きい</span>`;
+      document.getElementById("infoConc").textContent = unknownMode
+        ? "？（未知試料）"
+        : formatUm(cUm);
+      document.getElementById("infoA").textContent = A.toFixed(3);
+      document.getElementById("infoI0").textContent = String(Math.round(i0));
+      document.getElementById("infoI").textContent = I.toFixed(1);
+      document.getElementById("infoEstC").textContent = formatUm(estUm);
+
+      document.getElementById("dispA").textContent = A.toFixed(3);
+      document.getElementById("dispI0").textContent = String(Math.round(i0));
+      document.getElementById("dispI").textContent = I.toFixed(1);
+      document.getElementById("absorbMeaning").textContent = absorbanceMeaning(A);
+
+      document.getElementById("concVal").textContent = unknownMode
+        ? "？ 未知試料"
+        : formatUm(concentrationUm);
+      document.getElementById("i0Val").textContent = String(Math.round(i0));
+
+      const estBox = document.getElementById("estimateBox");
+      if (unknownMode) {
+        let html =
+          `<strong>未知試料の結果</strong><br>` +
+          `測った A = <strong>${A.toFixed(3)}</strong><br>` +
+          `グラフの直線から求めた濃度 ≈ <strong>${formatUm(estUm)}</strong><br>` +
+          `<span style="color:#94a3b8;font-size:0.76rem">ヒント：A ÷ ε ÷ l で濃度（mol/L）→ µM に直す</span>`;
+        if (!unknownRevealed) {
+          html += `<br><button type="button" class="btn-reveal" id="btnReveal">答え（正しい濃度）を見る</button>`;
+        } else {
+          html += `<br><strong style="color:#fde68a">正解：${formatUm(unknownConcUm)}</strong>`;
+        }
+        estBox.innerHTML = html;
+        if (!unknownRevealed) {
+          const btn = document.getElementById("btnReveal");
+          if (btn) btn.onclick = () => { unknownRevealed = true; updateInfoPanel(); };
+        }
+      } else {
+        estBox.innerHTML =
+          `いまの試料：<strong>${formatUm(cUm)}</strong> → <strong>A = ${A.toFixed(3)}</strong><br>` +
+          `濃度を 2 倍にすると、A もだいたい 2 倍になります。`;
+      }
+
+      document.getElementById("infoComment").innerHTML =
+        `・<strong style="color:#fde68a">A は濃度に比例</strong>（A = ε × c × l）<br>` +
+        `・${mat.name} は ${mat.lambdas.map((x) => x.nm + " nm").join(" または ")} 付近で測るのが一般的<br>` +
+        `・I₀ を変えても A は変わらない → 濃度だけが A を決める`;
+    }
+
+    function updateAll() {
+      updateChart();
+      updateInfoPanel();
+    }
+
+    let instrumentLayout = null;
+
+    function roundRectPath(x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function computeLayout(w, h) {
+      const yMid = h * 0.58;
+      const topBand = h * 0.17;
+      const srcW = Math.max(48, w * 0.11);
+      const monoW = Math.max(60, w * 0.14);
+      const cuvW = Math.max(36, w * 0.08);
+      const detW = Math.max(56, w * 0.13);
+      const srcX = w * 0.035;
+      const monoX = w * 0.22;
+      const cuvX = w * 0.44;
+      const detX = w * 0.68;
+      const compH = Math.min(h * 0.34, 108);
+      return {
+        w, h, yMid, topBand, compH,
+        srcX, monoX, cuvX, detX, srcW, monoW, cuvW, detW,
+        srcCx: srcX + srcW * 0.5,
+        monoCx: monoX + monoW * 0.5,
+        cuvCx: cuvX + cuvW * 0.5,
+        detCx: detX + detW * 0.5,
+        cuvStart: cuvX - 4,
+        cuvEnd: cuvX + cuvW + 4,
+        beamStart: srcX + srcW * 0.85,
+        beamEnd: detX + detW * 0.15,
+      };
+    }
+
+    function drawBeamChannel(x1, x2, y, rgb, alpha, halfH = 4) {
+      if (x2 <= x1) return;
+      ctx.save();
+      const g = ctx.createLinearGradient(0, y - halfH, 0, y + halfH);
+      g.addColorStop(0, rgbStr(rgb, 0));
+      g.addColorStop(0.42, rgbStr(rgb, alpha * 0.7));
+      g.addColorStop(0.5, rgbStr(rgb, alpha));
+      g.addColorStop(0.58, rgbStr(rgb, alpha * 0.7));
+      g.addColorStop(1, rgbStr(rgb, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(x1, y - halfH, x2 - x1, halfH * 2);
+      ctx.restore();
+    }
+
+    function drawBenchLine(L) {
+      ctx.strokeStyle = "rgba(148,163,184,0.14)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(L.srcX - 4, L.yMid);
+      ctx.lineTo(L.detX + L.detW + 12, L.yMid);
+      ctx.stroke();
+    }
+
+    function drawTopBanner(text, L, accent) {
+      roundRectPath(L.w * 0.06, 8, L.w * 0.88, 22, 8);
+      ctx.fillStyle = "rgba(15,23,42,0.92)";
+      ctx.fill();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      drawCanvasLabel(text, L.w * 0.5, 19, { size: 9, color: "#e9d5ff", bold: true });
+    }
+
+    function drawCanvasLabel(text, x, y, opts = {}) {
+      const { align = "center", size = 10, color = "#94a3b8", bold = false, pill = false, rgb = null } = opts;
+      ctx.save();
+      ctx.font = `${bold ? "700" : "600"} ${size}px "Inter","Noto Sans JP",sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      if (pill) {
+        const padX = 8;
+        const padY = 4;
+        const tw = ctx.measureText(text).width;
+        const bx = align === "center" ? x - tw / 2 - padX : x;
+        roundRectPath(bx, y - size / 2 - padY, tw + padX * 2, size + padY * 2, 6);
+        ctx.fillStyle = rgb ? rgbStr(rgb, 0.14) : "rgba(15,23,42,0.88)";
+        ctx.fill();
+        ctx.strokeStyle = rgb ? rgbStr(rgb, 0.38) : "rgba(168,85,247,0.28)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.fillStyle = rgb ? rgbStr(rgb, 0.95) : color;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function drawPhotonParticle(x, y, rgb, size) {
+      ctx.save();
+      const r = size * 2.2;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(255,255,255,0.9)");
+      g.addColorStop(0.2, rgbStr(rgb, 0.85));
+      g.addColorStop(0.55, rgbStr(rgb, 0.25));
+      g.addColorStop(1, rgbStr(rgb, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function spawnPhoton() {
+      if (!instrumentLayout) return;
+      const L = instrumentLayout;
+      const col = nmToRGB(lambdaNm);
+      photons.push({
+        x: L.beamStart,
+        y: L.yMid + (Math.random() - 0.5) * 5,
+        vx: 2.1 + Math.random() * 0.5,
+        phase: "source",
+        color: { r: 255, g: 230, b: 120 },
+        targetColor: col,
+        alive: true,
+        absorbRoll: Math.random(),
+      });
+    }
+
+    function drawInstrument(w, h, waveColor, A, I, I0) {
+      const L = computeLayout(w, h);
+      instrumentLayout = L;
+      const T = I / Math.max(I0, 1);
+      const c = unknownMode ? unknownConcUm : concentrationUm;
+      const sampleAlpha = 0.08 + Math.min(0.55, c / concMaxUm * 0.6);
+      const beamAlpha = 0.28 + T * 0.42;
+      const compY = L.yMid - L.compH / 2;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#0c1220");
+      bg.addColorStop(0.55, "#080d16");
+      bg.addColorStop(1, "#050810");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, h * 0.1, w * 0.5, h * 0.5, h * 0.82);
+      vignette.addColorStop(0, "rgba(168,85,247,0.04)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.5)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.05)";
+      ctx.lineWidth = 1;
+      for (let gx = 0; gx < w; gx += 28) {
+        ctx.beginPath(); ctx.moveTo(gx, 36); ctx.lineTo(gx, h); ctx.stroke();
+      }
+      for (let gy = 36; gy < h; gy += 28) {
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      }
+
+      drawTopBanner("直進光路 — 試料を透過した光 I を検出器で測る", L, "rgba(168,85,247,0.35)");
+      drawBenchLine(L);
+
+      roundRectPath(L.srcX, compY, L.srcW, L.compH, 10);
+      const srcGrad = ctx.createLinearGradient(L.srcX, compY, L.srcX + L.srcW, compY + L.compH);
+      srcGrad.addColorStop(0, "#1e293b");
+      srcGrad.addColorStop(1, "#0f172a");
+      ctx.fillStyle = srcGrad;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(253,230,138,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.save();
+      ctx.shadowColor = "rgba(253,230,138,0.75)";
+      ctx.shadowBlur = 16;
+      const lampG = ctx.createRadialGradient(L.srcCx, L.yMid, 1, L.srcCx, L.yMid, 14);
+      lampG.addColorStop(0, "#fff");
+      lampG.addColorStop(0.4, "#fde68a");
+      lampG.addColorStop(1, "rgba(253,230,138,0)");
+      ctx.fillStyle = lampG;
+      ctx.beginPath();
+      ctx.arc(L.srcCx, L.yMid, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      roundRectPath(L.monoX, compY, L.monoW, L.compH, 10);
+      ctx.fillStyle = "rgba(15,23,42,0.96)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(192,132,252,0.38)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      for (let i = 0; i < 7; i++) {
+        const lx = L.monoX + 12 + i * ((L.monoW - 24) / 6);
+        ctx.strokeStyle = "rgba(148,163,184,0.15)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(lx, compY + 10);
+        ctx.lineTo(lx, compY + L.compH - 10);
+        ctx.stroke();
+      }
+
+      const cuvInnerH = L.compH * 0.88;
+      const cuvY = L.yMid - cuvInnerH / 2;
+      roundRectPath(L.cuvX, cuvY, L.cuvW, cuvInnerH, 6);
+      ctx.fillStyle = "rgba(15,23,42,0.5)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(148,163,184,0.5)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      const liqG = ctx.createLinearGradient(L.cuvX, cuvY, L.cuvX + L.cuvW, cuvY);
+      liqG.addColorStop(0, rgbStr(waveColor, sampleAlpha * 0.4));
+      liqG.addColorStop(0.5, rgbStr(waveColor, sampleAlpha));
+      liqG.addColorStop(1, rgbStr(waveColor, sampleAlpha * 0.4));
+      ctx.fillStyle = liqG;
+      roundRectPath(L.cuvX + 4, cuvY + 5, L.cuvW - 8, cuvInnerH - 10, 4);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(L.cuvX + 6, cuvY + 7, 2, cuvInnerH - 14);
+
+      roundRectPath(L.detX, compY, L.detW, L.compH, 10);
+      ctx.fillStyle = "rgba(15,23,42,0.96)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(192,132,252,0.32)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      const barMax = L.compH * 0.48;
+      const barH = barMax * T;
+      const barX = L.detCx - 9;
+      const barBase = compY + L.compH - 16;
+      ctx.fillStyle = "rgba(255,255,255,0.07)";
+      roundRectPath(barX, barBase - barMax, 18, barMax, 4);
+      ctx.fill();
+      if (barH > 2) {
+        const barG = ctx.createLinearGradient(barX, barBase - barH, barX, barBase);
+        barG.addColorStop(0, rgbStr(waveColor, 0.9));
+        barG.addColorStop(1, rgbStr(waveColor, 0.35));
+        ctx.fillStyle = barG;
+        roundRectPath(barX, barBase - barH, 18, barH, 4);
+        ctx.fill();
+      }
+
+      drawBeamChannel(L.beamStart, L.monoCx - 8, L.yMid, { r: 255, g: 230, b: 120 }, 0.35, 5);
+      drawBeamChannel(L.monoCx + 8, L.cuvStart, L.yMid, waveColor, beamAlpha * 0.85, 5);
+      drawBeamChannel(L.cuvEnd, L.beamEnd, L.yMid, waveColor, beamAlpha, 5);
+
+      ctx.save();
+      ctx.shadowColor = rgbStr(waveColor, 0.65);
+      ctx.shadowBlur = 10;
+      const slitG = ctx.createLinearGradient(L.monoCx - 4, L.yMid - 14, L.monoCx + 4, L.yMid + 14);
+      slitG.addColorStop(0.5, rgbStr(waveColor, 1));
+      slitG.addColorStop(0, rgbStr(waveColor, 0.2));
+      slitG.addColorStop(1, rgbStr(waveColor, 0.2));
+      ctx.fillStyle = slitG;
+      roundRectPath(L.monoCx - 3, L.yMid - 12, 6, 24, 2);
+      ctx.fill();
+      ctx.restore();
+
+      drawCanvasLabel(`${lambdaNm} nm`, L.monoCx, L.topBand, { size: 9, rgb: waveColor, pill: true, bold: true });
+      drawCanvasLabel(`A = ${A.toFixed(2)}`, L.cuvCx, L.topBand, { size: 9, color: "#e9d5ff", pill: true, bold: true });
+      drawCanvasLabel(`透過 ${(T * 100).toFixed(1)}%  ·  I = ${I.toFixed(0)}`, L.detCx, L.topBand, {
+        size: 8, rgb: waveColor, pill: true, bold: true,
+      });
+
+      drawCanvasLabel("光源 I₀", L.srcCx, compY + L.compH + 14, { size: 9, bold: true, color: "#fde68a" });
+      drawCanvasLabel("モノクロメータ", L.monoCx, compY + L.compH + 14, { size: 9, bold: true });
+      drawCanvasLabel("試料セル", L.cuvCx, compY + L.compH + 14, { size: 9, bold: true });
+      drawCanvasLabel("検出器", L.detCx, compY + L.compH + 14, { size: 9, bold: true });
+    }
+
+    function animate() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      const { A, I } = computePhysics();
+      const T = transmissionFromA(A);
+      const waveColor = nmToRGB(lambdaNm);
+
+      drawInstrument(w, h, waveColor, A, I, i0);
+
+      if (measuring && animTime % 5 === 0) spawnPhoton();
+
+      const L = instrumentLayout;
+      if (!L) { animTime++; requestAnimationFrame(animate); return; }
+
+      photons.forEach((p) => {
+        if (!p.alive) return;
+        p.x += p.vx;
+        p.y = L.yMid + (p.y - L.yMid) * 0.92 + (Math.random() - 0.5) * 0.5;
+
+        if (p.x > L.monoCx - 6 && p.phase === "source") {
+          p.phase = "mono";
+          p.color = { ...p.targetColor };
+        }
+        if (p.x > L.cuvStart && p.x < L.cuvEnd && p.phase === "mono") {
+          if (p.absorbRoll > T) {
+            p.alive = false;
+            drawPhotonParticle(p.x, p.y, p.color, 0.9);
+            return;
+          }
+        }
+        if (p.x > L.cuvEnd) p.phase = "detected";
+        if (p.x > L.beamEnd + 20) p.alive = false;
+
+        if (p.alive) drawPhotonParticle(p.x, p.y, p.color, p.phase === "source" ? 1.1 : 1.3);
+      });
+
+      photons = photons.filter((p) => p.alive);
+      if (photons.length > 70) photons.splice(0, photons.length - 70);
+
+      animTime++;
+      requestAnimationFrame(animate);
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    document.getElementById("materialSelect").addEventListener("change", (e) => {
+      materialId = e.target.value;
+      applyMaterial(true);
+      document.getElementById("statusMsg").textContent =
+        `${MATERIALS[materialId].name} を選びました。波長も自動で設定されています。`;
+    });
+
+    document.getElementById("lambdaSelect").addEventListener("change", (e) => {
+      lambdaNm = Number(e.target.value);
+      const mat = MATERIALS[materialId];
+      const item = mat.lambdas.find((x) => x.nm === lambdaNm);
+      epsilon = item ? item.eps : mat.lambdas[0].eps;
+      updateAll();
+    });
+
+    document.getElementById("concSlider").addEventListener("input", (e) => {
+      if (unknownMode) return;
+      concentrationUm = concUmFromSlider(Number(e.target.value));
+      updateAll();
+    });
+
+    document.getElementById("i0Slider").addEventListener("input", (e) => {
+      i0 = Number(e.target.value);
+      updateAll();
+    });
+
+    document.getElementById("btnStart").addEventListener("click", () => {
+      measuring = true;
+      unknownMode = false;
+      unknownRevealed = false;
+      document.getElementById("concSlider").disabled = false;
+      document.getElementById("statusMsg").textContent =
+        "測定中 — 光の粒が試料で消えるほど、I が小さくなり A が大きくなります。";
+      updateAll();
+    });
+
+    document.getElementById("btnUnknown").addEventListener("click", () => {
+      unknownMode = true;
+      unknownRevealed = false;
+      unknownConcUm = concUmFromSlider(
+        Math.floor(CONC_SLIDER_STEPS * (0.2 + Math.random() * 0.65))
+      );
+      measuring = true;
+      document.getElementById("concSlider").disabled = true;
+      document.getElementById("statusMsg").textContent =
+        "未知試料を入れました！ A を読んで、グラフから濃度を当ててみましょう。";
+      updateAll();
+    });
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+      unknownMode = false;
+      unknownRevealed = false;
+      measuring = true;
+      materialId = "nadh";
+      document.getElementById("materialSelect").value = "nadh";
+      document.getElementById("i0Slider").value = 100;
+      i0 = 100;
+      applyMaterial(true);
+      document.getElementById("concSlider").disabled = false;
+      photons = [];
+      document.getElementById("statusMsg").textContent =
+        "最初からやり直します。① 物質 → ③ 濃度スライダーの順で試してみてください。";
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    initChart();
+    applyMaterial(true);
+    resizeCanvas();
+    animate();
+  </script>
+</body>
+</html>

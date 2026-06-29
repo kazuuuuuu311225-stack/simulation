@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>統合シミュ — 蛍光・燐光 ①〜⑦</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a78bfa;
+      --glow: rgba(167, 139, 250, 0.35);
+      --slate-bg: rgba(10, 14, 26, 0.88);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: #070a12;
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+    body::before, body::after {
+      content: ""; position: fixed; border-radius: 50%; pointer-events: none; filter: blur(90px); opacity: 0.4; z-index: 0;
+    }
+    body::before { width: 420px; height: 420px; top: -100px; left: -80px; background: rgba(163,230,53,0.25); }
+    body::after { width: 380px; height: 380px; bottom: -80px; right: -60px; background: rgba(167,139,250,0.22); }
+    .page-shell { position: relative; z-index: 1; width: min(1280px, 97vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; padding: 1rem 1.25rem; border-radius: 20px;
+      background: rgba(12,16,28,0.75); border: 1px solid rgba(167,139,250,0.2);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05); }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px; border-radius: 16px;
+      background: linear-gradient(135deg, rgba(163,230,53,0.25), rgba(167,139,250,0.3));
+      border: 1px solid rgba(167,139,250,0.4); box-shadow: 0 0 28px var(--glow); font-size: 1.2rem; color: #e9d5ff;
+    }
+    h1 { margin: 8px 0 4px; font-size: clamp(1.15rem, 3.5vw, 1.55rem); font-weight: 700; color: #f5f3ff;
+      text-shadow: 0 0 24px var(--glow); }
+    .chapter-label { margin: 0; font-size: 0.84rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 18px;
+      color: #ede9fe; background: rgba(167,139,250,0.12);
+      border: 1px solid rgba(167,139,250,0.35); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem; transition: background 0.2s;
+    }
+    #back:hover { background: rgba(167,139,250,0.22); }
+    .dash-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    }
+    @media (min-width: 640px) { .dash-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 960px) { .dash-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1100px) { .dash-grid { grid-template-columns: repeat(8, 1fr); } }
+    .dash-card {
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12);
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .dash-card.live { border-color: rgba(167,139,250,0.45); box-shadow: 0 0 16px rgba(167,139,250,0.15); }
+    .dash-card.bump { animation: dashBump 0.45s ease; }
+    @keyframes dashBump {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.04); box-shadow: 0 0 20px rgba(167,139,250,0.25); }
+      100% { transform: scale(1); }
+    }
+    .dash-card .lbl { display: block; font-size: 0.62rem; font-weight: 600; color: #64748b; letter-spacing: 0.04em; }
+    .dash-card .val { font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .dash-card.c-a .val { color: #a3e635; }
+    .dash-card.c-e .val { color: #c084fc; }
+    .dash-card.c-p .val { color: #2dd4bf; }
+    .dash-card.c-d .val { color: #fb923c; }
+    .dash-card.c-g .val { color: #fde68a; }
+    .dash-card.c-m .val { color: #e9d5ff; }
+    .flow-guide {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 4px;
+      padding: 12px 14px; border-radius: 16px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.14);
+      font-size: 0.78rem; font-weight: 600;
+    }
+    .flow-step {
+      padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+      transition: transform 0.2s, box-shadow 0.25s;
+    }
+    .flow-step.pulse { transform: scale(1.04); box-shadow: 0 0 14px rgba(255,255,255,0.12); }
+    .fs-a { background: rgba(163,230,53,0.16); color: #ecfccb; border: 1px solid rgba(163,230,53,0.35); }
+    .fs-e { background: rgba(192,132,252,0.14); color: #e9d5ff; border: 1px solid rgba(192,132,252,0.35); }
+    .fs-p { background: rgba(45,212,191,0.14); color: #99f6e4; border: 1px solid rgba(45,212,191,0.35); }
+    .fs-d { background: rgba(251,146,60,0.14); color: #fed7aa; border: 1px solid rgba(251,146,60,0.35); }
+    .fs-j { background: rgba(244,114,182,0.14); color: #fbcfe8; border: 1px solid rgba(244,114,182,0.35); }
+    .fs-f { background: rgba(134,239,172,0.14); color: #bbf7d0; border: 1px solid rgba(134,239,172,0.35); }
+    .fs-t { background: rgba(253,230,138,0.14); color: #fde68a; border: 1px solid rgba(253,230,138,0.35); }
+    .curriculum-map {
+      padding: 10px 14px; border-radius: 14px; font-size: 0.72rem; line-height: 1.55; color: #64748b;
+      background: rgba(255,255,255,0.02); border: 1px dashed rgba(148,163,184,0.18);
+    }
+    .curriculum-map span { color: #94a3b8; }
+    .panel.highlight-j { border-color: rgba(244,114,182,0.35); }
+    .panel.highlight-f { border-color: rgba(134,239,172,0.35); }
+    .panel.p-j::before { background: linear-gradient(180deg, #f472b6, transparent); }
+    .panel.p-f::before { background: linear-gradient(180deg, #86efac, transparent); }
+    .badge.j { background: #f472b6; color: #fff; }
+    .badge.f { background: #86efac; color: #14532d; }
+    .badge.t { background: #fde68a; color: #422006; }
+    .dual-canvas { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .abs-chart-wrap { height: 132px; min-height: 120px; padding: 0 10px 10px; position: relative; }
+    .abs-chart-wrap canvas { display: block; width: 100%; max-height: 120px; border-radius: 12px; border: 1px solid rgba(148,163,184,0.1); }
+    .emit-jab-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 1080px) { .emit-jab-grid { grid-template-columns: 1.05fr 0.95fr; } }
+    .prob-row { display: flex; gap: 8px; padding: 0 12px 10px; flex-wrap: wrap; }
+    .prob-box {
+      flex: 1; min-width: 100px; padding: 8px 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .prob-box .plbl { display: block; font-size: 0.62rem; color: #64748b; font-weight: 600; }
+    .prob-box .pval { font-size: 0.95rem; font-weight: 700; margin-top: 2px; }
+    .prob-box.fluor .pval { color: #fde68a; }
+    .prob-box.isc .pval { color: #2dd4bf; }
+    .dash-card.c-ex .val { color: #7dd3fc; }
+    .dash-card.c-em .val { color: #86efac; }
+    .dash-card.c-st .val { color: #fde68a; }
+    .ctrl-btn.active.green { background: rgba(134,239,172,0.18); border-color: rgba(134,239,172,0.45); color: #bbf7d0; }
+    .ctrl-btn.on-active { background: rgba(163,230,53,0.2); border-color: rgba(163,230,53,0.5); color: #ecfccb; }
+    .ctrl-btn.off-active { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.4); color: #fecaca; }
+    .sample-intro {
+      margin: 0 12px 8px; padding: 10px 12px; border-radius: 10px; font-size: 0.78rem; line-height: 1.6;
+      color: #94a3b8; background: rgba(134,239,172,0.06); border: 1px solid rgba(134,239,172,0.15);
+    }
+    .sample-intro strong { color: #bbf7d0; font-weight: 600; }
+    .sample-card {
+      margin: 0 12px 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .sample-card .sample-tag {
+      display: inline-block; margin-bottom: 6px; padding: 3px 8px; border-radius: 999px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+      background: rgba(134,239,172,0.15); color: #86efac; border: 1px solid rgba(134,239,172,0.25);
+    }
+    .sample-card h4 { margin: 0 0 4px; font-size: 0.92rem; color: #ecfccb; }
+    .sample-card .formal { margin: 0 0 8px; font-size: 0.72rem; color: #64748b; }
+    .sample-card dl { margin: 0; display: grid; gap: 6px; }
+    .sample-card dt { font-size: 0.65rem; font-weight: 700; color: #64748b; }
+    .sample-card dd { margin: 0; font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
+    .sample-swatch {
+      display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px;
+      vertical-align: -2px; border: 1px solid rgba(255,255,255,0.25);
+    }
+    .ctrl-btn[data-fluor] { flex: 1 1 100%; min-width: 0; text-align: left; padding-left: 10px; line-height: 1.35; }
+    .ctrl-btn[data-fluor] .btn-sub { display: block; font-size: 0.65rem; font-weight: 500; color: #64748b; margin-top: 2px; }
+    .ctrl-btn.active[data-fluor] .btn-sub { color: #a7f3d0; }
+    .factor-effect {
+      margin: 0; padding: 14px 16px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(45,212,191,0.08), rgba(251,146,60,0.06));
+      border: 1px solid rgba(148,163,184,0.16);
+    }
+    .factor-effect h3 { margin: 0 0 10px; font-size: 0.88rem; color: #e2e8f0; }
+    .factor-effect .sel-line {
+      margin: 0 0 12px; font-size: 0.78rem; line-height: 1.55; color: #94a3b8;
+    }
+    .factor-effect .sel-line strong { color: #99f6e4; }
+    .effect-compare {
+      display: grid; grid-template-columns: 1fr; gap: 8px;
+    }
+    @media (min-width: 640px) { .effect-compare { grid-template-columns: 1fr 1fr; } }
+    .effect-box {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .effect-box.f { border-color: rgba(253,230,138,0.25); }
+    .effect-box.p { border-color: rgba(94,234,212,0.25); }
+    .effect-box .eb-title { font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+    .effect-box.f .eb-title { color: #fde68a; }
+    .effect-box.p .eb-title { color: #5eead4; }
+    .effect-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.76rem; color: #cbd5e1; margin-top: 4px; }
+    .effect-row .val { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .steep-bar-wrap { margin-top: 8px; }
+    .steep-lbl { font-size: 0.62rem; color: #64748b; margin-bottom: 3px; }
+    .steep-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .steep-fill { height: 100%; border-radius: inherit; transition: width 0.25s ease; }
+    .steep-fill.f { background: linear-gradient(90deg, #fde68a, #f97316); }
+    .steep-fill.p { background: linear-gradient(90deg, #5eead4, #0891b2); }
+    .effect-verdict {
+      margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+      font-size: 0.8rem; line-height: 1.6; color: #e2e8f0;
+      background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.22);
+    }
+    .effect-verdict em { font-style: normal; color: #fde68a; font-weight: 700; }
+    .chart-effect-banner {
+      margin: 0 12px 8px; padding: 10px 12px; border-radius: 10px; font-size: 0.76rem; line-height: 1.55;
+      color: #cbd5e1; background: rgba(45,212,191,0.08); border: 1px solid rgba(45,212,191,0.2);
+    }
+    .chart-effect-banner strong { color: #99f6e4; }
+    .flow-arrow { color: #475569; font-size: 0.9rem; }
+    .connect-banner {
+      padding: 12px 16px; border-radius: 14px;
+      background: linear-gradient(90deg, rgba(167,139,250,0.08), rgba(45,212,191,0.06));
+      border: 1px solid rgba(167,139,250,0.2); font-size: 0.86rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .connect-banner strong { color: #c4b5fd; }
+    .connect-banner em { font-style: normal; color: #fde68a; font-weight: 600; }
+    .main-grid { display: flex; flex-direction: column; gap: 12px; }
+    .panels-flow { display: flex; flex-direction: column; gap: 12px; }
+    .flow-section-label {
+      margin: 4px 0 0; padding: 8px 14px; border-radius: 10px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; color: #94a3b8;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.1);
+    }
+    .flow-section-label em { font-style: normal; color: #c4b5fd; font-weight: 800; }
+    .factor-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 980px) { .factor-grid { grid-template-columns: 1fr 1fr; } }
+    .left-stack, .right-stack { display: flex; flex-direction: column; gap: 12px; }
+    .panel {
+      border-radius: 16px; background: var(--slate-bg);
+      border: 1px solid rgba(148,163,184,0.14);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      overflow: hidden; transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .panel.highlight-a { border-color: rgba(163,230,53,0.35); box-shadow: 0 0 24px rgba(163,230,53,0.08); }
+    .panel.highlight-e { border-color: rgba(192,132,252,0.35); box-shadow: 0 0 24px rgba(192,132,252,0.1); }
+    .panel.highlight-p { border-color: rgba(45,212,191,0.3); }
+    .panel.highlight-d { border-color: rgba(251,146,60,0.35); }
+    .panel.highlight-g { border-color: rgba(253,230,138,0.35); box-shadow: 0 0 24px rgba(253,230,138,0.08); }
+    .panel-head {
+      padding: 12px 14px 8px; border-bottom: 1px solid rgba(148,163,184,0.1);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .panel-head::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 16px 0 0 0;
+    }
+    .panel { position: relative; }
+    .panel.p-a::before { background: linear-gradient(180deg, #a3e635, transparent); }
+    .panel.p-e::before { background: linear-gradient(180deg, #c084fc, transparent); }
+    .panel.p-p::before { background: linear-gradient(180deg, #2dd4bf, transparent); }
+    .panel.p-d::before { background: linear-gradient(180deg, #fb923c, transparent); }
+    .panel.p-g::before { background: linear-gradient(180deg, #fde68a, transparent); }
+    .badge {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 800; box-shadow: 0 0 12px rgba(0,0,0,0.3);
+    }
+    .badge.a { background: #a3e635; color: #1a2e05; }
+    .badge.e { background: #c084fc; color: #fff; }
+    .badge.p { background: #2dd4bf; color: #042f2e; }
+    .badge.d { background: #fb923c; color: #fff; }
+    .badge.g { background: #fde68a; color: #422006; }
+    .panel-head h2 { margin: 0; font-size: 0.92rem; font-weight: 700; color: #f1f5f9; }
+    .panel-sub { margin: 3px 0 0; font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
+    .canvas-wrap { padding: 8px 10px 10px; }
+    .canvas-wrap canvas {
+      display: block; width: 100%; border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.1);
+    }
+    #absCanvas { height: 220px; min-height: 200px; }
+    #emitCanvas { height: 250px; min-height: 230px; }
+    #jabCanvas { height: 250px; min-height: 230px; }
+    #phononCanvas { height: 200px; min-height: 180px; }
+    #defectCanvas { height: 210px; min-height: 190px; }
+    #exEmChart { height: 200px; min-height: 180px; }
+    .mini-controls { padding: 0 12px 12px; }
+    .ctrl-label { display: block; margin: 8px 0 5px; font-size: 0.7rem; font-weight: 600; color: #64748b; }
+    .ctrl-label:first-child { margin-top: 0; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-val { min-width: 52px; text-align: right; font-size: 0.8rem; font-weight: 700; color: #e9d5ff; font-variant-numeric: tabular-nums; }
+    input[type="range"] { height: 28px; accent-color: #a78bfa; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ctrl-btn {
+      flex: 1 1 calc(33% - 6px); min-width: 74px; padding: 9px 8px; min-height: 38px;
+      border-radius: 10px; border: 1px solid rgba(148,163,184,0.22);
+      background: rgba(255,255,255,0.04); color: #cbd5e1;
+      font-family: inherit; font-size: 0.74rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .ctrl-btn:hover { background: rgba(255,255,255,0.08); }
+    .ctrl-btn:active { transform: scale(0.98); }
+    .ctrl-btn.active { background: rgba(167,139,250,0.22); border-color: rgba(167,139,250,0.5); color: #ede9fe; }
+    .ctrl-btn.active.teal { background: rgba(45,212,191,0.18); border-color: rgba(45,212,191,0.45); color: #99f6e4; }
+    .ctrl-btn.active.orange { background: rgba(251,146,60,0.2); border-color: rgba(251,146,60,0.45); color: #fed7aa; }
+    .shine-btn {
+      width: 100%; margin-top: 8px; padding: 11px; border: none; border-radius: 10px; cursor: pointer;
+      font-family: inherit; font-size: 0.84rem; font-weight: 700; color: #1e1b4b;
+      background: linear-gradient(135deg, #c4b5fd, #a78bfa); box-shadow: 0 0 20px rgba(167,139,250,0.35);
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    .shine-btn:hover { box-shadow: 0 0 28px rgba(167,139,250,0.5); }
+    .shine-btn:active { transform: scale(0.98); }
+    .shine-btn.auto-on { background: linear-gradient(135deg, #5eead4, #2dd4bf); color: #042f2e; margin-top: 6px; }
+    .shine-btn.auto-off { background: linear-gradient(135deg, #475569, #334155); color: #e2e8f0; margin-top: 6px; }
+    .phase-bar {
+      margin: 0 12px 10px; height: 6px; border-radius: 999px;
+      background: rgba(255,255,255,0.06); overflow: hidden;
+    }
+    .phase-bar-fill {
+      height: 100%; border-radius: inherit;
+      background: linear-gradient(90deg, #c084fc, #fde68a, #2dd4bf);
+      transition: width 0.08s linear;
+    }
+    .chart-wrap { padding: 8px 10px 10px; min-height: 240px; }
+    .chart-wrap canvas { max-height: 280px; }
+    .formula-note {
+      margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px;
+      font-size: 0.74rem; color: #94a3b8; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(148,163,184,0.1); line-height: 1.6;
+    }
+    .warn-banner {
+      margin: 0 12px 8px; padding: 8px 12px; border-radius: 10px; font-size: 0.74rem;
+      background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); color: #fde68a;
+      display: none;
+    }
+    .warn-banner.show { display: block; }
+    .explain {
+      padding: 16px 18px; border-radius: 16px;
+      background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .explain h3 { margin: 0 0 10px; font-size: 0.92rem; color: #e2e8f0; }
+    .explain ul { margin: 0; padding-left: 1.2em; font-size: 0.86rem; line-height: 1.75; color: #94a3b8; }
+    .explain strong { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">◎</div>
+      <h1>統合シミュ — 蛍光・燐光 ①〜⑦</h1>
+      <p class="chapter-label">上から ①→⑦ の順 · 個別学習の流れどおりに 1 画面で連動</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="dash-grid" id="dashGrid">
+      <div class="dash-card c-a" id="dashAbs"><span class="lbl">① Abs</span><span class="val" id="dashAbsVal">—</span></div>
+      <div class="dash-card c-e" id="dashPhase"><span class="lbl">② 状態</span><span class="val" id="dashPhaseVal">S₀</span></div>
+      <div class="dash-card c-ex" id="dashEx"><span class="lbl">⑦ Ex</span><span class="val" id="dashExVal">488 nm</span></div>
+      <div class="dash-card c-em" id="dashEm"><span class="lbl">⑦ Em</span><span class="val" id="dashEmVal">509 nm</span></div>
+      <div class="dash-card c-st" id="dashStokes"><span class="lbl">⑦ Δλ</span><span class="val" id="dashStokesVal">21 nm</span></div>
+      <div class="dash-card c-p" id="dashA"><span class="lbl">⑤ A</span><span class="val" id="dashAVal">0.50</span></div>
+      <div class="dash-card c-d" id="dashN"><span class="lbl">⑥ N</span><span class="val" id="dashNVal">1</span></div>
+      <div class="dash-card c-g" id="dashTf"><span class="lbl">④ τ_f / τ_p</span><span class="val" id="dashTauVal">—</span></div>
+    </div>
+
+    <div class="flow-guide" aria-label="①〜⑦の流れ">
+      <span class="flow-step fs-a" data-flow="a">① 吸光</span><span class="flow-arrow">→</span>
+      <span class="flow-step fs-e" data-flow="e">② 遷移</span><span class="flow-arrow">→</span>
+      <span class="flow-step fs-j" data-flow="j">③ 比較</span><span class="flow-arrow">→</span>
+      <span class="flow-step fs-t" data-flow="t">④ 減衰</span><span class="flow-arrow">←</span>
+      <span class="flow-step fs-p" data-flow="p">⑤ フォノン</span><span class="flow-arrow">↔</span>
+      <span class="flow-step fs-d" data-flow="d">⑥ 欠陥</span><span class="flow-arrow">·</span>
+      <span class="flow-step fs-f" data-flow="f">⑦ 光度計</span>
+    </div>
+    <p class="curriculum-map">
+      <span>①</span>光吸収 · <span>②</span>S₀/S₁/T₁ · <span>③</span>ジャブロンスキー · <span>④</span>I(t)=e^(−t/τ) · <span>⑤</span>フォノンA · <span>⑥</span>欠陥N · <span>⑦</span>Ex/Em/ストークス — すべて連動
+    </p>
+    <p class="connect-banner" id="connectMsg" role="status"></p>
+
+    <div class="main-grid">
+      <div class="panels-flow">
+
+        <p class="flow-section-label"><em>①〜④</em>　光の吸収 → 遷移 → 時間減衰</p>
+
+        <section class="panel p-a" id="panelAbs">
+          <div class="panel-head">
+            <span class="badge a">①</span>
+            <div>
+              <h2>光吸収と電子励起</h2>
+              <p class="panel-sub" id="absSub">個別 ① と同じ — 原子模型 · ガウス型吸収</p>
+            </div>
+          </div>
+          <div class="canvas-wrap"><canvas id="absCanvas" aria-label="原子と吸光"></canvas></div>
+          <div class="abs-chart-wrap"><canvas id="absChart" aria-label="吸収スペクトル"></canvas></div>
+          <div class="mini-controls">
+            <label class="ctrl-label" for="lambdaSlider">励起波長 λ（⑦で選んだ試料の Ex 付近 · 300〜700 nm）</label>
+            <div class="slider-row">
+              <input type="range" id="lambdaSlider" min="300" max="700" value="488" step="1">
+              <span class="slider-val" id="dispLambda">488</span>
+            </div>
+            <button type="button" class="shine-btn" id="shineBtn">光を当てる（励起）</button>
+            <button type="button" class="shine-btn auto-on" id="autoBtn">自動デモ ON</button>
+          </div>
+        </section>
+
+        <div class="emit-jab-grid">
+        <section class="panel p-e" id="panelEmit">
+          <div class="panel-head">
+            <span class="badge e">②</span>
+            <div>
+              <h2>励起状態と遷移（S₀ / S₁ / T₁）</h2>
+              <p class="panel-sub" id="emitSub">個別 ② — 蛍光 · 項間交差 · 燐光</p>
+            </div>
+          </div>
+          <div class="canvas-wrap"><canvas id="emitCanvas" aria-label="発光遷移"></canvas></div>
+          <div class="prob-row">
+            <div class="prob-box fluor"><span class="plbl">蛍光確率 P(F)</span><span class="pval" id="dispPfluor">—</span></div>
+            <div class="prob-box isc"><span class="plbl">ISC 確率 P(ISC)</span><span class="pval" id="dispPisc">—</span></div>
+          </div>
+          <div class="phase-bar" aria-hidden="true"><div class="phase-bar-fill" id="phaseBarFill"></div></div>
+        </section>
+
+        <section class="panel p-j" id="panelJab">
+          <div class="panel-head">
+            <span class="badge j">③</span>
+            <div>
+              <h2>ジャブロンスキー図（蛍光 vs 燐光）</h2>
+              <p class="panel-sub" id="jabSub">個別 ③ — 吸収↑ · 蛍光↓ · ISC↘ · 燐光↓</p>
+            </div>
+          </div>
+          <div class="canvas-wrap"><canvas id="jabCanvas" aria-label="ジャブロンスキー"></canvas></div>
+        </section>
+        </div>
+
+        <section class="panel p-g" id="panelChart">
+          <div class="panel-head">
+            <span class="badge t">④</span>
+            <div>
+              <h2>発光強度の時間減衰</h2>
+              <p class="panel-sub" id="decaySub">個別 ④ — I(t)=I₀e^(−t/τ) · 励起 ON/OFF</p>
+            </div>
+          </div>
+          <div class="mini-controls" style="padding-top:10px">
+            <div class="btn-row">
+              <button type="button" class="ctrl-btn on-active" id="btnExcOn">励起光 ON</button>
+              <button type="button" class="ctrl-btn" id="btnExcOff">励起光 OFF</button>
+            </div>
+            <label class="ctrl-label" for="i0Slider">初期強度 I₀</label>
+            <div class="slider-row">
+              <input type="range" id="i0Slider" min="0.3" max="1" value="0.9" step="0.05">
+              <span class="slider-val" id="dispI0">0.90</span>
+            </div>
+          </div>
+          <div class="chart-effect-banner" id="chartEffectBanner" role="status">
+            ⑤⑥ の設定がここに反映されます — スライダーを動かすと破線の曲線と τ の位置が変わります。
+          </div>
+          <div class="chart-wrap"><canvas id="decayChart" aria-label="減衰グラフ"></canvas></div>
+          <p class="formula-note">
+            ④ I(t)=I₀e^(−t/τ)　⑤⑥ で τ が短くなる · ⑦ Em &gt; Ex（ストークス）
+          </p>
+        </section>
+
+        <p class="flow-section-label"><em>⑤〜⑥</em>　フォノン · 欠陥 → 寿命が短くなる</p>
+
+        <div class="factor-grid">
+        <section class="panel p-p" id="panelPhonon">
+          <div class="panel-head">
+            <span class="badge p">⑤</span>
+            <div>
+              <h2>格子振動（フォノン）</h2>
+              <p class="panel-sub" id="phononSub">個別 ⑤ — A↑ で τ_f / τ_p が短く</p>
+            </div>
+          </div>
+          <p class="warn-banner" id="optWarn">光学モードは存在しません（単原子鎖）</p>
+          <div class="canvas-wrap"><canvas id="phononCanvas" aria-label="フォノン"></canvas></div>
+          <div class="mini-controls">
+            <span class="ctrl-label">鎖 · モード · 振幅</span>
+            <div class="btn-row">
+              <button type="button" class="ctrl-btn active teal" id="btnMono">単原子</button>
+              <button type="button" class="ctrl-btn" id="btnDi">双原子</button>
+              <button type="button" class="ctrl-btn active teal" id="btnAcoustic">音響</button>
+              <button type="button" class="ctrl-btn" id="btnOptical">光学</button>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="ampSlider" min="0.1" max="2" value="0.5" step="0.05">
+              <span class="slider-val" id="dispA">0.50</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel p-d" id="panelDefect">
+          <div class="panel-head">
+            <span class="badge d">⑥</span>
+            <div>
+              <h2>格子欠陥 → フォノン散乱</h2>
+              <p class="panel-sub" id="defectSub">個別 ⑥ — N × A で寿命がさらに短く</p>
+            </div>
+          </div>
+          <div class="canvas-wrap"><canvas id="defectCanvas" aria-label="格子欠陥"></canvas></div>
+          <div class="mini-controls">
+            <span class="ctrl-label">欠陥の種類 · 個数</span>
+            <div class="btn-row">
+              <button type="button" class="ctrl-btn active orange" data-defect="vacancy">空孔</button>
+              <button type="button" class="ctrl-btn" data-defect="substitution">置換</button>
+              <button type="button" class="ctrl-btn" data-defect="interstitial">間隙</button>
+              <button type="button" class="ctrl-btn" data-defect="dislocation">転位</button>
+              <button type="button" class="ctrl-btn" data-defect="grainBoundary">粒界</button>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="countSlider" min="0" max="5" value="1" step="1">
+              <span class="slider-val" id="dispN">1</span>
+            </div>
+          </div>
+        </section>
+        </div>
+
+        <section class="factor-effect" id="panelEffect" aria-live="polite">
+          <h3>⑤⑥ の選択 → ④ のグラフはこう変わる</h3>
+          <p class="sel-line" id="effectSelection">—</p>
+          <div class="effect-compare">
+            <div class="effect-box f">
+              <div class="eb-title">蛍光 I_f(t)</div>
+              <div class="effect-row"><span>τ_f</span><span class="val" id="effTf">—</span></div>
+              <div class="effect-row"><span>理想(A=0,N=0)</span><span class="val" id="effTf0">—</span></div>
+              <div class="effect-row"><span>t=1 s の強度</span><span class="val" id="effIf1">—</span></div>
+              <div class="steep-bar-wrap">
+                <div class="steep-lbl">減衰の急さ（右ほど急）</div>
+                <div class="steep-bar"><div class="steep-fill f" id="steepBarF"></div></div>
+              </div>
+            </div>
+            <div class="effect-box p">
+              <div class="eb-title">燐光 I_p(t)</div>
+              <div class="effect-row"><span>τ_p</span><span class="val" id="effTp">—</span></div>
+              <div class="effect-row"><span>理想(A=0,N=0)</span><span class="val" id="effTp0">—</span></div>
+              <div class="effect-row"><span>t=1 s の強度</span><span class="val" id="effIp1">—</span></div>
+              <div class="steep-bar-wrap">
+                <div class="steep-lbl">減衰の急さ（右ほど急）</div>
+                <div class="steep-bar"><div class="steep-fill p" id="steepBarP"></div></div>
+              </div>
+            </div>
+          </div>
+          <p class="effect-verdict" id="effectVerdict">—</p>
+          <p style="margin:10px 0 0;text-align:center;font-size:0.76rem">
+            <a href="#panelChart" style="color:#99f6e4;text-decoration:none;font-weight:600">↑ ④ のグラフで曲線の変化を確認</a>
+          </p>
+        </section>
+
+        <p class="flow-section-label"><em>⑦</em>　蛍光光度計（Ex / Em · 応用）</p>
+
+        <section class="panel p-f" id="panelFluoro">
+          <div class="panel-head">
+            <span class="badge f">⑦</span>
+            <div>
+              <h2>蛍光光度計 — Ex / Em スペクトル</h2>
+              <p class="panel-sub" id="fluoroSub">試料を選ぶと ① の λ と Ex/Em が連動</p>
+            </div>
+          </div>
+          <p class="sample-intro">
+            <strong>試料</strong>＝蛍光光度計に入れる「光る物質」のこと。下の3つは研究・病院でよく使う<strong>標準的な例</strong>です（略称だけでは分からなくてOK）。
+          </p>
+          <div class="mini-controls" style="padding-top:0">
+            <span class="ctrl-label">試料（蛍光色素）を選ぶ</span>
+            <div class="btn-row">
+              <button type="button" class="ctrl-btn active green" data-fluor="gfp">GFP<span class="btn-sub">緑 · 細胞を光らせるタンパク質</span></button>
+              <button type="button" class="ctrl-btn" data-fluor="fitc">FITC<span class="btn-sub">黄緑 · 抗体などの蛍光ラベル</span></button>
+              <button type="button" class="ctrl-btn" data-fluor="dapi">DAPI<span class="btn-sub">青 · DNA（細胞核）を染める</span></button>
+            </div>
+          </div>
+          <div class="sample-card" id="sampleCard" aria-live="polite">
+            <span class="sample-tag">いまの試料</span>
+            <h4 id="sampleTitle">—</h4>
+            <p class="formal" id="sampleFormal">—</p>
+            <dl>
+              <div><dt>どんなもの？</dt><dd id="sampleWhat">—</dd></div>
+              <div><dt>どこで使う？</dt><dd id="sampleUse">—</dd></div>
+              <div><dt>見える蛍光の色</dt><dd id="sampleColor">—</dd></div>
+            </dl>
+          </div>
+          <div class="chart-wrap"><canvas id="exEmChart" aria-label="Ex Em スペクトル"></canvas></div>
+          <p class="formula-note" style="margin-top:0">
+            Ex＝励起に使う波長 · Em＝出てくる蛍光の波長 · Em が Ex より長い＝<strong style="color:#fde68a">ストークスシフト</strong>
+          </p>
+        </section>
+
+      </div>
+    </div>
+
+    <section class="explain">
+      <h3>①〜⑦ → ⑧ 統合のポイント</h3>
+      <ul>
+        <li><strong>① 吸光</strong> — ⑦ で選んだ Ex 付近の波長が吸収ピーク。Abs ≥ 0.3 で S₀→S₁。</li>
+        <li><strong>② 遷移</strong> — S₁ から蛍光（速い）か ISC→T₁→燐光（遅い）。散乱が強いと ISC↑。</li>
+        <li><strong>③ 比較</strong> — ジャブロンスキー図で 4 経路を一覧。蛍光と燐光の寿命差が τ_f ≪ τ_p。</li>
+        <li><strong>④ 減衰</strong> — 励起 ON で I₀ 維持、OFF で指数減衰。⑤⑥ が τ を短縮。</li>
+        <li><strong>⑤ フォノン</strong> · <strong>⑥ 欠陥</strong> — A と N が大きいほど非放射失活↑、④ の曲線が急になる。</li>
+        <li><strong>⑦ 光度計</strong> — 試料（GFP/FITC/DAPI）の Ex·Em を選ぶと ① の吸収波長も連動。Em &gt; Ex がストークスシフト。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    const A_AMP = 1.0, ABS_THRESHOLD = 0.3;
+    const TAU_F0 = 1.0, TAU_P0 = 3.0, K1 = 0.5, K2 = 0.3, K3 = 0.4, K4 = 0.2;
+    const P_FLUOR_BASE = 0.55, P_ISC_BASE = 0.45;
+    const OMEGA_AC = 2.0, OMEGA_OPT = 3.2, PHI_AC = 0.35, N_ATOMS = 20, CHART_T = 5;
+    const DEFECT_NAMES = { vacancy: "空孔", substitution: "置換", interstitial: "間隙", dislocation: "転位", grainBoundary: "粒界" };
+    const FLUOROPHORES = {
+      gfp: {
+        name: "GFP", short: "GFP",
+        formalName: "緑色蛍光タンパク質（Green Fluorescent Protein）",
+        what: "クラゲなどに元々いる「光るタンパク質」。遺伝子を組み込んだ細胞が緑色に光る。",
+        use: "細胞・生物の蛍光イメージング（生きたまま観察）",
+        colorName: "緑", colorHex: "#22c55e",
+        exPeak: 488, emPeak: 509, sigmaEx: 22, sigmaEm: 18, qy: 0.60,
+      },
+      fitc: {
+        name: "FITC", short: "FITC",
+        formalName: "フルオレセインイソチオシアネート（fluorescein isothiocyanate）",
+        what: "小さな蛍光分子。抗体やタンパク質にくっつけて「ラベル」にする。",
+        use: "免疫染色・フローサイトメトリー（抗体がどこにあるか見る）",
+        colorName: "黄緑", colorHex: "#84cc16",
+        exPeak: 495, emPeak: 520, sigmaEx: 20, sigmaEm: 20, qy: 0.65,
+      },
+      dapi: {
+        name: "DAPI", short: "DAPI",
+        formalName: "4',6-ジアミジノ-2-フェニルインドール（DNA 染色剤）",
+        what: "DNA（細胞核の中身）に結合して青く光る染料。",
+        use: "細胞核の染色（显微镜で核の位置を確認）",
+        colorName: "青", colorHex: "#3b82f6",
+        exPeak: 358, emPeak: 461, sigmaEx: 18, sigmaEm: 24, qy: 0.50,
+      },
+    };
+
+    function updateSampleCard(f) {
+      document.getElementById("sampleTitle").textContent = `${f.short} — ${f.colorName}に光る`;
+      document.getElementById("sampleFormal").textContent = f.formalName;
+      document.getElementById("sampleWhat").textContent = f.what;
+      document.getElementById("sampleUse").textContent = f.use;
+      document.getElementById("sampleColor").innerHTML =
+        `<span class="sample-swatch" style="background:${f.colorHex}"></span>${f.colorName}（Ex ${f.exPeak} nm → 蛍光 Em ${f.emPeak} nm · Δλ=${f.emPeak - f.exPeak} nm）`;
+    }
+
+    let lambda0 = 488, sigmaEx = 22, emPeak = 509, sigmaEm = 18, qy = 0.60, fluorKey = "gfp";
+    let absChart = null, exEmChart = null;
+
+    const absCanvas = document.getElementById("absCanvas");
+    const absCtx = absCanvas.getContext("2d");
+    const emitCanvas = document.getElementById("emitCanvas");
+    const emitCtx = emitCanvas.getContext("2d");
+    const jabCanvas = document.getElementById("jabCanvas");
+    const jabCtx = jabCanvas.getContext("2d");
+    const phononCanvas = document.getElementById("phononCanvas");
+    const phononCtx = phononCanvas.getContext("2d");
+    const defectCanvas = document.getElementById("defectCanvas");
+    const defectCtx = defectCanvas.getContext("2d");
+
+    let currentLambda = 488, amplitude = 0.5, defectCount = 1, defectType = "vacancy";
+    let chainType = "mono", vibrMode = "acoustic", animTime = 0, lastFrame = 0, decayChart = null;
+    let ePhase = "s0", eProgress = 0, ePhaseStart = 0;
+    let lightFlash = 0, beamPulse = 0, emitFlash = 0, emitKind = "";
+    let photons = [], pendingPhotonSpawn = null;
+    let autoDemo = true, autoTimer = 0, lastDash = {};
+    let excitationOn = true, I0 = 0.9;
+    let decaySession = null; // { startMs, kind: 'fluor'|'phos', peak }
+    let lastTheoryKey = "";
+    let jabPulse = null;
+    let atomPresent = [], atomKind = [], deltaField = [], ampField = [], xShift = [];
+    let interstitials = [], defectSites = [], grainPivot = -1;
+
+    function absorption(lambda) {
+      return A_AMP * Math.exp(-((lambda - lambda0) ** 2) / (2 * sigmaEx * sigmaEx));
+    }
+    function emissionSpectrum(lambda) {
+      return qy * Math.exp(-((lambda - emPeak) ** 2) / (2 * sigmaEm * sigmaEm));
+    }
+    function stokesShift() { return emPeak - lambda0; }
+    function fluorProbability() { return Math.max(0.12, P_FLUOR_BASE - scatterLevel() * 0.35); }
+    function iscProbability() { return Math.min(0.88, P_ISC_BASE + scatterLevel() * 0.45); }
+    function applyFluorophore(key) {
+      const f = FLUOROPHORES[key];
+      if (!f) return;
+      fluorKey = key;
+      lambda0 = f.exPeak;
+      sigmaEx = f.sigmaEx;
+      emPeak = f.emPeak;
+      sigmaEm = f.sigmaEm;
+      qy = f.qy;
+      currentLambda = f.exPeak;
+      document.getElementById("lambdaSlider").value = String(currentLambda);
+      document.querySelectorAll("[data-fluor]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.fluor === key);
+        b.classList.toggle("green", b.dataset.fluor === key);
+      });
+      document.getElementById("fluoroSub").textContent =
+        `${f.short}（${f.colorName}）· Ex=${f.exPeak} nm · Em=${f.emPeak} nm · ①のλも ${f.exPeak} nm に`;
+      updateSampleCard(f);
+      refreshCharts();
+      updateUI();
+    }
+
+    function buildAbsChart() {
+      if (typeof Chart === "undefined") return;
+      absChart = new Chart(document.getElementById("absChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            { label: "Abs(λ)", data: [], borderColor: "#a3e635", backgroundColor: "rgba(163,230,53,0.12)", fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+            { label: "閾値", data: [], borderColor: "rgba(251,191,36,0.6)", borderDash: [4, 3], pointRadius: 0, borderWidth: 1.5, fill: false },
+            { label: "λ", data: [], borderColor: "#fde68a", pointRadius: 5, pointBackgroundColor: "#fde68a", showLine: false },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          scales: {
+            x: { type: "linear", min: 300, max: 700, ticks: { color: "#64748b", maxTicksLimit: 6 }, grid: { color: "rgba(148,163,184,0.06)" } },
+            y: { min: 0, max: 1.1, ticks: { color: "#64748b" }, grid: { color: "rgba(148,163,184,0.06)" } },
+          },
+          plugins: { legend: { display: false } },
+        },
+      });
+      updateAbsChart();
+    }
+
+    function updateAbsChart() {
+      if (!absChart) return;
+      const pts = [];
+      for (let lam = 300; lam <= 700; lam += 4) pts.push({ x: lam, y: absorption(lam) });
+      absChart.data.datasets[0].data = pts;
+      absChart.data.datasets[1].data = [{ x: 300, y: ABS_THRESHOLD }, { x: 700, y: ABS_THRESHOLD }];
+      const abs = absorption(currentLambda);
+      absChart.data.datasets[2].data = [{ x: currentLambda, y: abs }];
+      absChart.update("none");
+    }
+
+    function buildExEmChart() {
+      if (typeof Chart === "undefined") return;
+      exEmChart = new Chart(document.getElementById("exEmChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            { label: "Ex(λ)", data: [], borderColor: "#38bdf8", backgroundColor: "rgba(56,189,248,0.1)", fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+            { label: "Em(λ)", data: [], borderColor: "#86efac", backgroundColor: "rgba(134,239,172,0.1)", fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          scales: {
+            x: { type: "linear", min: 300, max: 750, title: { display: true, text: "λ (nm)", color: "#94a3b8" }, ticks: { color: "#64748b" }, grid: { color: "rgba(148,163,184,0.06)" } },
+            y: { min: 0, max: 1.05, ticks: { color: "#64748b" }, grid: { color: "rgba(148,163,184,0.06)" } },
+          },
+          plugins: { legend: { labels: { color: "#94a3b8", boxWidth: 10, font: { size: 10 } } } },
+        },
+      });
+      updateExEmChart();
+    }
+
+    function updateExEmChart() {
+      if (!exEmChart) return;
+      const ex = [], em = [];
+      for (let lam = 300; lam <= 750; lam += 3) {
+        ex.push({ x: lam, y: absorption(lam) });
+        em.push({ x: lam, y: emissionSpectrum(lam) });
+      }
+      exEmChart.data.datasets[0].data = ex;
+      exEmChart.data.datasets[1].data = em;
+      exEmChart.update("none");
+    }
+
+    function triggerJabPulse(type) {
+      jabPulse = { type, t: 0, life: 0.55 };
+    }
+
+    function drawJablonski() {
+      const { w, h, dpr } = resizeCanvas(jabCanvas);
+      jabCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fillBg(jabCtx, w, h);
+      const y0 = h * 0.78, y1 = h * 0.42, yT = h * 0.18;
+      const ax = w * 0.2;
+      const f = FLUOROPHORES[fluorKey];
+
+      function level(y, label, col, dash) {
+        jabCtx.strokeStyle = col;
+        jabCtx.lineWidth = 2.5;
+        jabCtx.setLineDash(dash || []);
+        jabCtx.beginPath();
+        jabCtx.moveTo(28, y);
+        jabCtx.lineTo(w - 28, y);
+        jabCtx.stroke();
+        jabCtx.setLineDash([]);
+        jabCtx.fillStyle = "#e2e8f0";
+        jabCtx.font = `600 ${fs(w, h, 11)}px sans-serif`;
+        jabCtx.fillText(label, 32, y - 8);
+      }
+      level(yT, "T₁ 三重項", "#2dd4bf", [6, 4]);
+      level(y1, "S₁ 一重項", "#c084fc");
+      level(y0, "S₀ 基底", "#38bdf8");
+
+      function jabArrow(x, y1a, y2a, col, label, wob) {
+        const prog = jabPulse && jabPulse.type === wob ? Math.min(1, jabPulse.t / jabPulse.life) : 0;
+        jabCtx.strokeStyle = col;
+        jabCtx.lineWidth = 2 + prog;
+        jabCtx.globalAlpha = 0.45 + prog * 0.55;
+        jabCtx.beginPath();
+        jabCtx.moveTo(x, y1a);
+        jabCtx.lineTo(x, y1a + (y2a - y1a) * (prog || 0.65));
+        jabCtx.stroke();
+        if (prog > 0.7) {
+          const ang = y2a > y1a ? Math.PI / 2 : -Math.PI / 2;
+          jabCtx.beginPath();
+          jabCtx.moveTo(x, y2a);
+          jabCtx.lineTo(x - 5, y2a - 7 * Math.sign(y2a - y1a));
+          jabCtx.lineTo(x + 5, y2a - 7 * Math.sign(y2a - y1a));
+          jabCtx.fillStyle = col;
+          jabCtx.fill();
+        }
+        jabCtx.globalAlpha = 1;
+        jabCtx.fillStyle = col;
+        jabCtx.font = `500 ${fs(w, h, 9)}px sans-serif`;
+        jabCtx.fillText(label, x + 6, (y1a + y2a) / 2);
+      }
+      jabArrow(ax, y0, y1, "#38bdf8", "吸収", "rise");
+      jabArrow(ax + 36, y1, y0, "#fde68a", "蛍光", "fluor");
+      jabArrow(ax + 72, y1, yT, "#fb923c", "ISC", "isc");
+      jabArrow(ax + 108, yT, y0, "#5eead4", "燐光", "phos");
+
+      jabCtx.fillStyle = "#94a3b8";
+      jabCtx.font = `500 ${fs(w, h, 10)}px sans-serif`;
+      jabCtx.fillText(`${f.short}（${f.colorName}）· τ_f=${tauF().toFixed(2)}s · τ_p=${tauP().toFixed(2)}s`, 12, h - 10);
+    }
+    function tickJabPulse(dt) {
+      if (jabPulse) {
+        jabPulse.t += dt;
+        if (jabPulse.t > jabPulse.life) jabPulse = null;
+      }
+    }
+
+    function canExcite(l) { return absorption(l) >= ABS_THRESHOLD; }
+    function tauFAt(a, n) { return TAU_F0 / (1 + K1 * a + K2 * n); }
+    function tauPAt(a, n) { return TAU_P0 / (1 + K3 * a + K4 * n); }
+    function tauF() { return tauFAt(amplitude, defectCount); }
+    function tauP() { return tauPAt(amplitude, defectCount); }
+    function scatterLevel() { return Math.min(1, defectCount * 0.18 + amplitude * 0.28); }
+    function steepPct(tau, tau0) {
+      return Math.min(100, Math.max(8, Math.round((1 - tau / tau0) * 100 + 12)));
+    }
+
+    function updateFactorEffectUI() {
+      const tf = tauF(), tp = tauP();
+      const tf0 = tauFAt(0, 0), tp0 = tauPAt(0, 0);
+      const sc = scatterLevel();
+      const i1f = Math.exp(-1 / tf) * 100;
+      const i1f0 = Math.exp(-1 / tf0) * 100;
+      const i1p = Math.exp(-1 / tp) * 100;
+      const i1p0 = Math.exp(-1 / tp0) * 100;
+
+      document.getElementById("effectSelection").innerHTML =
+        `いま <strong>⑤ A=${amplitude.toFixed(2)}</strong> · ` +
+        `<strong>⑥ ${DEFECT_NAMES[defectType]} N=${defectCount}</strong> · 散乱 ${(sc * 100 | 0)}%`;
+      document.getElementById("effTf").textContent = `${tf.toFixed(2)} s`;
+      document.getElementById("effTf0").textContent = `${tf0.toFixed(2)} s`;
+      document.getElementById("effTp").textContent = `${tp.toFixed(2)} s`;
+      document.getElementById("effTp0").textContent = `${tp0.toFixed(2)} s`;
+      document.getElementById("effIf1").textContent = `${i1f0.toFixed(0)}% → ${i1f.toFixed(0)}%`;
+      document.getElementById("effIp1").textContent = `${i1p0.toFixed(0)}% → ${i1p.toFixed(0)}%`;
+      document.getElementById("steepBarF").style.width = `${steepPct(tf, tf0)}%`;
+      document.getElementById("steepBarP").style.width = `${steepPct(tp, tp0)}%`;
+
+      let verdict = "";
+      if (amplitude <= 0.15 && defectCount === 0) {
+        verdict = "④ の曲線は <em>最もなだらか</em>（理想に近い）。光が長く続く。";
+      } else if (steepPct(tf, tf0) >= 55) {
+        verdict = "④ の曲線は <em>かなり急</em>。A や N が大きいと、蛍光・燐光ともすぐ暗くなる（非放射失活↑）。";
+      } else {
+        verdict = "④（上のグラフ）の破線は理想より <em>やや急</em>。A↑ や N↑ ほど、さらに急になる。";
+      }
+      if (defectCount > 0) {
+        verdict += ` 欠陥の種類（${DEFECT_NAMES[defectType]}）は鎖の乱れ方 · ② の ISC に効き、寿命の数式では <em>N=${defectCount}</em> が効きます。`;
+      }
+      document.getElementById("effectVerdict").innerHTML = verdict;
+
+      const banner = document.getElementById("chartEffectBanner");
+      if (banner) {
+        banner.innerHTML =
+          `<strong>⑤⑥→④</strong> A=${amplitude.toFixed(2)} · N=${defectCount} → ` +
+          `τ_f=${tf.toFixed(2)}s · τ_p=${tp.toFixed(2)}s · ` +
+          `t=1s で蛍光 ${i1f.toFixed(0)}% / 燐光 ${i1p.toFixed(0)}%（灰破線＝A=0,N=0）`;
+      }
+    }
+    function modeValid() { return !(chainType === "mono" && vibrMode === "optical"); }
+    function currentOmega() { return !modeValid() ? OMEGA_AC : (vibrMode === "optical" ? OMEGA_OPT : OMEGA_AC); }
+    function pseudoRand(a, b) {
+      const x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+      return x - Math.floor(x);
+    }
+    function ease(t) { return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2; }
+    function fs(w, h, b) { return Math.max(b, Math.min(w, h) * 0.028); }
+
+    function defectIndices() {
+      const idx = [];
+      for (let k = 0; k < defectCount; k++) {
+        idx.push(Math.max(1, Math.min(N_ATOMS - 2, Math.round((k + 1) * (N_ATOMS - 1) / (defectCount + 1)))));
+      }
+      return idx;
+    }
+
+    // 欠陥によるフォノン乱れ
+    function rebuildDefectModel() {
+      atomPresent = Array(N_ATOMS).fill(true);
+      atomKind = Array(N_ATOMS).fill("host");
+      deltaField = Array(N_ATOMS).fill(0);
+      ampField = Array(N_ATOMS).fill(1);
+      xShift = Array(N_ATOMS).fill(0);
+      interstitials = [];
+      defectSites = defectIndices();
+      grainPivot = -1;
+      function addDelta(c, s) {
+        for (let i = 0; i < N_ATOMS; i++) {
+          const d = Math.abs(i - c);
+          if (d <= 3) deltaField[i] += (1 - d / 4) * s * (1 + 0.12 * defectCount) * (pseudoRand(i, c) * 2 - 1) * Math.PI * 0.55;
+        }
+      }
+      if (defectType === "vacancy") defectSites.forEach((i) => { atomPresent[i] = false; addDelta(i, 1.25); });
+      else if (defectType === "substitution") defectSites.forEach((i) => { atomKind[i] = "impurity"; ampField[i] = 1.45; addDelta(i, 1.0); });
+      else if (defectType === "interstitial") defectSites.forEach((i) => { interstitials.push({ after: i }); addDelta(i, 0.9); });
+      else if (defectType === "dislocation") defectSites.forEach((i) => { for (let j = i; j < N_ATOMS; j++) xShift[j] += 0.38; addDelta(i, 1.55); });
+      else if (defectType === "grainBoundary") defectSites.forEach((i) => {
+        grainPivot = i;
+        for (let j = 0; j < N_ATOMS; j++) { deltaField[j] += j < i ? 0 : Math.PI * 0.42; if (Math.abs(j - i) <= 2) addDelta(i, 1.05); }
+      });
+    }
+
+    function displacement(i, t) {
+      if (!atomPresent[i]) return 0;
+      const delta = deltaField[i] || 0;
+      const amp = amplitude * (ampField[i] || 1);
+      const w = currentOmega();
+      if (vibrMode === "optical" && chainType === "di") {
+        return (i % 2 === 0 ? 1 : -1) * amp * Math.sin(w * t + delta);
+      }
+      const chaos = scatterLevel() * 0.35 * Math.sin(t * 4.3 + i * 1.6 + delta);
+      return amp * Math.sin(w * t + PHI_AC * i + delta) + chaos;
+    }
+
+    function nmToRgb(nm) {
+      nm = Math.max(380, Math.min(780, nm));
+      let r = 0, g = 0, b = 0;
+      if (nm < 440) { r = -(nm - 440) / 60; b = 1; }
+      else if (nm < 490) { g = (nm - 440) / 50; b = 1; }
+      else if (nm < 510) { g = 1; b = -(nm - 510) / 20; }
+      else if (nm < 580) { r = (nm - 510) / 70; g = 1; }
+      else if (nm < 645) { r = 1; g = -(nm - 645) / 65; }
+      else r = 1;
+      return { r: Math.round(40 + r * 215), g: Math.round(40 + g * 215), b: Math.round(40 + b * 215) };
+    }
+
+    function rgbStr(c, a) { return `rgba(${c.r},${c.g},${c.b},${a})`; }
+
+    function spawnPhotons(x, y, kind, n) {
+      const emRgb = nmToRgb(emPeak);
+      const col = kind === "fluor"
+        ? `rgb(${emRgb.r},${emRgb.g},${emRgb.b})`
+        : "94,234,212";
+      for (let i = 0; i < n; i++) {
+        photons.push({
+          x, y, vx: (Math.random() - 0.5) * 4, vy: -2 - Math.random() * 3,
+          life: 1, kind, r: 2 + Math.random() * 2, col,
+        });
+      }
+    }
+
+    function updatePhotons() {
+      photons = photons.filter((p) => {
+        p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+        return p.life > 0;
+      });
+    }
+
+    function drawPhotons(ctx) {
+      photons.forEach((p) => {
+        const base = typeof p.col === "string" && p.col.startsWith("rgb")
+          ? p.col.replace("rgb(", "").replace(")", "").split(",").map(Number)
+          : (p.kind === "fluor" ? [253, 230, 138] : [94, 234, 212]);
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3 * p.life);
+        g.addColorStop(0, `rgba(${base[0]},${base[1]},${base[2]},${p.life})`);
+        g.addColorStop(1, `rgba(${base[0]},${base[1]},${base[2]},0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 3 * p.life, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function bumpDash(id, val) {
+      const el = document.getElementById(id);
+      if (!el || lastDash[id] === val) return;
+      lastDash[id] = val;
+      el.classList.remove("bump");
+      void el.offsetWidth;
+      el.classList.add("bump");
+    }
+
+    function updateConnectMessage() {
+      const abs = absorption(currentLambda);
+      const ok = canExcite(currentLambda);
+      const sc = scatterLevel();
+      const tf = tauF(), tp = tauP();
+      let msg = "";
+      if (!ok) {
+        msg = `<strong>① 吸光：</strong>λ=${currentLambda} nm では Abs=${abs.toFixed(2)} &lt; 0.3。<strong>⑦</strong> の Ex=${lambda0} nm 付近へ合わせてください。`;
+      } else if (ePhase === "rise" || ePhase === "s1") {
+        msg = `<strong>①→②：</strong>試料 ${FLUOROPHORES[fluorKey].short}（${FLUOROPHORES[fluorKey].colorName}）の Ex=${lambda0} nm で吸収 → <em>S₀→S₁</em>`;
+      } else if (ePhase === "fluor") {
+        msg = `<strong>②③ 蛍光：</strong>S₁→S₀（τ_f=<em>${tf.toFixed(2)}s</em>）· Em=${emPeak} nm（⑦ ストークス Δλ=${stokesShift()} nm）`;
+      } else if (ePhase === "isc" || ePhase === "t1") {
+        msg = `<strong>②③ 項間交差：</strong>③ 図の ISC 経路 · 散乱 ${(sc * 100 | 0)}% → T₁ へ（燐光の前段階）`;
+      } else if (ePhase === "phos") {
+        msg = `<strong>②③ 燐光：</strong>T₁→S₀（τ_p=<em>${tp.toFixed(2)}s</em>）· ④ OFF 後に指数減衰`;
+      } else if (sc > 0.45) {
+        msg = `<strong>⑤⑥→④：</strong>フォノン A=${amplitude.toFixed(2)} · 欠陥 N=${defectCount} → τ_f=${tf.toFixed(2)}s · τ_p=${tp.toFixed(2)}s`;
+      } else {
+        msg = `<strong>連動中：</strong>① Abs=${abs.toFixed(2)} → ${phaseLabel()} · ⑦ Δλ=${stokesShift()} nm · ④ I₀=${I0.toFixed(2)}`;
+      }
+      document.getElementById("connectMsg").innerHTML = msg;
+    }
+
+    function phaseLabel() {
+      const map = { s0: "S₀ 基底", s1: "S₁ 励起", t1: "T₁ 三重項", rise: "吸光↑", fluor: "蛍光", isc: "項間交差", phos: "燐光" };
+      return map[ePhase] || ePhase;
+    }
+
+    function setFlowPulse() {
+      document.querySelectorAll(".flow-step").forEach((el) => el.classList.remove("pulse"));
+      document.querySelectorAll(".panel").forEach((p) => {
+        p.classList.remove("highlight-a", "highlight-e", "highlight-j", "highlight-p", "highlight-d", "highlight-g", "highlight-f");
+      });
+      if (ePhase === "rise" || (ePhase === "s0" && lightFlash > 0.2)) {
+        document.querySelector('[data-flow="a"]')?.classList.add("pulse");
+        document.getElementById("panelAbs")?.classList.add("highlight-a");
+      } else if (ePhase === "fluor" || ePhase === "isc" || ePhase === "phos") {
+        document.querySelector('[data-flow="j"]')?.classList.add("pulse");
+        document.getElementById("panelJab")?.classList.add("highlight-j");
+        document.querySelector('[data-flow="e"]')?.classList.add("pulse");
+        document.getElementById("panelEmit")?.classList.add("highlight-e");
+        if (emitFlash > 0.2 || (decaySession && decayElapsed(performance.now()) > 0.02)) {
+          document.querySelector('[data-flow="t"]')?.classList.add("pulse");
+          document.getElementById("panelChart")?.classList.add("highlight-g");
+        }
+        if (ePhase === "fluor") {
+          document.querySelector('[data-flow="f"]')?.classList.add("pulse");
+          document.getElementById("panelFluoro")?.classList.add("highlight-f");
+        }
+      } else if (ePhase === "s1" || ePhase === "t1") {
+        document.querySelector('[data-flow="e"]')?.classList.add("pulse");
+        document.getElementById("panelEmit")?.classList.add("highlight-e");
+      }
+    }
+
+    function updateUI() {
+      const abs = absorption(currentLambda);
+      const ok = canExcite(currentLambda);
+      document.getElementById("dispLambda").textContent = `${currentLambda}`;
+      document.getElementById("dispA").textContent = amplitude.toFixed(2);
+      document.getElementById("dispN").textContent = String(defectCount);
+      document.getElementById("dashAbsVal").textContent = abs.toFixed(2) + (ok ? " ✓" : " ✗");
+      document.getElementById("dashPhaseVal").textContent = phaseLabel();
+      document.getElementById("dashExVal").textContent = `${lambda0} nm`;
+      document.getElementById("dashEmVal").textContent = `${emPeak} nm`;
+      document.getElementById("dashStokesVal").textContent = `${stokesShift()} nm`;
+      document.getElementById("dashAVal").textContent = amplitude.toFixed(2);
+      document.getElementById("dashNVal").textContent = String(defectCount);
+      document.getElementById("dashTauVal").textContent = `${tauF().toFixed(2)} / ${tauP().toFixed(2)} s`;
+      document.getElementById("dispPfluor").textContent = `${(fluorProbability() * 100).toFixed(0)}%`;
+      document.getElementById("dispPisc").textContent = `${(iscProbability() * 100).toFixed(0)}%`;
+      document.getElementById("dispI0").textContent = I0.toFixed(2);
+      document.getElementById("absSub").textContent =
+        `① 試料=${FLUOROPHORES[fluorKey].short}（${FLUOROPHORES[fluorKey].colorName}）· λ=${currentLambda} nm · ${ok ? "励起可能" : "励起不可"}`;
+      document.getElementById("defectSub").textContent = `${DEFECT_NAMES[defectType]} · N = ${defectCount} · 散乱 ${(scatterLevel() * 100 | 0)}%`;
+      document.getElementById("phononSub").textContent = chainType === "mono"
+        ? `単原子 · ${vibrMode === "acoustic" ? "音響" : "—"}`
+        : `双原子 · ${vibrMode === "acoustic" ? "音響" : "光学"}`;
+      document.getElementById("optWarn").classList.toggle("show", !modeValid());
+      bumpDash("dashAbs", abs.toFixed(2));
+      bumpDash("dashPhase", ePhase);
+      bumpDash("dashEx", String(lambda0));
+      bumpDash("dashEm", String(emPeak));
+      bumpDash("dashStokes", String(stokesShift()));
+      bumpDash("dashA", amplitude.toFixed(2));
+      bumpDash("dashN", String(defectCount));
+      bumpDash("dashTau", `${tauF().toFixed(2)}/${tauP().toFixed(2)}`);
+      ["btnMono", "btnDi", "btnAcoustic", "btnOptical"].forEach((id) => {
+        const el = document.getElementById(id);
+        const on = (id === "btnMono" && chainType === "mono")
+          || (id === "btnDi" && chainType === "di")
+          || (id === "btnAcoustic" && vibrMode === "acoustic")
+          || (id === "btnOptical" && vibrMode === "optical");
+        el.classList.toggle("active", on);
+        el.classList.toggle("teal", on);
+      });
+      document.querySelectorAll("[data-defect]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.defect === defectType);
+        b.classList.toggle("orange", b.dataset.defect === defectType);
+      });
+      updateConnectMessage();
+      document.getElementById("phaseBarFill").style.width = `${Math.round(eProgress * 100)}%`;
+      setFlowPulse();
+      updateFactorEffectUI();
+    }
+
+    function decayElapsed(now) {
+      if (!decaySession) return 0;
+      return Math.max(0, (now - decaySession.startMs) / 1000);
+    }
+
+    function sessionTau() {
+      if (!decaySession) return tauF();
+      return decaySession.kind === "phos" ? tauP() : tauF();
+    }
+
+    function startDecaySession(now, kind) {
+      decaySession = { startMs: now, kind, peak: I0 * qy };
+    }
+
+    function buildLiveTrace(now) {
+      if (!decaySession) return [];
+      const tau = sessionTau();
+      const peak = decaySession.peak;
+      const tEnd = Math.min(decayElapsed(now), CHART_T);
+      const pts = [];
+      const step = 0.025;
+      for (let t = 0; t <= tEnd; t += step) {
+        pts.push({ x: t, y: peak * Math.exp(-t / tau) });
+      }
+      const yEnd = peak * Math.exp(-tEnd / tau);
+      if (!pts.length || Math.abs(pts[pts.length - 1].x - tEnd) > 1e-6) {
+        pts.push({ x: tEnd, y: yEnd });
+      }
+      return pts;
+    }
+
+    function theoryKey() {
+      return `${tauF().toFixed(3)}|${tauP().toFixed(3)}|${I0}|${qy}`;
+    }
+
+    function updateDecayTheory() {
+      if (!decayChart) return;
+      const key = theoryKey();
+      if (key === lastTheoryKey) return;
+      lastTheoryKey = key;
+      const tf = tauF(), tp = tauP();
+      const peak = I0 * qy;
+      const tf0 = tauFAt(0, 0), tp0 = tauPAt(0, 0);
+      const fluor = [], phos = [], refF = [], refP = [];
+      for (let t = 0; t <= CHART_T; t += 0.04) {
+        fluor.push({ x: t, y: peak * Math.exp(-t / tf) });
+        phos.push({ x: t, y: peak * Math.exp(-t / tp) });
+        refF.push({ x: t, y: peak * Math.exp(-t / tf0) });
+        refP.push({ x: t, y: peak * Math.exp(-t / tp0) });
+      }
+      decayChart.data.datasets[0].data = fluor;
+      decayChart.data.datasets[1].data = phos;
+      decayChart.data.datasets[4].data = refF;
+      decayChart.data.datasets[5].data = refP;
+    }
+
+    function updateDecayLive(now) {
+      if (!decayChart) return;
+      updateDecayTheory();
+      const trace = buildLiveTrace(now);
+      const ds = decayChart.data.datasets[2];
+      ds.data = trace;
+      ds.label = !decaySession ? "実測 I(t)" : (decaySession.kind === "phos" ? "実測 燐光" : "実測 蛍光");
+      ds.borderColor = decaySession?.kind === "phos" ? "#f472b6" : "#fb923c";
+      ds.backgroundColor = decaySession?.kind === "phos" ? "rgba(244,114,182,0.12)" : "rgba(251,146,60,0.12)";
+
+      const t = decaySession ? Math.min(decayElapsed(now), CHART_T) : 0;
+      const peak = decaySession?.peak ?? I0 * qy;
+      const I = decaySession ? peak * Math.exp(-t / sessionTau()) : 0;
+      decayChart.data.datasets[3].data = decaySession ? [{ x: t, y: I }] : [];
+
+      decayChart.update("none");
+
+      const tf = tauF(), tp = tauP();
+      const el = document.getElementById("decaySub");
+      if (excitationOn && ePhase !== "s0") {
+        el.textContent = `④ 励起 ON — I≈${peak.toFixed(2)} · τ_f=${tf.toFixed(2)}s · τ_p=${tp.toFixed(2)}s`;
+      } else if (decaySession && t > 0) {
+        el.textContent = `④ 減衰中 t=${t.toFixed(2)}s · I=${I.toFixed(3)} · τ=${sessionTau().toFixed(2)}s`;
+      } else {
+        el.textContent = `④ 個別 ④ — I(t)=I₀e^(−t/τ) · 励起 ON/OFF`;
+      }
+    }
+
+    function resizeCanvas(cnv) {
+      const rect = cnv.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(170, Math.round(rect.height));
+      const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+      if (cnv.width !== pw || cnv.height !== ph) { cnv.width = pw; cnv.height = ph; }
+      return { w, h, dpr };
+    }
+
+    function fillBg(ctx, w, h) {
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "#0c1524");
+      g.addColorStop(1, "#060a12");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "rgba(148,163,184,0.04)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 24) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 24) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+    }
+
+    function drawCurvedArrow(ctx, x1, y1, x2, y2, col, prog) {
+      const mx = (x1 + x2) / 2 + (y2 - y1) * 0.15;
+      const my = (y1 + y2) / 2 - (x2 - x1) * 0.08;
+      ctx.save();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = col;
+      ctx.globalAlpha = 0.35 + prog * 0.65;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(mx, my, x1 + (x2 - x1) * prog, y1 + (y2 - y1) * prog);
+      ctx.stroke();
+      if (prog > 0.85) {
+        const ang = Math.atan2(y2 - my, x2 - mx);
+        const ex = x2, ey = y2;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - 8 * Math.cos(ang - 0.4), ey - 8 * Math.sin(ang - 0.4));
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - 8 * Math.cos(ang + 0.4), ey - 8 * Math.sin(ang + 0.4));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawSphere(ctx, x, y, r, col) {
+      ctx.save();
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = col;
+      const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r + 2);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.35, col);
+      g.addColorStop(1, col);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawNucleus(ctx, cx, cy, w, h) {
+      const parts = [
+        { dx: 0, dy: 0, r: 5, c: "#ef4444" }, { dx: -7, dy: -5, r: 4, c: "#64748b" },
+        { dx: 7, dy: -4, r: 4, c: "#ef4444" }, { dx: -5, dy: 6, r: 3.5, c: "#64748b" },
+      ];
+      ctx.fillStyle = "rgba(239,68,68,0.15)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.fill();
+      parts.forEach((p) => { ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(cx + p.dx, cy + p.dy, p.r, 0, Math.PI * 2); ctx.fill(); });
+      ctx.fillStyle = "#64748b";
+      ctx.font = `500 ${fs(w, h, 10)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("原子核", cx, cy + 22);
+      ctx.textAlign = "left";
+    }
+
+    // ① 吸光
+    function drawAbsorption() {
+      const { w, h, dpr } = resizeCanvas(absCanvas);
+      absCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fillBg(absCtx, w, h);
+      const rgb = nmToRgb(currentLambda);
+      const abs = absorption(currentLambda);
+      const ok = canExcite(currentLambda);
+
+      if (lightFlash > 0) lightFlash -= 0.035;
+      if (beamPulse > 0) beamPulse -= 0.04;
+
+      // 原子＋光（スペクトルは下の Chart ①）
+      const ax = w * 0.42, ay = h * 0.52;
+      drawNucleus(absCtx, ax, ay, w, h);
+      absCtx.strokeStyle = "rgba(56,189,248,0.5)";
+      absCtx.lineWidth = 1.5;
+      absCtx.setLineDash([3, 4]);
+      absCtx.beginPath();
+      absCtx.arc(ax, ay, fs(w, h, 28), 0, Math.PI * 2);
+      absCtx.stroke();
+      absCtx.setLineDash([]);
+
+      const s0y = ay + 28, s1y = ay - 32;
+      absCtx.strokeStyle = "#38bdf8";
+      absCtx.lineWidth = 2.5;
+      [s1y, s0y].forEach((y, i) => {
+        absCtx.beginPath();
+        absCtx.moveTo(ax + 40, y);
+        absCtx.lineTo(ax + 90, y);
+        absCtx.stroke();
+        absCtx.fillStyle = "#cbd5e1";
+        absCtx.font = `600 ${fs(w, h, 11)}px sans-serif`;
+        absCtx.fillText(i ? "S₀" : "S₁", ax + 94, y + 4);
+      });
+
+      let ey = s0y;
+      if (ePhase === "rise") ey = s0y + (s1y - s0y) * ease(eProgress);
+      else if (ePhase === "s1" || ePhase === "fluor" || ePhase === "isc") ey = s1y;
+      else if (ePhase === "t1" || ePhase === "phos") ey = s1y - 8;
+      drawSphere(absCtx, ax + 65, ey, 10, ok ? "#c084fc" : "#475569");
+      if (ePhase === "rise" || ePhase === "s1") {
+        absCtx.strokeStyle = `rgba(192,132,252,${0.25 + Math.sin(animTime * 6) * 0.15})`;
+        absCtx.lineWidth = 1.5;
+        absCtx.beginPath();
+        absCtx.arc(ax + 65, ay, Math.abs(ey - ay) + 8, -Math.PI * 0.5, Math.PI * 0.5);
+        absCtx.stroke();
+      }
+
+      const beamA = 0.25 + lightFlash * 0.6 + beamPulse * 0.4;
+      const grad = absCtx.createLinearGradient(8, ay, ax - 20, ay);
+      grad.addColorStop(0, rgbStr(rgb, 0));
+      grad.addColorStop(0.5, rgbStr(rgb, beamA));
+      grad.addColorStop(1, rgbStr(rgb, beamA * 0.3));
+      absCtx.strokeStyle = grad;
+      absCtx.lineWidth = 5 + beamPulse * 4;
+      absCtx.beginPath();
+      absCtx.moveTo(8, ay);
+      absCtx.lineTo(ax - 18, ay);
+      absCtx.stroke();
+
+      absCtx.fillStyle = ok ? "#86efac" : "#fca5a5";
+      absCtx.font = `600 ${fs(w, h, 11)}px sans-serif`;
+      absCtx.fillText(ok ? `Abs ${abs.toFixed(2)} ≥ 0.3 · Ex=${lambda0} nm` : `Abs ${abs.toFixed(2)} < 0.3`, 10, h - 12);
+    }
+
+    // ② 発光
+    function drawEmission() {
+      const { w, h, dpr } = resizeCanvas(emitCanvas);
+      emitCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fillBg(emitCtx, w, h);
+      const Y = { s1: h * 0.16, t1: h * 0.46, s0: h * 0.76 };
+      const lineL = w * 0.07, lineR = w * 0.93, ex = w * 0.52;
+      let eY = Y.s0, color = "#38bdf8";
+
+      if (ePhase === "s1") { eY = Y.s1; color = "#c084fc"; }
+      else if (ePhase === "t1") { eY = Y.t1; color = "#2dd4bf"; }
+      else if (ePhase === "rise") { eY = Y.s0 + (Y.s1 - Y.s0) * ease(eProgress); color = "#c084fc"; }
+      else if (ePhase === "fluor") { eY = Y.s1 + (Y.s0 - Y.s1) * ease(eProgress); color = "#fde68a"; }
+      else if (ePhase === "isc") { eY = Y.s1 + (Y.t1 - Y.s1) * ease(eProgress); color = "#2dd4bf"; }
+      else if (ePhase === "phos") { eY = Y.t1 + (Y.s0 - Y.t1) * ease(eProgress); color = "#5eead4"; }
+
+      if (ePhase === "isc") {
+        emitCtx.strokeStyle = "#fb923c";
+        emitCtx.lineWidth = 2;
+        emitCtx.beginPath();
+        emitCtx.arc(ex + 22, (Y.s1 + Y.t1) / 2, 14, animTime * 4, animTime * 4 + Math.PI * 1.2);
+        emitCtx.stroke();
+        emitCtx.fillStyle = "#fb923c";
+        emitCtx.font = `500 ${fs(w, h, 9)}px sans-serif`;
+        emitCtx.fillText("スピン反転", ex + 38, (Y.s1 + Y.t1) / 2);
+      }
+
+      // 散乱の視覚化（フォノン+欠陥）
+      const sc = scatterLevel();
+      if (sc > 0.15) {
+        emitCtx.strokeStyle = `rgba(251,146,60,${sc * 0.35})`;
+        emitCtx.lineWidth = 1;
+        for (let i = 0; i < 6; i++) {
+          const ox = ex + Math.sin(animTime * 5 + i) * 30 * sc;
+          emitCtx.beginPath();
+          emitCtx.moveTo(ox, Y.s1 - 10);
+          emitCtx.lineTo(ox + 8 * sc, Y.s0 + 10);
+          emitCtx.stroke();
+        }
+        emitCtx.fillStyle = `rgba(251,146,60,${sc * 0.5})`;
+        emitCtx.font = `500 ${fs(w, h, 10)}px sans-serif`;
+        emitCtx.fillText(`フォノン散乱 ${(sc * 100 | 0)}%`, lineL, 16);
+      }
+
+      function drawLevel(y, label, col, dash) {
+        emitCtx.save();
+        emitCtx.strokeStyle = col;
+        emitCtx.lineWidth = 3;
+        emitCtx.shadowBlur = 8;
+        emitCtx.shadowColor = col;
+        emitCtx.setLineDash(dash || []);
+        emitCtx.beginPath();
+        emitCtx.moveTo(lineL, y);
+        emitCtx.lineTo(lineR, y);
+        emitCtx.stroke();
+        emitCtx.setLineDash([]);
+        emitCtx.shadowBlur = 0;
+        emitCtx.fillStyle = "#f1f5f9";
+        emitCtx.font = `600 ${fs(w, h, 12)}px sans-serif`;
+        emitCtx.fillText(label, lineL, y - 8);
+        emitCtx.restore();
+      }
+      drawLevel(Y.s1, "S₁ 励起", "#c084fc");
+      drawLevel(Y.t1, "T₁ 三重項", "#2dd4bf", [6, 4]);
+      drawLevel(Y.s0, "S₀ 基底", "#38bdf8");
+
+      // 遷移アニメ（曲線矢印）
+      if (ePhase === "fluor") drawCurvedArrow(emitCtx, ex, Y.s1, ex, Y.s0, "#fde68a", eProgress);
+      else if (ePhase === "isc") drawCurvedArrow(emitCtx, ex, Y.s1, ex, Y.t1, "#2dd4bf", eProgress);
+      else if (ePhase === "phos") drawCurvedArrow(emitCtx, ex, Y.t1, ex, Y.s0, "#5eead4", eProgress);
+      else if (ePhase === "rise") drawCurvedArrow(emitCtx, ex, Y.s0, ex, Y.s1, "#c084fc", eProgress);
+      if (sc > 0.55 && (ePhase === "s1" || ePhase === "fluor")) {
+        drawCurvedArrow(emitCtx, ex + 20, Y.s1, ex + 55, Y.s0 + 8, "rgba(148,163,184,0.7)", Math.min(1, sc));
+        emitCtx.fillStyle = `rgba(148,163,184,${sc * 0.7})`;
+        emitCtx.font = `500 ${fs(w, h, 9)}px sans-serif`;
+        emitCtx.fillText("非放射失活", ex + 58, Y.s0 + 4);
+      }
+
+      // 遷移ラベル
+      emitCtx.fillStyle = "rgba(148,163,184,0.5)";
+      emitCtx.font = `500 ${fs(w, h, 9)}px sans-serif`;
+      emitCtx.fillText("蛍光 →", lineR - 70, (Y.s1 + Y.s0) / 2);
+      emitCtx.fillText("ISC ↘", lineR - 55, Y.s1 + 18);
+      emitCtx.fillText("燐光 →", lineR - 70, (Y.t1 + Y.s0) / 2);
+
+      if (emitFlash > 0) {
+        emitFlash -= 0.028;
+        const g = emitCtx.createRadialGradient(ex, eY, 2, ex, eY, 80 + emitFlash * 50);
+        const c = emitKind === "fluor" ? "253,230,138" : "94,234,212";
+        g.addColorStop(0, `rgba(${c},${0.45 * emitFlash})`);
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        emitCtx.fillStyle = g;
+        emitCtx.fillRect(0, 0, w, h);
+      }
+
+      drawSphere(emitCtx, ex, eY, 13, color);
+      if (pendingPhotonSpawn) {
+        spawnPhotons(ex, eY, pendingPhotonSpawn, 16);
+        pendingPhotonSpawn = null;
+      }
+      drawPhotons(emitCtx);
+
+      emitCtx.fillStyle = "#94a3b8";
+      emitCtx.font = `500 ${fs(w, h, 10)}px sans-serif`;
+      emitCtx.fillText(`τ_f = ${tauF().toFixed(2)} s   τ_p = ${tauP().toFixed(2)} s`, lineL, h - 10);
+    }
+
+    // ③④ 鎖描画
+    function drawChain(ctx, cnv, t, mode) {
+      const { w, h, dpr } = resizeCanvas(cnv);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fillBg(ctx, w, h);
+
+      if (!modeValid() && mode === "phonon") {
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "600 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("光学モードは存在しません", w / 2, h / 2 - 8);
+        ctx.font = "500 11px sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("双原子鎖を選んでください", w / 2, h / 2 + 12);
+        ctx.textAlign = "left";
+        return;
+      }
+
+      const padX = w * 0.05;
+      const cy = h * 0.54;
+      const spacing = (w - padX * 2) / (N_ATOMS - 1);
+      const pxScale = spacing * 0.38;
+
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = "rgba(100,116,139,0.3)";
+      ctx.beginPath();
+      ctx.moveTo(padX, cy);
+      ctx.lineTo(w - padX, cy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const nodes = [];
+      for (let i = 0; i < N_ATOMS; i++) {
+        const bx = padX + i * spacing + xShift[i] * spacing * 0.32;
+        nodes.push({ i, present: atomPresent[i], x: bx + displacement(i, t) * pxScale, y: cy, kind: atomKind[i], delta: Math.abs(deltaField[i]) });
+      }
+
+      if (mode === "phonon" && modeValid()) {
+        ctx.strokeStyle = "rgba(45,212,191,0.18)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < N_ATOMS; i++) {
+          if (!atomPresent[i]) continue;
+          const y = cy - displacement(i, t) * pxScale * 1.8 - 28;
+          i === 0 || !atomPresent[i - 1] ? ctx.moveTo(nodes[i].x, y) : ctx.lineTo(nodes[i].x, y);
+        }
+        ctx.stroke();
+        const pulseX = padX + ((t * 0.35) % 1) * (w - padX * 2);
+        ctx.fillStyle = "rgba(45,212,191,0.35)";
+        ctx.beginPath();
+        ctx.arc(pulseX, cy - 38, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#64748b";
+        ctx.font = "500 9px sans-serif";
+        ctx.fillText("フォノン伝播 →", pulseX + 8, cy - 36);
+      }
+
+      if (defectType === "grainBoundary" && grainPivot >= 0 && mode === "defect") {
+        const gx = padX + grainPivot * spacing;
+        ctx.strokeStyle = "rgba(251,191,36,0.55)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(gx, cy - h * 0.32);
+        ctx.lineTo(gx, cy + h * 0.32);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      for (let i = 0; i < N_ATOMS - 1; i++) {
+        if (!nodes[i].present && !nodes[i + 1].present) continue;
+        const x1 = nodes[i].present ? nodes[i].x : nodes[i + 1].x - spacing * 0.28;
+        const x2 = nodes[i + 1].present ? nodes[i + 1].x : nodes[i].x + spacing * 0.28;
+        const strain = Math.abs(nodes[i + 1].x - nodes[i].x - spacing) / spacing;
+        ctx.strokeStyle = `rgba(45,212,191,${0.25 + Math.min(0.5, strain)})`;
+        ctx.lineWidth = 1.5 + strain;
+        ctx.beginPath();
+        ctx.moveTo(x1, cy);
+        ctx.lineTo(x2, cy);
+        ctx.stroke();
+      }
+
+      defectSites.forEach((idx) => {
+        if (nodes[idx]) {
+          ctx.strokeStyle = `rgba(251,146,60,${0.3 + 0.15 * Math.sin(t * 4)})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(nodes[idx].x, cy, 18 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      nodes.forEach((p) => {
+        if (!p.present) {
+          ctx.strokeStyle = "rgba(248,113,113,0.5)";
+          ctx.setLineDash([3, 4]);
+          ctx.beginPath();
+          ctx.arc(p.x, cy, 12, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          return;
+        }
+        const isImp = p.kind === "impurity";
+        const isM2 = chainType === "di" && p.i % 2 === 1;
+        const r = chainType === "di" ? (isM2 ? 9 : 10) : 9;
+        const col = isImp ? "#f87171" : (chainType === "di" ? (isM2 ? "#f87171" : "#38bdf8") : "#2dd4bf");
+        if (p.delta > 0.3 && mode === "defect") {
+          ctx.strokeStyle = `rgba(251,191,36,${Math.min(0.6, p.delta * 0.15)})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.x, cy, r + 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        drawSphere(ctx, p.x, cy, r, col);
+      });
+
+      interstitials.forEach((it) => {
+        const i = Math.min(it.after, N_ATOMS - 2);
+        const x = (nodes[i].x + nodes[i + 1].x) * 0.5;
+        drawSphere(ctx, x, cy - 16, 6, "#fbbf24");
+      });
+
+      if (defectType === "dislocation" && mode === "defect") {
+        defectSites.forEach((idx) => {
+          if (nodes[idx]?.present) {
+            ctx.fillStyle = "#fca5a5";
+            ctx.font = "700 14px sans-serif";
+            ctx.fillText("⊥", nodes[idx].x - 5, cy - 16);
+          }
+        });
+      }
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "500 10px sans-serif";
+      const label = mode === "phonon"
+        ? `A=${amplitude.toFixed(2)} ω=${currentOmega().toFixed(1)}`
+        : `${DEFECT_NAMES[defectType]} N=${defectCount}`;
+      ctx.fillText(label, 10, 16);
+    }
+
+    function phaseDuration(phase) {
+      const scale = 0.32;
+      if (phase === "rise") return 0.45;
+      if (phase === "s1") return 0.22;
+      if (phase === "fluor") return Math.max(0.18, tauF() * scale);
+      if (phase === "isc") return 0.32;
+      if (phase === "phos") return Math.max(0.32, Math.min(3, tauP() * scale));
+      if (phase === "s0") return canExcite(currentLambda) ? 0.55 : 1.5;
+      return 0.35;
+    }
+
+    function triggerExcitation() {
+      if (!canExcite(currentLambda)) return;
+      lightFlash = 1;
+      beamPulse = 1;
+      if (ePhase === "s0") {
+        ePhase = "rise";
+        ePhaseStart = performance.now();
+        eProgress = 0;
+      }
+    }
+
+    function advanceElectron(now) {
+      if (!canExcite(currentLambda)) {
+        if (ePhase !== "s0") { ePhase = "s0"; eProgress = 0; ePhaseStart = now; }
+        return;
+      }
+      const dur = phaseDuration(ePhase);
+      eProgress = Math.min(1, (now - ePhaseStart) / (dur * 1000));
+      if (eProgress < 1) return;
+
+      if (ePhase === "s0") { ePhase = "rise"; lightFlash = 1; triggerJabPulse("rise"); }
+      else if (ePhase === "rise") { ePhase = "s1"; triggerJabPulse("rise"); }
+      else if (ePhase === "s1") {
+        ePhase = Math.random() < iscProbability() ? "isc" : "fluor";
+        triggerJabPulse(ePhase === "isc" ? "isc" : "fluor");
+      }
+      else if (ePhase === "fluor") {
+        ePhase = "s0"; emitFlash = 1; emitKind = "fluor";
+        pendingPhotonSpawn = "fluor";
+        triggerJabPulse("fluor");
+        startDecaySession(now, "fluor");
+      } else if (ePhase === "isc") { ePhase = "t1"; triggerJabPulse("isc"); }
+      else if (ePhase === "t1") ePhase = "phos";
+      else if (ePhase === "phos") {
+        ePhase = "s0"; emitFlash = 1; emitKind = "phos";
+        pendingPhotonSpawn = "phos";
+        triggerJabPulse("phos");
+        startDecaySession(now, "phos");
+      }
+      ePhaseStart = now;
+      eProgress = 0;
+      document.getElementById("emitSub").textContent =
+        ePhase === "fluor" ? `蛍光 S₁→S₀（τ_f=${tauF().toFixed(2)}s）`
+        : ePhase === "phos" ? `燐光 T₁→S₀（τ_p=${tauP().toFixed(2)}s）`
+        : ePhase === "rise" ? "吸光 → S₀→S₁"
+        : `${phaseLabel()} · A=${amplitude.toFixed(2)} N=${defectCount}`;
+      refreshCharts();
+      updateUI();
+    }
+
+    function buildDecayChart() {
+      if (typeof Chart === "undefined") return;
+      const tauPlugin = {
+        id: "tauLines",
+        afterDraw(chart) {
+          const { ctx, chartArea, scales } = chart;
+          if (!chartArea) return;
+          const tf = tauF(), tp = tauP();
+          [[tf, "#fde68a", "τ_f"], [tp, "#5eead4", "τ_p"]].forEach(([tau, col, lbl]) => {
+            if (tau > CHART_T) return;
+            const x = scales.x.getPixelForValue(tau);
+            ctx.save();
+            ctx.strokeStyle = col;
+            ctx.globalAlpha = 0.45;
+            ctx.setLineDash([5, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x, chartArea.top);
+            ctx.lineTo(x, chartArea.bottom);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = col;
+            ctx.font = "600 9px sans-serif";
+            ctx.fillText(lbl, x + 3, chartArea.top + 12);
+            ctx.restore();
+          });
+        },
+      };
+      decayChart = new Chart(document.getElementById("decayChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            { label: "蛍光 I_f（いま）", data: [], borderColor: "#fde68a", backgroundColor: "rgba(253,230,138,0.08)", fill: false, tension: 0.25, pointRadius: 0, borderWidth: 2.5, borderDash: [6, 4] },
+            { label: "燐光 I_p（いま）", data: [], borderColor: "#5eead4", backgroundColor: "rgba(94,234,212,0.06)", fill: false, tension: 0.25, pointRadius: 0, borderWidth: 2.5, borderDash: [6, 4] },
+            { label: "実測 I(t)", data: [], borderColor: "#fb923c", backgroundColor: "rgba(251,146,60,0.12)", fill: true, tension: 0.15, pointRadius: 0, borderWidth: 2.5 },
+            { label: "現在", data: [], borderColor: "#fde68a", pointRadius: 7, pointBackgroundColor: "#fde68a", pointBorderColor: "#fff", pointBorderWidth: 2, showLine: false },
+            { label: "理想 蛍光 A=0,N=0", data: [], borderColor: "rgba(148,163,184,0.35)", fill: false, tension: 0.25, pointRadius: 0, borderWidth: 1.5, borderDash: [2, 4] },
+            { label: "理想 燐光 A=0,N=0", data: [], borderColor: "rgba(148,163,184,0.25)", fill: false, tension: 0.25, pointRadius: 0, borderWidth: 1.5, borderDash: [2, 4] },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          scales: {
+            x: { type: "linear", min: 0, max: CHART_T, title: { display: true, text: "時間 t (s)", color: "#94a3b8" }, ticks: { color: "#64748b" }, grid: { color: "rgba(148,163,184,0.08)" } },
+            y: { min: 0, max: 1.08, title: { display: true, text: "I(t)", color: "#94a3b8" }, ticks: { color: "#64748b" }, grid: { color: "rgba(148,163,184,0.08)" } },
+          },
+          plugins: {
+            legend: { labels: { color: "#94a3b8", boxWidth: 10, font: { size: 10 } } },
+          },
+        },
+        plugins: [tauPlugin],
+      });
+      lastTheoryKey = "";
+      updateDecayTheory();
+    }
+
+    function refreshCharts() {
+      updateAbsChart();
+      updateExEmChart();
+      lastTheoryKey = "";
+      updateDecayTheory();
+    }
+
+    function loop(now) {
+      if (!lastFrame) lastFrame = now;
+      if (!ePhaseStart) ePhaseStart = now;
+      const dt = Math.min((now - lastFrame) / 1000, 0.05);
+      animTime += dt;
+      lastFrame = now;
+      tickJabPulse(dt);
+      advanceElectron(now);
+      updatePhotons();
+      drawAbsorption();
+      drawEmission();
+      drawJablonski();
+      drawChain(phononCtx, phononCanvas, animTime, "phonon");
+      drawChain(defectCtx, defectCanvas, animTime, "defect");
+      const shouldExcite = (autoDemo || excitationOn) && ePhase === "s0" && canExcite(currentLambda);
+      if (shouldExcite) {
+        autoTimer += dt;
+        if (autoTimer > (excitationOn ? 1.4 : 1.8)) { autoTimer = 0; triggerExcitation(); }
+      }
+      updateDecayLive(now);
+      document.getElementById("phaseBarFill").style.width = `${Math.round(eProgress * 100)}%`;
+      setFlowPulse();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById("lambdaSlider").addEventListener("input", () => {
+      currentLambda = parseInt(document.getElementById("lambdaSlider").value, 10);
+      updateAbsChart();
+      updateUI();
+    });
+    document.getElementById("i0Slider").addEventListener("input", () => {
+      I0 = parseFloat(document.getElementById("i0Slider").value);
+      updateUI();
+    });
+    document.getElementById("btnExcOn").addEventListener("click", () => {
+      excitationOn = true;
+      document.getElementById("btnExcOn").classList.add("on-active");
+      document.getElementById("btnExcOff").classList.remove("off-active");
+      updateUI();
+    });
+    document.getElementById("btnExcOff").addEventListener("click", () => {
+      excitationOn = false;
+      document.getElementById("btnExcOff").classList.add("off-active");
+      document.getElementById("btnExcOn").classList.remove("on-active");
+      if (decaySession) startDecaySession(performance.now(), decaySession.kind);
+      updateUI();
+    });
+    document.querySelectorAll("[data-fluor]").forEach((btn) => {
+      btn.addEventListener("click", () => applyFluorophore(btn.dataset.fluor));
+    });
+    document.getElementById("shineBtn").addEventListener("click", triggerExcitation);
+    document.getElementById("autoBtn").addEventListener("click", () => {
+      autoDemo = !autoDemo;
+      autoTimer = 0;
+      const btn = document.getElementById("autoBtn");
+      btn.textContent = autoDemo ? "自動デモ ON" : "自動デモ OFF";
+      btn.classList.toggle("auto-on", autoDemo);
+      btn.classList.toggle("auto-off", !autoDemo);
+    });
+    document.getElementById("ampSlider").addEventListener("input", () => {
+      amplitude = parseFloat(document.getElementById("ampSlider").value);
+      refreshCharts();
+      updateUI();
+    });
+    document.getElementById("countSlider").addEventListener("input", () => {
+      defectCount = parseInt(document.getElementById("countSlider").value, 10);
+      rebuildDefectModel();
+      refreshCharts();
+      updateUI();
+    });
+    document.querySelectorAll("[data-defect]").forEach((btn) => {
+      btn.addEventListener("click", () => { defectType = btn.dataset.defect; rebuildDefectModel(); updateUI(); });
+    });
+    document.getElementById("btnMono").addEventListener("click", () => {
+      chainType = "mono"; if (vibrMode === "optical") vibrMode = "acoustic"; updateUI();
+    });
+    document.getElementById("btnDi").addEventListener("click", () => { chainType = "di"; updateUI(); });
+    document.getElementById("btnAcoustic").addEventListener("click", () => { vibrMode = "acoustic"; updateUI(); });
+    document.getElementById("btnOptical").addEventListener("click", () => {
+      if (chainType === "mono") return; vibrMode = "optical"; updateUI();
+    });
+    window.addEventListener("resize", () => {
+      drawAbsorption();
+      drawEmission();
+      drawJablonski();
+      drawChain(phononCtx, phononCanvas, animTime, "phonon");
+      drawChain(defectCtx, defectCanvas, animTime, "defect");
+      if (decayChart) decayChart.resize();
+      if (absChart) absChart.resize();
+      if (exEmChart) exEmChart.resize();
+    });
+
+    rebuildDefectModel();
+    applyFluorophore("gfp");
+    buildAbsChart();
+    buildExEmChart();
+    buildDecayChart();
+    refreshCharts();
+    updateUI();
+    lastFrame = performance.now();
+    ePhaseStart = lastFrame;
+    updateDecayLive(lastFrame);
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

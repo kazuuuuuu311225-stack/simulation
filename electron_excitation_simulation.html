@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>光吸収と電子励起</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a3e635;
+      --accent-light: #bef264;
+      --accent-glow: rgba(163, 230, 53, 0.35);
+      --s0: #38bdf8;
+      --s1: #c084fc;
+      --slate-bg: rgba(12, 18, 32, 0.82);
+      --slate-border: rgba(163, 230, 53, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1520 40%, #101828 75%, #0a0e14 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(1180px, 97vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(163, 230, 53, 0.2), rgba(74, 222, 128, 0.25));
+      border: 1px solid rgba(163, 230, 53, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.2rem;
+    }
+    h1 {
+      margin: 6px 0 4px;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      font-weight: 700;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 9px 16px;
+      color: #ecfccb;
+      background: rgba(163, 230, 53, 0.12);
+      border: 1px solid rgba(163, 230, 53, 0.35);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 920px) {
+      .main-grid { grid-template-columns: 1.05fr 0.95fr; align-items: stretch; }
+    }
+    .panel {
+      border-radius: 14px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel-head {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #d9f99d;
+    }
+    .panel-sub {
+      margin: 4px 0 0;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+    .canvas-wrap {
+      flex: 1;
+      padding: 8px 10px 10px;
+      min-height: min(420px, 52dvh);
+    }
+    #levelCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(6, 12, 22, 0.98), rgba(4, 8, 14, 0.99));
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+    .chart-wrap {
+      flex: 1;
+      padding: 8px 10px 10px;
+      min-height: 220px;
+    }
+    .chart-wrap canvas { max-height: min(260px, 32dvh); }
+    .controls {
+      padding: 14px 16px;
+    }
+    .controls label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      accent-color: var(--accent);
+    }
+    .lambda-readout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .readout-box {
+      flex: 1;
+      min-width: 120px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .readout-box .lbl {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--muted);
+    }
+    .readout-box .val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ecfccb;
+      font-variant-numeric: tabular-nums;
+    }
+    .shine-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px 16px;
+      min-height: 48px;
+      border-radius: 10px;
+      border: 1px solid rgba(163, 230, 53, 0.45);
+      background: linear-gradient(135deg, rgba(163, 230, 53, 0.25), rgba(74, 222, 128, 0.15));
+      color: #ecfccb;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .shine-btn:hover { box-shadow: 0 0 20px rgba(163, 230, 53, 0.25); }
+    .shine-btn:active { transform: scale(0.985); }
+    .shine-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .status-msg {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      background: rgba(163, 230, 53, 0.08);
+      border: 1px solid rgba(163, 230, 53, 0.22);
+      color: #d9f99d;
+    }
+    .status-msg.warn {
+      background: rgba(251, 191, 36, 0.08);
+      border-color: rgba(251, 191, 36, 0.28);
+      color: #fde68a;
+    }
+    .status-msg.ok {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.28);
+      color: #bae6fd;
+    }
+    .explain {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .explain h3 {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+    .explain ul {
+      margin: 0;
+      padding-left: 1.2em;
+      font-size: 0.86rem;
+      line-height: 1.75;
+      color: #94a3b8;
+    }
+    .explain strong { color: #bef264; }
+    .formula-note {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.03);
+      font-family: "Cambria Math", "Times New Roman", serif;
+    }
+    .legend-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+      padding: 0 12px 12px;
+    }
+    .legend-bar span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      font-size: 0.78rem;
+      color: #cbd5e1;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .term-note {
+      margin: 8px 14px 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: #bae6fd;
+    }
+    .term-note strong { color: #fde68a; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">↑</div>
+      <h1>光吸収と電子励起</h1>
+      <p class="chapter-label">EX章 · 蛍光・燐光 — 外側の電子が光でエネルギーを受け取る</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <section class="panel" aria-label="原子模型とエネルギー準位">
+        <div class="panel-head">
+          <h2>① 原子の模型とエネルギーの段</h2>
+          <p class="panel-sub" id="levelSub">外側の電子がふだんは低い段 — 「光を当てる」で試す</p>
+        </div>
+        <p class="term-note">
+          <strong>外側の電子</strong>だけが光で動きます（内側の灰色の電子は動きません）。<br>
+          右の<strong>2本の横線</strong>＝エネルギーの段。下＝ふだん、上＝光を吸ったあと。
+        </p>
+        <div class="canvas-wrap">
+          <canvas id="levelCanvas" aria-label="原子模型とエネルギー準位"></canvas>
+        </div>
+        <div class="legend-bar">
+          <span><span class="legend-dot" style="background:#64748b"></span>内側の電子（ほぼ動かない）</span>
+          <span><span class="legend-dot" style="background:#38bdf8;box-shadow:0 0 6px #7dd3fc"></span>外側の電子</span>
+          <span><span class="legend-dot" style="background:#38bdf8"></span>低い段＝基底状態</span>
+          <span><span class="legend-dot" style="background:#c084fc"></span>高い段＝励起状態</span>
+        </div>
+      </section>
+
+      <div class="right-col">
+        <section class="panel" aria-label="吸収スペクトル">
+          <div class="panel-head">
+            <h2>② 吸収スペクトル</h2>
+            <p class="panel-sub">ガウス型 — ピーク付近の波長ほど吸収しやすい</p>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="absChart" aria-label="吸収スペクトルグラフ"></canvas>
+          </div>
+        </section>
+
+        <section class="panel controls" aria-label="操作">
+          <h2 style="margin:0 0 10px;font-size:0.92rem;color:#d9f99d">③ 操作</h2>
+          <label for="lambdaSlider">光の波長 λ（300〜700 nm）</label>
+          <input type="range" id="lambdaSlider" min="300" max="700" value="450" step="1">
+          <div class="lambda-readout">
+            <div class="readout-box">
+              <span class="lbl">波長 λ</span>
+              <span class="val" id="dispLambda">450 nm</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">吸収強度 Abs(λ)</span>
+              <span class="val" id="dispAbs">1.00</span>
+            </div>
+            <div class="readout-box">
+              <span class="lbl">励起判定</span>
+              <span class="val" id="dispJudge">可能</span>
+            </div>
+          </div>
+          <button type="button" class="shine-btn" id="shineBtn">光を当てる</button>
+          <p class="status-msg" id="statusMsg">波長を選んで「光を当てる」を押してください。吸収が強いと外側の電子が高い段（励起状態）へ移ります。</p>
+          <p class="formula-note">Abs(λ) = A · exp(−(λ−λ₀)² / 2σ²)　　λ₀=450 nm, σ=30 nm, 閾値=0.3</p>
+        </section>
+      </div>
+    </div>
+
+    <section class="explain">
+      <h3>ポイント</h3>
+      <ul>
+        <li>原子の<strong>外側</strong>にある電子が、光のエネルギーを受け取って動きます。内側の電子は今回はそのまま。</li>
+        <li>右の<strong>エネルギーの段</strong>は、その電子のエネルギーの高さを表す。<strong>低い段＝基底状態</strong>（ふだん）、<strong>高い段＝励起状態</strong>（光を吸ったあと）。</li>
+        <li>教科書では基底状態を <strong>S₀</strong>、励起状態を <strong>S₁</strong> と書くことがあります（同じ意味）。</li>
+        <li>吸収しやすい波長は物質ごとに決まる（ここでは 450 nm 付近）。② のグラフがそれを示す。</li>
+        <li>励起された電子は時間が経つと<strong>低い段（基底状態）</strong>へ戻る（ここでは発光はまだ描かない）。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // ── 吸収スペクトルパラメータ ──
+    const LAMBDA0 = 450;
+    const SIGMA = 30;
+    const A_AMP = 1.0;
+    const ABS_THRESHOLD = 0.3;
+
+    const canvas = document.getElementById("levelCanvas");
+    const ctx = canvas.getContext("2d");
+    const lambdaSlider = document.getElementById("lambdaSlider");
+    const shineBtn = document.getElementById("shineBtn");
+    const statusMsg = document.getElementById("statusMsg");
+    const levelSub = document.getElementById("levelSub");
+
+    let currentLambda = 450;
+    let electronState = "s0"; // s0 | rising | s1 | falling
+    let electronY = 0;
+    let animProgress = 0;
+    let lightFlash = 0;
+    let absChart = null;
+    let markerDatasetIndex = -1;
+
+    // 吸収スペクトルを計算（ガウス）
+    function absorption(lambda) {
+      const d = lambda - LAMBDA0;
+      return A_AMP * Math.exp(-(d * d) / (2 * SIGMA * SIGMA));
+    }
+
+    function nmToRgb(nm) {
+      nm = Math.max(380, Math.min(780, nm));
+      let r = 0; let g = 0; let b = 0;
+      if (nm < 440) { r = -(nm - 440) / (440 - 380); b = 1; }
+      else if (nm < 490) { g = (nm - 440) / (490 - 440); b = 1; }
+      else if (nm < 510) { g = 1; b = -(nm - 510) / (510 - 490); }
+      else if (nm < 580) { r = (nm - 510) / (580 - 510); g = 1; }
+      else if (nm < 645) { r = 1; g = -(nm - 645) / (645 - 580); }
+      else { r = 1; }
+      return {
+        r: Math.round(40 + r * 215),
+        g: Math.round(40 + g * 215),
+        b: Math.round(40 + b * 215),
+      };
+    }
+
+    function rgbStr(rgb, a = 1) {
+      return `rgba(${rgb.r},${rgb.g},${rgb.b},${a})`;
+    }
+
+    function canExcite(lambda) {
+      return absorption(lambda) >= ABS_THRESHOLD;
+    }
+
+    function updateReadouts() {
+      const abs = absorption(currentLambda);
+      document.getElementById("dispLambda").textContent = `${currentLambda} nm`;
+      document.getElementById("dispAbs").textContent = abs.toFixed(2);
+      const ok = canExcite(currentLambda);
+      document.getElementById("dispJudge").textContent = ok ? "可能 ✓" : "不可";
+      document.getElementById("dispJudge").style.color = ok ? "#86efac" : "#fca5a5";
+      if (absChart && markerDatasetIndex >= 0) {
+        absChart.data.datasets[markerDatasetIndex].data = [{ x: currentLambda, y: abs }];
+        absChart.update("none");
+      }
+    }
+
+    function buildSpectrumChart() {
+      const pts = [];
+      for (let lam = 300; lam <= 700; lam += 2) {
+        pts.push({ x: lam, y: absorption(lam) });
+      }
+      const thresholdPts = [{ x: 300, y: ABS_THRESHOLD }, { x: 700, y: ABS_THRESHOLD }];
+      const ctxChart = document.getElementById("absChart");
+
+      absChart = new Chart(ctxChart, {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Abs(λ)",
+              data: pts,
+              borderColor: "#a3e635",
+              backgroundColor: "rgba(163,230,53,0.12)",
+              fill: true,
+              tension: 0.35,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            {
+              label: "閾値 0.3",
+              data: thresholdPts,
+              borderColor: "rgba(251,191,36,0.6)",
+              borderDash: [6, 4],
+              pointRadius: 0,
+              borderWidth: 1.5,
+            },
+            {
+              label: "いまの λ",
+              data: [{ x: currentLambda, y: absorption(currentLambda) }],
+              pointRadius: 8,
+              pointBackgroundColor: "#fde68a",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              showLine: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              type: "linear",
+              min: 300,
+              max: 700,
+              title: { display: true, text: "波長 λ (nm)", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              min: 0,
+              max: 1.08,
+              title: { display: true, text: "吸収強度（相対）", color: "#94a3b8" },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+          },
+          plugins: {
+            legend: {
+              labels: { color: "#94a3b8", boxWidth: 12, font: { size: 10 } },
+            },
+          },
+        },
+      });
+      markerDatasetIndex = 2;
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(320, Math.round(rect.width));
+      const h = Math.max(320, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      return { w, h, dpr };
+    }
+
+    function fs(w, h, base) {
+      return Math.round(Math.max(base, Math.min(w, h) * 0.028));
+    }
+
+    function roundRect(x, y, rw, rh, r) {
+      const rr = Math.min(r, rw / 2, rh / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + rw, y, x + rw, y + rh, rr);
+      ctx.arcTo(x + rw, y + rh, x, y + rh, rr);
+      ctx.arcTo(x, y + rh, x, y, rr);
+      ctx.arcTo(x, y, x + rw, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBadge(x, y, text, opts = {}) {
+      const {
+        bg = "rgba(15,23,42,0.88)",
+        border = "rgba(148,163,184,0.35)",
+        color = "#e2e8f0",
+        size = 12,
+        padX = 8,
+        padY = 5,
+        align = "left",
+      } = opts;
+      ctx.font = `600 ${size}px Noto Sans JP, sans-serif`;
+      const tw = ctx.measureText(text).width;
+      const bw = tw + padX * 2;
+      const bh = size + padY * 2;
+      let bx = x;
+      if (align === "center") bx = x - bw / 2;
+      if (align === "right") bx = x - bw;
+      roundRect(bx, y, bw, bh, 6);
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.textAlign = "left";
+      ctx.fillText(text, bx + padX, y + padY + size * 0.82);
+      return { x: bx, y, w: bw, h: bh };
+    }
+
+    function drawSectionHeader(x, y, w, h, text, accent) {
+      drawBadge(x, y, text, {
+        bg: accent,
+        border: "transparent",
+        color: "#0f172a",
+        size: fs(w, h, 13),
+        padX: 10,
+        padY: 6,
+      });
+    }
+
+    function levelY(h, state) {
+      if (state === "s1") return h * 0.25;
+      return h * 0.76;
+    }
+
+    // 原子模型：核・内側電子・外側電子の位置
+    function atomLayout(w, h) {
+      const cx = w * 0.2;
+      const cy = h * 0.56;
+      const rInner = Math.min(w, h) * 0.1;
+      const rOuter = Math.min(w, h) * 0.175;
+      const rExcited = Math.min(w, h) * 0.265;
+      const innerAngle = Math.PI * 0.42;
+      return { cx, cy, rInner, rOuter, rExcited, innerAngle };
+    }
+
+    function valencePos(layout, tNorm, goingUp) {
+      const { cx, cy, rOuter, rExcited, innerAngle } = layout;
+      const angle = innerAngle;
+      if (tNorm <= 0) {
+        return { x: cx + rOuter * Math.cos(angle), y: cy + rOuter * Math.sin(angle), r: rOuter };
+      }
+      if (tNorm >= 1) {
+        const a2 = innerAngle - 0.35;
+        return { x: cx + rExcited * Math.cos(a2), y: cy + rExcited * Math.sin(a2), r: rExcited };
+      }
+      const ease = tNorm < 0.5 ? 2 * tNorm * tNorm : 1 - Math.pow(-2 * tNorm + 2, 2) / 2;
+      const r = rOuter + (rExcited - rOuter) * ease;
+      const a = innerAngle + (innerAngle - 0.35 - innerAngle) * ease;
+      return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), r };
+    }
+
+    function drawNucleus(cx, cy, w, h) {
+      const lbl = fs(w, h, 11);
+      const parts = [
+        { dx: 0, dy: 0, r: 4.5, c: "#ef4444" },
+        { dx: -6, dy: -4, r: 4, c: "#64748b" },
+        { dx: 6, dy: -3, r: 4, c: "#ef4444" },
+        { dx: -4, dy: 5, r: 3.5, c: "#64748b" },
+        { dx: 5, dy: 5, r: 3.5, c: "#ef4444" },
+        { dx: 0, dy: -7, r: 3.5, c: "#64748b" },
+      ];
+      ctx.save();
+      ctx.fillStyle = "rgba(239,68,68,0.12)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+      ctx.fill();
+      parts.forEach((p) => {
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(cx + p.dx, cy + p.dy, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      });
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = `500 ${lbl - 1}px Noto Sans JP, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("原子核", cx, cy + 18);
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    function drawAtomModel(w, h, valenceT) {
+      const layout = atomLayout(w, h);
+      const { cx, cy, rInner, rOuter, rExcited } = layout;
+      const vp = valencePos(layout, valenceT, true);
+      const lbl = fs(w, h, 11);
+
+      ctx.save();
+
+      drawNucleus(cx, cy, w, h);
+
+      // 内側の軌道
+      ctx.strokeStyle = "rgba(100,116,139,0.5)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 内側の電子（4個に減らしてすっきり）
+      const coreAngles = [0.5, 2.1, 3.7, 5.2];
+      coreAngles.forEach((a) => {
+        const ex = cx + rInner * 0.88 * Math.cos(a);
+        const ey = cy + rInner * 0.88 * Math.sin(a);
+        ctx.fillStyle = "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      drawBadge(cx - 42, cy + rInner + 18, "内側（動かない）", {
+        size: lbl - 1,
+        color: "#94a3b8",
+        bg: "rgba(30,41,59,0.85)",
+        border: "rgba(100,116,139,0.4)",
+        align: "center",
+      });
+
+      // 外側の軌道（基底）
+      ctx.strokeStyle = "rgba(56,189,248,0.7)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 外側の軌道（励起・点線）
+      ctx.strokeStyle = "rgba(192,132,252,0.55)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rExcited, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (valenceT < 0.5) {
+        drawBadge(cx + 6, cy + rOuter + 10, "外側・低い軌道", {
+          size: lbl - 1,
+          color: "#7dd3fc",
+          bg: "rgba(12,74,110,0.55)",
+          border: "rgba(56,189,248,0.45)",
+        });
+      } else {
+        drawBadge(cx - 58, cy - rExcited - 28, "外側・高い軌道", {
+          size: lbl - 1,
+          color: "#d8b4fe",
+          bg: "rgba(88,28,135,0.45)",
+          border: "rgba(192,132,252,0.45)",
+          align: "center",
+        });
+      }
+
+      // 外側の電子
+      const isExcited = valenceT >= 0.99;
+      const glow = isExcited || valenceT > 0.5 ? "#c084fc" : "#38bdf8";
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = glow;
+      const eRad = fs(w, h, 12);
+      const eg = ctx.createRadialGradient(vp.x - 3, vp.y - 3, 1, vp.x, vp.y, eRad);
+      eg.addColorStop(0, "#fff");
+      eg.addColorStop(0.45, isExcited || valenceT > 0.5 ? "#c084fc" : "#38bdf8");
+      eg.addColorStop(1, "#0ea5e9");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(vp.x, vp.y, eRad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (valenceT > 0.02 && valenceT < 0.98) {
+        ctx.strokeStyle = "rgba(163,230,53,0.85)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        const start = valencePos(layout, 0, true);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(vp.x, vp.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.restore();
+      return { vp, layout };
+    }
+
+    // 原子模型とエネルギー段を描画
+    function drawLevelDiagram() {
+      const { w, h, dpr } = resizeCanvas();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const splitX = w * 0.43;
+      const lbl = fs(w, h, 12);
+
+      // 背景
+      ctx.fillStyle = "#060c14";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "rgba(14,116,144,0.14)";
+      ctx.fillRect(0, 0, splitX, h);
+      ctx.fillStyle = "rgba(109,40,217,0.12)";
+      ctx.fillRect(splitX, 0, w - splitX, h);
+
+      // 区切り線
+      ctx.strokeStyle = "rgba(148,163,184,0.28)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(splitX, h * 0.06);
+      ctx.lineTo(splitX, h * 0.94);
+      ctx.stroke();
+
+      drawSectionHeader(12, 12, w, h, "原子の中", "rgba(56,189,248,0.85)");
+      drawSectionHeader(splitX + 12, 12, w, h, "エネルギーの段", "rgba(192,132,252,0.85)");
+
+      const yS1 = levelY(h, "s1");
+      const yS0 = levelY(h, "s0");
+      const lineL = splitX + w * 0.06;
+      const lineR = w * 0.9;
+      const ex = splitX + (w - splitX) * 0.42;
+
+      let eY = yS0;
+      let valenceT = 0;
+      if (electronState === "s1") {
+        eY = yS1;
+        valenceT = 1;
+      } else if (electronState === "rising" || electronState === "falling") {
+        const t = animProgress;
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        if (electronState === "rising") {
+          eY = yS0 + (yS1 - yS0) * ease;
+          valenceT = ease;
+        } else {
+          eY = yS1 + (yS0 - yS1) * ease;
+          valenceT = 1 - ease;
+        }
+      }
+
+      const { vp } = drawAtomModel(w, h, valenceT);
+
+      function drawLevel(y, mainLabel, subLabel, symbol, color) {
+        ctx.save();
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = color;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(lineL, y);
+        ctx.lineTo(lineR, y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        drawBadge(lineL, y - 38, mainLabel, {
+          size: lbl,
+          color: "#f8fafc",
+          bg: color === "#38bdf8" ? "rgba(12,74,110,0.75)" : "rgba(88,28,135,0.65)",
+          border: color,
+        });
+        drawBadge(lineL, y + 10, subLabel, {
+          size: lbl - 2,
+          color: "#cbd5e1",
+          bg: "rgba(15,23,42,0.7)",
+          border: "rgba(148,163,184,0.25)",
+        });
+        drawBadge(lineR - 52, y - 14, symbol, {
+          size: lbl - 2,
+          color,
+          bg: "rgba(15,23,42,0.75)",
+          border: color,
+          align: "right",
+        });
+        ctx.restore();
+      }
+
+      drawLevel(yS1, "高い段（励起状態）", "光を吸ったあと", "S₁", "#c084fc");
+      drawLevel(yS0, "低い段（基底状態）", "ふだんの状態", "S₀", "#38bdf8");
+
+      // エネルギー軸
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = `600 ${lbl}px Noto Sans JP, sans-serif`;
+      ctx.save();
+      ctx.translate(w - 14, h * 0.5);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("エネルギー ↑", 0, 0);
+      ctx.restore();
+
+      // 光のビーム（フラッシュ）
+      if (lightFlash > 0) {
+        const col = nmToRgb(currentLambda);
+        ctx.globalAlpha = Math.min(1, lightFlash);
+        const beamG = ctx.createLinearGradient(4, vp.y, vp.x - 16, vp.y);
+        beamG.addColorStop(0, rgbStr(col, 0.15));
+        beamG.addColorStop(0.5, rgbStr(col, 0.65));
+        beamG.addColorStop(1, rgbStr(col, 0.2));
+        ctx.fillStyle = beamG;
+        ctx.fillRect(2, vp.y - 12, vp.x - 18, 24);
+        drawBadge(8, vp.y - 36, `光 ${currentLambda} nm`, {
+          size: lbl - 1,
+          color: rgbStr(col, 1),
+          bg: "rgba(15,23,42,0.8)",
+          border: rgbStr(col, 0.6),
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      // 段上の電子
+      const eRad = fs(w, h, 13);
+      ctx.save();
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = electronState === "s1" || electronState === "rising" ? "#c084fc" : "#38bdf8";
+      const eg = ctx.createRadialGradient(ex - 3, eY - 3, 1, ex, eY, eRad);
+      eg.addColorStop(0, "#fff");
+      eg.addColorStop(0.45, electronState === "s1" || electronState === "rising" ? "#c084fc" : "#38bdf8");
+      eg.addColorStop(1, "#0ea5e9");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(ex, eY, eRad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = `600 ${fs(w, h, 10)}px Inter, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("e⁻", ex, eY + 4);
+      ctx.textAlign = "left";
+      ctx.restore();
+
+      if (electronState === "rising") {
+        ctx.strokeStyle = "rgba(163,230,53,0.85)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(ex + 22, yS0);
+        ctx.lineTo(ex + 22, eY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawBadge(ex + 28, (yS0 + eY) * 0.5 - 10, "↑ 上へ", {
+          size: lbl - 1,
+          color: "#bbf7d0",
+          bg: "rgba(20,83,45,0.65)",
+          border: "rgba(163,230,53,0.5)",
+        });
+      }
+      if (electronState === "falling") {
+        ctx.strokeStyle = "rgba(148,163,184,0.6)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(ex + 22, yS1);
+        ctx.lineTo(ex + 22, eY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawBadge(ex + 28, (yS1 + eY) * 0.5 - 10, "↓ 下へ", {
+          size: lbl - 1,
+          color: "#cbd5e1",
+          bg: "rgba(30,41,59,0.75)",
+          border: "rgba(148,163,184,0.4)",
+        });
+      }
+    }
+
+    let animating = false;
+
+    function setStatus(text, kind = "") {
+      statusMsg.textContent = text;
+      statusMsg.className = "status-msg" + (kind ? ` ${kind}` : "");
+    }
+
+    // 光を当てる — 励起判定とアニメーション
+    function shineLight() {
+      if (animating) return;
+      const abs = absorption(currentLambda);
+      lightFlash = 1;
+
+      if (!canExcite(currentLambda)) {
+        setStatus(`Abs(λ) = ${abs.toFixed(2)} < 0.3 — この波長では光を吸収できず、外側の電子は低い段（基底状態）のままです。`, "warn");
+        levelSub.textContent = "吸収なし — 外側の電子は低い軌道のまま";
+        electronState = "s0";
+        animProgress = 0;
+        return;
+      }
+
+      animating = true;
+      shineBtn.disabled = true;
+      setStatus(`Abs(λ) = ${abs.toFixed(2)} ≥ 0.3 — 光を吸収！外側の電子が低い段 → 高い段（励起状態）へ…`, "ok");
+      levelSub.textContent = "吸収 — 外側の電子が高い軌道へ、段も上へ";
+
+      electronState = "rising";
+      animProgress = 0;
+      const riseStart = performance.now();
+      const riseDur = 700;
+
+      function riseFrame(now) {
+        animProgress = Math.min(1, (now - riseStart) / riseDur);
+        drawLevelDiagram();
+        lightFlash = Math.max(0, lightFlash - 0.04);
+        if (animProgress < 1) {
+          requestAnimationFrame(riseFrame);
+        } else {
+          electronState = "s1";
+          levelSub.textContent = "励起状態 — 外側の電子は高い軌道・高い段にいる";
+          setStatus("高い段（励起状態）に到達。時間が経つと低い段（基底状態）へ戻ります（発光はまだ描かない）。", "ok");
+          setTimeout(startFall, 900);
+        }
+      }
+      requestAnimationFrame(riseFrame);
+    }
+
+    function startFall() {
+      electronState = "falling";
+      animProgress = 0;
+      const fallStart = performance.now();
+      const fallDur = 800;
+
+      function fallFrame(now) {
+        animProgress = Math.min(1, (now - fallStart) / fallDur);
+        drawLevelDiagram();
+        if (animProgress < 1) {
+          requestAnimationFrame(fallFrame);
+        } else {
+          electronState = "s0";
+          animProgress = 0;
+          animating = false;
+          shineBtn.disabled = false;
+          levelSub.textContent = "基底状態に戻った — もう一度「光を当てる」";
+          setStatus("低い段（基底状態）に戻りました。別の波長でも試してみましょう。");
+        }
+      }
+      requestAnimationFrame(fallFrame);
+    }
+
+    function idleLoop() {
+      if (!animating) {
+        lightFlash = Math.max(0, lightFlash - 0.02);
+        drawLevelDiagram();
+      }
+      requestAnimationFrame(idleLoop);
+    }
+
+    lambdaSlider.addEventListener("input", () => {
+      currentLambda = parseInt(lambdaSlider.value, 10);
+      updateReadouts();
+      if (!animating) {
+        const abs = absorption(currentLambda);
+        if (canExcite(currentLambda)) {
+          setStatus(`λ = ${currentLambda} nm, Abs = ${abs.toFixed(2)} — この波長なら外側の電子を励起できます。`);
+        } else {
+          setStatus(`λ = ${currentLambda} nm, Abs = ${abs.toFixed(2)} — 吸収が弱く、励起しにくい波長です。`, "warn");
+        }
+      }
+    });
+
+    shineBtn.addEventListener("click", shineLight);
+    window.addEventListener("resize", drawLevelDiagram);
+
+    buildSpectrumChart();
+    updateReadouts();
+    drawLevelDiagram();
+    requestAnimationFrame(idleLoop);
+  </script>
+</body>
+</html>
