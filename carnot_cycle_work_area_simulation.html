@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>カルノーサイクル — PVループの面積＝仕事量 W</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fb923c; --accent-light: #fdba74;
+      --hot: #f87171; --cold: #38bdf8;
+      --panel: rgba(12,18,32,0.88); --border: rgba(251,146,60,0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12,#12101a 40%,#0a1018);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(24px,env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 50% 42% at 12% 18%, rgba(251,146,60,0.12), transparent 55%),
+        radial-gradient(ellipse 45% 40% at 88% 82%, rgba(56,189,248,0.1), transparent 55%);
+    }
+    .shell { position: relative; z-index: 1; width: min(1320px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg,rgba(251,146,60,0.35),rgba(248,113,113,0.25));
+      border: 1px solid rgba(251,146,60,0.45); font-size: 1.1rem;
+      box-shadow: 0 0 28px rgba(251,146,60,0.25);
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; font-size: clamp(1rem,2.8vw,1.35rem); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #ffedd5; background: rgba(251,146,60,0.14);
+      border: 1px solid rgba(251,146,60,0.4); border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .intro-panel {
+      padding: 14px 16px; border-radius: 16px;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.28);
+      font-size: 0.84rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .intro-panel strong { color: #ffedd5; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas:
+        "motion" "heat" "ctrl"
+        "pv" "tu" "energy"
+        "explain" "footer";
+      align-items: start;
+    }
+    @media (min-width: 980px) {
+      .sim-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "motion pv"
+          "heat tu"
+          "ctrl energy"
+          "explain explain"
+          "footer footer";
+      }
+    }
+    .panel { padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.42); align-self: start; }
+    .panel h3 { margin: 0 0 10px; font-size: 0.88rem; color: var(--accent-light); font-weight: 600; }
+    .area-motion { grid-area: motion; }
+    .area-heat { grid-area: heat; }
+    .area-ctrl { grid-area: ctrl; }
+    .area-pv { grid-area: pv; }
+    .area-tu { grid-area: tu; }
+    .area-energy { grid-area: energy; }
+    .area-explain { grid-area: explain; }
+    .area-footer { grid-area: footer; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg,rgba(8,14,24,0.98),rgba(4,8,16,0.99));
+      border: 1px solid rgba(251,146,60,0.32);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #ffedd5; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    .canvas-wrap { width: 100%; height: min(240px,30dvh); min-height: 190px; position: relative; }
+    .canvas-wrap.heat { height: min(220px,28dvh); min-height: 200px; }
+    canvas { width: 100%; height: 100%; display: block; }
+    .canvas-hud { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+    .hud-chip {
+      padding: 5px 10px; border-radius: 9px; font-size: 0.64rem; font-weight: 600;
+      background: rgba(6,10,18,0.88); border: 1px solid rgba(251,146,60,0.28); font-variant-numeric: tabular-nums;
+    }
+    .hud-chip.hot { border-color: rgba(248,113,113,0.5); color: #fecaca; }
+    .hud-chip.cold { border-color: rgba(56,189,248,0.5); color: #bae6fd; }
+    .hud-chip.p { border-color: rgba(251,113,133,0.45); color: #fecdd3; }
+    .phase-badge {
+      margin: 0 14px 10px; padding: 8px 12px; border-radius: 10px; font-size: 0.72rem; line-height: 1.55;
+      background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.25); color: #fed7aa;
+    }
+    .chart-wrap { height: min(240px,30dvh); min-height: 200px; position: relative; }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); margin-bottom: 4px; }
+    .ctrl-row label span.val { color: #fdba74; font-weight: 700; font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    select {
+      width: 100%; padding: 9px 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem;
+      background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid rgba(148,163,184,0.25);
+    }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .btn {
+      flex: 1; min-width: 120px; padding: 11px 14px; border-radius: 11px; cursor: pointer;
+      font-family: inherit; font-size: 0.82rem; font-weight: 700; border: 2px solid rgba(148,163,184,0.25);
+      background: rgba(255,255,255,0.05); color: #e2e8f0;
+    }
+    .btn.primary { border-color: rgba(251,146,60,0.65); background: linear-gradient(135deg,rgba(251,146,60,0.35),rgba(248,113,113,0.25)); color: #fff7ed; }
+    .btn.active { border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.15); color: #bae6fd; }
+    .energy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .energy-card {
+      padding: 12px 10px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid rgba(148,163,184,0.15);
+    }
+    .energy-card .lbl { font-size: 0.6rem; color: var(--muted); }
+    .energy-card .num { font-size: 0.88rem; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .energy-card.qin .num { color: #fca5a5; }
+    .energy-card.qout .num { color: #7dd3fc; }
+    .energy-card.w .num { color: #fdba74; }
+    .energy-card.eta .num { color: #fde047; }
+    .formula-box {
+      padding: 10px 12px; border-radius: 12px; text-align: center;
+      background: rgba(253,224,71,0.08); border: 1px solid rgba(253,224,71,0.3);
+      font-size: 0.76rem; font-weight: 700; color: #fde047; line-height: 1.6;
+    }
+    .formula-box.sub { margin-top: 8px; font-size: 0.72rem; font-weight: 600; color: #bae6fd; background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.25); }
+    .u-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .u-card {
+      padding: 12px 10px; border-radius: 12px; text-align: center;
+      background: rgba(253,224,71,0.06); border: 2px solid rgba(253,224,71,0.25);
+    }
+    .u-card .lbl { font-size: 0.6rem; color: #fde68a; }
+    .u-card .num { font-size: 0.95rem; font-weight: 700; color: #fde047; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .explain-body { font-size: 0.78rem; line-height: 1.75; color: #cbd5e1; }
+    .explain-body ul { margin: 0; padding-left: 1.15rem; }
+    .explain-body li { margin-bottom: 6px; }
+    .explain-body strong { color: #ffedd5; }
+    .status { padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.6; background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.2); color: #fdba74; margin-top: 8px; }
+    .coll-bar-wrap { margin-top: 8px; }
+    .coll-bar-wrap .lbl { font-size: 0.64rem; color: var(--muted); margin-bottom: 4px; }
+    .coll-bar { height: 10px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
+    .coll-bar-fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg,#fb923c,#f87171); transition: width 0.12s; }
+    .fill-note {
+      margin-top: 8px; padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; line-height: 1.55;
+      background: rgba(255,100,0,0.12); border: 1px solid rgba(255,100,0,0.28); color: #fed7aa;
+    }
+    .pv-legend {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;
+    }
+    .pv-legend span {
+      font-size: 0.66rem; padding: 5px 8px; border-radius: 8px; line-height: 1.4;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .pv-legend .l1 { border-color: rgba(248,113,113,0.45); color: #fecaca; }
+    .pv-legend .l2 { border-color: rgba(251,146,60,0.45); color: #fed7aa; }
+    .pv-legend .l3 { border-color: rgba(56,189,248,0.45); color: #bae6fd; }
+    .pv-legend .l4 { border-color: rgba(167,139,250,0.45); color: #ddd6fe; }
+    .heat-status {
+      margin: 0 14px 10px; padding: 8px 12px; border-radius: 10px; font-size: 0.72rem; line-height: 1.55;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22); color: #bae6fd;
+    }
+    .ctrl-row.disabled-hint { opacity: 0.55; }
+    .ctrl-hint { margin: 0 0 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">♨</div>
+      <h2>カルノーサイクル — 仕事量 W の面積</h2>
+      <p class="chapter-label">14章 · 等温→断熱→等温→断熱 · PVループ塗りつぶし · η = 1 − T<sub>c</sub>/T<sub>h</sub></p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="intro-panel">
+      理想気体の<strong>カルノーサイクル</strong>を4過程でアニメーション再生します。
+      <strong>PV グラフのループ内部</strong>を半透明色で塗りつぶし、<strong>面積＝仕事量 W</strong> を直感的に理解できます。
+      分子運動・熱流・内部エネルギー <strong>U = (f/2)nRT</strong> と完全連動します。
+    </section>
+
+    <div class="sim-grid">
+      <!-- ① 分子運動 -->
+      <section class="panel area-motion">
+        <div class="viz-block">
+          <div class="viz-head"><p class="viz-label">① 気体分子の運動（Canvas）</p></div>
+          <p class="viz-legend">T ↑ → 速さ ↑ · 箱の幅 ＝ V · 壁フラッシュ ＝ 衝突頻度 → P</p>
+          <div class="canvas-wrap">
+            <canvas id="motionCanvas"></canvas>
+          </div>
+          <div class="canvas-hud">
+            <div class="hud-chip hot" id="hudT">T = — K</div>
+            <div class="hud-chip" id="hudV">V = — L</div>
+            <div class="hud-chip p" id="hudP">P = —</div>
+            <div class="hud-chip p" id="hudColl">衝突 — 回/s</div>
+          </div>
+          <p class="phase-badge" id="phaseBadge">—</p>
+        </div>
+        <div class="coll-bar-wrap">
+          <div class="lbl">壁への衝突頻度（圧力 P の目安）</div>
+          <div class="coll-bar"><div class="coll-bar-fill" id="collFill"></div></div>
+        </div>
+      </section>
+
+      <!-- ④ PV グラフ -->
+      <section class="panel area-pv">
+        <h3>④ PV グラフ — ループの面積 ＝ 仕事量 W</h3>
+        <div class="chart-wrap"><canvas id="pvChart"></canvas></div>
+        <div class="pv-legend" id="pvLegend">
+          <span class="l1">① 等温膨張（T<sub>h</sub>）</span>
+          <span class="l2">② 断熱膨張</span>
+          <span class="l3">③ 等温圧縮（T<sub>c</sub>）</span>
+          <span class="l4">④ 断熱圧縮</span>
+        </div>
+        <div class="fill-note" id="fillNote">点 ①→②→③→④ の順にカルノーサイクルを描きます。オレンジの塗りつぶし＝仕事量 W。</div>
+      </section>
+
+      <!-- ② 熱流 -->
+      <section class="panel area-heat">
+        <div class="viz-block">
+          <div class="viz-head"><p class="viz-label">② 熱流 Q（Canvas）</p></div>
+          <p class="viz-legend">左＝高温 T<sub>h</sub> · 中央＝気体 · 右＝低温 T<sub>c</sub> · 矢印の太さ＝熱の流れ</p>
+          <div class="canvas-wrap heat">
+            <canvas id="heatCanvas"></canvas>
+          </div>
+          <p class="heat-status" id="heatStatus">待機中 — サイクル開始後、等温過程で Q の矢印が表示されます</p>
+          <div class="canvas-hud">
+            <div class="hud-chip hot" id="hudTh">T<sub>h</sub> = — K</div>
+            <div class="hud-chip cold" id="hudTc">T<sub>c</sub> = — K</div>
+            <div class="hud-chip hot" id="hudQin">Q<sub>in</sub> = —</div>
+            <div class="hud-chip cold" id="hudQout">Q<sub>out</sub> = —</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑤ T–U グラフ -->
+      <section class="panel area-tu">
+        <h3>⑤ T – U グラフ</h3>
+        <div class="chart-wrap"><canvas id="tuChart"></canvas></div>
+        <div class="u-grid">
+          <div class="u-card"><div class="lbl">U = (f/2) nRT</div><div class="num" id="dU">—</div></div>
+          <div class="u-card"><div class="lbl">現在の T</div><div class="num" id="dT">—</div></div>
+        </div>
+      </section>
+
+      <!-- ③ 操作 -->
+      <section class="panel area-ctrl">
+        <h3>③ 操作パネル</h3>
+        <p class="ctrl-hint" id="ctrlHint">実行中以外は T<sub>h</sub> · T<sub>c</sub> · n · f をいつでも変更できます（グラフが即更新）。</p>
+        <div class="ctrl-row">
+          <label>高温熱源 T<sub>h</sub>（K）<span class="val" id="thVal">500 K</span></label>
+          <input type="range" id="thSlider" min="350" max="700" step="10" value="500">
+        </div>
+        <div class="ctrl-row">
+          <label>低温熱源 T<sub>c</sub>（K）<span class="val" id="tcVal">300 K</span></label>
+          <input type="range" id="tcSlider" min="150" max="450" step="10" value="300">
+        </div>
+        <div class="ctrl-row">
+          <label>モル数 n · 自由度 f</label>
+          <select id="nfSelect">
+            <option value="1|3">n = 1.00 mol · f = 3（単原子）</option>
+            <option value="1|5" selected>n = 1.00 mol · f = 5（二原子）</option>
+            <option value="1|6">n = 1.00 mol · f = 6（多原子）</option>
+            <option value="2|5">n = 2.00 mol · f = 5（二原子）</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="startBtn">サイクル開始</button>
+          <button type="button" class="btn" id="loopBtn">自動ループ OFF</button>
+          <button type="button" class="btn" id="resetBtn">リセット</button>
+        </div>
+        <p class="status" id="ctrlMsg">「サイクル開始」で ①等温膨張 → ②断熱膨張 → ③等温圧縮 → ④断熱圧縮 を順に再生します。</p>
+      </section>
+
+      <!-- ⑥ 熱量・仕事量 -->
+      <section class="panel area-energy">
+        <h3>⑥ 熱量 · 仕事量 · 熱効率</h3>
+        <div class="energy-grid">
+          <div class="energy-card qin"><div class="lbl">Q<sub>in</sub>（等温膨張）</div><div class="num" id="dQin">—</div></div>
+          <div class="energy-card qout"><div class="lbl">Q<sub>out</sub>（等温圧縮）</div><div class="num" id="dQout">—</div></div>
+          <div class="energy-card w"><div class="lbl">仕事量 W（PV面積）</div><div class="num" id="dW">—</div></div>
+          <div class="energy-card eta"><div class="lbl">熱効率 η</div><div class="num" id="dEta">—</div></div>
+        </div>
+        <div class="formula-box">W = Q<sub>in</sub> − Q<sub>out</sub> ＝ ∮ P dV ＝ PVループの面積</div>
+        <div class="formula-box sub">η = W / Q<sub>in</sub> = 1 − T<sub>c</sub> / T<sub>h</sub>（カルノー効率）</div>
+      </section>
+
+      <!-- ⑦ 説明 -->
+      <section class="panel area-explain">
+        <h3>⑦ カルノーサイクルの説明</h3>
+        <div class="explain-body" id="explainBody">
+          <ul>
+            <li><strong>カルノーサイクル</strong>は熱機関の理想モデルである。</li>
+            <li><strong>PV ループの面積</strong>が仕事量 <strong>W</strong> を表す。</li>
+            <li><strong>等温膨張</strong>：高温 T<sub>h</sub> の熱源から熱 Q<sub>in</sub> を受け取りながら気体が仕事をする（U 一定）。</li>
+            <li><strong>断熱膨張</strong>：熱の出入りなし（Q＝0）で温度が T<sub>h</sub> → T<sub>c</sub> に下がる（U 減少）。</li>
+            <li><strong>等温圧縮</strong>：低温 T<sub>c</sub> の熱浴へ熱 Q<sub>out</sub> を捨てながら外部から仕事される（U 一定）。</li>
+            <li><strong>断熱圧縮</strong>：Q＝0 で温度が T<sub>c</sub> → T<sub>h</sub> に上がる（U 増加）。</li>
+            <li>熱効率 <strong>η = 1 − T<sub>c</sub>/T<sub>h</sub></strong> は与えられた温度差での<strong>理想的な最大効率</strong>である。</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel area-footer">
+        <h3>4 過程の対応</h3>
+        <div class="explain-body">
+          <ul>
+            <li><strong>① 等温膨張</strong>：PV ＝ nRT<sub>h</sub>（双曲線）· Q<sub>in</sub> ＝ nRT<sub>h</sub> ln(V₂/V₁)</li>
+            <li><strong>② 断熱膨張</strong>：PV<sup>γ</sup> ＝ 一定 · Q ＝ 0 · T ↓</li>
+            <li><strong>③ 等温圧縮</strong>：PV ＝ nRT<sub>c</sub> · Q<sub>out</sub> ＝ nRT<sub>c</sub> ln(V₃/V₄)</li>
+            <li><strong>④ 断熱圧縮</strong>：PV<sup>γ</sup> ＝ 一定 · Q ＝ 0 · T ↑</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const R = 8.314462618;
+      const M_MOLAR = 0.028; // N2 付近
+      const MAX_N = 120;
+      const WALL_LO = 0.05;
+      const WALL_HI = 0.95;
+      const SIM_SPEED = 0.0026;
+      const EXPANSION_RATIO = 2.0; // V2/V1
+      const V1_L = 6.0;
+
+      const PHASES = [
+        {
+          id: 0, name: "① 等温膨張", short: "等温膨張",
+          desc: "T = T<sub>h</sub> 一定 · Q<sub>in</sub> > 0 · U 一定 · 気体が膨張して仕事をする",
+          heat: "in", duration: 3.2,
+        },
+        {
+          id: 1, name: "② 断熱膨張", short: "断熱膨張",
+          desc: "Q = 0 · T 低下 · U 減少 · PV<sup>γ</sup> = 一定",
+          heat: "none", duration: 2.8,
+        },
+        {
+          id: 2, name: "③ 等温圧縮", short: "等温圧縮",
+          desc: "T = T<sub>c</sub> 一定 · Q<sub>out</sub> > 0 · U 一定 · 外部から仕事される",
+          heat: "out", duration: 3.2,
+        },
+        {
+          id: 3, name: "④ 断熱圧縮", short: "断熱圧縮",
+          desc: "Q = 0 · T 上昇 · U 増加 · 初期状態へ戻る",
+          heat: "none", duration: 2.8,
+        },
+      ];
+
+      const motionCanvas = document.getElementById("motionCanvas");
+      const heatCanvas = document.getElementById("heatCanvas");
+      const mCtx = motionCanvas.getContext("2d");
+      const hCtx = heatCanvas.getContext("2d");
+
+      const thSlider = document.getElementById("thSlider");
+      const tcSlider = document.getElementById("tcSlider");
+      const nfSelect = document.getElementById("nfSelect");
+      const startBtn = document.getElementById("startBtn");
+      const loopBtn = document.getElementById("loopBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      const state = {
+        Th: 500, Tc: 300, n: 1, f: 5,
+        V_L: V1_L, T: 500, P_Pa: 0,
+        phase: -1, phaseT: 0, running: false, autoLoop: false,
+        cycleDone: false,
+        points: { V1: 0, V2: 0, V3: 0, V4: 0, P1: 0, P2: 0, P3: 0, P4: 0 },
+        pvTrail: [], tuTrail: [],
+        loopPoly: [],
+        Qin: 0, Qout: 0, W_area: 0, W_theory: 0, eta: 0,
+        parts: [], collCount: 0, collRate: 0, simTime: 0, lastRateT: 0,
+        boxW: 280, boxH: 180,
+        wallFlash: { l: 0, r: 0, t: 0, b: 0 },
+        trackTrail: [],
+        heatPulse: 0,
+      };
+
+      let pvChart, tuChart, lastFrame;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function fmtJ(n) {
+        if (!Number.isFinite(n)) return "—";
+        if (Math.abs(n) >= 10000) return `${fmt(n / 1000, 2)} kJ`;
+        return `${fmt(n, 1)} J`;
+      }
+      function fmtPct(n) { return Number.isFinite(n) ? `${fmt(n * 100, 1)} %` : "—"; }
+      function gamma() { return (state.f + 2) / state.f; }
+      function V_m3() { return state.V_L * 1e-3; }
+      function U() { return (state.f / 2) * state.n * R * state.T; }
+      function pKpa(V_L, T) { return state.n * R * T / (V_L * 1e-3) / 1000; }
+
+      // カルノーサイクルの4状態点を計算
+      function computeCyclePoints() {
+        const g = gamma();
+        const ratio = Math.pow(state.Th / state.Tc, 1 / (g - 1));
+        const V1 = V1_L;
+        const V2 = V1 * EXPANSION_RATIO;
+        const V4 = V1 * ratio;
+        const V3 = V2 * ratio;
+        const P1 = state.n * R * state.Th / (V1 * 1e-3);
+        const P2 = state.n * R * state.Th / (V2 * 1e-3);
+        const P3 = state.n * R * state.Tc / (V3 * 1e-3);
+        const P4 = state.n * R * state.Tc / (V4 * 1e-3);
+        state.points = { V1, V2, V3, V4, P1, P2, P3, P4 };
+
+        state.Qin = state.n * R * state.Th * Math.log(V2 / V1);
+        state.Qout = state.n * R * state.Tc * Math.log(V3 / V4);
+        state.W_theory = state.Qin - state.Qout;
+        state.eta = 1 - state.Tc / state.Th;
+      }
+
+      // 各過程の (V, P, T) を phase 内パラメータ u∈[0,1] で返す
+      function stateAt(phase, u) {
+        const pt = state.points;
+        const g = gamma();
+        let V_L, T, P_Pa;
+        if (phase === 0) {
+          V_L = pt.V1 + (pt.V2 - pt.V1) * u;
+          T = state.Th;
+          P_Pa = state.n * R * T / (V_L * 1e-3);
+        } else if (phase === 1) {
+          V_L = pt.V2 + (pt.V3 - pt.V2) * u;
+          const PVg = pt.P2 * Math.pow(pt.V2 * 1e-3, g);
+          P_Pa = PVg / Math.pow(V_L * 1e-3, g);
+          T = P_Pa * (V_L * 1e-3) / (state.n * R);
+        } else if (phase === 2) {
+          V_L = pt.V3 + (pt.V4 - pt.V3) * u;
+          T = state.Tc;
+          P_Pa = state.n * R * T / (V_L * 1e-3);
+        } else {
+          V_L = pt.V4 + (pt.V1 - pt.V4) * u;
+          const PVg = pt.P4 * Math.pow(pt.V4 * 1e-3, g);
+          P_Pa = PVg / Math.pow(V_L * 1e-3, g);
+          T = P_Pa * (V_L * 1e-3) / (state.n * R);
+        }
+        return { V_L, T, P_Pa };
+      }
+
+      // PVループの全点列（塗りつぶし・面積計算用）
+      function buildLoopPolyline() {
+        const pts = [];
+        const steps = 40;
+        for (let ph = 0; ph < 4; ph += 1) {
+          for (let i = 0; i <= steps; i += 1) {
+            const s = stateAt(ph, i / steps);
+            pts.push({ x: s.V_L, y: s.P_Pa / 1000 });
+          }
+        }
+        return pts;
+      }
+
+      // PVループの面積を計算（台形法, V[m³]·P[Pa] → J）
+      function polygonWorkJ(points) {
+        if (points.length < 3) return 0;
+        let area = 0;
+        const n = points.length;
+        for (let i = 0; i < n; i += 1) {
+          const j = (i + 1) % n;
+          const Vi = points[i].x * 1e-3;
+          const Vj = points[j].x * 1e-3;
+          const Pi = points[i].y * 1000;
+          const Pj = points[j].y * 1000;
+          area += (Vi * Pj - Vj * Pi);
+        }
+        return Math.abs(area) * 0.5;
+      }
+
+      function applyThermo(V_L, T, P_Pa) {
+        const oldT = state.T;
+        state.V_L = V_L;
+        state.T = T;
+        state.P_Pa = P_Pa;
+        if (Math.abs(T - oldT) > 0.5) rescaleSpeeds(oldT);
+        resizeMotionCanvas();
+      }
+
+      function randNormal() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+
+      function speedScale() {
+        return Math.sqrt(R * state.T / M_MOLAR) * SIM_SPEED;
+      }
+
+      function initParticles() {
+        state.parts = [];
+        const sc = speedScale();
+        for (let i = 0; i < MAX_N; i += 1) {
+          state.parts.push({
+            px: WALL_LO + Math.random() * (WALL_HI - WALL_LO),
+            py: WALL_LO + Math.random() * (WALL_HI - WALL_LO),
+            vx: randNormal() * sc,
+            vy: randNormal() * sc,
+          });
+        }
+      }
+
+      function rescaleSpeeds(oldT) {
+        if (oldT > 1 && state.T > 1) {
+          const sc = Math.sqrt(state.T / oldT);
+          state.parts.forEach((p) => { p.vx *= sc; p.vy *= sc; });
+        }
+      }
+
+      function flashWall(side) {
+        state.wallFlash[side] = 1;
+      }
+
+      function decayWallFlash(dt) {
+        Object.keys(state.wallFlash).forEach((k) => {
+          state.wallFlash[k] = Math.max(0, state.wallFlash[k] - dt * 3.5);
+        });
+      }
+
+      function bounceWalls(p) {
+        let hit = false;
+        if (p.px < WALL_LO) {
+          p.px = WALL_LO + (WALL_LO - p.px);
+          if (p.vx < 0) { p.vx = -p.vx; hit = true; flashWall("l"); }
+        } else if (p.px > WALL_HI) {
+          p.px = WALL_HI - (p.px - WALL_HI);
+          if (p.vx > 0) { p.vx = -p.vx; hit = true; flashWall("r"); }
+        }
+        if (p.py < WALL_LO) {
+          p.py = WALL_LO + (WALL_LO - p.py);
+          if (p.vy < 0) { p.vy = -p.vy; hit = true; flashWall("t"); }
+        } else if (p.py > WALL_HI) {
+          p.py = WALL_HI - (p.py - WALL_HI);
+          if (p.vy > 0) { p.vy = -p.vy; hit = true; flashWall("b"); }
+        }
+        if (hit) state.collCount += 1;
+        p.px = Math.max(WALL_LO, Math.min(WALL_HI, p.px));
+        p.py = Math.max(WALL_LO, Math.min(WALL_HI, p.py));
+      }
+
+      function updateParticles(dt) {
+        const maxStep = (WALL_HI - WALL_LO) * 0.045;
+        state.parts.forEach((p) => {
+          let vx = p.vx * dt;
+          let vy = p.vy * dt;
+          const step = Math.hypot(vx, vy);
+          if (step > maxStep && step > 0) {
+            const s = maxStep / step;
+            vx *= s;
+            vy *= s;
+          }
+          p.px += vx;
+          p.py += vy;
+          bounceWalls(p);
+        });
+        const tp = state.parts[0];
+        if (tp) {
+          state.trackTrail.push({ x: tp.px, y: tp.py });
+          if (state.trackTrail.length > 24) state.trackTrail.shift();
+        }
+      }
+
+      function resizeCanvas(canvas, ctx) {
+        const wrap = canvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(1, wrap.clientWidth);
+        const h = Math.max(1, wrap.clientHeight);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h };
+      }
+
+      function resizeMotionCanvas() {
+        resizeCanvas(motionCanvas, mCtx);
+        const w = motionCanvas.clientWidth;
+        const h = motionCanvas.clientHeight;
+        const refV = 14;
+        const scale = Math.cbrt(state.V_L / refV);
+        state.boxW = w * 0.82 * scale;
+        state.boxH = h * 0.76 * Math.max(0.85, Math.min(1.1, scale));
+      }
+
+      function particleColor(speed) {
+        const ref = speedScale() * 1.25;
+        const t = Math.min(1, Math.max(0, speed / (ref * 1.8)));
+        const hue = 200 - t * 155;
+        return `hsl(${hue}, 88%, ${48 + t * 18}%)`;
+      }
+
+      function drawVelArrow(ctx, x, y, vx, vy, lenScale, color, width) {
+        const sp = Math.sqrt(vx * vx + vy * vy) || 1;
+        const ux = vx / sp;
+        const uy = vy / sp;
+        const len = Math.min(22, Math.max(6, sp * lenScale));
+        const x2 = x + ux * len;
+        const y2 = y + uy * len;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = width || 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - ux * 5 + uy * 3, y2 - uy * 5 - ux * 3);
+        ctx.lineTo(x2 - ux * 5 - uy * 3, y2 - uy * 5 + ux * 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawMotion(dt) {
+        decayWallFlash(dt || 0.016);
+        const { w, h } = resizeCanvas(motionCanvas, mCtx);
+        mCtx.fillStyle = "#060a12";
+        mCtx.fillRect(0, 0, w, h);
+        const bx = (w - state.boxW) / 2;
+        const by = (h - state.boxH) / 2;
+
+        const walls = [
+          { side: "l", x1: bx, y1: by, x2: bx, y2: by + state.boxH },
+          { side: "r", x1: bx + state.boxW, y1: by, x2: bx + state.boxW, y2: by + state.boxH },
+          { side: "t", x1: bx, y1: by, x2: bx + state.boxW, y2: by },
+          { side: "b", x1: bx, y1: by + state.boxH, x2: bx + state.boxW, y2: by + state.boxH },
+        ];
+        walls.forEach((wl) => {
+          const g = state.wallFlash[wl.side];
+          mCtx.strokeStyle = `rgba(251,113,133,${0.35 + g * 0.65})`;
+          mCtx.lineWidth = 2 + g * 2;
+          mCtx.beginPath();
+          mCtx.moveTo(wl.x1, wl.y1);
+          mCtx.lineTo(wl.x2, wl.y2);
+          mCtx.stroke();
+        });
+
+        mCtx.fillStyle = "rgba(251,146,60,0.06)";
+        mCtx.fillRect(bx, by, state.boxW, state.boxH);
+
+        // 右壁＝可動活塞（体積 V）
+        mCtx.fillStyle = "rgba(251,146,60,0.2)";
+        mCtx.fillRect(bx + state.boxW - 7, by, 7, state.boxH);
+        mCtx.fillStyle = "#fdba74";
+        mCtx.font = "600 9px sans-serif";
+        mCtx.fillText("活塞", bx + state.boxW - 28, by - 4);
+
+        mCtx.fillStyle = "#94a3b8";
+        mCtx.font = "600 10px sans-serif";
+        mCtx.fillText(`V = ${fmt(state.V_L, 1)} L`, bx + state.boxW - 54, by + state.boxH + 14);
+
+        const r = Math.max(2.5, Math.min(5.5, state.boxW / 55));
+        const arrowScale = state.boxW * 0.14;
+        state.parts.forEach((p, idx) => {
+          const x = bx + p.px * state.boxW;
+          const y = by + p.py * state.boxH;
+          const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+          if (idx === 0) {
+            mCtx.fillStyle = "#fde047";
+            mCtx.beginPath();
+            mCtx.arc(x, y, r + 1.5, 0, Math.PI * 2);
+            mCtx.fill();
+            drawVelArrow(mCtx, x, y, p.vx, p.vy, arrowScale, "#fff", 2);
+          } else {
+            mCtx.fillStyle = particleColor(spd);
+            mCtx.beginPath();
+            mCtx.arc(x, y, r, 0, Math.PI * 2);
+            mCtx.fill();
+          }
+        });
+      }
+
+      function drawHeatFlow(dt) {
+        const { w, h } = resizeCanvas(heatCanvas, hCtx);
+        hCtx.fillStyle = "#060a12";
+        hCtx.fillRect(0, 0, w, h);
+
+        const gasX = w * 0.5;
+        const gasY = h * 0.5;
+        const hotX = w * 0.14;
+        const coldX = w * 0.86;
+        const boxW = Math.min(108, w * 0.22);
+        const boxH = Math.min(72, h * 0.38);
+        const gasR = Math.min(w, h) * 0.13;
+
+        function drawReservoir(x, y, bg, stroke, titleColor, label, sub) {
+          hCtx.fillStyle = bg;
+          hCtx.strokeStyle = stroke;
+          hCtx.lineWidth = 2.5;
+          hCtx.fillRect(x - boxW * 0.5, y - boxH * 0.5, boxW, boxH);
+          hCtx.strokeRect(x - boxW * 0.5, y - boxH * 0.5, boxW, boxH);
+          hCtx.textAlign = "center";
+          hCtx.fillStyle = titleColor;
+          hCtx.font = "800 12px sans-serif";
+          hCtx.fillText(label, x, y - 4);
+          hCtx.font = "600 10px sans-serif";
+          hCtx.fillStyle = "#cbd5e1";
+          hCtx.fillText(sub, x, y + 14);
+        }
+
+        drawReservoir(hotX, gasY, "rgba(248,113,113,0.22)", "rgba(248,113,113,0.85)", "#fecaca",
+          "高温熱源", `T_h = ${fmt(state.Th, 0)} K`);
+        drawReservoir(coldX, gasY, "rgba(56,189,248,0.18)", "rgba(56,189,248,0.85)", "#bae6fd",
+          "低温熱源", `T_c = ${fmt(state.Tc, 0)} K`);
+
+        // 接続ガイド線
+        hCtx.setLineDash([6, 5]);
+        hCtx.strokeStyle = "rgba(148,163,184,0.25)";
+        hCtx.lineWidth = 1.5;
+        hCtx.beginPath();
+        hCtx.moveTo(hotX + boxW * 0.5, gasY);
+        hCtx.lineTo(gasX - gasR - 8, gasY);
+        hCtx.moveTo(gasX + gasR + 8, gasY);
+        hCtx.lineTo(coldX - boxW * 0.5, gasY);
+        hCtx.stroke();
+        hCtx.setLineDash([]);
+
+        // 気体（温度で色）
+        const tNorm = Math.min(1, Math.max(0, (state.T - state.Tc) / (state.Th - state.Tc || 1)));
+        const gasGrad = hCtx.createRadialGradient(gasX, gasY, 4, gasX, gasY, gasR);
+        gasGrad.addColorStop(0, `rgba(253,224,71,${0.35 + tNorm * 0.25})`);
+        gasGrad.addColorStop(1, `rgba(251,146,60,${0.15 + tNorm * 0.2})`);
+        hCtx.fillStyle = gasGrad;
+        hCtx.strokeStyle = "rgba(251,146,60,0.85)";
+        hCtx.lineWidth = 3;
+        hCtx.beginPath();
+        hCtx.arc(gasX, gasY, gasR, 0, Math.PI * 2);
+        hCtx.fill();
+        hCtx.stroke();
+        hCtx.textAlign = "center";
+        hCtx.fillStyle = "#ffedd5";
+        hCtx.font = "800 13px sans-serif";
+        hCtx.fillText("気体", gasX, gasY - 2);
+        hCtx.font = "700 11px sans-serif";
+        hCtx.fillStyle = "#fed7aa";
+        hCtx.fillText(`T = ${fmt(state.T, 0)} K`, gasX, gasY + 14);
+
+        const phaseInfo = state.phase >= 0 ? PHASES[state.phase] : null;
+        const pulse = 0.65 + 0.35 * Math.sin(state.heatPulse * 7);
+        let heatMsg = "待機中 — 等温膨張で Q_in、等温圧縮で Q_out が流れます";
+
+        function drawFlowArrow(x1, y1, x2, y2, rgb, label, lw) {
+          hCtx.save();
+          hCtx.shadowBlur = 14;
+          hCtx.shadowColor = rgb.replace("ALPHA", "0.6");
+          hCtx.strokeStyle = rgb.replace("ALPHA", String(pulse));
+          hCtx.fillStyle = rgb.replace("ALPHA", String(Math.min(1, pulse + 0.15)));
+          hCtx.lineWidth = lw || 5;
+          hCtx.lineCap = "round";
+          hCtx.beginPath();
+          hCtx.moveTo(x1, y1);
+          hCtx.lineTo(x2, y2);
+          hCtx.stroke();
+          const ang = Math.atan2(y2 - y1, x2 - x1);
+          const head = 14;
+          hCtx.beginPath();
+          hCtx.moveTo(x2, y2);
+          hCtx.lineTo(x2 - head * Math.cos(ang - 0.42), y2 - head * Math.sin(ang - 0.42));
+          hCtx.lineTo(x2 - head * 0.5 * Math.cos(ang), y2 - head * 0.5 * Math.sin(ang));
+          hCtx.lineTo(x2 - head * Math.cos(ang + 0.42), y2 - head * Math.sin(ang + 0.42));
+          hCtx.closePath();
+          hCtx.fill();
+          hCtx.shadowBlur = 0;
+          hCtx.font = "800 13px sans-serif";
+          hCtx.fillText(label, (x1 + x2) * 0.5, y1 - 14);
+          hCtx.restore();
+
+          // 流れる粒子
+          const t = (state.heatPulse * 0.8) % 1;
+          const px = x1 + (x2 - x1) * t;
+          const py = y1 + (y2 - y1) * t;
+          hCtx.fillStyle = rgb.replace("ALPHA", "0.95");
+          hCtx.beginPath();
+          hCtx.arc(px, py, 5, 0, Math.PI * 2);
+          hCtx.fill();
+        }
+
+        if (phaseInfo && phaseInfo.heat === "in") {
+          drawFlowArrow(hotX + boxW * 0.52, gasY, gasX - gasR - 10, gasY,
+            "rgba(248,113,113,ALPHA)", "Q_in →", 6);
+          heatMsg = "① 等温膨張 — 高温熱源から Q_in を受け取る（U 一定）";
+        } else if (phaseInfo && phaseInfo.heat === "out") {
+          drawFlowArrow(gasX + gasR + 10, gasY, coldX - boxW * 0.52, gasY,
+            "rgba(56,189,248,ALPHA)", "→ Q_out", 6);
+          heatMsg = "③ 等温圧縮 — 低温熱源へ Q_out を捨てる（U 一定）";
+        } else if (phaseInfo && phaseInfo.heat === "none") {
+          hCtx.textAlign = "center";
+          hCtx.font = "800 14px sans-serif";
+          hCtx.fillStyle = "#94a3b8";
+          hCtx.fillText("Q = 0（断熱）", gasX, gasY + gasR + 36);
+          heatMsg = `${phaseInfo.name} — 断熱のため熱の出入りなし`;
+        }
+
+        document.getElementById("heatStatus").textContent = heatMsg;
+        hCtx.textAlign = "left";
+      }
+
+      function chartBase() {
+        return {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 10 } } },
+        };
+      }
+
+      function pvAxisExtents() {
+        const pts = state.loopPoly.length ? state.loopPoly : buildLoopPolyline();
+        const vs = pts.map((p) => p.x);
+        const ps = pts.map((p) => p.y);
+        state.pvTrail.forEach((p) => { vs.push(p.x); ps.push(p.y); });
+        vs.push(state.V_L);
+        ps.push(state.P_Pa / 1000);
+        let vMin = Math.min(...vs);
+        let vMax = Math.max(...vs);
+        let pMin = Math.min(...ps);
+        let pMax = Math.max(...ps);
+        const padV = Math.max(0.8, (vMax - vMin) * 0.1);
+        const padP = Math.max(15, (pMax - pMin) * 0.1);
+        return {
+          vMin: Math.max(0, vMin - padV),
+          vMax: vMax + padV,
+          pMin: Math.max(0, pMin - padP),
+          pMax: pMax + padP,
+        };
+      }
+
+      function buildCharts() {
+        state.loopPoly = buildLoopPolyline();
+        const ext = pvAxisExtents();
+
+        // 仕事量 W の塗りつぶし（PVループ内部を polygon fill）
+        const fillLoopPlugin = {
+          id: "carnotFillLoop",
+          beforeDatasetsDraw(chart) {
+            const poly = state.loopPoly.length >= 3 ? state.loopPoly : buildLoopPolyline();
+            if (poly.length < 3) return;
+            const { ctx } = chart;
+            const xS = chart.scales.x;
+            const yS = chart.scales.y;
+            ctx.save();
+            ctx.beginPath();
+            poly.forEach((p, i) => {
+              const px = xS.getPixelForValue(p.x);
+              const py = yS.getPixelForValue(p.y);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.fillStyle = state.cycleDone ? "rgba(255,100,0,0.35)" : "rgba(255,100,0,0.14)";
+            ctx.fill();
+            ctx.strokeStyle = state.cycleDone ? "rgba(255,100,0,0.65)" : "rgba(255,100,0,0.35)";
+            ctx.lineWidth = state.cycleDone ? 2 : 1.2;
+            ctx.stroke();
+            ctx.restore();
+          },
+        };
+
+        // 状態点 ①②③④ のラベル
+        const pointLabelPlugin = {
+          id: "carnotPointLabels",
+          afterDatasetsDraw(chart) {
+            if (state.running) return;
+            const { ctx } = chart;
+            const xS = chart.scales.x;
+            const yS = chart.scales.y;
+            ctx.save();
+            ctx.font = "800 11px sans-serif";
+            ctx.textAlign = "center";
+            statePointMarkers().forEach((m) => {
+              const px = xS.getPixelForValue(m.x);
+              const py = yS.getPixelForValue(m.y);
+              ctx.fillStyle = "rgba(6,10,18,0.85)";
+              ctx.beginPath();
+              ctx.arc(px, py - 14, 10, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = "#fde047";
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+              ctx.fillStyle = "#fde047";
+              ctx.fillText(m.label, px, py - 10);
+            });
+            ctx.restore();
+          },
+        };
+
+        const pt = state.points;
+        pvChart = new Chart(document.getElementById("pvChart"), {
+          type: "scatter",
+          plugins: [fillLoopPlugin, pointLabelPlugin],
+          data: {
+            datasets: [
+              {
+                label: "① 等温膨張",
+                data: isothermSegment(state.Th, pt.V1, pt.V2),
+                showLine: true, borderColor: "#f87171", pointRadius: 0, borderWidth: 3, order: 3,
+              },
+              {
+                label: "② 断熱膨張",
+                data: adiabatSegment(pt.V2, pt.V3, pt.P2),
+                showLine: true, borderColor: "#fb923c", pointRadius: 0, borderWidth: 2.5, borderDash: [7, 4], order: 3,
+              },
+              {
+                label: "③ 等温圧縮",
+                data: isothermSegment(state.Tc, pt.V3, pt.V4),
+                showLine: true, borderColor: "#38bdf8", pointRadius: 0, borderWidth: 3, order: 3,
+              },
+              {
+                label: "④ 断熱圧縮",
+                data: adiabatSegment(pt.V4, pt.V1, pt.P4),
+                showLine: true, borderColor: "#a78bfa", pointRadius: 0, borderWidth: 2.5, borderDash: [7, 4], order: 3,
+              },
+              {
+                label: "状態点 ①–④",
+                data: statePointMarkers().map((m) => ({ x: m.x, y: m.y })),
+                backgroundColor: "#fde047",
+                borderColor: "#fff",
+                pointRadius: 5,
+                showLine: false,
+                order: 2,
+              },
+              {
+                label: "サイクル軌跡",
+                data: state.pvTrail,
+                showLine: true,
+                borderColor: "#fb923c",
+                backgroundColor: "#fb923c",
+                pointRadius: 0,
+                borderWidth: 3,
+                tension: 0.08,
+                order: 1,
+              },
+              {
+                label: "現在",
+                data: [{ x: state.V_L, y: state.P_Pa / 1000 }],
+                backgroundColor: "#fde047",
+                borderColor: "#fff",
+                pointRadius: 9,
+                showLine: false,
+                order: 0,
+              },
+            ],
+          },
+          options: {
+            ...chartBase(), parsing: false,
+            scales: {
+              x: {
+                type: "linear", min: ext.vMin, max: ext.vMax,
+                title: { display: true, text: "V（L）", color: "#94a3b8" },
+                ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" },
+              },
+              y: {
+                type: "linear", min: ext.pMin, max: ext.pMax,
+                title: { display: true, text: "P（kPa）", color: "#94a3b8" },
+                ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" },
+              },
+            },
+          },
+        });
+
+        tuChart = new Chart(document.getElementById("tuChart"), {
+          type: "scatter",
+          data: {
+            datasets: [
+              {
+                label: "U = (f/2)nRT",
+                data: tuReferenceLine(),
+                showLine: true,
+                borderColor: "rgba(148,163,184,0.45)",
+                pointRadius: 0,
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+              },
+              {
+                label: "サイクル軌跡",
+                data: state.tuTrail,
+                showLine: true,
+                borderColor: "#fde047",
+                backgroundColor: "#fde047",
+                pointRadius: 2,
+                borderWidth: 2,
+                tension: 0.05,
+              },
+              {
+                label: "現在",
+                data: [{ x: state.T, y: U() }],
+                backgroundColor: "#fb923c",
+                borderColor: "#fff",
+                pointRadius: 8,
+                showLine: false,
+              },
+            ],
+          },
+          options: {
+            ...chartBase(), parsing: false,
+            scales: {
+              x: {
+                type: "linear",
+                title: { display: true, text: "T（K）", color: "#94a3b8" },
+                ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" },
+              },
+              y: {
+                type: "linear",
+                title: { display: true, text: "U（J）", color: "#94a3b8" },
+                ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" },
+              },
+            },
+          },
+        });
+      }
+
+      function isothermSegment(T, Vstart, Vend) {
+        const pts = [];
+        const n = 30;
+        for (let i = 0; i <= n; i += 1) {
+          const v = Vstart + (Vend - Vstart) * (i / n);
+          pts.push({ x: v, y: pKpa(v, T) });
+        }
+        return pts;
+      }
+
+      // 断熱過程 PV^γ = 一定
+      function adiabatSegment(Vstart, Vend, Pstart_Pa) {
+        const g = gamma();
+        const PVg = Pstart_Pa * Math.pow(Vstart * 1e-3, g);
+        const pts = [];
+        const n = 30;
+        for (let i = 0; i <= n; i += 1) {
+          const v = Vstart + (Vend - Vstart) * (i / n);
+          const p = PVg / Math.pow(v * 1e-3, g);
+          pts.push({ x: v, y: p / 1000 });
+        }
+        return pts;
+      }
+
+      function statePointMarkers() {
+        const pt = state.points;
+        return [
+          { x: pt.V1, y: pt.P1 / 1000, label: "①" },
+          { x: pt.V2, y: pt.P2 / 1000, label: "②" },
+          { x: pt.V3, y: pt.P3 / 1000, label: "③" },
+          { x: pt.V4, y: pt.P4 / 1000, label: "④" },
+        ];
+      }
+
+      function setControlsEnabled(enabled) {
+        thSlider.disabled = !enabled;
+        tcSlider.disabled = !enabled;
+        nfSelect.disabled = !enabled;
+        startBtn.disabled = !enabled;
+        document.getElementById("ctrlHint").style.opacity = enabled ? "1" : "0.55";
+      }
+
+      function tuReferenceLine() {
+        const tMin = state.Tc * 0.85;
+        const tMax = state.Th * 1.08;
+        return [
+          { x: tMin, y: (state.f / 2) * state.n * R * tMin },
+          { x: tMax, y: (state.f / 2) * state.n * R * tMax },
+        ];
+      }
+
+      function updateCharts() {
+        const ext = pvAxisExtents();
+        pvChart.options.scales.x.min = ext.vMin;
+        pvChart.options.scales.x.max = ext.vMax;
+        pvChart.options.scales.y.min = ext.pMin;
+        pvChart.options.scales.y.max = ext.pMax;
+
+        const pt = state.points;
+        pvChart.data.datasets[0].data = isothermSegment(state.Th, pt.V1, pt.V2);
+        pvChart.data.datasets[1].data = adiabatSegment(pt.V2, pt.V3, pt.P2);
+        pvChart.data.datasets[2].data = isothermSegment(state.Tc, pt.V3, pt.V4);
+        pvChart.data.datasets[3].data = adiabatSegment(pt.V4, pt.V1, pt.P4);
+        pvChart.data.datasets[4].data = statePointMarkers().map((m) => ({ x: m.x, y: m.y }));
+        pvChart.data.datasets[5].data = state.pvTrail;
+        pvChart.data.datasets[6].data = [{ x: state.V_L, y: state.P_Pa / 1000 }];
+        pvChart.update("none");
+
+        tuChart.data.datasets[0].data = tuReferenceLine();
+        tuChart.data.datasets[1].data = state.tuTrail;
+        tuChart.data.datasets[2].data = [{ x: state.T, y: U() }];
+        tuChart.update("none");
+      }
+
+      function updateHUD() {
+        document.getElementById("hudT").textContent = `T = ${fmt(state.T, 0)} K`;
+        document.getElementById("hudV").textContent = `V = ${fmt(state.V_L, 1)} L`;
+        document.getElementById("hudP").textContent = `P = ${fmt(state.P_Pa / 1000, 1)} kPa`;
+        document.getElementById("hudColl").textContent = `衝突 ${fmt(state.collRate, 0)} 回/s`;
+        document.getElementById("hudTh").textContent = `T_h = ${fmt(state.Th, 0)} K`;
+        document.getElementById("hudTc").textContent = `T_c = ${fmt(state.Tc, 0)} K`;
+        document.getElementById("hudQin").textContent = `Q_in = ${fmtJ(state.Qin)}`;
+        document.getElementById("hudQout").textContent = `Q_out = ${fmtJ(state.Qout)}`;
+
+        document.getElementById("dU").textContent = fmtJ(U());
+        document.getElementById("dT").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("dQin").textContent = fmtJ(state.Qin);
+        document.getElementById("dQout").textContent = fmtJ(state.Qout);
+        document.getElementById("dW").textContent = fmtJ(state.W_area || state.W_theory);
+        document.getElementById("dEta").textContent = fmtPct(state.eta);
+
+        document.getElementById("thVal").textContent = `${state.Th} K`;
+        document.getElementById("tcVal").textContent = `${state.Tc} K`;
+
+        const maxColl = 180;
+        document.getElementById("collFill").style.width = `${Math.min(100, (state.collRate / maxColl) * 100)}%`;
+
+        if (state.phase >= 0) {
+          const ph = PHASES[state.phase];
+          document.getElementById("phaseBadge").innerHTML = `<strong>${ph.name}</strong> — ${ph.desc}`;
+        } else if (state.cycleDone) {
+          document.getElementById("phaseBadge").innerHTML = `<strong>サイクル完了</strong> — PVループの面積 W = ${fmtJ(state.W_area)}`;
+        } else {
+          document.getElementById("phaseBadge").textContent = "待機中 — 「サイクル開始」を押してください";
+        }
+
+        if (state.cycleDone) {
+          document.getElementById("fillNote").textContent =
+            `仕事量 W = ${fmtJ(state.W_area)}（数値積分）≈ ${fmtJ(state.W_theory)}（Q_in − Q_out）· 塗りつぶし面積が大きいほど W が大きい`;
+        } else if (!state.running) {
+          document.getElementById("fillNote").textContent =
+            `プレビュー：①→②→③→④ のループ（薄いオレンジ＝W の目安 ${fmtJ(state.W_theory)}）· 点 ① からサイクル開始`;
+        }
+      }
+
+      function resetCycle() {
+        state.running = false;
+        state.phase = -1;
+        state.phaseT = 0;
+        state.cycleDone = false;
+        state.pvTrail = [];
+        state.tuTrail = [];
+        state.heatPulse = 0;
+        computeCyclePoints();
+        const s = stateAt(0, 0);
+        applyThermo(s.V_L, s.T, s.P_Pa);
+        state.pvTrail.push({ x: state.V_L, y: state.P_Pa / 1000 });
+        state.tuTrail.push({ x: state.T, y: U() });
+        state.loopPoly = buildLoopPolyline();
+        state.W_area = polygonWorkJ(state.loopPoly);
+        setControlsEnabled(true);
+        document.getElementById("ctrlMsg").textContent =
+          "T_h · T_c を変えると PV ループの形が更新されます。「サイクル開始」で ①→④ を順に再生。";
+        document.getElementById("fillNote").textContent =
+          `プレビュー：①→②→③→④ のループ（薄いオレンジ＝W の目安 ${fmtJ(state.W_theory)}）· 点 ① からサイクル開始`;
+      }
+
+      function startCycle() {
+        if (state.running) return;
+        if (state.Tc >= state.Th) {
+          document.getElementById("ctrlMsg").textContent = "T_c は T_h より小さくしてください。";
+          return;
+        }
+        computeCyclePoints();
+        state.running = true;
+        state.cycleDone = false;
+        state.phase = 0;
+        state.phaseT = 0;
+        state.pvTrail = [];
+        state.tuTrail = [];
+        const s0 = stateAt(0, 0);
+        applyThermo(s0.V_L, s0.T, s0.P_Pa);
+        state.pvTrail.push({ x: state.V_L, y: state.P_Pa / 1000 });
+        state.tuTrail.push({ x: state.T, y: U() });
+        setControlsEnabled(false);
+        document.getElementById("ctrlMsg").textContent = "サイクル実行中…（完了後に T_h · T_c を変更できます）";
+      }
+
+      function finishCycle() {
+        state.running = false;
+        state.phase = -1;
+        state.cycleDone = true;
+        state.loopPoly = buildLoopPolyline();
+        state.W_area = polygonWorkJ(state.loopPoly);
+        setControlsEnabled(true);
+        document.getElementById("ctrlMsg").textContent =
+          `1 サイクル完了 · W = ${fmtJ(state.W_area)} · η = ${fmtPct(state.eta)}`;
+        if (state.autoLoop) {
+          document.getElementById("ctrlMsg").textContent += " · 1.2 秒後に次のサイクル…";
+          setTimeout(() => {
+            if (!state.autoLoop) return;
+            resetCycle();
+            startCycle();
+          }, 1200);
+        }
+      }
+
+      function readParams() {
+        state.Th = parseFloat(thSlider.value);
+        state.Tc = parseFloat(tcSlider.value);
+        if (state.Tc >= state.Th - 10) {
+          state.Tc = state.Th - 10;
+          tcSlider.value = state.Tc;
+        }
+        const [nStr, fStr] = nfSelect.value.split("|");
+        state.n = parseFloat(nStr);
+        state.f = parseInt(fStr, 10);
+        computeCyclePoints();
+      }
+
+      function tick(dt) {
+        state.simTime += dt;
+        if (state.simTime - state.lastRateT > 0.4) {
+          state.collRate = state.collCount / (state.simTime - state.lastRateT);
+          state.collCount = 0;
+          state.lastRateT = state.simTime;
+        }
+
+        if (!state.running || state.phase < 0) return;
+
+        state.phaseT += dt;
+        state.heatPulse += dt;
+        const ph = PHASES[state.phase];
+        const u = Math.min(1, state.phaseT / ph.duration);
+        const s = stateAt(state.phase, u);
+        applyThermo(s.V_L, s.T, s.P_Pa);
+
+        const pt = { x: state.V_L, y: state.P_Pa / 1000 };
+        const last = state.pvTrail[state.pvTrail.length - 1];
+        if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 0.08) {
+          state.pvTrail.push(pt);
+          state.tuTrail.push({ x: state.T, y: U() });
+        }
+
+        if (u >= 1) {
+          state.phase += 1;
+          state.phaseT = 0;
+          if (state.phase >= 4) finishCycle();
+        }
+      }
+
+      function loop(now) {
+        if (!lastFrame) lastFrame = now;
+        const dt = Math.min((now - lastFrame) / 1000, 0.05);
+        lastFrame = now;
+        tick(dt);
+        updateParticles(dt * 60);
+        drawMotion(dt);
+        drawHeatFlow(dt);
+        updateCharts();
+        updateHUD();
+        requestAnimationFrame(loop);
+      }
+
+      thSlider.addEventListener("input", () => {
+        if (state.running) return;
+        readParams();
+        resetCycle();
+        updateCharts();
+        updateHUD();
+      });
+      tcSlider.addEventListener("input", () => {
+        if (state.running) return;
+        readParams();
+        resetCycle();
+        updateCharts();
+        updateHUD();
+      });
+      nfSelect.addEventListener("change", () => {
+        if (state.running) return;
+        readParams();
+        resetCycle();
+        updateCharts();
+        updateHUD();
+      });
+      startBtn.addEventListener("click", startCycle);
+      loopBtn.addEventListener("click", () => {
+        state.autoLoop = !state.autoLoop;
+        loopBtn.textContent = state.autoLoop ? "自動ループ ON" : "自動ループ OFF";
+        loopBtn.classList.toggle("active", state.autoLoop);
+      });
+      resetBtn.addEventListener("click", () => {
+        state.autoLoop = false;
+        loopBtn.textContent = "自動ループ OFF";
+        loopBtn.classList.remove("active");
+        readParams();
+        resetCycle();
+        updateCharts();
+        updateHUD();
+      });
+
+      window.addEventListener("resize", () => {
+        resizeMotionCanvas();
+        pvChart && pvChart.resize();
+        tuChart && tuChart.resize();
+      });
+
+      readParams();
+      initParticles();
+      resetCycle();
+      buildCharts();
+      updateHUD();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

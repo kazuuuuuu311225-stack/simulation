@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>圧縮係数 Z — PV/(nRT)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #22d3ee; --accent-light: #67e8f9;
+      --panel: rgba(12,18,32,0.84); --border: rgba(34,211,238,0.24);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12,#0c1524 45%,#0a1018);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(24px,env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 48% 40% at 16% 16%, rgba(253,224,71,0.08), transparent 55%),
+        radial-gradient(ellipse 45% 38% at 84% 84%, rgba(56,189,248,0.07), transparent 55%);
+    }
+    .shell { position: relative; z-index: 1; width: min(1240px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg,rgba(253,224,71,0.22),rgba(56,189,248,0.18));
+      border: 1px solid rgba(34,211,238,0.35); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "canvas" "ctrl" "zp" "zt" "info";
+    }
+    @media (min-width: 980px) {
+      .sim-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+          "canvas zp"
+          "ctrl zt"
+          "ctrl info";
+      }
+      .area-ctrl { align-self: start; }
+    }
+    .panel { padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .panel h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--accent-light); font-weight: 600; }
+    .area-canvas { grid-area: canvas; }
+    .area-ctrl { grid-area: ctrl; }
+    .area-zp { grid-area: zp; }
+    .area-zt { grid-area: zt; }
+    .area-info { grid-area: info; }
+    .canvas-wrap {
+      position: relative; height: min(240px,30dvh); min-height: 200px;
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg,#080e18,#040810);
+      border: 1px solid rgba(253,224,71,0.28);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .canvas-hud { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; gap: 6px; pointer-events: none; flex-wrap: wrap; }
+    .hud-chip {
+      padding: 6px 10px; border-radius: 9px; font-size: 0.68rem; font-weight: 600;
+      background: rgba(6,10,18,0.88); border: 1px solid rgba(34,211,238,0.28); font-variant-numeric: tabular-nums;
+    }
+    .hud-chip.z { border-color: rgba(253,224,71,0.45); color: #fde047; }
+    .chart-wrap { height: min(200px,26dvh); min-height: 170px; position: relative; }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--muted); margin-bottom: 4px; }
+    .ctrl-row label span.val { color: #bae6fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+    select {
+      width: 100%; padding: 9px 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem;
+      background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid rgba(148,163,184,0.25);
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .toggle-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .toggle-row span { font-size: 0.78rem; color: #cbd5e1; }
+    .big-readout {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 12px 0;
+    }
+    .readout-card {
+      padding: 12px 8px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid rgba(148,163,184,0.15);
+    }
+    .readout-card .lbl { font-size: 0.62rem; color: var(--muted); }
+    .readout-card .num { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 4px; }
+    .readout-card.t .num { color: #7dd3fc; }
+    .readout-card.p .num { color: #fdba74; }
+    .readout-card.z .num { color: #fde047; font-size: 1.35rem; }
+    .status { padding: 10px 12px; border-radius: 10px; font-size: 0.78rem; line-height: 1.6; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); color: #bae6fd; }
+    .info-block { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.12); }
+    .info-block:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .info-block h4 { margin: 0 0 6px; font-size: 0.78rem; color: #fde047; font-weight: 600; }
+    .info-block p { margin: 0; font-size: 0.8rem; line-height: 1.65; color: #cbd5e1; }
+    .z-formula {
+      display: inline-block; padding: 6px 12px; border-radius: 8px; margin-bottom: 10px;
+      font-size: 0.9rem; font-weight: 700; color: #fde047;
+      background: rgba(253,224,71,0.1); border: 1px solid rgba(253,224,71,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">Z</div>
+      <h2>圧縮係数 Z — 理想気体からのずれ</h2>
+      <p class="chapter-label">13章 · Z = PV/(nRT)</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="sim-grid">
+      <section class="panel area-canvas">
+        <h3>① 気体分子 — 温度 · 圧力 · 分子種</h3>
+        <div class="canvas-wrap">
+          <canvas id="gasCanvas"></canvas>
+          <div class="canvas-hud">
+            <div class="hud-chip" id="hudSub">CO₂</div>
+            <div class="hud-chip z" id="hudZ">Z = —</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel area-ctrl">
+        <h3>② 操作パネル</h3>
+        <div class="ctrl-row">
+          <label>物質<span class="val" id="subVal">CO₂</span></label>
+          <select id="subSelect">
+            <option value="CO2" selected>CO₂ — ずれ大</option>
+            <option value="CH4">CH₄ — 中程度</option>
+            <option value="H2">H₂ — Z ≈ 1 に近い</option>
+          </select>
+        </div>
+        <div class="big-readout">
+          <div class="readout-card t"><div class="lbl">T</div><div class="num" id="dT">—</div></div>
+          <div class="readout-card p"><div class="lbl">P</div><div class="num" id="dP">—</div></div>
+          <div class="readout-card z"><div class="lbl">Z</div><div class="num" id="dZ">—</div></div>
+        </div>
+        <div class="ctrl-row">
+          <label>温度 T（K）<span class="val" id="tVal">—</span></label>
+          <input type="range" id="tSlider" min="250" max="600" step="5" value="300">
+        </div>
+        <div class="ctrl-row">
+          <label>圧力 P（atm）<span class="val" id="pVal">—</span></label>
+          <input type="range" id="pSlider" min="0.5" max="200" step="0.5" value="10">
+        </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="idealToggle">
+          <span>理想気体近似 ON（Z = 1 の基準のみ）</span>
+        </label>
+        <p class="status" id="statusMsg">Van der Waals 近似で Z を計算。低温・中圧で Z &lt; 1、高圧で Z &gt; 1。</p>
+      </section>
+
+      <section class="panel area-zp">
+        <h3>③ Z–P グラフ（等温線）</h3>
+        <div class="chart-wrap"><canvas id="zpChart"></canvas></div>
+      </section>
+
+      <section class="panel area-zt">
+        <h3>④ Z–T グラフ（P 一定）</h3>
+        <div class="chart-wrap"><canvas id="ztChart"></canvas></div>
+      </section>
+
+      <section class="panel area-info">
+        <h3>⑤ 条件とずれの説明</h3>
+        <div class="z-formula">Z = PV / nRT</div>
+        <div class="info-block">
+          <h4>温度の影響</h4>
+          <p id="infoTemp">—</p>
+        </div>
+        <div class="info-block">
+          <h4>圧力の影響</h4>
+          <p id="infoPress">—</p>
+        </div>
+        <div class="info-block">
+          <h4>理想気体とみなせる条件</h4>
+          <p>高温にすると運動エネルギーが大きく分子間力の影響が小さくなる → Z ≈ 1。低圧にすると分子間距離が大きく引力を無視できる → Z ≈ 1。<strong>高温・低圧</strong>では実在気体も理想気体として扱える。</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const N = 1;
+      const R = 0.08314; // L·bar/(mol·K)
+      const ATM = 1.01325;
+      const K_V = 0.5;
+      const V_VIS_MIN = 0.08, V_VIS_MAX = 80;
+      const NP = 44;
+      const ISO_TEMPS = [280, 300, 320];
+      const GAS_COLORS = { CO2: "#22c55e", CH4: "#ef4444", H2: "#fde047" };
+
+      const SUBSTANCES = {
+        CO2: { label: "CO₂", a: 3.592, b: 0.0427, att: 1.0, cluster: 1.0 },
+        CH4: { label: "CH₄", a: 2.253, b: 0.0428, att: 0.62, cluster: 0.55 },
+        H2: { label: "H₂", a: 0.244, b: 0.0266, att: 0.12, cluster: 0.08 },
+      };
+
+      const canvas = document.getElementById("gasCanvas");
+      const ctx = canvas.getContext("2d");
+      const tSlider = document.getElementById("tSlider");
+      const pSlider = document.getElementById("pSlider");
+      const subSelect = document.getElementById("subSelect");
+      const idealToggle = document.getElementById("idealToggle");
+      const statusMsg = document.getElementById("statusMsg");
+
+      const state = {
+        substance: "CO2",
+        idealOnly: false,
+        T: 300, Patm: 10,
+        V: 2.5, Z: 1, Vdisp: 2.5,
+        parts: [], flashes: [],
+        coll: 0, collRate: 0, simTime: 0, lastRateT: 0,
+        lastChartKey: "",
+      };
+
+      let zpChart, ztChart, lastFrame;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function sub() { return SUBSTANCES[state.substance]; }
+
+      // Van der Waals：P（bar）
+      function pBarFromV(vL, tK, s) {
+        if (vL <= s.b + 1e-5) return null;
+        return (R * tK) / (vL - s.b) - s.a / (vL * vL);
+      }
+
+      // Z = PV/(nRT) を計算
+      function calcZ(pBar, vL, tK) {
+        return (pBar * vL) / (R * tK);
+      }
+
+      // 圧力 P から気相の V を求める（Newton 法）
+      function solveV(pBar, tK, s) {
+        if (pBar <= 0) return (R * tK) / 0.01;
+        let v = Math.max(s.b + 0.05, (R * tK) / pBar);
+        for (let i = 0; i < 50; i += 1) {
+          const f = pBarFromV(v, tK, s) - pBar;
+          const dv = 0.0005;
+          const df = (pBarFromV(v + dv, tK, s) - pBarFromV(v, tK, s)) / dv;
+          if (!df) break;
+          v -= f / df;
+          if (v <= s.b + 0.002) v = s.b + 0.002;
+        }
+        return v;
+      }
+
+      function syncState() {
+        state.T = Number(tSlider.value);
+        state.Patm = Number(pSlider.value);
+        const s = sub();
+        const pBar = state.Patm * ATM;
+        if (state.idealOnly) {
+          state.V = (R * state.T) / pBar;
+          state.Z = 1;
+        } else {
+          state.V = solveV(pBar, state.T, s);
+          state.Z = calcZ(pBar, state.V, state.T);
+        }
+      }
+
+      // 温度・圧力によるZのずれ — Z(P) 等温線
+      function zCurveVsP(tK, gasKey, idealOnly) {
+        const s = SUBSTANCES[gasKey];
+        const pts = [];
+        if (idealOnly) return [{ x: 0.5, y: 1 }, { x: 200, y: 1 }];
+        const all = [];
+        for (let v = 80; v >= s.b + 0.012; v -= 0.04) {
+          const pb = pBarFromV(v, tK, s);
+          if (pb == null || pb <= 0) continue;
+          const patm = pb / ATM;
+          if (patm > 200) continue;
+          const z = calcZ(pb, v, tK);
+          if (z > 0.35 && z < 2.8) all.push({ x: patm, y: z });
+        }
+        let pPeak = -1, past = false;
+        all.forEach((pt, i) => {
+          if (!past) {
+            pts.push(pt);
+            if (i > 0 && pt.x < all[i - 1].x - 0.5) past = true;
+            pPeak = Math.max(pPeak, pt.x);
+          } else if (pt.x >= pPeak * 0.9) {
+            pts.push(pt);
+            pPeak = Math.max(pPeak, pt.x);
+          }
+        });
+        pts.sort((a, b) => a.x - b.x);
+        return pts;
+      }
+
+      // Z(T) at fixed P
+      function zCurveVsT(pAtm, gasKey, idealOnly) {
+        const s = SUBSTANCES[gasKey];
+        const pts = [];
+        const pBar = pAtm * ATM;
+        for (let t = 250; t <= 600; t += 4) {
+          if (idealOnly) { pts.push({ x: t, y: 1 }); continue; }
+          const v = solveV(pBar, t, s);
+          pts.push({ x: t, y: calcZ(pBar, v, t) });
+        }
+        return pts;
+      }
+
+      function initParticles(L) {
+        state.parts = [];
+        const pad = 12;
+        for (let i = 0; i < NP; i += 1) {
+          state.parts.push({
+            x: L.x0 + pad + Math.random() * (L.boxW - 2 * pad),
+            y: L.y0 + pad + Math.random() * (L.boxH - 2 * pad),
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+          });
+        }
+        syncSpeeds();
+      }
+
+      function syncSpeeds() {
+        const sp = K_V * Math.sqrt(state.T);
+        state.parts.forEach((p) => {
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * sp; p.vy = (p.vy / m) * sp;
+        });
+      }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return false;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return true;
+      }
+
+      function boxLayout() {
+        const w = canvas.getBoundingClientRect().width || 400;
+        const h = canvas.getBoundingClientRect().height || 220;
+        const v = Math.max(V_VIS_MIN, Math.min(V_VIS_MAX, state.Vdisp));
+        const frac = (Math.log(v) - Math.log(V_VIS_MIN)) / (Math.log(V_VIS_MAX) - Math.log(V_VIS_MIN));
+        const boxW = w * (0.32 + frac * 0.58);
+        const boxH = h * 0.72;
+        return { w, h, x0: (w - boxW) / 2, y0: h * 0.14, boxW, boxH };
+      }
+
+      // 粒子間引力・斥力 — CO₂とCH₄とH₂の比較
+      function updateParticles(dt, L) {
+        const s = sub();
+        const parts = state.parts;
+        const pad = 10;
+        const Lft = L.x0 + pad, top = L.y0 + pad;
+        const rgt = L.x0 + L.boxW - pad, bot = L.y0 + L.boxH - pad;
+        const cold = Math.max(0, 1 - state.T / 420);
+        const dense = Math.min(1, 30 / Math.max(state.V, 0.15));
+        const rRep = 9, rAtt = 40;
+        const repK = 480 * dense * (1 + s.att * 0.5);
+        const attK = 90 * cold * s.att * (1 + dense * 0.6);
+
+        for (let i = 0; i < parts.length; i += 1) {
+          for (let j = i + 1; j < parts.length; j += 1) {
+            let dx = parts[j].x - parts[i].x, dy = parts[j].y - parts[i].y;
+            let dist = Math.hypot(dx, dy) || 0.5;
+            let fx = 0, fy = 0;
+            if (dist < rRep) {
+              const f = repK * (1 - dist / rRep);
+              fx = -f * dx / dist; fy = -f * dy / dist;
+            } else if (dist < rAtt && attK > 0) {
+              const f = attK * (1 - (dist - rRep) / (rAtt - rRep));
+              fx = f * dx / dist; fy = f * dy / dist;
+            }
+            parts[i].vx += fx * dt; parts[i].vy += fy * dt;
+            parts[j].vx -= fx * dt; parts[j].vy -= fy * dt;
+          }
+        }
+
+        const sp = K_V * Math.sqrt(state.T);
+        parts.forEach((p) => {
+          p.vx += (Math.random() - 0.5) * sp * 0.04 * dt;
+          p.vy += (Math.random() - 0.5) * sp * 0.04 * dt;
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * sp; p.vy = (p.vy / m) * sp;
+          p.x += p.vx * dt * 50; p.y += p.vy * dt * 50;
+          if (p.x <= Lft) { p.x = Lft; p.vx = Math.abs(p.vx); state.coll++; state.flashes.push({ x: Lft, y: p.y, t: 0.3 }); }
+          else if (p.x >= rgt) { p.x = rgt; p.vx = -Math.abs(p.vx); state.coll++; state.flashes.push({ x: rgt, y: p.y, t: 0.3 }); }
+          if (p.y <= top) { p.y = top; p.vy = Math.abs(p.vy); state.coll++; state.flashes.push({ x: p.x, y: top, t: 0.3 }); }
+          else if (p.y >= bot) { p.y = bot; p.vy = -Math.abs(p.vy); state.coll++; state.flashes.push({ x: p.x, y: bot, t: 0.3 }); }
+        });
+      }
+
+      function drawScene(L) {
+        const s = sub();
+        ctx.clearRect(0, 0, L.w, L.h);
+        ctx.fillStyle = "#060a12";
+        ctx.fillRect(0, 0, L.w, L.h);
+        const cold = Math.max(0, 1 - state.T / 400);
+        const g = ctx.createLinearGradient(L.x0, L.y0, L.x0 + L.boxW, L.y0 + L.boxH);
+        g.addColorStop(0, `rgba(34,211,238,${0.06 + (1 - cold) * 0.1})`);
+        g.addColorStop(1, `rgba(34,197,94,${0.04 + cold * s.cluster * 0.14})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(L.x0, L.y0, L.boxW, L.boxH);
+        ctx.strokeStyle = "rgba(253,224,71,0.45)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(L.x0, L.y0, L.boxW, L.boxH);
+
+        const parts = state.parts;
+        if (cold * s.cluster > 0.15) {
+          for (let i = 0; i < parts.length; i += 1) {
+            for (let j = i + 1; j < parts.length; j += 1) {
+              const dist = Math.hypot(parts[j].x - parts[i].x, parts[j].y - parts[i].y);
+              if (dist < 36 * s.cluster) {
+                ctx.strokeStyle = `rgba(34,197,94,${0.06 * s.cluster * (1 - dist / 36)})`;
+                ctx.beginPath();
+                ctx.moveTo(parts[i].x, parts[i].y);
+                ctx.lineTo(parts[j].x, parts[j].y);
+                ctx.stroke();
+              }
+            }
+          }
+        }
+        parts.forEach((p) => {
+          ctx.fillStyle = GAS_COLORS[state.substance] || "#bae6fd";
+          ctx.globalAlpha = 0.92;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 3.2 + denseSize() * 0.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+        state.flashes.forEach((f) => {
+          ctx.fillStyle = `rgba(251,146,60,${(f.t / 0.3) * 0.7})`;
+          ctx.fillRect(f.x - 2, f.y - 8, 4, 16);
+        });
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "500 10px sans-serif";
+        ctx.fillText(`V ≈ ${fmt(state.V, 2)} L`, L.x0 + 4, L.y0 + L.boxH + 16);
+      }
+
+      function denseSize() {
+        return Math.min(1, 25 / Math.max(state.V, 0.2));
+      }
+
+      function chartScales(xL, yL, xMax, yMin, yMax) {
+        return {
+          x: { type: "linear", min: 0, max: xMax, title: { display: true, text: xL, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+          y: { type: "linear", min: yMin, max: yMax, title: { display: true, text: yL, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+        };
+      }
+
+      function buildCharts() {
+        const base = {
+          responsive: true, maintainAspectRatio: false, animation: false, parsing: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 10 } } },
+        };
+        syncState();
+        const ds = buildZpDatasets();
+        zpChart = new Chart(document.getElementById("zpChart"), {
+          type: "scatter",
+          data: { datasets: ds },
+          options: { ...base, scales: chartScales("P（atm）", "Z = PV/nRT", 200, 0.5, 1.55) },
+        });
+        ztChart = new Chart(document.getElementById("ztChart"), {
+          type: "scatter",
+          data: { datasets: buildZtDatasets() },
+          options: { ...base, scales: chartScales("T（K）", "Z", 600, 0.5, 1.35) },
+        });
+      }
+
+      function buildZpDatasets() {
+        const sel = state.substance;
+        const ideal = state.idealOnly;
+        const datasets = [{
+          label: "理想気体 Z = 1",
+          data: [{ x: 0, y: 1 }, { x: 200, y: 1 }],
+          borderColor: "#38bdf8",
+          borderWidth: 3,
+          showLine: true,
+          pointRadius: 0,
+        }];
+        if (!ideal) {
+          ISO_TEMPS.forEach((tK) => {
+            const active = Math.abs(tK - state.T) < 12;
+            datasets.push({
+              label: `${sub().label} T=${tK} K`,
+              data: zCurveVsP(tK, sel, false),
+              borderColor: active ? GAS_COLORS[sel] : "rgba(148,163,184,0.45)",
+              borderWidth: active ? 2.8 : 1.5,
+              showLine: true,
+              pointRadius: 0,
+              tension: 0.12,
+            });
+          });
+          // CO₂とCH₄とH₂の比較（現在 T）
+          ["CO2", "CH4", "H2"].forEach((key) => {
+            if (key === sel) return;
+            datasets.push({
+              label: `${SUBSTANCES[key].label}（T=${state.T} K）`,
+              data: zCurveVsP(state.T, key, false),
+              borderColor: GAS_COLORS[key],
+              borderDash: [5, 4],
+              borderWidth: 1.5,
+              showLine: true,
+              pointRadius: 0,
+              tension: 0.12,
+            });
+          });
+        }
+        datasets.push({
+          label: "現在点",
+          data: [{ x: state.Patm, y: state.Z }],
+          backgroundColor: "#fde047",
+          borderColor: "#fff",
+          borderWidth: 2,
+          pointRadius: 9,
+          showLine: false,
+        });
+        return datasets;
+      }
+
+      function buildZtDatasets() {
+        const sel = state.substance;
+        const ideal = state.idealOnly;
+        const datasets = [{
+          label: "理想 Z = 1",
+          data: [{ x: 250, y: 1 }, { x: 600, y: 1 }],
+          borderColor: "#38bdf8",
+          borderWidth: 3,
+          showLine: true,
+          pointRadius: 0,
+        }];
+        if (!ideal) {
+          datasets.push({
+            label: `${sub().label} P=${fmt(state.Patm, 1)} atm`,
+            data: zCurveVsT(state.Patm, sel, false),
+            borderColor: GAS_COLORS[sel],
+            borderWidth: 2.5,
+            showLine: true,
+            pointRadius: 0,
+            tension: 0.1,
+          });
+        }
+        datasets.push({
+          label: "現在点",
+          data: [{ x: state.T, y: state.Z }],
+          backgroundColor: "#fde047",
+          borderColor: "#fff",
+          borderWidth: 2,
+          pointRadius: 9,
+          showLine: false,
+        });
+        return datasets;
+      }
+
+      function refreshCharts() {
+        if (!zpChart || !ztChart) return;
+        zpChart.data.datasets = buildZpDatasets();
+        ztChart.data.datasets = buildZtDatasets();
+        zpChart.update("none");
+        ztChart.update("none");
+      }
+
+      function updateInfoText() {
+        const z = state.Z;
+        let tMsg = `T = ${fmt(state.T, 0)} K。`;
+        if (state.T < 320) tMsg += "低温では運動が遅く分子間引力が相対的に強い → 体積が理想より小さく Z < 1 になりやすい。";
+        else if (state.T > 450) tMsg += "高温では分子間力の影響が小さく Z → 1 に近づく。";
+        else tMsg += "中温域では物質・圧力によって Z が 1 から上下にずれる。";
+        document.getElementById("infoTemp").textContent = tMsg;
+
+        let pMsg = `P = ${fmt(state.Patm, 1)} atm。`;
+        if (state.Patm < 5) pMsg += "低圧では分子間距離が大きく Z ≈ 1。";
+        else if (z < 0.98) pMsg += "中〜高圧で引力優位 → Z < 1（理想より体積が小さく見える）。";
+        else if (z > 1.02) pMsg += "高圧で分子体積・斥力が優位 → Z > 1（理想より圧縮しにくい）。";
+        else pMsg += "この条件では Z ≈ 1 で理想気体に近い。";
+        document.getElementById("infoPress").textContent = pMsg;
+      }
+
+      function updateUI() {
+        syncState();
+        const s = sub();
+        document.getElementById("dT").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("dP").textContent = `${fmt(state.Patm, 1)} atm`;
+        document.getElementById("dZ").textContent = fmt(state.Z, 3);
+        document.getElementById("tVal").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("pVal").textContent = `${fmt(state.Patm, 1)} atm`;
+        document.getElementById("subVal").textContent = s.label;
+        document.getElementById("hudSub").textContent = s.label;
+        document.getElementById("hudZ").textContent = `Z = ${fmt(state.Z, 3)}`;
+        updateInfoText();
+        if (state.idealOnly) {
+          statusMsg.textContent = "理想気体近似 ON：Z = 1 の基準線のみ表示。実在気体のずれは OFF です。";
+        } else {
+          statusMsg.textContent = `${s.label}：Van der Waals から Z を計算。スライダーで T・P を変え、Z–P / Z–T グラフ上の黄点を追ってください。`;
+        }
+      }
+
+      function onControlChange() {
+        state.idealOnly = idealToggle.checked;
+        syncSpeeds();
+        state.lastChartKey = "";
+        refreshCharts();
+        updateUI();
+      }
+
+      function tick(now) {
+        if (lastFrame == null) lastFrame = now;
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+        state.Vdisp += (state.V - state.Vdisp) * (1 - Math.exp(-dt * 8));
+        if (state.simTime - state.lastRateT >= 0.5) {
+          state.collRate = state.coll / (state.simTime - state.lastRateT);
+          state.coll = 0;
+          state.lastRateT = state.simTime;
+        }
+        state.flashes.forEach((f) => { f.t -= dt; });
+        state.flashes = state.flashes.filter((f) => f.t > 0);
+        const L = boxLayout();
+        if (state.parts.length === 0) initParticles(L);
+        updateParticles(dt, L);
+        drawScene(L);
+        requestAnimationFrame(tick);
+      }
+
+      tSlider.addEventListener("input", onControlChange);
+      pSlider.addEventListener("input", onControlChange);
+      subSelect.addEventListener("change", () => {
+        state.substance = subSelect.value;
+        state.parts = [];
+        onControlChange();
+      });
+      idealToggle.addEventListener("change", onControlChange);
+      window.addEventListener("resize", () => { resizeCanvas(); state.parts = []; });
+
+      function boot() {
+        if (typeof Chart === "undefined") { statusMsg.textContent = "Chart.js を読み込めません。"; return; }
+        if (!resizeCanvas()) { requestAnimationFrame(boot); return; }
+        initParticles(boxLayout());
+        buildCharts();
+        updateUI();
+        state.lastRateT = 0;
+        drawScene(boxLayout());
+        requestAnimationFrame(tick);
+      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      else requestAnimationFrame(boot);
+    })();
+  </script>
+</body>
+</html>

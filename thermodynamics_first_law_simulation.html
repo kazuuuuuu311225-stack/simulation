@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>熱力学第一法則 — ΔU = Q − W</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --q: #fb923c;
+      --w: #a78bfa;
+      --u: #34d399;
+      --bg-panel: rgba(12, 18, 32, 0.82);
+      --border: rgba(34, 211, 238, 0.22);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12, #0c1524 50%, #0a1018);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: 12px 0 24px;
+    }
+    .shell { width: min(1100px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; }
+    h2 { margin: 8px 0 4px; color: #67e8f9; font-weight: 700; }
+    .sub { margin: 0; font-size: 0.84rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600;
+    }
+    .equation-hero {
+      text-align: center;
+      padding: 18px 16px;
+      border-radius: 18px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .equation-hero .eq-title { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+    .equation-row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+      gap: 10px 14px; font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .term { padding: 6px 14px; border-radius: 12px; min-width: 72px; }
+    .term.u { background: rgba(52,211,153,0.15); color: #6ee7b7; border: 2px solid rgba(52,211,153,0.45); }
+    .term.q { background: rgba(251,146,60,0.15); color: #fdba74; border: 2px solid rgba(251,146,60,0.45); }
+    .term.w { background: rgba(167,139,250,0.15); color: #c4b5fd; border: 2px solid rgba(167,139,250,0.45); }
+    .eq-op { color: #64748b; font-weight: 600; }
+    .phase-bar {
+      margin-top: 12px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
+    }
+    .phase-step {
+      padding: 5px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+      background: rgba(255,255,255,0.05); color: var(--muted);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .phase-step.active { color: #fff; border-color: rgba(34,211,238,0.5); background: rgba(34,211,238,0.15); }
+    .phase-step.done { color: #6ee7b7; border-color: rgba(52,211,153,0.4); }
+    .main-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 920px) { .main-grid { grid-template-columns: 1.15fr 0.85fr; } }
+    .panel {
+      padding: 14px 16px; border-radius: 16px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+    }
+    .panel h3 { margin: 0 0 10px; font-size: 0.92rem; color: #67e8f9; }
+    .canvas-wrap {
+      position: relative; height: min(340px, 44dvh); min-height: 280px;
+      border-radius: 14px; overflow: hidden;
+      background: #060a12; border: 1px solid rgba(56,189,248,0.3);
+    }
+    #mainCanvas { display: block; width: 100%; height: 100%; }
+    .energy-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;
+    }
+    .ecard {
+      padding: 12px 10px; border-radius: 14px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid transparent;
+    }
+    .ecard.q { border-color: rgba(251,146,60,0.35); }
+    .ecard.w { border-color: rgba(167,139,250,0.35); }
+    .ecard.u { border-color: rgba(52,211,153,0.35); }
+    .ecard .icon { font-size: 1.2rem; margin-bottom: 4px; }
+    .ecard .lbl { font-size: 0.68rem; color: var(--muted); }
+    .ecard .val { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .ecard.q .val { color: #fdba74; }
+    .ecard.w .val { color: #c4b5fd; }
+    .ecard.u .val { color: #6ee7b7; }
+    .ecard .bar-wrap {
+      height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08);
+      margin-top: 8px; overflow: hidden;
+    }
+    .ecard .bar { height: 100%; width: 0%; border-radius: 999px; transition: width 0.15s; }
+    .ecard.q .bar { background: var(--q); }
+    .ecard.w .bar { background: var(--w); }
+    .ecard.u .bar { background: var(--u); }
+    .split-bar {
+      margin-bottom: 12px; padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .split-bar .lbl { font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; }
+    .split-track {
+      display: flex; height: 22px; border-radius: 8px; overflow: hidden;
+      background: rgba(255,255,255,0.06);
+    }
+    .split-u { background: var(--u); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #064e3b; min-width: 0; }
+    .split-w { background: var(--w); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #3b0764; min-width: 0; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .btn-row button {
+      flex: 1; min-height: 46px; padding: 10px; font-family: inherit;
+      font-size: 0.88rem; font-weight: 700; border-radius: 12px; cursor: pointer;
+      border: 1px solid rgba(34,211,238,0.45);
+      background: linear-gradient(135deg, rgba(34,211,238,0.25), rgba(56,189,248,0.1));
+      color: #cffafe;
+    }
+    .btn-row button.secondary {
+      background: rgba(15,23,42,0.7); border-color: rgba(148,163,184,0.3); color: var(--muted);
+    }
+    .btn-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .status {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; line-height: 1.55;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); color: #bae6fd;
+    }
+    .explain { margin: 0; padding-left: 1.2rem; font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <h2>熱力学第一法則</h2>
+      <p class="sub">加えた熱 Q のうち、一部は内部エネルギー ΔU に、残りは外部への仕事 W になる</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="equation-hero" aria-label="第一法則">
+      <div class="eq-title">熱力学第一法則（符号：W は気体がした仕事）</div>
+      <div class="equation-row">
+        <span class="term u" id="eqU">ΔU = 0 J</span>
+        <span class="eq-op">=</span>
+        <span class="term q" id="eqQ">Q = 0 J</span>
+        <span class="eq-op">−</span>
+        <span class="term w" id="eqW">W = 0 J</span>
+      </div>
+      <div class="phase-bar">
+        <span class="phase-step" id="ph0">① 待機</span>
+        <span class="phase-step" id="ph1">② 加熱 +Q</span>
+        <span class="phase-step" id="ph2">③ 膨張 → W</span>
+        <span class="phase-step" id="ph3">④ Q = ΔU + W</span>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <section class="panel">
+        <h3>エネルギーの流れ（Canvas）</h3>
+        <div class="canvas-wrap">
+          <canvas id="mainCanvas"></canvas>
+        </div>
+      </section>
+
+      <div>
+        <section class="panel">
+          <h3>Q · W · ΔU</h3>
+          <div class="energy-cards">
+            <div class="ecard q">
+              <div class="icon">🔥</div>
+              <div class="lbl">Q 加えた熱</div>
+              <div class="val" id="qVal">0 J</div>
+              <div class="bar-wrap"><div class="bar" id="qBar"></div></div>
+            </div>
+            <div class="ecard w">
+              <div class="icon">⚙</div>
+              <div class="lbl">W 外部への仕事</div>
+              <div class="val" id="wVal">0 J</div>
+              <div class="bar-wrap"><div class="bar" id="wBar"></div></div>
+            </div>
+            <div class="ecard u">
+              <div class="icon">📦</div>
+              <div class="lbl">ΔU 内部Eの増加</div>
+              <div class="val" id="uVal">0 J</div>
+              <div class="bar-wrap"><div class="bar" id="uBar"></div></div>
+            </div>
+          </div>
+          <div class="split-bar">
+            <div class="lbl">Q の行き先（完了後）：Q = ΔU + W</div>
+            <div class="split-track">
+              <div class="split-u" id="splitU" style="width:0%">ΔU</div>
+              <div class="split-w" id="splitW" style="width:0%">W</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="demoBtn">デモ：加熱 → 膨張</button>
+            <button type="button" id="resetBtn" class="secondary">リセット</button>
+          </div>
+          <p class="status" id="statusMsg">「デモ開始」で ②加熱 → ③膨張 → ④エネルギー保存 を順に表示します。</p>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h3>ポイント</h3>
+      <ul class="explain">
+        <li>熱 Q を加えると気体の内部エネルギー U が増える（この段階では W ≈ 0 → ΔU ≈ Q）。</li>
+        <li>圧力が上がるとピストンが押し出され、気体は外部に仕事 W をする。</li>
+        <li>仕事 W をすると内部エネルギーは減る方向に働く → ΔU = Q − W。</li>
+        <li>最終的に「加えた熱 = 内部Eの増加 + 外部への仕事」が成り立つ。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const R = 8.314;
+      const N = 0.04;
+      const CV = 1.5 * N * R;
+      const Q_TOTAL = 80;
+      const V0 = 1.0;
+      const V_MIN = 0.5;
+      const V_MAX = 2.0;
+      const T0 = 300;
+      const P_EXT = 100;
+      const HEAT_TIME = 1.6;
+      const BAR_MAX = 100;
+
+      const canvas = document.getElementById("mainCanvas");
+      const ctx = canvas.getContext("2d");
+      const demoBtn = document.getElementById("demoBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const statusMsg = document.getElementById("statusMsg");
+
+      const state = {
+        T: T0, V: V0, Vdisp: V0,
+        Q: 0, W: 0,
+        simTime: 0,
+        phase: "idle",
+        demoT: 0,
+        heatPulse: 0,
+        workPulse: 0,
+        particles: [],
+      };
+
+      let lastFrame = null;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function deltaU() { return state.Q - state.W; }
+      function pressureKPa() { return (N * R * state.T) / state.V; }
+      function volumeM3(vL) { return vL * 1e-3; }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return false;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return true;
+      }
+
+      function initParticles() {
+        state.particles = [];
+        for (let i = 0; i < 36; i += 1) {
+          state.particles.push({
+            nx: Math.random(), ny: Math.random(),
+            vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
+          });
+        }
+      }
+
+      function syncSpeeds() {
+        const s = 0.5 * Math.sqrt(state.T);
+        state.particles.forEach((p) => {
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * s;
+          p.vy = (p.vy / m) * s;
+        });
+      }
+
+      function layout() {
+        const w = canvas.getBoundingClientRect().width || 400;
+        const h = canvas.getBoundingClientRect().height || 300;
+        const cx = w * 0.36;
+        const cylW = Math.min(w * 0.28, 120);
+        const x0 = cx - cylW / 2;
+        const headY = h * 0.22;
+        const footY = h * 0.72;
+        const stroke = footY - headY - 30;
+        const frac = (state.Vdisp - V_MIN) / (V_MAX - V_MIN);
+        const pistonY = headY + 28 + frac * stroke;
+        return { w, h, cx, cylW, x0, headY, footY, pistonY, frac };
+      }
+
+      function updateParticles(dt, L) {
+        const s = 0.5 * Math.sqrt(state.T);
+        const top = L.pistonY + 18;
+        const bot = L.footY - 8;
+        const left = L.x0 + 8;
+        const right = L.x0 + L.cylW - 8;
+        const iw = right - left;
+        const ih = Math.max(10, bot - top);
+        state.particles.forEach((p) => {
+          p.vx += (Math.random() - 0.5) * s * 0.1 * dt;
+          p.vy += (Math.random() - 0.5) * s * 0.1 * dt;
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * s;
+          p.vy = (p.vy / m) * s;
+          p.nx += (p.vx * dt * 16) / iw;
+          p.ny += (p.vy * dt * 16) / ih;
+          if (p.nx < 0) { p.nx = 0; p.vx = Math.abs(p.vx); }
+          if (p.nx > 1) { p.nx = 1; p.vx = -Math.abs(p.vx); }
+          if (p.ny < 0) { p.ny = 0; p.vy = Math.abs(p.vy); }
+          if (p.ny > 1) { p.ny = 1; p.vy = -Math.abs(p.vy); }
+        });
+      }
+
+      // ΔU = Q − W · ピストン運動
+      function stepPiston(dt) {
+        if (state.phase !== "expand") return;
+        const P = (N * R * state.T) / volumeM3(state.V);
+        const diff = P - P_EXT * 1000;
+        if (Math.abs(diff) < 500 && state.V > V0 * 1.05) {
+          state.phase = "done";
+          statusMsg.textContent = `④ 完成！ Q（${fmt(state.Q,0)} J）= ΔU（${fmt(deltaU(),0)} J）+ W（${fmt(state.W,0)} J）`;
+          return;
+        }
+        const dV = Math.sign(diff) * 0.45 * dt * Math.min(1, Math.abs(diff) / 30000);
+        const newV = Math.max(V_MIN, Math.min(V_MAX, state.V + dV));
+        const dVreal = newV - state.V;
+        if (Math.abs(dVreal) < 1e-9) return;
+        state.V = newV;
+        const dW = P * volumeM3(dVreal);
+        state.W += dW;
+        state.T = Math.max(80, state.T - dW / CV);
+        if (dVreal > 0) state.workPulse = 1;
+        syncSpeeds();
+      }
+
+      function stepDemo(dt) {
+        if (state.phase === "heat") {
+          state.demoT += dt;
+          const t = Math.min(1, state.demoT / HEAT_TIME);
+          state.Q = Q_TOTAL * t;
+          state.T = T0 + state.Q / CV;
+          state.V = V0;
+          state.heatPulse = 0.5 + 0.5 * Math.sin(state.simTime * 8);
+          syncSpeeds();
+          if (t >= 1) {
+            state.phase = "expand";
+            state.demoT = 0;
+            statusMsg.textContent = "③ 圧力↑ → ピストンが押し出される → 気体が外部に仕事 W";
+          } else {
+            statusMsg.textContent = `② 加熱中… Q = ${fmt(state.Q, 0)} J（W ≈ 0 → ΔU ≈ Q）`;
+          }
+        }
+      }
+
+      function drawFlowDiagram(L) {
+        const { w, h } = L;
+        const fx = w * 0.62;
+        const fy = h * 0.12;
+        const steps = [
+          { t: "heat", label: "+Q 熱が入る", c: "#fb923c", on: state.phase === "heat" || state.Q > 0 },
+          { t: "u", label: "U が増える", c: "#34d399", on: state.Q > 0 && state.phase !== "idle" },
+          { t: "p", label: "P が上がる", c: "#38bdf8", on: pressureKPa() > P_EXT + 5 },
+          { t: "w", label: "W が外へ", c: "#a78bfa", on: state.W > 1 || state.phase === "expand" },
+        ];
+        ctx.font = "700 11px Noto Sans JP, sans-serif";
+        for (let i = 0; i < steps.length; i += 1) {
+          const y = fy + i * 38;
+          const on = steps[i].on;
+          ctx.fillStyle = on ? steps[i].c : "rgba(100,116,139,0.5)";
+          ctx.beginPath();
+          ctx.arc(fx, y, on ? 7 : 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = on ? "#e2e8f0" : "rgba(148,163,184,0.6)";
+          ctx.fillText(steps[i].label, fx + 14, y + 4);
+          if (i < steps.length - 1) {
+            ctx.strokeStyle = on ? "rgba(34,211,238,0.5)" : "rgba(100,116,139,0.25)";
+            ctx.beginPath();
+            ctx.moveTo(fx, y + 8);
+            ctx.lineTo(fx, y + 30);
+            ctx.stroke();
+          }
+        }
+        if (state.phase === "done") {
+          ctx.fillStyle = "#fde047";
+          ctx.font = "700 12px Noto Sans JP, sans-serif";
+          ctx.fillText("Q = ΔU + W ✓", fx - 8, fy + steps.length * 38 + 8);
+        }
+      }
+
+      function drawCylinder(L) {
+        const { x0, cylW, headY, footY, pistonY } = L;
+        const tNorm = Math.min(1, (state.T - T0) / (Q_TOTAL / CV));
+
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(x0 - 8, headY - 16, cylW + 16, footY - headY + 24);
+        ctx.fillStyle = "#0c1220";
+        ctx.fillRect(x0, headY, cylW, footY - headY);
+
+        const gasTop = pistonY + 16;
+        const gasH = footY - gasTop;
+        const gg = ctx.createLinearGradient(0, gasTop, 0, footY);
+        gg.addColorStop(0, `rgba(251,146,60,${0.15 + tNorm * 0.25 + state.heatPulse * 0.15})`);
+        gg.addColorStop(1, "rgba(56,189,248,0.12)");
+        ctx.fillStyle = gg;
+        ctx.fillRect(x0 + 2, gasTop, cylW - 4, gasH);
+
+        const left = x0 + 8;
+        const right = x0 + cylW - 8;
+        const top = gasTop + 6;
+        const ih = Math.max(8, gasH - 12);
+        state.particles.forEach((p) => {
+          const px = left + p.nx * (right - left);
+          const py = top + p.ny * ih;
+          ctx.fillStyle = "rgba(186,230,253,0.85)";
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillRect(x0 + 1, pistonY, cylW - 2, 16);
+
+        if (state.phase === "heat" || state.heatPulse > 0.1) {
+          ctx.fillStyle = `rgba(251,146,60,${0.6 + state.heatPulse * 0.4})`;
+          ctx.font = "700 14px sans-serif";
+          ctx.fillText("+Q ↓", x0 + cylW / 2 - 18, headY - 4);
+        }
+        if (state.phase === "expand" || state.workPulse > 0.05) {
+          ctx.strokeStyle = `rgba(167,139,250,${0.5 + state.workPulse * 0.5})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(x0 + cylW + 4, pistonY + 8);
+          ctx.lineTo(x0 + cylW + 36, pistonY + 8);
+          ctx.lineTo(x0 + cylW + 28, pistonY + 2);
+          ctx.moveTo(x0 + cylW + 36, pistonY + 8);
+          ctx.lineTo(x0 + cylW + 28, pistonY + 14);
+          ctx.stroke();
+          ctx.fillStyle = "#c4b5fd";
+          ctx.font = "700 11px sans-serif";
+          ctx.fillText("W →", x0 + cylW + 38, pistonY + 12);
+        }
+
+        ctx.font = "600 10px sans-serif";
+        ctx.fillStyle = "#7dd3fc";
+        ctx.fillText(`P=${fmt(pressureKPa(),0)} kPa`, x0, headY - 22);
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText(`V=${fmt(state.V,2)} L`, x0 + cylW - 52, headY - 22);
+      }
+
+      function drawScene() {
+        const L = layout();
+        ctx.clearRect(0, 0, L.w, L.h);
+        ctx.fillStyle = "#060a12";
+        ctx.fillRect(0, 0, L.w, L.h);
+        drawCylinder(L);
+        drawFlowDiagram(L);
+      }
+
+      function setPhaseUI() {
+        const map = { idle: 0, heat: 1, expand: 2, done: 3 };
+        const idx = map[state.phase] ?? 0;
+        for (let i = 0; i < 4; i += 1) {
+          const el = document.getElementById(`ph${i}`);
+          el.classList.remove("active", "done");
+          if (i < idx) el.classList.add("done");
+          else if (i === idx) el.classList.add("active");
+        }
+      }
+
+      function updateUI() {
+        const dU = deltaU();
+        document.getElementById("eqU").textContent = `ΔU = ${fmt(dU, 0)} J`;
+        document.getElementById("eqQ").textContent = `Q = ${fmt(state.Q, 0)} J`;
+        document.getElementById("eqW").textContent = `W = ${fmt(state.W, 0)} J`;
+        document.getElementById("qVal").textContent = `${fmt(state.Q, 0)} J`;
+        document.getElementById("wVal").textContent = `${fmt(state.W, 0)} J`;
+        document.getElementById("uVal").textContent = `${fmt(dU, 0)} J`;
+        document.getElementById("qBar").style.width = `${Math.min(100, (state.Q / BAR_MAX) * 100)}%`;
+        document.getElementById("wBar").style.width = `${Math.min(100, (state.W / BAR_MAX) * 100)}%`;
+        document.getElementById("uBar").style.width = `${Math.min(100, (Math.max(0, dU) / BAR_MAX) * 100)}%`;
+        const q = state.Q || 1;
+        const uPct = Math.max(0, (dU / q) * 100);
+        const wPct = Math.max(0, (state.W / q) * 100);
+        document.getElementById("splitU").style.width = `${uPct}%`;
+        document.getElementById("splitW").style.width = `${wPct}%`;
+        document.getElementById("splitU").textContent = dU > 0.5 ? `ΔU ${fmt(dU,0)}J` : "";
+        document.getElementById("splitW").textContent = state.W > 0.5 ? `W ${fmt(state.W,0)}J` : "";
+        setPhaseUI();
+        demoBtn.disabled = state.phase === "heat" || state.phase === "expand";
+      }
+
+      function startDemo() {
+        if (state.phase === "heat" || state.phase === "expand") return;
+        state.phase = "heat";
+        state.demoT = 0;
+        state.Q = 0;
+        state.W = 0;
+        state.T = T0;
+        state.V = V0;
+        state.Vdisp = V0;
+        syncSpeeds();
+        statusMsg.textContent = "② 筒内に熱 Q が入る…";
+      }
+
+      function resetAll() {
+        state.T = T0;
+        state.V = V0;
+        state.Vdisp = V0;
+        state.Q = 0;
+        state.W = 0;
+        state.simTime = 0;
+        state.phase = "idle";
+        state.demoT = 0;
+        state.heatPulse = 0;
+        state.workPulse = 0;
+        initParticles();
+        syncSpeeds();
+        statusMsg.textContent = "リセットしました。「デモ開始」で第一法則の流れを確認できます。";
+        updateUI();
+      }
+
+      function tick(now) {
+        if (lastFrame === null) lastFrame = now;
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+        state.Vdisp += (state.V - state.Vdisp) * (1 - Math.exp(-dt * 10));
+        state.heatPulse = Math.max(0, state.heatPulse - dt * 1.5);
+        state.workPulse = Math.max(0, state.workPulse - dt * 1.2);
+
+        stepDemo(dt);
+        stepPiston(dt);
+        const L = layout();
+        updateParticles(dt, L);
+        drawScene();
+        updateUI();
+        requestAnimationFrame(tick);
+      }
+
+      demoBtn.addEventListener("click", startDemo);
+      resetBtn.addEventListener("click", resetAll);
+      window.addEventListener("resize", () => { resizeCanvas(); drawScene(); });
+
+      function boot() {
+        initParticles();
+        syncSpeeds();
+        if (!resizeCanvas()) {
+          requestAnimationFrame(boot);
+          return;
+        }
+        updateUI();
+        drawScene();
+        requestAnimationFrame(tick);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      } else {
+        requestAnimationFrame(boot);
+      }
+    })();
+  </script>
+</body>
+</html>

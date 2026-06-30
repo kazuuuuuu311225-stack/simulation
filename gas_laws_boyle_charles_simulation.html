@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ボイルの法則 · シャルルの法則 — PV · V/T</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #22d3ee;
+      --accent-light: #67e8f9;
+      --boyle: #fb923c;
+      --charles: #38bdf8;
+      --glow: rgba(34, 211, 238, 0.35);
+      --panel: rgba(12, 18, 32, 0.84);
+      --border: rgba(34, 211, 238, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12, #0c1524 45%, #0a1018);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 50% 40% at 20% 15%, rgba(56,189,248,0.08), transparent 55%),
+        radial-gradient(ellipse 50% 38% at 80% 85%, rgba(251,146,60,0.07), transparent 55%);
+    }
+    .shell {
+      position: relative; z-index: 1;
+      width: min(1180px, 96vw); margin: 0 auto;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.22), rgba(251,146,60,0.2));
+      border: 1px solid rgba(34,211,238,0.35);
+      box-shadow: 0 0 22px var(--glow);
+      font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600;
+    }
+    .sim-grid {
+      display: grid; gap: 12px;
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "canvas"
+        "ctrl"
+        "pv"
+        "vt"
+        "eqn";
+    }
+    @media (min-width: 960px) {
+      .sim-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+          "canvas pv"
+          "ctrl vt"
+          "ctrl eqn";
+      }
+      .area-ctrl { align-self: stretch; }
+    }
+    .panel {
+      padding: 14px 16px; border-radius: 16px;
+      background: var(--panel); border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .panel h3 { margin: 0 0 10px; font-size: 0.94rem; color: var(--accent-light); font-weight: 600; }
+    .area-canvas { grid-area: canvas; }
+    .area-ctrl { grid-area: ctrl; }
+    .area-pv { grid-area: pv; }
+    .area-vt { grid-area: vt; }
+    .area-eqn { grid-area: eqn; }
+    .canvas-wrap {
+      position: relative; height: min(280px, 36dvh); min-height: 240px;
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg, #080e18, #040810);
+      border: 1px solid rgba(56,189,248,0.32);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .canvas-hud {
+      position: absolute; top: 10px; left: 10px; right: 10px;
+      display: flex; justify-content: space-between; gap: 8px; pointer-events: none;
+    }
+    .hud-chip {
+      padding: 7px 11px; border-radius: 10px; font-size: 0.72rem; font-weight: 600;
+      background: rgba(6,10,18,0.85); border: 1px solid rgba(34,211,238,0.28);
+      font-variant-numeric: tabular-nums; line-height: 1.45;
+    }
+    .hud-chip.press { border-color: rgba(251,146,60,0.45); color: #fed7aa; }
+    .area-pv.dimmed, .area-vt.dimmed { opacity: 0.45; }
+    .area-pv.dimmed h3, .area-vt.dimmed h3 { color: var(--muted); }
+    .chart-wrap { height: min(200px, 26dvh); min-height: 170px; position: relative; }
+    .mode-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .mode-btn {
+      flex: 1; min-width: 140px; min-height: 44px; padding: 10px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      border-radius: 12px; cursor: pointer; border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .mode-btn.boyle {
+      background: rgba(251,146,60,0.12); color: #fdba74;
+      border-color: rgba(251,146,60,0.35);
+    }
+    .mode-btn.boyle.active {
+      background: rgba(251,146,60,0.25); border-color: rgba(251,146,60,0.7);
+      box-shadow: 0 0 16px rgba(251,146,60,0.2);
+    }
+    .mode-btn.charles {
+      background: rgba(56,189,248,0.12); color: #7dd3fc;
+      border-color: rgba(56,189,248,0.35);
+    }
+    .mode-btn.charles.active {
+      background: rgba(56,189,248,0.22); border-color: rgba(56,189,248,0.65);
+      box-shadow: 0 0 16px rgba(56,189,248,0.2);
+    }
+    .ctrl-row { margin-bottom: 11px; }
+    .ctrl-row.disabled { opacity: 0.4; pointer-events: none; }
+    .ctrl-row label {
+      display: flex; justify-content: space-between; font-size: 0.78rem;
+      color: var(--muted); margin-bottom: 4px;
+    }
+    .ctrl-row label span.val { color: #bae6fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .pvt-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0;
+    }
+    .pvt-card {
+      padding: 11px 8px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid rgba(148,163,184,0.15);
+    }
+    .pvt-card .lbl { font-size: 0.65rem; color: var(--muted); }
+    .pvt-card .num { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .pvt-card.p .num { color: #fdba74; }
+    .pvt-card.v .num { color: #a78bfa; }
+    .pvt-card.t .num { color: #7dd3fc; }
+    .status {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; line-height: 1.6;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); color: #bae6fd;
+    }
+    .eqn-panel {
+      padding: 16px; border-radius: 14px; text-align: center;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .eqn-title { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
+    .eqn-main {
+      font-size: clamp(1.1rem, 3vw, 1.45rem); font-weight: 700;
+      font-variant-numeric: tabular-nums; line-height: 1.6;
+    }
+    .eqn-main .p { color: #fdba74; }
+    .eqn-main .v { color: #c4b5fd; }
+    .eqn-main .t { color: #7dd3fc; }
+    .eqn-main .r { color: #6ee7b7; }
+    .eqn-sub { margin-top: 8px; font-size: 0.78rem; color: var(--muted); }
+    .law-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
+    .law-tag {
+      padding: 5px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+    }
+    .law-tag.boyle { background: rgba(251,146,60,0.15); color: #fdba74; border: 1px solid rgba(251,146,60,0.35); }
+    .law-tag.charles { background: rgba(56,189,248,0.15); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.35); }
+    .explain { margin: 0; padding-left: 1.2rem; font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">💨</div>
+      <h2>ボイルの法則 · シャルルの法則</h2>
+      <p class="chapter-label">13章 気体の法則 — 粒子運動 · PV = nRT</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="sim-grid">
+      <!-- 1. 左上：粒子運動 -->
+      <section class="panel area-canvas">
+        <h3>気体粒子運動 — 衝突頻度 ≈ 圧力</h3>
+        <div class="canvas-wrap">
+          <canvas id="gasCanvas"></canvas>
+          <div class="canvas-hud">
+            <div class="hud-chip press" id="hudCollisions">衝突 — 回/s</div>
+            <div class="hud-chip" id="hudMode">モード —</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 左下：操作 -->
+      <section class="panel area-ctrl">
+        <h3>操作パネル</h3>
+        <div class="mode-row">
+          <button type="button" class="mode-btn boyle active" id="boyleBtn">ボイルの法則（T一定）</button>
+          <button type="button" class="mode-btn charles" id="charlesBtn">シャルルの法則（P一定）</button>
+        </div>
+        <div class="pvt-grid">
+          <div class="pvt-card p"><div class="lbl">P 圧力</div><div class="num" id="dispP">—</div></div>
+          <div class="pvt-card v"><div class="lbl">V 体積</div><div class="num" id="dispV">—</div></div>
+          <div class="pvt-card t"><div class="lbl">T 温度</div><div class="num" id="dispT">—</div></div>
+        </div>
+        <div class="ctrl-row" id="vRow">
+          <label>体積 V（L）<span class="val" id="vVal">1.00 L</span></label>
+          <input type="range" id="vSlider" min="0.4" max="2.5" step="0.05" value="1.0">
+        </div>
+        <div class="ctrl-row disabled" id="tRow">
+          <label>温度 T<span class="val" id="tVal">300 K（27 ℃）</span></label>
+          <input type="range" id="tSlider" min="-20" max="150" step="5" value="27">
+        </div>
+        <p class="status" id="statusMsg">ボイルモード：温度を一定に保ち、体積 V を変えると P ∝ 1/V（PV = 一定）。</p>
+      </section>
+
+      <!-- 3. 右上：PVグラフ -->
+      <section class="panel area-pv" id="pvPanel">
+        <h3>PV グラフ — ボイルの法則（PV = 一定）</h3>
+        <div class="chart-wrap"><canvas id="pvChart"></canvas></div>
+      </section>
+
+      <!-- 4. 右中：VTグラフ -->
+      <section class="panel area-vt dimmed" id="vtPanel">
+        <h3>VT グラフ — シャルルの法則（V ∝ T）</h3>
+        <div class="chart-wrap"><canvas id="vtChart"></canvas></div>
+      </section>
+
+      <!-- 5. 右下：状態方程式 -->
+      <section class="panel area-eqn">
+        <h3>理想気体の状態方程式</h3>
+        <div class="eqn-panel">
+          <div class="eqn-title">n = 0.05 mol · R = 8.31 J/(mol·K)</div>
+          <div class="eqn-main" id="eqnLive">PV = nRT</div>
+          <div class="eqn-sub" id="eqnCheck">—</div>
+          <div class="law-tags">
+            <span class="law-tag boyle">PV = 一定（T一定）</span>
+            <span class="law-tag charles">V/T = 一定（P一定）</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h3>ポイント</h3>
+      <ul class="explain">
+        <li>ボイルの法則：温度一定で PV＝一定。体積を半分にすると圧力は2倍になる。</li>
+        <li>シャルルの法則：圧力一定で V ∝ T（絶対温度）。温度を上げると粒子が速くなり、箱が膨張する。</li>
+        <li>気体の状態は PV = nRT で決まる。</li>
+        <li>粒子運動が圧力と体積の変化の原因である（壁への衝突頻度 ≈ 圧力）。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const R = 8.314;
+      const N = 0.05;
+      const K_SPEED = 0.5;
+      const BOYLE_T_K = 300;
+      const CHARLES_P_KPA = (N * R * BOYLE_T_K) / (1.0 * 1e-3) / 1000; // シャルル：P一定（300K・1L基準）
+      const V_MIN = 0.4;
+      const V_MAX = 2.5;
+      const NUM_PARTICLES = 55;
+
+      const canvas = document.getElementById("gasCanvas");
+      const ctx = canvas.getContext("2d");
+      const boyleBtn = document.getElementById("boyleBtn");
+      const charlesBtn = document.getElementById("charlesBtn");
+      const vSlider = document.getElementById("vSlider");
+      const tSlider = document.getElementById("tSlider");
+      const vRow = document.getElementById("vRow");
+      const tRow = document.getElementById("tRow");
+      const statusMsg = document.getElementById("statusMsg");
+
+      const state = {
+        mode: "boyle",
+        T_K: BOYLE_T_K,
+        V_L: 1.0,
+        P_kPa: 0,
+        particles: [],
+        wallFlashes: [],
+        collisionCount: 0,
+        collisionRate: 0,
+        lastRateT: 0,
+        simTime: 0,
+        Vdisp: 1.0,
+      };
+
+      let pvChart = null;
+      let vtChart = null;
+      let lastFrame = null;
+      let lastChartKey = "";
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function celsiusToK(C) { return C + 273.15; }
+      function volM3(vL) { return vL * 1e-3; }
+
+      // PV = nRT を計算
+      function calcPfromVT(vL, tK) {
+        return (N * R * tK) / volM3(vL) / 1000;
+      }
+      function calcVfromPT(pKPa, tK) {
+        const pPa = pKPa * 1000;
+        return (N * R * tK) / pPa * 1e3;
+      }
+
+      function syncThermo() {
+        if (state.mode === "boyle") {
+          state.T_K = BOYLE_T_K;
+          state.V_L = Number(vSlider.value);
+          state.P_kPa = calcPfromVT(state.V_L, state.T_K);
+        } else {
+          state.T_K = celsiusToK(Number(tSlider.value));
+          state.P_kPa = CHARLES_P_KPA;
+          state.V_L = calcVfromPT(state.P_kPa, state.T_K);
+        }
+      }
+
+      function initParticles() {
+        state.particles = [];
+        for (let i = 0; i < NUM_PARTICLES; i += 1) {
+          state.particles.push({
+            nx: Math.random(), ny: Math.random(),
+            vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
+          });
+        }
+        syncSpeeds();
+      }
+
+      // 粒子速度を温度で更新 v = k * sqrt(T_K)
+      function syncSpeeds() {
+        const s = K_SPEED * Math.sqrt(state.T_K);
+        state.particles.forEach((p) => {
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * s;
+          p.vy = (p.vy / m) * s;
+        });
+      }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return false;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return true;
+      }
+
+      function boxLayout() {
+        const w = canvas.getBoundingClientRect().width || 400;
+        const h = canvas.getBoundingClientRect().height || 260;
+        const vNorm = Math.max(0, Math.min(1, (state.Vdisp - V_MIN) / (V_MAX - V_MIN)));
+        const boxW = w * (0.35 + vNorm * 0.55);
+        const boxH = h * 0.72;
+        const x0 = (w - boxW) / 2;
+        const y0 = h * 0.14;
+        return { w, h, x0, y0, boxW, boxH };
+      }
+
+      function updateParticles(dt, L) {
+        const left = L.x0 + 6;
+        const top = L.y0 + 6;
+        const right = L.x0 + L.boxW - 6;
+        const bottom = L.y0 + L.boxH - 6;
+        const iw = right - left;
+        const ih = bottom - top;
+        const s = K_SPEED * Math.sqrt(state.T_K);
+
+        state.particles.forEach((p) => {
+          p.vx += (Math.random() - 0.5) * s * 0.06 * dt;
+          p.vy += (Math.random() - 0.5) * s * 0.06 * dt;
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * s;
+          p.vy = (p.vy / m) * s;
+
+          const px = left + p.nx * iw;
+          const py = top + p.ny * ih;
+          let nx = px + p.vx * dt * 55;
+          let ny = py + p.vy * dt * 55;
+
+          if (nx <= left) {
+            nx = left; p.vx = Math.abs(p.vx); p.nx = 0;
+            state.collisionCount += 1;
+            state.wallFlashes.push({ x: left, y: ny, t: 0.35, side: "L" });
+          } else if (nx >= right) {
+            nx = right; p.vx = -Math.abs(p.vx); p.nx = 1;
+            state.collisionCount += 1;
+            state.wallFlashes.push({ x: right, y: ny, t: 0.35, side: "R" });
+          } else {
+            p.nx = (nx - left) / iw;
+          }
+          if (ny <= top) {
+            ny = top; p.vy = Math.abs(p.vy); p.ny = 0;
+            state.collisionCount += 1;
+            state.wallFlashes.push({ x: nx, y: top, t: 0.35, side: "T" });
+          } else if (ny >= bottom) {
+            ny = bottom; p.vy = -Math.abs(p.vy); p.ny = 1;
+            state.collisionCount += 1;
+            state.wallFlashes.push({ x: nx, y: bottom, t: 0.35, side: "B" });
+          } else {
+            p.ny = (ny - top) / ih;
+          }
+        });
+      }
+
+      function drawScene() {
+        const L = boxLayout();
+        ctx.clearRect(0, 0, L.w, L.h);
+        ctx.fillStyle = "#060a12";
+        ctx.fillRect(0, 0, L.w, L.h);
+
+        const tNorm = Math.min(1, (state.T_K - 250) / 200);
+        const glow = ctx.createLinearGradient(L.x0, L.y0, L.x0 + L.boxW, L.y0 + L.boxH);
+        glow.addColorStop(0, `rgba(56,189,248,${0.08 + tNorm * 0.12})`);
+        glow.addColorStop(1, `rgba(251,146,60,${0.06 + tNorm * 0.1})`);
+        ctx.fillStyle = glow;
+        ctx.fillRect(L.x0, L.y0, L.boxW, L.boxH);
+
+        ctx.strokeStyle = "rgba(56,189,248,0.55)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(L.x0, L.y0, L.boxW, L.boxH);
+
+        ctx.font = "600 11px sans-serif";
+        ctx.fillStyle = "#a78bfa";
+        ctx.fillText(`V = ${fmt(state.V_L, 2)} L`, L.x0 + 6, L.y0 - 6);
+
+        const left = L.x0 + 8;
+        const top = L.y0 + 8;
+        const iw = L.boxW - 16;
+        const ih = L.boxH - 16;
+
+        state.particles.forEach((p) => {
+          const px = left + p.nx * iw;
+          const py = top + p.ny * ih;
+          const g = ctx.createRadialGradient(px, py, 0, px, py, 5);
+          g.addColorStop(0, "#e0f2fe");
+          g.addColorStop(1, "rgba(56,189,248,0.25)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        state.wallFlashes.forEach((f) => {
+          const a = f.t / 0.35;
+          ctx.fillStyle = `rgba(251,146,60,${a * 0.7})`;
+          if (f.side === "L" || f.side === "R") {
+            ctx.fillRect(f.x - 2, f.y - 8, 4, 16);
+          } else {
+            ctx.fillRect(f.x - 8, f.y - 2, 16, 4);
+          }
+        });
+
+        const rateNorm = Math.min(1, state.collisionRate / 800);
+        ctx.fillStyle = `rgba(251,146,60,${0.15 + rateNorm * 0.35})`;
+        ctx.fillRect(L.x0, L.y0 + L.boxH + 8, L.boxW * rateNorm, 6);
+        ctx.font = "600 10px Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("壁衝突（多いほど圧力↑）", L.x0, L.y0 + L.boxH + 22);
+      }
+
+      function boyleCurvePoints() {
+        const pts = [];
+        const pvConst = N * R * BOYLE_T_K;
+        for (let v = V_MIN; v <= V_MAX; v += 0.05) {
+          pts.push({ x: v, y: pvConst / volM3(v) / 1000 });
+        }
+        return pts;
+      }
+
+      function charlesLinePoints() {
+        const pts = [];
+        for (let t = 253; t <= 423; t += 4) {
+          pts.push({ x: t, y: calcVfromPT(CHARLES_P_KPA, t) });
+        }
+        return pts;
+      }
+
+      function chartScaleOpts(xTitle, yTitle) {
+        return {
+          x: {
+            type: "linear",
+            title: { display: true, text: xTitle, color: "#94a3b8" },
+            ticks: { color: "#94a3b8" },
+            grid: { color: "rgba(148,163,184,0.08)" },
+          },
+          y: {
+            type: "linear",
+            title: { display: true, text: yTitle, color: "#94a3b8" },
+            ticks: { color: "#94a3b8" },
+            grid: { color: "rgba(148,163,184,0.08)" },
+          },
+        };
+      }
+
+      function buildCharts() {
+        const common = {
+          responsive: true, maintainAspectRatio: false, animation: false, parsing: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 10 }, boxWidth: 10 } } },
+        };
+        pvChart = new Chart(document.getElementById("pvChart"), {
+          type: "scatter",
+          data: {
+            datasets: [
+              {
+                label: "測定点", data: [], borderColor: "#fb923c", backgroundColor: "#fb923c",
+                pointRadius: 5, pointHoverRadius: 7,
+              },
+              {
+                label: "PV = 一定", data: boyleCurvePoints(), borderColor: "#64748b",
+                borderDash: [6, 4], pointRadius: 0, showLine: true, borderWidth: 2, tension: 0.15,
+              },
+            ],
+          },
+          options: { ...common, scales: chartScaleOpts("V（L）", "P（kPa）") },
+        });
+        vtChart = new Chart(document.getElementById("vtChart"), {
+          type: "scatter",
+          data: {
+            datasets: [
+              {
+                label: "測定点", data: [], borderColor: "#38bdf8", backgroundColor: "#38bdf8",
+                pointRadius: 5, pointHoverRadius: 7,
+              },
+              {
+                label: "V ∝ T", data: charlesLinePoints(), borderColor: "#64748b",
+                borderDash: [6, 4], pointRadius: 0, showLine: true, borderWidth: 2, tension: 0,
+              },
+            ],
+          },
+          options: { ...common, scales: chartScaleOpts("T（K）", "V（L）") },
+        });
+      }
+
+      // ボイルの法則曲線 / シャルル直線 + 測定点を更新
+      function recordChartPoint(force) {
+        if (!pvChart || !vtChart) return;
+        syncThermo();
+        const key = state.mode === "boyle"
+          ? `b:${fmt(state.V_L, 2)}`
+          : `c:${fmt(state.T_K, 0)}`;
+        if (!force && key === lastChartKey) return;
+        lastChartKey = key;
+
+        if (state.mode === "boyle") {
+          const ds = pvChart.data.datasets[0];
+          const pt = { x: state.V_L, y: state.P_kPa };
+          const last = ds.data[ds.data.length - 1];
+          if (!last || Math.abs(last.x - pt.x) > 0.02) {
+            ds.data.push(pt);
+            if (ds.data.length > 50) ds.data.shift();
+          }
+          pvChart.update("none");
+        } else {
+          const ds = vtChart.data.datasets[0];
+          const pt = { x: state.T_K, y: state.V_L };
+          const last = ds.data[ds.data.length - 1];
+          if (!last || Math.abs(last.x - pt.x) > 0.5) {
+            ds.data.push(pt);
+            if (ds.data.length > 50) ds.data.shift();
+          }
+          vtChart.update("none");
+        }
+      }
+
+      function refreshTheoryCurves() {
+        if (!pvChart || !vtChart) return;
+        pvChart.data.datasets[1].data = boyleCurvePoints();
+        vtChart.data.datasets[1].data = charlesLinePoints();
+        pvChart.update("none");
+        vtChart.update("none");
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        boyleBtn.classList.toggle("active", mode === "boyle");
+        charlesBtn.classList.toggle("active", mode === "charles");
+        vRow.classList.toggle("disabled", mode !== "boyle");
+        tRow.classList.toggle("disabled", mode !== "charles");
+        document.getElementById("pvPanel").classList.toggle("dimmed", mode !== "boyle");
+        document.getElementById("vtPanel").classList.toggle("dimmed", mode !== "charles");
+        if (mode === "boyle") {
+          tSlider.value = 27;
+          statusMsg.textContent = `ボイルモード：T = ${BOYLE_T_K} K 一定。V を変えると P = nRT/V（PV = 一定）。`;
+          document.getElementById("hudMode").textContent = "T 一定 · PV = 一定";
+        } else {
+          statusMsg.textContent = `シャルルモード：P = ${fmt(CHARLES_P_KPA, 1)} kPa 一定。T を変えると V = nRT/P（V ∝ T）。`;
+          document.getElementById("hudMode").textContent = "P 一定 · V/T = 一定";
+        }
+        syncThermo();
+        syncSpeeds();
+        refreshTheoryCurves();
+        lastChartKey = "";
+        if (pvChart) pvChart.data.datasets[0].data = [];
+        if (vtChart) vtChart.data.datasets[0].data = [];
+        recordChartPoint(true);
+        updateUI();
+      }
+
+      function updateUI() {
+        syncThermo();
+        document.getElementById("dispP").textContent = `${fmt(state.P_kPa, 1)} kPa`;
+        document.getElementById("dispV").textContent = `${fmt(state.V_L, 2)} L`;
+        document.getElementById("dispT").textContent = `${fmt(state.T_K, 0)} K（${fmt(state.T_K - 273.15, 0)} ℃）`;
+        document.getElementById("vVal").textContent = `${fmt(state.V_L, 2)} L`;
+        document.getElementById("tVal").textContent = `${fmt(state.T_K, 0)} K（${fmt(state.T_K - 273.15, 0)} ℃）`;
+        document.getElementById("hudCollisions").textContent = `衝突 ${fmt(state.collisionRate, 0)} 回/s`;
+
+        const pvLeft = state.P_kPa * volM3(state.V_L) * 1000;
+        const pvRight = N * R * state.T_K;
+        document.getElementById("eqnLive").innerHTML =
+          `<span class="p">${fmt(state.P_kPa, 1)}</span> × ` +
+          `<span class="v">${fmt(state.V_L, 2)}</span> = ` +
+          `<span class="r">${fmt(N, 2)}</span> × <span class="r">8.31</span> × ` +
+          `<span class="t">${fmt(state.T_K, 0)}</span>`;
+        document.getElementById("eqnCheck").textContent =
+          `PV = ${fmt(pvLeft, 1)} J ≈ nRT = ${fmt(pvRight, 1)} J（一致）`;
+      }
+
+      function onControlChange() {
+        syncThermo();
+        syncSpeeds();
+        recordChartPoint(false);
+        updateUI();
+      }
+
+      function tick(now) {
+        if (lastFrame === null) lastFrame = now;
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+        state.Vdisp += (Math.max(V_MIN, Math.min(V_MAX, state.V_L)) - state.Vdisp) * (1 - Math.exp(-dt * 10));
+
+        if (state.simTime - state.lastRateT >= 0.5) {
+          state.collisionRate = state.collisionCount / (state.simTime - state.lastRateT);
+          state.collisionCount = 0;
+          state.lastRateT = state.simTime;
+        }
+
+        state.wallFlashes.forEach((f) => { f.t -= dt; });
+        state.wallFlashes = state.wallFlashes.filter((f) => f.t > 0);
+
+        const L = boxLayout();
+        updateParticles(dt, L);
+        drawScene();
+        updateUI();
+        requestAnimationFrame(tick);
+      }
+
+      boyleBtn.addEventListener("click", () => setMode("boyle"));
+      charlesBtn.addEventListener("click", () => setMode("charles"));
+      vSlider.addEventListener("input", onControlChange);
+      tSlider.addEventListener("input", onControlChange);
+      window.addEventListener("resize", () => { resizeCanvas(); drawScene(); });
+
+      function boot() {
+        if (typeof Chart === "undefined") {
+          statusMsg.textContent = "Chart.js を読み込めません。";
+          return;
+        }
+        initParticles();
+        syncThermo();
+        if (!resizeCanvas()) {
+          requestAnimationFrame(boot);
+          return;
+        }
+        buildCharts();
+        setMode("boyle");
+        state.lastRateT = 0;
+        drawScene();
+        requestAnimationFrame(tick);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      } else {
+        requestAnimationFrame(boot);
+      }
+    })();
+  </script>
+</body>
+</html>

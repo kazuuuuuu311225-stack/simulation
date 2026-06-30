@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>気体分子の運動論 — 立方体の中の熱運動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #22d3ee; --accent-light: #67e8f9;
+      --panel: rgba(12,18,32,0.84); --border: rgba(34,211,238,0.24);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12,#0c1524 45%,#0a1018);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(24px,env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 48% 40% at 16% 14%, rgba(6,182,212,0.1), transparent 55%),
+        radial-gradient(ellipse 45% 38% at 84% 86%, rgba(244,114,182,0.08), transparent 55%);
+    }
+    .shell { position: relative; z-index: 1; width: min(1280px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg,rgba(6,182,212,0.28),rgba(244,114,182,0.22));
+      border: 1px solid rgba(34,211,238,0.35); font-size: 1.2rem;
+      box-shadow: 0 0 24px rgba(6,182,212,0.25);
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; font-size: clamp(1rem,2.8vw,1.35rem); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .intro-panel {
+      padding: 14px 16px; border-radius: 16px;
+      background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.28);
+      font-size: 0.84rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .intro-panel strong { color: #e0f2fe; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "canvas" "readout" "hist" "derive" "ctrl" "egraph" "footer";
+    }
+    @media (min-width: 980px) {
+      .sim-grid {
+        grid-template-columns: 1.08fr 0.92fr;
+        grid-template-areas:
+          "canvas readout"
+          "canvas derive"
+          "hist ctrl"
+          "hist egraph"
+          "footer footer";
+      }
+    }
+    .panel { padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .panel h3 { margin: 0 0 10px; font-size: 0.88rem; color: var(--accent-light); font-weight: 600; }
+    .area-canvas { grid-area: canvas; }
+    .area-hist { grid-area: hist; }
+    .panel-note {
+      margin-top: 8px; padding: 12px 14px; border-radius: 12px;
+      font-size: 0.76rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .viz-block .panel-note { margin: 0; border-radius: 0; border-top: 1px solid rgba(6,182,212,0.2); border-left: 0; border-right: 0; border-bottom: 0; }
+    .panel-note h4 { margin: 0 0 8px; font-size: 0.72rem; font-weight: 700; color: #e0f2fe; }
+    .panel-note ul { margin: 0; padding-left: 1.15rem; }
+    .panel-note li { margin-bottom: 6px; }
+    .panel-note li:last-child { margin-bottom: 0; }
+    .panel-note strong { color: #bae6fd; }
+    .panel-note-canvas { background: rgba(6,182,212,0.07); border: 1px solid rgba(6,182,212,0.22); }
+    .panel-note-hist { background: rgba(56,189,248,0.07); border: 1px solid rgba(56,189,248,0.22); }
+    .area-readout { grid-area: readout; }
+    .area-derive { grid-area: derive; }
+    .area-ctrl { grid-area: ctrl; }
+    .area-egraph { grid-area: egraph; }
+    .area-footer { grid-area: footer; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg,rgba(8,14,24,0.98),rgba(4,8,16,0.99));
+      border: 1px solid rgba(6,182,212,0.35);
+      box-shadow: inset 0 0 40px rgba(6,182,212,0.06);
+    }
+    .area-hist .panel-note { margin-top: 10px; }
+    .viz-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    #gas3dWrap {
+      width: 100%; height: min(420px,48dvh); min-height: 300px;
+      cursor: grab; touch-action: none;
+    }
+    #gas3dWrap:active { cursor: grabbing; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active { background: rgba(6,182,212,0.22); color: #e0f2fe; border-color: rgba(6,182,212,0.6); }
+    .canvas-hud {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px;
+    }
+    .hud-chip {
+      padding: 5px 10px; border-radius: 9px; font-size: 0.64rem; font-weight: 600;
+      background: rgba(6,10,18,0.88); border: 1px solid rgba(34,211,238,0.28); font-variant-numeric: tabular-nums;
+    }
+    .hud-chip.hot { border-color: rgba(251,146,60,0.45); color: #fed7aa; }
+    .hud-chip.cold { border-color: rgba(56,189,248,0.45); color: #bae6fd; }
+    .hs-callout {
+      margin-top: 8px; padding: 10px 12px; border-radius: 11px;
+      background: rgba(244,114,182,0.1); border-left: 3px solid #f472b6;
+      font-size: 0.76rem; line-height: 1.65; color: #fbcfe8;
+    }
+    .chart-wrap { height: min(195px,24dvh); min-height: 165px; position: relative; }
+    .readout-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 10px; }
+    @media (min-width: 520px) { .readout-grid { grid-template-columns: repeat(3,1fr); } }
+    .readout-card {
+      padding: 10px 8px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid rgba(148,163,184,0.15);
+    }
+    .readout-card .lbl { font-size: 0.56rem; color: var(--muted); line-height: 1.3; }
+    .readout-card .num { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 3px; }
+    .readout-card.p .num { color: #fdba74; font-size: 0.95rem; }
+    .readout-card.v .num { color: #c4b5fd; }
+    .readout-card.e .num { color: #7dd3fc; }
+    .readout-card.m .num { color: #fde047; }
+    .momentum-panel {
+      margin-top: 10px; padding: 11px 12px; border-radius: 12px;
+      background: rgba(253,224,71,0.06); border: 1px solid rgba(253,224,71,0.28);
+    }
+    .momentum-panel h4 { margin: 0 0 8px; font-size: 0.72rem; color: #fde047; font-weight: 700; }
+    .mom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mom-item { font-size: 0.68rem; line-height: 1.5; color: #cbd5e1; }
+    .mom-item .eq { display: block; font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .formula-box {
+      padding: 10px 12px; border-radius: 12px; margin-top: 8px;
+      background: rgba(253,224,71,0.08); border: 1px solid rgba(253,224,71,0.3);
+      font-size: 0.78rem; font-weight: 700; color: #fde047; line-height: 1.6; text-align: center;
+    }
+    .law-row {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+    }
+    .law-row span {
+      flex: 1; min-width: 120px; padding: 7px 8px; border-radius: 9px;
+      font-size: 0.68rem; font-weight: 600; text-align: center; line-height: 1.4;
+    }
+    .law-t { background: rgba(251,146,60,0.12); color: #fed7aa; }
+    .law-p { background: rgba(253,224,71,0.1); color: #fde047; }
+    .law-e { background: rgba(56,189,248,0.12); color: #bae6fd; }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); margin-bottom: 4px; }
+    .ctrl-row label span.val { color: #bae6fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+    select, input[type="range"] { width: 100%; accent-color: var(--accent); }
+    select {
+      padding: 9px 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem;
+      background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid rgba(148,163,184,0.25);
+    }
+    .preset-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+    .preset-row button {
+      flex: 1; min-width: 90px; padding: 8px 6px; border-radius: 10px; cursor: pointer;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600;
+      border: 1px solid rgba(148,163,184,0.25); background: rgba(255,255,255,0.04); color: #cbd5e1;
+    }
+    .preset-row button.active { border-color: rgba(6,182,212,0.6); background: rgba(6,182,212,0.18); color: #e0f2fe; }
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+    .toggle-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .toggle-row span { font-size: 0.74rem; color: #cbd5e1; }
+    .derive-steps { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+    .step-btn {
+      flex: 1; min-width: 48px; padding: 7px 4px; border-radius: 9px; cursor: pointer;
+      font-family: inherit; font-size: 0.66rem; font-weight: 700; border: 2px solid rgba(148,163,184,0.25);
+      background: rgba(255,255,255,0.04); color: #cbd5e1; transition: all 0.2s;
+    }
+    .step-btn.active { border-color: rgba(244,114,182,0.7); background: rgba(244,114,182,0.18); color: #fbcfe8; }
+    .derive-body { padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); }
+    .derive-title { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; color: #f9a8d4; }
+    .derive-eqn {
+      margin: 8px 0; padding: 10px; border-radius: 10px; text-align: center;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+      font-size: clamp(0.8rem,2.2vw,0.95rem); font-weight: 700; color: #bae6fd; line-height: 1.55;
+    }
+    .derive-text { margin: 0; font-size: 0.76rem; line-height: 1.7; color: #cbd5e1; }
+    .mini-canvas-wrap { height: min(188px, 24dvh); min-height: 168px; margin-top: 10px; border-radius: 10px; overflow: hidden; background: #060a12; border: 1px solid rgba(244,114,182,0.25); }
+    #miniCanvas { width: 100%; height: 100%; display: block; }
+    .derive-nav { display: flex; gap: 8px; margin-top: 10px; }
+    .derive-nav button {
+      flex: 1; padding: 8px; border-radius: 10px; cursor: pointer; font-family: inherit;
+      font-size: 0.72rem; font-weight: 600; border: 1px solid rgba(34,211,238,0.35);
+      background: rgba(34,211,238,0.1); color: #bae6fd;
+    }
+    .derive-nav button:disabled { opacity: 0.4; cursor: default; }
+    .pressure-bar-wrap { margin-top: 10px; }
+    .pressure-bar-wrap .lbl { font-size: 0.64rem; color: var(--muted); margin-bottom: 4px; }
+    .pressure-bar { height: 10px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
+    .pressure-bar-fill {
+      height: 100%; border-radius: 999px; width: 0%;
+      background: linear-gradient(90deg,#06b6d4,#f472b6);
+      transition: width 0.15s ease-out;
+    }
+    .explain { margin: 0; padding-left: 1.2rem; font-size: 0.84rem; line-height: 1.75; color: #cbd5e1; }
+    .explain li { margin-bottom: 6px; }
+    .status { padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.6; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); color: #bae6fd; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">◇</div>
+      <h2>気体分子の運動論</h2>
+      <p class="chapter-label">14章 · 立方体の中の熱運動 · P = ⅓nm⟨v²⟩</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="intro-panel">
+      透明な<strong>立方体の容器</strong>の中で、理想気体の分子が<strong>不規則な熱運動</strong>をします。
+      壁にぶつかると跳ね返り、運動量 <strong>p = mv</strong> が壁に伝わります。この積み重ねが<strong>圧力 P</strong> になります。
+    </section>
+
+    <div class="sim-grid">
+      <section class="panel area-canvas">
+        <div class="viz-block">
+          <div class="viz-head">
+            <p class="viz-label">① 立方体コンテナの中 — 分子の熱運動（3D）</p>
+          </div>
+          <p class="viz-legend">立方体ワイヤー枠 · ドラッグで回転 · 黄色分子が当たった<strong>面だけ</strong>が光る · 軌跡＝注目分子</p>
+          <div id="gas3dWrap"></div>
+          <div class="canvas-hud">
+            <div class="hud-chip hot" id="hudT">T = — K</div>
+            <div class="hud-chip" id="hudColl">壁衝突 — 回/s</div>
+            <div class="hud-chip" id="hudN">N = —</div>
+          </div>
+          <div class="viz-foot">
+            <button type="button" id="btnTrail" class="active">軌跡 ON</button>
+            <button type="button" id="btnVectors">速度ベクトル</button>
+            <button type="button" id="btnSpin" class="active">自動回転</button>
+          </div>
+          <div class="panel-note panel-note-canvas">
+            <h4>この画面で見ること</h4>
+            <ul>
+              <li>透明な<strong>立方体</strong>の中で、気体分子が不規則に動いています（理想気体のモデル）。</li>
+              <li><strong>黄色の1粒</strong>を追跡中。壁に当たった<strong>面だけ光る</strong>＝その瞬間、壁が運動量 <strong>Δp = 2mv⊥</strong> を受け取ります。</li>
+              <li>⑤の<strong>温度 T</strong>を上げると分子が速く動き、衝突の回数も増えます。②の圧力 P も大きくなります。</li>
+              <li>「<strong>速度ベクトル</strong>」で進む方向と速さ、「<strong>軌跡</strong>」で黄色分子の直近の経路が分かります。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="hs-callout" id="hsCallout">—</div>
+      </section>
+
+      <section class="panel area-readout">
+        <h3>② 圧力 · 運動量 · エネルギー</h3>
+        <div class="law-row">
+          <span class="law-t">T ↑ → v ↑</span>
+          <span class="law-p">p = mv · Δp → P</span>
+          <span class="law-e">½m⟨v²⟩ ∝ T</span>
+        </div>
+        <div class="readout-grid">
+          <div class="readout-card p"><div class="lbl">圧力 P（式）</div><div class="num" id="dPformula">—</div></div>
+          <div class="readout-card p"><div class="lbl">P（衝突から）</div><div class="num" id="dPcoll">—</div></div>
+          <div class="readout-card v"><div class="lbl">平均速度 ⟨v⟩</div><div class="num" id="dVmean">—</div></div>
+          <div class="readout-card e"><div class="lbl">平均運動 E</div><div class="num" id="dEk">—</div></div>
+          <div class="readout-card c"><div class="lbl">n = N/V</div><div class="num" id="dNdens">—</div></div>
+          <div class="readout-card v"><div class="lbl">⟨v²⟩</div><div class="num" id="dVsq">—</div></div>
+        </div>
+        <div class="momentum-panel">
+          <h4>注目分子（黄色）— 1 粒の運動量</h4>
+          <div class="mom-grid">
+            <div class="mom-item">速さ v<span class="eq" id="dTrackV">—</span></div>
+            <div class="mom-item">運動量 |p| = mv<span class="eq" id="dTrackP">—</span></div>
+            <div class="mom-item">当たった面<span class="eq" id="dTrackFace">—</span></div>
+            <div class="mom-item">壁衝突 Δp = 2mv⊥<span class="eq" id="dTrackDp">—</span></div>
+            <div class="mom-item">運動エネルギー ½mv²<span class="eq" id="dTrackEk">—</span></div>
+          </div>
+        </div>
+        <div class="formula-box" id="mainFormula">P = ⅓ n m ⟨v²⟩</div>
+        <div class="pressure-bar-wrap">
+          <div class="lbl">壁への衝突が多いほどバーが伸びる（圧力のイメージ）</div>
+          <div class="pressure-bar"><div class="pressure-bar-fill" id="pBarFill"></div></div>
+        </div>
+        <p class="status" id="readoutMsg">—</p>
+      </section>
+
+      <section class="panel area-hist">
+        <h3>③ 速度分布 — マックスウェル分布</h3>
+        <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+        <div class="panel-note panel-note-hist">
+          <h4>グラフの読み方</h4>
+          <ul>
+            <li>横軸＝速さ <strong>v</strong>、縦軸＝その速さ付近にいる分子の<strong>数</strong>です。</li>
+            <li><strong>青い棒</strong>＝いまのシミュレーション（N 個の分子）、<strong>ピンクの曲線</strong>＝理論式（マックスウェル分布）。</li>
+            <li>温度 <strong>T ↑</strong> → 速い分子が増え、グラフは<strong>右へ</strong>ずれ、山が低く<strong>広がる</strong>。</li>
+            <li>分子が<strong>軽い</strong>（He）ほど同じ T でも平均速さは大きく、<strong>重い</strong>（CO₂）ほど遅くなります。</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel area-derive">
+        <h3>④ 圧力の式の導き方（5ステップ）</h3>
+        <div class="derive-steps" id="stepBtns"></div>
+        <div class="derive-body">
+          <p class="derive-title" id="deriveTitle">—</p>
+          <div class="derive-eqn" id="deriveEqn">—</div>
+          <p class="derive-text" id="deriveText">—</p>
+          <div class="mini-canvas-wrap"><canvas id="miniCanvas"></canvas></div>
+          <div class="derive-nav">
+            <button type="button" id="btnPrev">← 前へ</button>
+            <button type="button" id="btnNext">次へ →</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel area-ctrl">
+        <h3>⑤ 操作</h3>
+        <div class="ctrl-row">
+          <label>気体の種類<span class="val" id="mVal">—</span></label>
+          <select id="mSelect">
+            <option value="He" selected>He（ヘリウム）— 軽くて速い</option>
+            <option value="N2">N₂（窒素）— 空気に近い</option>
+            <option value="CO2">CO₂ — 重くて遅い</option>
+          </select>
+        </div>
+        <div class="ctrl-row">
+          <label>温度 T（K）<span class="val" id="tVal">—</span></label>
+          <input type="range" id="tSlider" min="100" max="800" step="10" value="300">
+        </div>
+        <div class="preset-row">
+          <button type="button" data-t="100" class="tp">100 K 冷たい</button>
+          <button type="button" data-t="300" class="tp active">300 K 常温</button>
+          <button type="button" data-t="500" class="tp">500 K 熱い</button>
+        </div>
+        <div class="ctrl-row">
+          <label>分子の数 N<span class="val" id="nVal">—</span></label>
+          <input type="range" id="nSlider" min="50" max="400" step="10" value="160">
+        </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="deriveToggle">
+          <span>導出モード — ステップを順番に読む</span>
+        </label>
+        <p class="status" id="ctrlMsg">分子数 N を増やすと n = N/V が大きくなり、同じ T でも P が増えます。</p>
+      </section>
+
+      <section class="panel area-egraph">
+        <h3>⑥ 温度と平均運動エネルギー</h3>
+        <div class="chart-wrap"><canvas id="eChart"></canvas></div>
+      </section>
+
+      <section class="panel area-footer">
+        <h3>まとめ</h3>
+        <ul class="explain">
+          <li>気体の<strong>圧力</strong>は、分子が容器の<strong>壁にぶつかって跳ね返る</strong>ときの運動量の変化 Δp から生じます（1 回の跳ね返りで Δp = 2mv⊥）。</li>
+          <li>式 <strong>P = (1/3) n m ⟨v²⟩</strong> … n は単位体積あたりの分子数、⟨v²⟩ は速度の二乗の平均です。</li>
+          <li><strong>温度</strong>は分子の「平均的な運動の激しさ」の尺度：<strong>(3/2) k_B T = (1/2) m ⟨v²⟩</strong>。</li>
+          <li>速さの分布は<strong>マックスウェル分布</strong>。T が高いほど速い分子が増え、ヒストグラムは右へ広がります。</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const KB = 1.380649e-23;
+      const L_M = 0.10;
+      const V_M3 = L_M ** 3;
+      const HIST_BINS = 14;
+      const MAX_N = 400;
+      const TRAIL_LEN = 24;
+      const TRAIL_FRACTION = 0.12;
+      const VIS_CROSS_FRAMES = 28;
+      const T_VIS_REF = 300;
+
+      const FACE_LABEL = {
+        mx: "左の面（−x）", px: "右の面（+x）",
+        my: "下の面（−y）", py: "上の面（+y）",
+        mz: "手前の面（−z）", pz: "奥の面（+z）",
+      };
+      const SPECIES = {
+        He: { label: "He", m: 6.64e-27, color: 0x67e8f9, histMax: 2200 },
+        N2: { label: "N₂", m: 46.5e-27, color: 0xf472b6, histMax: 900 },
+        CO2: { label: "CO₂", m: 7.31e-26, color: 0x4ade80, histMax: 550 },
+      };
+
+      const STEPS = [
+        {
+          title: "ステップ 1 — 1個ぶつかったら？",
+          eqn: "Δp = 2 m v_x",
+          text: "x 方向に +v_x で壁に当たると、分子は −v_x に反転（p：+mv_x → −mv_x）。壁が受け取る運動量は Δp = 2mv_x。「跳ね返り＝壁を押す」が圧力のもと。",
+        },
+        {
+          title: "ステップ 2 — どれくらいの頻度で当たる？",
+          eqn: "1分子の衝突 ≈ v_x / (2L)",
+          text: "長さ L の箱を往復するのに 2L/v_x 秒。だから 1 秒あたり v_x/(2L) 回、壁に当たります。速い分子ほど衝突が多い。",
+        },
+        {
+          title: "ステップ 3 — 力 F とは？",
+          eqn: "F = （単位時間の運動量変化の合計）",
+          text: "すべての分子の Δp を Δt 秒で足すと、壁に働く力 F になります。3D 画面で黄色分子が当たった面が光るのは、この Δp が起きている瞬間です。",
+        },
+        {
+          title: "ステップ 4 — 圧力 P = F/A",
+          eqn: "P = ⅓ n m ⟨v²⟩",
+          text: "力 F を壁の面積 A で割ると圧力。x,y,z 方向の運動がバランス良いとき、整理すると P = (1/3) n m ⟨v²⟩（n = N/V）。",
+        },
+        {
+          title: "ステップ 5 — 温度とのつながり",
+          eqn: "½ m ⟨v²⟩ = (3/2) k_B T",
+          text: "平均運動エネルギー ⟨E_k⟩ = (1/2) m ⟨v²⟩。これが (3/2)k_B T と等しいので、温度＝分子の運動の激しさと言えます。",
+        },
+      ];
+
+      const wrap = document.getElementById("gas3dWrap");
+      const miniCanvas = document.getElementById("miniCanvas");
+      const mCtx = miniCanvas.getContext("2d");
+      const tSlider = document.getElementById("tSlider");
+      const nSlider = document.getElementById("nSlider");
+      const mSelect = document.getElementById("mSelect");
+      const deriveToggle = document.getElementById("deriveToggle");
+
+      const state = {
+        T: 300, targetT: 300, N: 160, species: "He",
+        deriveOn: false, step: 0,
+        parts: [],
+        collCount: 0, collRate: 0, momTransfer: 0,
+        simTime: 0, lastRateT: 0, eTrail: [],
+        trackIdx: 0,
+        lastDeltaP: 0, lastVperp: 0, lastHitAge: 999, lastHitFace: "—",
+        showTrail: true, showVectors: false, autoSpin: true,
+      };
+
+      let scene, camera, renderer, gasGroup, instMesh, trailGroup, vectorGroup, vectorLines, trackVectorArrow, focusMesh;
+      let faceMeshes = {}, faceEdgeLoops = {}, faceGlow = { mx: 0, px: 0, my: 0, py: 0, mz: 0, pz: 0 };
+      let rotX = 0.45, rotY = 0.72, zoom = 3.2, dragging = false, lx = 0, ly = 0;
+      let histChart, eChart, lastFrame, miniT = 0, clock = 0;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function fmtSci(n) {
+        if (!Number.isFinite(n) || n === 0) return "0";
+        if (Math.abs(n) >= 1000 || Math.abs(n) < 0.01) return n.toExponential(2);
+        return fmt(n, 2);
+      }
+      function fmtKPa(pa) { return `${fmt(pa / 1000, 2)} kPa`; }
+      function species() { return SPECIES[state.species]; }
+      function histMax() { return species().histMax; }
+
+      function randNormal() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+
+      function sampleVelocity(T, m) {
+        const s = Math.sqrt(KB * T / m);
+        return { vx: randNormal() * s, vy: randNormal() * s, vz: randNormal() * s };
+      }
+
+      function trackedParticle() {
+        return state.parts[state.trackIdx] || state.parts[0];
+      }
+
+      function particleMomentum(p) {
+        const m = species().m;
+        const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+        return { v, pMag: m * v, ek: 0.5 * m * v * v };
+      }
+
+      function recordWallHit(p, vPerp, faceId) {
+        const m = species().m;
+        state.lastDeltaP = 2 * m * Math.abs(vPerp);
+        state.lastVperp = Math.abs(vPerp);
+        state.lastHitAge = 0;
+        state.lastHitFace = FACE_LABEL[faceId] || "—";
+        flashTrackFace(faceId);
+      }
+
+      function flashTrackFace(faceId) {
+        if (faceGlow[faceId] !== undefined) faceGlow[faceId] = 1.0;
+      }
+
+      function decayFaceGlow(dt) {
+        Object.keys(faceGlow).forEach((id) => {
+          faceGlow[id] = Math.max(0, faceGlow[id] - dt * 2.8);
+          const g = faceGlow[id];
+          const mesh = faceMeshes[id];
+          if (mesh) mesh.material.opacity = g * 0.95;
+          const edge = faceEdgeLoops[id];
+          if (edge) edge.material.opacity = g * 0.98;
+        });
+      }
+
+      function vTypical() {
+        return Math.sqrt(3 * KB * state.T / species().m);
+      }
+
+      // 300 K 基準で T に応じて見た目の速さが変わる（高温＝速い）。壁すり抜け防止の上限あり
+      function visMotionScale() {
+        const m = species().m;
+        const vTyp = Math.max(vTypical(), 80);
+        const vRef = Math.max(Math.sqrt(3 * KB * T_VIS_REF / m), 80);
+        const safeMove = (L_M * 0.92) / (vTyp * 0.04 * VIS_CROSS_FRAMES);
+        const refMove = (L_M * 0.92) / (vRef * 0.04 * VIS_CROSS_FRAMES);
+        const tempVis = Math.sqrt(Math.max(state.T, 50) / T_VIS_REF);
+        const tempVisClamped = Math.max(0.35, Math.min(1.65, tempVis));
+        return Math.min(refMove * tempVisClamped, safeMove * 1.02);
+      }
+
+      function tempVisualFactor() {
+        return Math.sqrt(Math.max(state.T, 50) / T_VIS_REF);
+      }
+
+      function syncTemperatureFromControl() {
+        const newTarget = Number(tSlider.value);
+        if (Math.abs(newTarget - state.targetT) < 0.5) return;
+        if (state.T > 1 && newTarget > 1) {
+          const s = Math.sqrt(newTarget / state.T);
+          state.parts.forEach((p) => { p.vx *= s; p.vy *= s; p.vz *= s; });
+        }
+        state.T = newTarget;
+        state.targetT = newTarget;
+      }
+
+      function updateHudPartial() {
+        const hud = document.getElementById("hudT");
+        hud.textContent = `T = ${fmt(state.T, 0)} K（${fmt(state.T - 273.15, 0)} ℃）`;
+        hud.classList.toggle("hot", state.T >= 400);
+        hud.classList.toggle("cold", state.T <= 150);
+        updateHsCallout();
+      }
+
+      function velocityArrowLen(v) {
+        const vTyp = Math.max(vTypical(), 80);
+        return 0.028 + 0.072 * (v / vTyp);
+      }
+
+      function initVectorArrows() {
+        if (!vectorGroup) return;
+        const pos = new Float32Array(MAX_N * 2 * 3);
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        geo.setDrawRange(0, 0);
+        vectorLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+          color: 0x67e8f9, transparent: true, opacity: 0.5, depthWrite: false,
+        }));
+        vectorLines.renderOrder = 3;
+        vectorGroup.add(vectorLines);
+
+        trackVectorArrow = new THREE.ArrowHelper(
+          new THREE.Vector3(1, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          0.08, 0xfacc15, 0.022, 0.014
+        );
+        trackVectorArrow.renderOrder = 4;
+        vectorGroup.add(trackVectorArrow);
+        vectorGroup.visible = state.showVectors;
+      }
+
+      function syncVelocityArrows() {
+        if (!vectorGroup || !vectorLines) return;
+        vectorGroup.visible = state.showVectors;
+        if (!state.showVectors) return;
+
+        const pos = vectorLines.geometry.attributes.position;
+        const tmpDir = new THREE.Vector3();
+        let vi = 0;
+        state.parts.forEach((p, i) => {
+          const s = toScene(p.px, p.py, p.pz);
+          const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+          if (v < 1e-6) {
+            pos.setXYZ(vi, s.x, s.y, s.z);
+            pos.setXYZ(vi + 1, s.x, s.y, s.z);
+          } else {
+            const len = velocityArrowLen(v);
+            tmpDir.set(p.vx / v, p.vy / v, p.vz / v).multiplyScalar(len);
+            pos.setXYZ(vi, s.x, s.y, s.z);
+            pos.setXYZ(vi + 1, s.x + tmpDir.x, s.y + tmpDir.y, s.z + tmpDir.z);
+          }
+          vi += 2;
+        });
+        pos.needsUpdate = true;
+        vectorLines.geometry.setDrawRange(0, state.N * 2);
+        vectorLines.visible = state.N > 0;
+
+        const tp = trackedParticle();
+        if (tp && trackVectorArrow) {
+          const fs = toScene(tp.px, tp.py, tp.pz);
+          const v = Math.sqrt(tp.vx * tp.vx + tp.vy * tp.vy + tp.vz * tp.vz);
+          trackVectorArrow.visible = v > 1e-6;
+          if (v > 1e-6) {
+            tmpDir.set(tp.vx / v, tp.vy / v, tp.vz / v);
+            trackVectorArrow.position.set(fs.x, fs.y, fs.z);
+            trackVectorArrow.setDirection(tmpDir);
+            const len = velocityArrowLen(v) * 1.35;
+            trackVectorArrow.setLength(len, len * 0.32, len * 0.2);
+          }
+        }
+      }
+
+      function toScene(px, py, pz) {
+        const s = 0.88;
+        return {
+          x: (px / L_M - 0.5) * s,
+          y: (py / L_M - 0.5) * s,
+          z: (pz / L_M - 0.5) * s,
+        };
+      }
+
+      function initParticles() {
+        state.parts = [];
+        const pad = L_M * 0.04;
+        for (let i = 0; i < state.N; i += 1) {
+          const v = sampleVelocity(state.T, species().m);
+          const trail = (i === state.trackIdx) ? [] : null;
+          state.parts.push({
+            px: pad + Math.random() * (L_M - 2 * pad),
+            py: pad + Math.random() * (L_M - 2 * pad),
+            pz: pad + Math.random() * (L_M - 2 * pad),
+            vx: v.vx, vy: v.vy, vz: v.vz,
+            trail,
+          });
+        }
+        state.trackIdx = 0;
+        rebuildTrails();
+      }
+
+      function rebuildTrails() {
+        if (!trailGroup) return;
+        while (trailGroup.children.length) {
+          const c = trailGroup.children[0];
+          trailGroup.remove(c);
+          if (c.geometry) c.geometry.dispose();
+          if (c.material) c.material.dispose();
+        }
+        state.parts.forEach((p) => {
+          if (!p.trail) return;
+          const geo = new THREE.BufferGeometry();
+          const pos = new Float32Array(TRAIL_LEN * 3);
+          const sc = toScene(p.px, p.py, p.pz);
+          for (let j = 0; j < TRAIL_LEN; j += 1) {
+            pos[j * 3] = sc.x;
+            pos[j * 3 + 1] = sc.y;
+            pos[j * 3 + 2] = sc.z;
+          }
+          geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+          geo.setDrawRange(0, 0);
+          const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
+            color: 0xfde047, transparent: true, opacity: 0.55,
+          }));
+          line.userData.part = p;
+          trailGroup.add(line);
+        });
+      }
+
+      function rescaleTemperature(dt) {
+        const blend = 1 - Math.exp(-dt * 2.2);
+        const oldT = state.T;
+        state.T += (state.targetT - state.T) * blend;
+        if (oldT > 1) {
+          const s = Math.sqrt(state.T / oldT);
+          state.parts.forEach((p) => { p.vx *= s; p.vy *= s; p.vz *= s; });
+        }
+      }
+
+      // 平均二乗速度を計算
+      function computeStats() {
+        const m = species().m;
+        let sumV = 0, sumV2 = 0;
+        state.parts.forEach((p) => {
+          const v2 = p.vx * p.vx + p.vy * p.vy + p.vz * p.vz;
+          sumV += Math.sqrt(v2);
+          sumV2 += v2;
+        });
+        const n = state.parts.length || 1;
+        const vMean = sumV / n;
+        const v2Mean = sumV2 / n;
+        const ekMean = 0.5 * m * v2Mean;
+        const ndens = n / V_M3;
+        const pFormula = (1 / 3) * ndens * m * v2Mean;
+        return { vMean, v2Mean, ekMean, ndens, pFormula, n };
+      }
+
+      function maxwellBins(T, m, binW, nPart) {
+        const pts = [];
+        for (let i = 0; i < HIST_BINS; i += 1) {
+          const v = (i + 0.5) * binW;
+          const f = 4 * Math.PI * Math.pow(m / (2 * Math.PI * KB * T), 1.5) * v * v * Math.exp(-m * v * v / (2 * KB * T));
+          pts.push({ x: v, y: nPart * f * binW });
+        }
+        return pts;
+      }
+
+      function histogramData() {
+        const vmax = histMax();
+        const counts = new Array(HIST_BINS).fill(0);
+        const binW = vmax / HIST_BINS;
+        state.parts.forEach((p) => {
+          const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+          const idx = Math.min(HIST_BINS - 1, Math.floor(v / binW));
+          if (idx >= 0) counts[idx] += 1;
+        });
+        return { counts, binW, vmax };
+      }
+
+      function updateParticles(dt) {
+        const m = species().m;
+        const pad = L_M * 0.018;
+        const move = visMotionScale();
+        const brown = Math.sqrt(KB * state.T / m) * 0.004;
+
+        state.parts.forEach((p, idx) => {
+          p.vx += randNormal() * brown * Math.sqrt(dt);
+          p.vy += randNormal() * brown * Math.sqrt(dt);
+          p.vz += randNormal() * brown * Math.sqrt(dt);
+
+          const ox = p.px, oy = p.py, oz = p.pz;
+          p.px += p.vx * dt * move;
+          p.py += p.vy * dt * move;
+          p.pz += p.vz * dt * move;
+
+          function hitWall(axis, lo, hi, vKey, faceLo, faceHi, oVal) {
+            const v = p[vKey];
+            const x = p[axis];
+            if (x <= lo) {
+              if (v < 0 && oVal > lo) {
+                state.collCount += 1;
+                state.momTransfer += 2 * m * Math.abs(v);
+                if (idx === state.trackIdx) recordWallHit(p, v, faceLo);
+              }
+              p[axis] = lo;
+              if (v < 0) p[vKey] = Math.abs(v) || 1e-6;
+            } else if (x >= hi) {
+              if (v > 0 && oVal < hi) {
+                state.collCount += 1;
+                state.momTransfer += 2 * m * Math.abs(v);
+                if (idx === state.trackIdx) recordWallHit(p, v, faceHi);
+              }
+              p[axis] = hi;
+              if (v > 0) p[vKey] = -Math.abs(v) || -1e-6;
+            }
+          }
+
+          hitWall("px", pad, L_M - pad, "vx", "mx", "px", ox);
+          hitWall("py", pad, L_M - pad, "vy", "my", "py", oy);
+          hitWall("pz", pad, L_M - pad, "vz", "mz", "pz", oz);
+
+          if (p.trail) {
+            p.trail.push({ px: p.px, py: p.py, pz: p.pz });
+            if (p.trail.length > TRAIL_LEN) p.trail.shift();
+          }
+        });
+      }
+
+      function buildCubeContainer(group) {
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+          color: 0xc47a4a, transparent: true, opacity: 0.72,
+        }));
+        group.add(wire);
+        boxGeo.dispose();
+        edges.dispose();
+
+        const glowMat = () => new THREE.MeshBasicMaterial({
+          color: 0xfde047, transparent: true, opacity: 0,
+          side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+          depthWrite: false, depthTest: false,
+        });
+        const faceHalf = 0.502;
+        const faceDefs = [
+          { id: "mx", pos: [-faceHalf, 0, 0], look: [-1, 0, 0] },
+          { id: "px", pos: [faceHalf, 0, 0], look: [1, 0, 0] },
+          { id: "my", pos: [0, -faceHalf, 0], look: [0, -1, 0] },
+          { id: "py", pos: [0, faceHalf, 0], look: [0, 1, 0] },
+          { id: "mz", pos: [0, 0, -faceHalf], look: [0, 0, -1] },
+          { id: "pz", pos: [0, 0, faceHalf], look: [0, 0, 1] },
+        ];
+        faceMeshes = {};
+        faceEdgeLoops = {};
+        faceDefs.forEach(({ id, pos, look }) => {
+          const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.98), glowMat());
+          mesh.position.set(pos[0], pos[1], pos[2]);
+          mesh.lookAt(look[0], look[1], look[2]);
+          mesh.renderOrder = 20;
+          group.add(mesh);
+          faceMeshes[id] = mesh;
+        });
+
+        const e = 0.501;
+        const edgeDefs = {
+          mx: [[-e, -e, -e], [-e, -e, e], [-e, e, e], [-e, e, -e]],
+          px: [[e, -e, -e], [e, e, -e], [e, e, e], [e, -e, e]],
+          my: [[-e, -e, -e], [e, -e, -e], [e, -e, e], [-e, -e, e]],
+          py: [[-e, e, -e], [-e, e, e], [e, e, e], [e, e, -e]],
+          mz: [[-e, -e, -e], [-e, e, -e], [e, e, -e], [e, -e, -e]],
+          pz: [[-e, -e, e], [-e, e, e], [e, e, e], [e, -e, e]],
+        };
+        Object.entries(edgeDefs).forEach(([id, pts]) => {
+          const geo = new THREE.BufferGeometry().setFromPoints(
+            pts.map(([x, y, z]) => new THREE.Vector3(x, y, z))
+          );
+          const loop = new THREE.LineLoop(geo, new THREE.LineBasicMaterial({
+            color: 0xfde047, transparent: true, opacity: 0,
+            depthWrite: false, depthTest: false,
+          }));
+          loop.renderOrder = 21;
+          group.add(loop);
+          faceEdgeLoops[id] = loop;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060a12);
+        scene.fog = new THREE.FogExp2(0x060a12, 0.08);
+
+        const w = wrap.clientWidth;
+        const h = wrap.clientHeight;
+        camera = new THREE.PerspectiveCamera(42, w / h, 0.05, 50);
+        camera.position.set(0, 0, zoom);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.65));
+        const key = new THREE.DirectionalLight(0xffffff, 1.0);
+        key.position.set(3, 4, 5);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x22d3ee, 0.7, 12);
+        rim.position.set(-3, -2, 4);
+        scene.add(rim);
+
+        gasGroup = new THREE.Group();
+        scene.add(gasGroup);
+
+        const cubeGroup = new THREE.Group();
+        buildCubeContainer(cubeGroup);
+        gasGroup.add(cubeGroup);
+
+        trailGroup = new THREE.Group();
+        gasGroup.add(trailGroup);
+
+        vectorGroup = new THREE.Group();
+        gasGroup.add(vectorGroup);
+        initVectorArrows();
+
+        const pGeo = new THREE.SphereGeometry(0.018, 10, 10);
+        const pMat = new THREE.MeshPhysicalMaterial({
+          color: species().color, emissive: species().color, emissiveIntensity: 0.55,
+          metalness: 0.1, roughness: 0.35,
+        });
+        instMesh = new THREE.InstancedMesh(pGeo, pMat, MAX_N);
+        instMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        gasGroup.add(instMesh);
+
+        focusMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.022, 14, 14),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xfde047, emissive: 0xfbbf24, emissiveIntensity: 0.9,
+            metalness: 0.05, roughness: 0.25, transparent: true, opacity: 0.95,
+          })
+        );
+        focusMesh.renderOrder = 2;
+        gasGroup.add(focusMesh);
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-1.1, Math.min(1.1, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = Math.max(2.2, Math.min(5.5, zoom + e.deltaY * 0.004));
+        }, { passive: false });
+
+        window.addEventListener("resize", () => {
+          const rw = wrap.clientWidth, rh = wrap.clientHeight;
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+          renderer.setSize(rw, rh);
+          refreshLayoutSizes();
+        });
+      }
+
+      function syncThreeVisuals() {
+        if (!instMesh) return;
+        const mat4 = new THREE.Matrix4();
+        const col = new THREE.Color(species().color);
+        instMesh.material.color.copy(col);
+        instMesh.material.emissive.copy(col);
+        instMesh.material.emissiveIntensity = 0.32 + 0.48 * Math.min(1.6, tempVisualFactor());
+
+        state.parts.forEach((p, i) => {
+          const s = toScene(p.px, p.py, p.pz);
+          mat4.makeTranslation(s.x, s.y, s.z);
+          instMesh.setMatrixAt(i, mat4);
+        });
+        instMesh.count = state.N;
+        instMesh.instanceMatrix.needsUpdate = true;
+
+        const tp = trackedParticle();
+        if (tp && focusMesh) {
+          const fs = toScene(tp.px, tp.py, tp.pz);
+          focusMesh.position.set(fs.x, fs.y, fs.z);
+          focusMesh.visible = true;
+        }
+
+        if (state.showTrail && trailGroup) {
+          let li = 0;
+          state.parts.forEach((p) => {
+            if (!p.trail || li >= trailGroup.children.length) return;
+            const line = trailGroup.children[li];
+            const pos = line.geometry.attributes.position;
+            const n = p.trail.length;
+            if (n < 2) {
+              line.visible = false;
+              li += 1;
+              return;
+            }
+            const count = Math.min(n, TRAIL_LEN);
+            for (let j = 0; j < count; j += 1) {
+              const pt = p.trail[n - count + j];
+              const sc = toScene(pt.px, pt.py, pt.pz);
+              pos.setXYZ(j, sc.x, sc.y, sc.z);
+            }
+            pos.needsUpdate = true;
+            line.geometry.setDrawRange(0, count);
+            line.visible = state.showTrail;
+            line.material.opacity = 0.28 + 0.42 * Math.min(1.5, tempVisualFactor());
+            li += 1;
+          });
+        } else if (trailGroup) {
+          trailGroup.children.forEach((line) => { line.visible = false; });
+        }
+
+        syncVelocityArrows();
+      }
+
+      function renderThree(dt) {
+        if (!renderer) return;
+        clock += dt;
+        if (state.autoSpin && !dragging) rotY += dt * 0.18;
+        gasGroup.rotation.x = rotX;
+        gasGroup.rotation.y = rotY;
+        camera.position.z = zoom;
+        camera.lookAt(0, 0, 0);
+        decayFaceGlow(dt);
+        syncThreeVisuals();
+        renderer.render(scene, camera);
+      }
+
+      function drawMiniStep(step, dt) {
+        miniT += dt;
+        const w = miniCanvas.getBoundingClientRect().width || 300;
+        const h = miniCanvas.getBoundingClientRect().height || 148;
+        const dpr = window.devicePixelRatio || 1;
+        miniCanvas.width = Math.round(w * dpr);
+        miniCanvas.height = Math.round(h * dpr);
+        mCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        mCtx.clearRect(0, 0, w, h);
+        mCtx.fillStyle = "#060a12";
+        mCtx.fillRect(0, 0, w, h);
+
+        const bx = 16, by = 12, bw = w - 32, bh = h - 24;
+        mCtx.strokeStyle = "rgba(6,182,212,0.45)";
+        mCtx.lineWidth = 1.5;
+        mCtx.strokeRect(bx, by, bw, bh);
+
+        const drawers = [
+          drawMiniStep1, drawMiniStep2, drawMiniStep3, drawMiniStep4, drawMiniStep5,
+        ];
+        if (drawers[step]) drawers[step](bx, by, bw, bh);
+      }
+
+      function drawArrow(x1, y1, x2, y2, color, label, dashed) {
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len;
+        mCtx.save();
+        if (dashed) mCtx.setLineDash([4, 3]);
+        mCtx.strokeStyle = color;
+        mCtx.fillStyle = color;
+        mCtx.lineWidth = 2;
+        mCtx.beginPath();
+        mCtx.moveTo(x1, y1);
+        mCtx.lineTo(x2, y2);
+        mCtx.stroke();
+        mCtx.beginPath();
+        mCtx.moveTo(x2, y2);
+        mCtx.lineTo(x2 - ux * 7 + uy * 4, y2 - uy * 7 - ux * 4);
+        mCtx.lineTo(x2 - ux * 7 - uy * 4, y2 - uy * 7 + ux * 4);
+        mCtx.closePath();
+        mCtx.fill();
+        mCtx.restore();
+        if (label) {
+          mCtx.font = "600 9px sans-serif";
+          mCtx.fillStyle = color;
+          mCtx.fillText(label, x2 + ux * 6, y2 + uy * 6 - 4);
+        }
+      }
+
+      function drawParticle(x, y, r, color) {
+        mCtx.fillStyle = color;
+        mCtx.beginPath();
+        mCtx.arc(x, y, r, 0, Math.PI * 2);
+        mCtx.fill();
+      }
+
+      // ステップ1: 1分子の跳ね返り → Δp = 2mv_x（壁が受け取る運動量）
+      function drawMiniStep1(bx, by, bw, bh) {
+        const cy = by + bh * 0.52;
+        const wallX = bx + bw * 0.88;
+        const arrowLen = Math.min(28, bw * 0.11);
+        const phase = (miniT * 0.55) % 1;
+        const hit = phase > 0.72;
+        const t = hit ? 1 - (phase - 0.72) / 0.28 : phase / 0.72;
+        const px = hit
+          ? wallX - 10 - t * bw * 0.36
+          : bx + bw * 0.12 + t * (wallX - bx - bw * 0.12 - 10);
+
+        mCtx.strokeStyle = "#fb923c";
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(wallX, by + 8);
+        mCtx.lineTo(wallX, by + bh - 8);
+        mCtx.stroke();
+        mCtx.fillStyle = "rgba(251,146,60,0.25)";
+        mCtx.fillRect(wallX - 3, by + 8, 6, bh - 16);
+
+        drawParticle(px, cy, 6, "#fde047");
+
+        if (!hit) {
+          drawArrow(px + 8, cy, px + 8 + arrowLen, cy, "#67e8f9", "+mv_x");
+          mCtx.fillStyle = "#94a3b8";
+          mCtx.font = "9px sans-serif";
+          mCtx.fillText("衝突前：p = +mv_x（壁へ向かう）", bx + 8, by + bh - 6);
+        } else {
+          drawArrow(px + 8, cy - 14, px + 8 + arrowLen, cy - 14, "rgba(103,232,249,0.55)", "+mv_x", true);
+          drawArrow(px - 8, cy, px - 8 - arrowLen, cy, "#67e8f9", "−mv_x");
+          drawArrow(wallX + 4, cy, wallX + 4 + arrowLen * 2, cy, "#fb923c", "Δp = 2mv_x");
+          mCtx.fillStyle = "#fde047";
+          mCtx.font = "600 9px sans-serif";
+          mCtx.fillText("(+mv_x) → (−mv_x)", px - arrowLen - 4, cy + 18);
+          mCtx.fillStyle = "#94a3b8";
+          mCtx.font = "9px sans-serif";
+          mCtx.fillText("跳ね返りで壁は +2mv_x 分の運動量を受け取る", bx + 8, by + bh - 6);
+        }
+      }
+
+      // ステップ2: 往復 2L → 衝突頻度 v_x/(2L)
+      function drawMiniStep2(bx, by, bw, bh) {
+        const cy = by + bh * 0.5;
+        const xL = bx + bw * 0.1, xR = bx + bw * 0.9;
+        const phase = (miniT * 0.45) % 1;
+        const toRight = phase < 0.5;
+        const t = toRight ? phase * 2 : (phase - 0.5) * 2;
+        const px = toRight ? xL + t * (xR - xL) : xR - t * (xR - xL);
+
+        mCtx.strokeStyle = "rgba(6,182,212,0.6)";
+        mCtx.lineWidth = 2;
+        [xL, xR].forEach((x) => {
+          mCtx.beginPath();
+          mCtx.moveTo(x, by + 10);
+          mCtx.lineTo(x, by + bh - 10);
+          mCtx.stroke();
+        });
+        mCtx.setLineDash([4, 4]);
+        mCtx.strokeStyle = "rgba(148,163,184,0.5)";
+        mCtx.beginPath();
+        mCtx.moveTo(xL, cy + 18);
+        mCtx.lineTo(xR, cy + 18);
+        mCtx.stroke();
+        mCtx.setLineDash([]);
+        mCtx.fillStyle = "#94a3b8";
+        mCtx.font = "9px sans-serif";
+        mCtx.fillText("2L", (xL + xR) / 2 - 8, cy + 30);
+        mCtx.fillText("往復時間 = 2L/v_x", bx + 8, by + 16);
+
+        drawParticle(px, cy, 5, "#fde047");
+        drawArrow(px, cy - 14, px + (toRight ? 28 : -28), cy - 14, "#67e8f9", "v_x");
+        mCtx.fillStyle = "#f9a8d4";
+        mCtx.font = "600 10px sans-serif";
+        mCtx.fillText("1秒あたり ≈ v_x/(2L) 回", bx + bw - 108, by + bh - 8);
+      }
+
+      // ステップ3: 多数分子の Δp の積み重ね → 力 F
+      function drawMiniStep3(bx, by, bw, bh) {
+        const wallX = bx + bw * 0.86;
+        mCtx.strokeStyle = "#fb923c";
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(wallX, by + 8);
+        mCtx.lineTo(wallX, by + bh - 8);
+        mCtx.stroke();
+
+        const hits = 5;
+        for (let i = 0; i < hits; i += 1) {
+          const phase = (miniT * 0.9 + i * 0.17) % 1;
+          const y = by + bh * (0.22 + i * 0.13);
+          const px = bx + bw * (0.15 + phase * 0.62);
+          const near = phase > 0.78;
+          drawParticle(near ? wallX - 10 : px, y, 4, near ? "#fde047" : "#67e8f9");
+          if (near) {
+            const pulse = 1 - (phase - 0.78) / 0.22;
+            drawArrow(wallX + 4, y, wallX + 4 + 18 * pulse, y, `rgba(251,146,60,${0.4 + pulse * 0.6})`, "");
+          }
+        }
+        drawArrow(wallX + 6, by + bh * 0.42, wallX + 46, by + bh * 0.42, "#f472b6", "F");
+        mCtx.fillStyle = "#94a3b8";
+        mCtx.font = "9px sans-serif";
+        mCtx.fillText("Δt 秒の ΣΔp = 壁への力 F", bx + 8, by + bh - 6);
+      }
+
+      function drawLabel(text, x, y, color, size, align) {
+        mCtx.fillStyle = color || "#cbd5e1";
+        mCtx.font = `${size || 9}px sans-serif`;
+        mCtx.textAlign = align || "left";
+        mCtx.fillText(text, x, y);
+        mCtx.textAlign = "left";
+      }
+
+      function drawLabelBold(text, x, y, color, size) {
+        mCtx.fillStyle = color || "#e2e8f0";
+        mCtx.font = `700 ${size || 10}px sans-serif`;
+        mCtx.fillText(text, x, y);
+      }
+
+      function drawFlowDown(x, y1, y2, label) {
+        mCtx.strokeStyle = "rgba(148,163,184,0.55)";
+        mCtx.fillStyle = "rgba(148,163,184,0.55)";
+        mCtx.lineWidth = 1.5;
+        mCtx.beginPath();
+        mCtx.moveTo(x, y1);
+        mCtx.lineTo(x, y2);
+        mCtx.stroke();
+        mCtx.beginPath();
+        mCtx.moveTo(x, y2);
+        mCtx.lineTo(x - 4, y2 - 6);
+        mCtx.lineTo(x + 4, y2 - 6);
+        mCtx.closePath();
+        mCtx.fill();
+        if (label) drawLabel(label, x + 6, (y1 + y2) / 2 + 3, "#94a3b8", 8);
+      }
+
+      // ステップ4: まず P=F/A → 次に 3方向のうち1方向 → ⅓
+      function drawMiniStep4(bx, by, bw, bh) {
+        const midX = bx + bw * 0.5;
+        mCtx.strokeStyle = "rgba(244,114,182,0.35)";
+        mCtx.lineWidth = 1;
+        mCtx.setLineDash([3, 3]);
+        mCtx.beginPath();
+        mCtx.moveTo(midX, by + 6);
+        mCtx.lineTo(midX, by + bh - 6);
+        mCtx.stroke();
+        mCtx.setLineDash([]);
+
+        // ── 左: P = F/A ──
+        const lx = bx + 8, lw = bw * 0.46;
+        drawLabelBold("① 力を面積で割る", lx, by + 14, "#fdba74", 9);
+        const wallX = lx + lw * 0.72;
+        const cy = by + bh * 0.46;
+        mCtx.strokeStyle = "#fb923c";
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(wallX, by + 28);
+        mCtx.lineTo(wallX, by + bh - 22);
+        mCtx.stroke();
+        mCtx.fillStyle = "rgba(251,146,60,0.15)";
+        mCtx.fillRect(wallX - 2, by + 28, 4, bh - 50);
+
+        const pulse = 0.65 + 0.35 * Math.sin(miniT * 2.5);
+        drawArrow(wallX + 4, cy, wallX + 4 + 30 * pulse, cy, "#f472b6", "F");
+        drawLabel("壁が受け取る力", wallX - lw * 0.62, cy - 8, "#94a3b8", 8);
+
+        const gy = by + bh - 38;
+        mCtx.strokeStyle = "rgba(251,146,60,0.5)";
+        mCtx.lineWidth = 1;
+        for (let i = 0; i < 4; i += 1) {
+          mCtx.strokeRect(lx + 4 + i * 14, gy, 12, 14);
+        }
+        drawLabel("面積 A", lx + 10, gy + 26, "#94a3b8", 8);
+        drawFlowDown(lx + lw * 0.45, gy + 32, gy + 44, "÷A");
+        mCtx.fillStyle = "rgba(6,182,212,0.15)";
+        mCtx.strokeStyle = "#22d3ee";
+        mCtx.lineWidth = 1.5;
+        mCtx.fillRect(lx + 2, by + bh - 18, lw - 8, 14);
+        mCtx.strokeRect(lx + 2, by + bh - 18, lw - 8, 14);
+        drawLabelBold("P = F / A", lx + 10, by + bh - 7, "#7dd3fc", 10);
+
+        // ── 右: なぜ ⅓？ ──
+        const rx = midX + 10, rw = bw * 0.46;
+        drawLabelBold("② 3方向に動く → ⅓", rx, by + 14, "#fdba74", 9);
+        const cx = rx + rw * 0.42, ccy = by + bh * 0.48;
+        drawParticle(cx, ccy, 5, "#fde047");
+        const rWall = rx + rw - 10;
+        mCtx.strokeStyle = "#fb923c";
+        mCtx.lineWidth = 2;
+        mCtx.beginPath();
+        mCtx.moveTo(rWall, ccy - 22);
+        mCtx.lineTo(rWall, ccy + 22);
+        mCtx.stroke();
+        drawArrow(cx, ccy, rWall - 6, ccy, "#fb923c", "vx");
+        drawLabel("x壁を押す", cx + 8, ccy + 14, "#fb923c", 8);
+        drawArrow(cx, ccy, cx, ccy - 28, "rgba(148,163,184,0.45)", "");
+        drawLabel("vy", cx + 4, ccy - 30, "#64748b", 8);
+        drawArrow(cx, ccy, cx - 22, ccy + 14, "rgba(148,163,184,0.45)", "");
+        drawLabel("vz", cx - 34, ccy + 18, "#64748b", 8);
+
+        drawLabel("⟨v²⟩ = vx²+vy²+vz²", rx + 2, by + bh - 38, "#94a3b8", 8);
+        drawLabel("x壁: vx²/3 だけ効く", rx + 2, by + bh - 26, "#94a3b8", 8);
+        mCtx.fillStyle = "rgba(244,114,182,0.12)";
+        mCtx.strokeStyle = "#f472b6";
+        mCtx.lineWidth = 1.5;
+        mCtx.fillRect(rx + 2, by + bh - 16, rw - 6, 14);
+        mCtx.strokeRect(rx + 2, by + bh - 16, rw - 6, 14);
+        drawLabelBold("∴ P = ⅓ n m ⟨v²⟩", rx + 8, by + bh - 5, "#f9a8d4", 9);
+      }
+
+      // ステップ5: T → v → ½mv² = (3/2)k_B T
+      function drawMiniStep5(bx, by, bw, bh) {
+        const st = computeStats();
+        const theoryEk = (3 / 2) * KB * state.T;
+        const tNorm = Math.max(0.12, Math.min(1, (state.T - 100) / 700));
+        const speedScale = 0.35 + 0.65 * tNorm;
+
+        drawLabelBold("温度 = 分子の運動の激しさ", bx + 8, by + 14, "#bae6fd", 9);
+
+        // 低温 vs 今の温度（2パネル）
+        const pW = (bw - 20) / 2;
+        [[bx + 6, "100 K（低温）", 0.35, false], [bx + 14 + pW, `今 ${fmt(state.T, 0)} K`, speedScale, true]].forEach(([px, label, spd, active]) => {
+          const py = by + 22, ph = bh * 0.38;
+          mCtx.fillStyle = active ? "rgba(251,146,60,0.1)" : "rgba(56,189,248,0.06)";
+          mCtx.strokeStyle = active ? "rgba(251,146,60,0.45)" : "rgba(56,189,248,0.25)";
+          mCtx.lineWidth = 1.5;
+          mCtx.fillRect(px, py, pW, ph);
+          mCtx.strokeRect(px, py, pW, ph);
+          drawLabelBold(label, px + 6, py + 12, active ? "#fed7aa" : "#bae6fd", 8);
+          const pcy = py + ph * 0.55;
+          const phase = active ? (miniT * spd * 1.2) % 1 : (miniT * 0.25) % 1;
+          const ppx = px + 12 + phase * (pW - 28);
+          drawParticle(ppx, pcy, active ? 5 : 4, active ? "#fde047" : "#67e8f9");
+          const arrLen = 14 + 28 * spd;
+          drawArrow(ppx, pcy - 10, ppx + arrLen, pcy - 10, active ? "#fb923c" : "#38bdf8", active ? "v大" : "v小");
+          drawLabel(active ? "速い・激しい" : "遅い・穏やか", px + 6, py + ph - 6, "#94a3b8", 8);
+        });
+
+        // 式の流れ（矢印でつなぐ）
+        const fy = by + bh * 0.68;
+        const steps = ["T", "v", "½mv²", "⟨E_k⟩"];
+        const stepW = (bw - 16) / steps.length;
+        steps.forEach((s, i) => {
+          const sx = bx + 8 + i * stepW;
+          mCtx.fillStyle = "rgba(56,189,248,0.12)";
+          mCtx.strokeStyle = "rgba(56,189,248,0.4)";
+          mCtx.lineWidth = 1;
+          mCtx.fillRect(sx, fy, stepW - 10, 18);
+          mCtx.strokeRect(sx, fy, stepW - 10, 18);
+          drawLabelBold(s, sx + (stepW - 10) / 2 - (s.length * 2.5), fy + 13, "#7dd3fc", 9);
+          if (i < steps.length - 1) {
+            drawLabel("→", sx + stepW - 8, fy + 13, "#64748b", 10);
+          }
+        });
+
+        mCtx.fillStyle = "rgba(253,224,71,0.1)";
+        mCtx.strokeStyle = "#fde047";
+        mCtx.lineWidth = 1.5;
+        mCtx.fillRect(bx + 8, by + bh - 20, bw - 16, 16);
+        mCtx.strokeRect(bx + 8, by + bh - 20, bw - 16, 16);
+        const ekSim = fmtSci(st.ekMean);
+        const ekTh = fmtSci(theoryEk);
+        drawLabelBold(`½m⟨v²⟩ = (3/2)k_BT  →  今: ${ekSim} J ≈ 理論 ${ekTh} J`, bx + 14, by + bh - 7, "#fde047", 8);
+      }
+
+      function buildStepButtons() {
+        const wrapEl = document.getElementById("stepBtns");
+        wrapEl.innerHTML = "";
+        STEPS.forEach((_, i) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "step-btn"; b.textContent = String(i + 1);
+          b.addEventListener("click", () => setStep(i));
+          wrapEl.appendChild(b);
+        });
+      }
+
+      function setStep(i) {
+        state.step = Math.max(0, Math.min(STEPS.length - 1, i));
+        miniT = 0;
+        document.querySelectorAll(".step-btn").forEach((b, j) => b.classList.toggle("active", j === state.step));
+        const s = STEPS[state.step];
+        document.getElementById("deriveTitle").textContent = s.title;
+        document.getElementById("deriveEqn").textContent = s.eqn;
+        document.getElementById("deriveText").textContent = s.text;
+        document.getElementById("btnPrev").disabled = state.step === 0;
+        document.getElementById("btnNext").disabled = state.step === STEPS.length - 1;
+        drawMiniStep(state.step, 0);
+      }
+
+      function chartBase() {
+        return {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 10 } } },
+        };
+      }
+
+      function buildCharts() {
+        const hist = histogramData();
+        histChart = new Chart(document.getElementById("histChart"), {
+          type: "bar",
+          data: {
+            datasets: [
+              {
+                label: "分子の数（速さビン）",
+                data: hist.counts.map((c, i) => ({ x: (i + 0.5) * hist.binW, y: c })),
+                backgroundColor: "rgba(56,189,248,0.55)", borderColor: "#38bdf8", borderWidth: 1,
+                parsing: false, order: 2,
+              },
+              {
+                label: "理論（マックスウェル）",
+                data: maxwellBins(state.T, species().m, hist.binW, state.N),
+                type: "line", parsing: false, borderColor: "#f472b6", borderWidth: 2.5,
+                pointRadius: 0, tension: 0.35, order: 1,
+              },
+            ],
+          },
+          options: {
+            ...chartBase(), parsing: false,
+            scales: {
+              x: { type: "linear", min: 0, max: hist.vmax, title: { display: true, text: "速さ v（m/s）", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+              y: { type: "linear", title: { display: true, text: "分子数", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" }, beginAtZero: true },
+            },
+          },
+        });
+
+        const eTheory = [];
+        for (let t = 100; t <= 800; t += 20) eTheory.push({ x: t, y: (3 / 2) * KB * t });
+        eChart = new Chart(document.getElementById("eChart"), {
+          type: "scatter",
+          data: {
+            datasets: [
+              { label: "(3/2)k_B T", data: eTheory, borderColor: "#38bdf8", showLine: true, pointRadius: 0, borderWidth: 2.5 },
+              { label: "今の ⟨E_k⟩", data: [{ x: state.T, y: computeStats().ekMean }], backgroundColor: "#fde047", borderColor: "#fff", borderWidth: 2, pointRadius: 9, showLine: false },
+              { label: "記録", data: state.eTrail, backgroundColor: "rgba(244,114,182,0.7)", pointRadius: 4, showLine: false },
+            ],
+          },
+          options: {
+            ...chartBase(), parsing: false,
+            scales: {
+              x: { type: "linear", min: 100, max: 800, title: { display: true, text: "T（K）", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+              y: { type: "linear", title: { display: true, text: "⟨E_k⟩（J）", color: "#94a3b8" }, ticks: { color: "#94a3b8", callback: (v) => fmtSci(v) }, grid: { color: "rgba(148,163,184,0.08)" } },
+            },
+          },
+        });
+      }
+
+      function refreshCharts() {
+        if (!histChart) return;
+        const hist = histogramData();
+        histChart.options.scales.x.max = hist.vmax;
+        histChart.data.datasets[0].data = hist.counts.map((c, i) => ({ x: (i + 0.5) * hist.binW, y: c }));
+        histChart.data.datasets[1].data = maxwellBins(state.T, species().m, hist.binW, state.N);
+        histChart.update("none");
+        const st = computeStats();
+        eChart.data.datasets[1].data = [{ x: state.T, y: st.ekMean }];
+        eChart.data.datasets[2].data = state.eTrail;
+        eChart.update("none");
+      }
+
+      function collisionPressure(el) {
+        return state.momTransfer / (6 * L_M * L_M * el);
+      }
+
+      function updateHsCallout() {
+        const st = computeStats();
+        let msg = "";
+        if (state.T < 200) msg = "低温：分子はゆっくり。壁への衝突が少なく、圧力 P も小さい。";
+        else if (state.T > 450) msg = "高温：分子が速く、軌跡が長く伸びる。衝突が増え P も大きい。";
+        else msg = "理想気体：分子は直進と跳ね返りをくり返す。黄色＝1粒の p=mv を追跡。黄色分子が当たった面だけが光る。";
+        if (state.collRate > 600) msg += " いま壁への衝突が多い状態です。";
+        document.getElementById("hsCallout").textContent = "💡 " + msg;
+      }
+
+      function updateUI(el) {
+        const st = computeStats();
+        const pColl = el > 0 ? collisionPressure(el) : 0;
+        const sp = species();
+        const theoryEk = (3 / 2) * KB * state.T;
+        const err = Math.abs(st.ekMean - theoryEk) / theoryEk * 100;
+
+        document.getElementById("dVmean").textContent = `${fmt(st.vMean, 0)} m/s`;
+        document.getElementById("dVsq").textContent = `${fmt(st.v2Mean / 1e6, 2)}×10⁶ m²/s²`;
+        document.getElementById("dEk").textContent = `${fmtSci(st.ekMean)} J`;
+        document.getElementById("dPformula").textContent = fmtKPa(st.pFormula);
+        document.getElementById("dPcoll").textContent = fmtKPa(pColl);
+        document.getElementById("dNdens").textContent = `${fmtSci(st.ndens)} /m³`;
+        document.getElementById("hudT").textContent = `T = ${fmt(state.T, 0)} K（${fmt(state.T - 273.15, 0)} ℃）`;
+        const hudEl = document.getElementById("hudT");
+        hudEl.classList.toggle("hot", state.T >= 400);
+        hudEl.classList.toggle("cold", state.T <= 150);
+        document.getElementById("hudColl").textContent = `壁衝突 ${fmt(state.collRate, 0)} 回/s`;
+        document.getElementById("hudN").textContent = `N = ${state.N}`;
+        document.getElementById("tVal").textContent = `${fmt(state.targetT, 0)} K`;
+        document.getElementById("nVal").textContent = String(state.N);
+        document.getElementById("mVal").textContent = sp.label;
+
+        const tr = trackedParticle();
+        const tm = tr ? particleMomentum(tr) : { v: 0, pMag: 0, ek: 0 };
+        document.getElementById("dTrackV").textContent = `${fmt(tm.v, 0)} m/s`;
+        document.getElementById("dTrackP").textContent = `${fmtSci(tm.pMag)} kg·m/s`;
+        document.getElementById("dTrackEk").textContent = `${fmtSci(tm.ek)} J`;
+        const faceText = state.lastHitAge < 1.8 ? state.lastHitFace : "—";
+        document.getElementById("dTrackFace").textContent = faceText;
+        const dpText = state.lastHitAge < 1.2
+          ? `${fmtSci(state.lastDeltaP)} kg·m/s（v⊥=${fmt(state.lastVperp, 0)} m/s）`
+          : "壁に当たると表示";
+        document.getElementById("dTrackDp").textContent = dpText;
+
+        document.getElementById("readoutMsg").textContent =
+          `1 粒：|p|=mv=${fmtSci(tm.pMag)}。全 N=${state.N} 粒の Δp の積み重ね → P≈${fmtKPa(st.pFormula)}（理論式 ⅓nm⟨v²⟩ と一致）。`;
+
+        document.getElementById("pBarFill").style.width = `${Math.min(100, (state.collRate / 800) * 100)}%`;
+        document.getElementById("mainFormula").textContent =
+          `P = ⅓nm⟨v²⟩ ≈ ${fmtKPa(st.pFormula)}（n=${fmtSci(st.ndens)}, m=${sp.label}）`;
+
+        if (state.eTrail.length === 0 || Math.abs(state.eTrail[state.eTrail.length - 1].x - state.T) > 12) {
+          state.eTrail.push({ x: state.T, y: st.ekMean });
+          if (state.eTrail.length > 22) state.eTrail.shift();
+        } else state.eTrail[state.eTrail.length - 1] = { x: state.T, y: st.ekMean };
+
+        updateHsCallout();
+      }
+
+      function onControlChange() {
+        syncTemperatureFromControl();
+        state.targetT = Number(tSlider.value);
+        document.querySelectorAll(".tp").forEach((b) => {
+          b.classList.toggle("active", Number(b.dataset.t) === state.targetT);
+        });
+        updateHudPartial();
+        const newN = Number(nSlider.value);
+        if (newN !== state.N) { state.N = newN; initParticles(); rebuildTrails(); }
+        if (mSelect.value !== state.species) {
+          state.species = mSelect.value;
+          initParticles();
+          rebuildTrails();
+        }
+        state.deriveOn = deriveToggle.checked;
+        document.querySelector(".area-derive").style.opacity = state.deriveOn ? "1" : "0.55";
+        refreshCharts();
+      }
+
+      function tick(now) {
+        if (lastFrame == null) lastFrame = now;
+        const dt = Math.min(0.04, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+
+        rescaleTemperature(dt);
+        updateParticles(dt);
+        state.lastHitAge += dt;
+        renderThree(dt);
+
+        if (state.simTime - state.lastRateT >= 0.45) {
+          const el = state.simTime - state.lastRateT;
+          state.collRate = state.collCount / el;
+          updateUI(el);
+          refreshCharts();
+          state.collCount = 0;
+          state.momTransfer = 0;
+          state.lastRateT = state.simTime;
+        }
+        drawMiniStep(state.step, dt);
+        requestAnimationFrame(tick);
+      }
+
+      document.getElementById("btnTrail").addEventListener("click", function () {
+        state.showTrail = !state.showTrail;
+        this.classList.toggle("active", state.showTrail);
+        if (trailGroup) trailGroup.visible = state.showTrail;
+      });
+      document.getElementById("btnVectors").addEventListener("click", function () {
+        state.showVectors = !state.showVectors;
+        this.classList.toggle("active", state.showVectors);
+        if (vectorGroup) vectorGroup.visible = state.showVectors;
+      });
+      document.getElementById("btnSpin").addEventListener("click", function () {
+        state.autoSpin = !state.autoSpin;
+        this.classList.toggle("active", state.autoSpin);
+      });
+      tSlider.addEventListener("input", onControlChange);
+      nSlider.addEventListener("input", onControlChange);
+      mSelect.addEventListener("change", onControlChange);
+      deriveToggle.addEventListener("change", () => { onControlChange(); if (deriveToggle.checked) setStep(state.step); });
+      document.getElementById("btnPrev").addEventListener("click", () => setStep(state.step - 1));
+      document.getElementById("btnNext").addEventListener("click", () => setStep(state.step + 1));
+      document.querySelectorAll(".tp").forEach((b) => {
+        b.addEventListener("click", () => {
+          tSlider.value = b.dataset.t;
+          onControlChange();
+        });
+      });
+
+      function refreshLayoutSizes() {
+        if (renderer && wrap) {
+          const rw = Math.max(1, wrap.clientWidth);
+          const rh = Math.max(1, wrap.clientHeight);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+          renderer.setSize(rw, rh);
+        }
+        if (histChart) histChart.resize();
+        if (eChart) eChart.resize();
+      }
+
+      function boot() {
+        if (typeof THREE === "undefined" || typeof Chart === "undefined") {
+          document.getElementById("ctrlMsg").textContent = "Three.js または Chart.js を読み込めません。";
+          return;
+        }
+        buildStepButtons();
+        setStep(0);
+        state.targetT = Number(tSlider.value);
+        state.N = Number(nSlider.value);
+        initThree();
+        initParticles();
+        rebuildTrails();
+        buildCharts();
+        refreshLayoutSizes();
+        updateUI(0.45);
+        state.lastRateT = state.simTime;
+        drawMiniStep(state.step, 0);
+        requestAnimationFrame(() => {
+          refreshLayoutSizes();
+          requestAnimationFrame(tick);
+        });
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+      else boot();
+    })();
+  </script>
+</body>
+</html>

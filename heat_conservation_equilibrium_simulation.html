@@ -437,8 +437,8 @@
           <div class="object-block b">
             <p class="object-title b">物体 B（右）</p>
             <div class="material-row" id="matRowB">
-              <button type="button" class="mat-btn active" data-obj="b" data-mat="water">水 c=4.2</button>
-              <button type="button" class="mat-btn" data-obj="b" data-mat="iron">鉄 c=0.45</button>
+              <button type="button" class="mat-btn" data-obj="b" data-mat="water">水 c=4.2</button>
+              <button type="button" class="mat-btn active" data-obj="b" data-mat="iron">鉄 c=0.45</button>
               <button type="button" class="mat-btn" data-obj="b" data-mat="aluminum">アルミ c=0.9</button>
               <button type="button" class="mat-btn" data-obj="b" data-mat="air">空気 c=1.0</button>
             </div>
@@ -522,17 +522,15 @@
       const K_V = 0.5;             // 粒子速度スケール k_v
       const K_OFFSET = 273.15;
       const EQUILIB_EPS = 0.05;    // 熱平衡判定（℃）
-      const SOLID_COLS = 5;
-      const SOLID_ROWS = 4;
       const GAS_COUNT = 20;
       const PARTICLE_R = 4;
       const CHART_SAMPLE_DT = 0.08;
       const HEAT_DOT_MAX = 12;
 
       const MATERIALS = {
-        water: { name: "水", c: 4.2, color: "#38bdf8" },
-        iron: { name: "鉄", c: 0.45, color: "#94a3b8" },
-        aluminum: { name: "アルミ", c: 0.9, color: "#e2e8f0" },
+        water: { name: "水", c: 4.2, color: "#38bdf8", iceColor: "#e0f2fe", meltAt: 0 },
+        iron: { name: "鉄", c: 0.45, color: "#64748b", bond: "#94a3b8" },
+        aluminum: { name: "アルミ", c: 0.9, color: "#cbd5e1", bond: "#e2e8f0" },
         air: { name: "空気", c: 1.0, color: "#a5f3fc" },
       };
 
@@ -571,15 +569,31 @@
 
       function cA() { return MATERIALS[state.matA].c; }
       function cB() { return MATERIALS[state.matB].c; }
-      function isGas(matKey) { return matKey === "air"; }
 
-      // 固体用：温度が高いほど振動 amplitude / 周波数が大きい
-      function solidMotionParams(celsius) {
-        const s = speedFromTemp(celsius);
-        return {
-          amp: 1.5 + s * 0.55,
-          omega: 3 + s * 1.4,
-        };
+      // 物質と温度から粒子モデル（気体 / 液体 / 金属固体 / 氷）を決定
+      function particleMode(matKey, temp) {
+        if (matKey === "air") return "gas";
+        if (matKey === "water") return temp <= MATERIALS.water.meltAt ? "ice" : "liquid";
+        return "metal";
+      }
+
+      function phaseLabel(matKey, temp) {
+        const mode = particleMode(matKey, temp);
+        if (mode === "gas") return "気体";
+        if (mode === "liquid") return "液体";
+        if (mode === "ice") return "固体（氷）";
+        return "固体";
+      }
+
+      // 金属・氷：格子点付近の微小振動（液体のような大きな移動はしない）
+      function latticeMotionParams(temp, cellSize, kind) {
+        const s = speedFromTemp(temp);
+        if (kind === "metal") {
+          const amp = Math.min(cellSize * 0.07, 0.6 + s * 0.06);
+          return { amp, omega: 2.5 + s * 0.55 };
+        }
+        const amp = Math.min(cellSize * 0.1, 1.0 + s * 0.18);
+        return { amp, omega: 3 + s * 0.9 };
       }
 
       // 平衡温度（接触前の理論値）
@@ -620,17 +634,30 @@
         particlesB = buildParticles("b", state.matB, state.TB);
       }
 
-      function buildParticles(side, matKey, temp) {
-        const bounds = regionBounds(side);
-        if (isGas(matKey)) return buildGasParticles(bounds, side, temp);
-        return buildSolidParticles(bounds, side);
+      function ensureParticleModes() {
+        const wantA = particleMode(state.matA, state.TA);
+        const wantB = particleMode(state.matB, state.TB);
+        if (!particlesA.length || particlesA[0].mode !== wantA) {
+          particlesA = buildParticles("a", state.matA, state.TA);
+        }
+        if (!particlesB.length || particlesB[0].mode !== wantB) {
+          particlesB = buildParticles("b", state.matB, state.TB);
+        }
       }
 
-      // 固体：格子点の周りで微振動（分子の熱振動）
-      function buildSolidParticles(bounds, side) {
+      function buildParticles(side, matKey, temp) {
+        const bounds = regionBounds(side);
+        const mode = particleMode(matKey, temp);
+        if (mode === "gas") return buildGasParticles(bounds, side, temp);
+        if (mode === "liquid") return buildLiquidParticles(bounds, side, temp);
+        return buildLatticeParticles(bounds, side, mode, matKey);
+      }
+
+      // 金属・氷：固定格子 + 結合線（位置は平衡点附近のみ振動）
+      function buildLatticeParticles(bounds, side, mode, matKey) {
         const list = [];
-        const cols = SOLID_COLS;
-        const rows = SOLID_ROWS;
+        const cols = mode === "metal" ? 6 : 5;
+        const rows = mode === "metal" ? 5 : 4;
         const innerW = Math.max(20, bounds.x1 - bounds.x0);
         const innerH = Math.max(20, bounds.y1 - bounds.y0);
         const cellW = innerW / (cols + 1);
@@ -640,17 +667,41 @@
             const ax = bounds.x0 + cellW * (col + 1);
             const ay = bounds.y0 + cellH * (row + 1);
             list.push({
-              mode: "solid",
+              mode,
               side,
               col,
               row,
               ax,
               ay,
+              cellW,
+              cellH,
               x: ax,
               y: ay,
               phase: Math.random() * Math.PI * 2,
             });
           }
+        }
+        return list;
+      }
+
+      // 液体：容器内を分子がランダムに移動（格子は持たない）
+      function buildLiquidParticles(bounds, side, temp) {
+        const list = [];
+        const r = PARTICLE_R;
+        const w = Math.max(r * 2, bounds.x1 - bounds.x0 - 2 * r);
+        const h = Math.max(r * 2, bounds.y1 - bounds.y0 - 2 * r);
+        const count = 28;
+        for (let i = 0; i < count; i += 1) {
+          const p = {
+            mode: "liquid",
+            side,
+            x: bounds.x0 + r + Math.random() * w,
+            y: bounds.y0 + r + Math.random() * h,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+          };
+          normalizeSpeed(p, speedFromTemp(temp) * 0.42);
+          list.push(p);
         }
         return list;
       }
@@ -683,26 +734,49 @@
       }
 
       function updateParticles(dt) {
+        ensureParticleModes();
         updateParticleGroup(particlesA, regionBounds("a"), state.TA, state.matA, dt);
         updateParticleGroup(particlesB, regionBounds("b"), state.TB, state.matB, dt);
       }
 
       function updateParticleGroup(list, bounds, temp, matKey, dt) {
-        if (isGas(matKey)) {
+        if (!list.length) return;
+        const mode = list[0].mode;
+        if (mode === "gas") {
           updateGasGroup(list, bounds, temp, dt);
+        } else if (mode === "liquid") {
+          updateLiquidGroup(list, bounds, temp, dt);
         } else {
-          updateSolidGroup(list, temp, dt);
+          updateLatticeGroup(list, temp, mode, dt);
         }
       }
 
-      // 温度に応じて粒子速度を変更 — 固体は格子点付近の振動
-      function updateSolidGroup(list, temp, dt) {
-        const { amp, omega } = solidMotionParams(temp);
+      // 金属・氷：平衡位置 ax,ay のみで熱振動（大きく流れない）
+      function updateLatticeGroup(list, temp, kind, dt) {
         for (let i = 0; i < list.length; i += 1) {
           const p = list[i];
+          const cell = p.cellW || 20;
+          const { amp, omega } = latticeMotionParams(temp, cell, kind);
           p.phase += omega * dt;
           p.x = p.ax + Math.sin(p.phase) * amp;
-          p.y = p.ay + Math.cos(p.phase * 0.93 + p.row * 0.4) * amp * 0.75;
+          p.y = p.ay + Math.cos(p.phase * 0.91 + p.row * 0.35) * amp * 0.65;
+        }
+      }
+
+      function updateLiquidGroup(list, bounds, temp, dt) {
+        const target = speedFromTemp(temp) * 0.42;
+        const r = PARTICLE_R;
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          p.vx += (Math.random() - 0.5) * target * 0.18 * dt;
+          p.vy += (Math.random() - 0.5) * target * 0.18 * dt;
+          normalizeSpeed(p, target);
+          p.x += p.vx * dt * 20;
+          p.y += p.vy * dt * 20;
+          if (p.x < bounds.x0 + r) { p.x = bounds.x0 + r; p.vx = Math.abs(p.vx); }
+          if (p.x > bounds.x1 - r) { p.x = bounds.x1 - r; p.vx = -Math.abs(p.vx); }
+          if (p.y < bounds.y0 + r) { p.y = bounds.y0 + r; p.vy = Math.abs(p.vy); }
+          if (p.y > bounds.y1 - r) { p.y = bounds.y1 - r; p.vy = -Math.abs(p.vy); }
         }
       }
 
@@ -758,11 +832,9 @@
         const bB = regionBounds("b");
         const mid = w * 0.5;
 
-        // 物体領域の背景
-        ctx.fillStyle = "rgba(251, 146, 60, 0.06)";
-        ctx.fillRect(bA.x0, bA.y0, bA.x1 - bA.x0, bA.y1 - bA.y0);
-        ctx.fillStyle = "rgba(56, 189, 248, 0.06)";
-        ctx.fillRect(bB.x0, bB.y0, bB.x1 - bB.x0, bB.y1 - bB.y0);
+        // 物体領域の背景（物質の状態に応じた見た目）
+        drawMaterialBody(bA, particlesA, state.matA, state.TA, "a");
+        drawMaterialBody(bB, particlesB, state.matB, state.TB, "b");
 
         // 接触面
         ctx.strokeStyle = state.contacting
@@ -792,21 +864,54 @@
           ctx.fill();
         }
 
-        drawSolidBonds(particlesA, MATERIALS[state.matA].color);
-        drawSolidBonds(particlesB, MATERIALS[state.matB].color);
-        drawGroup(particlesA, MATERIALS[state.matA].color, "#fb923c", state.matA);
-        drawGroup(particlesB, MATERIALS[state.matB].color, "#38bdf8", state.matB);
+        drawLatticeBonds(particlesA, state.matA);
+        drawLatticeBonds(particlesB, state.matB);
+        drawGroup(particlesA, state.matA, "a");
+        drawGroup(particlesB, state.matB, "b");
       }
 
-      function drawSolidBonds(list, color) {
-        if (!list.length || list[0].mode !== "solid") return;
+      function drawMaterialBody(bounds, list, matKey, temp, side) {
+        if (!list.length) return;
+        const mode = list[0].mode;
+        const w = bounds.x1 - bounds.x0;
+        const h = bounds.y1 - bounds.y0;
+        if (mode === "metal") {
+          const mat = MATERIALS[matKey];
+          const grad = ctx.createLinearGradient(bounds.x0, bounds.y0, bounds.x1, bounds.y1);
+          grad.addColorStop(0, hexToRgba(mat.color, 0.22));
+          grad.addColorStop(1, hexToRgba(mat.bond || mat.color, 0.1));
+          ctx.fillStyle = grad;
+          ctx.fillRect(bounds.x0, bounds.y0, w, h);
+          ctx.strokeStyle = hexToRgba(mat.bond || mat.color, 0.45);
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(bounds.x0 + 0.5, bounds.y0 + 0.5, w - 1, h - 1);
+        } else if (mode === "liquid") {
+          ctx.fillStyle = "rgba(56, 189, 248, 0.14)";
+          ctx.fillRect(bounds.x0, bounds.y0, w, h);
+          ctx.fillStyle = "rgba(125, 211, 252, 0.08)";
+          ctx.fillRect(bounds.x0, bounds.y0 + h * 0.15, w, h * 0.85);
+        } else if (mode === "ice") {
+          ctx.fillStyle = "rgba(224, 242, 254, 0.1)";
+          ctx.fillRect(bounds.x0, bounds.y0, w, h);
+        } else {
+          ctx.fillStyle = side === "a" ? "rgba(251, 146, 60, 0.06)" : "rgba(56, 189, 248, 0.06)";
+          ctx.fillRect(bounds.x0, bounds.y0, w, h);
+        }
+      }
+
+      function drawLatticeBonds(list, matKey) {
+        if (!list.length || (list[0].mode !== "metal" && list[0].mode !== "ice")) return;
+        const mat = MATERIALS[matKey];
+        const bondColor = list[0].mode === "ice"
+          ? "rgba(186, 230, 253, 0.45)"
+          : hexToRgba(mat.bond || mat.color, 0.5);
         const byKey = new Map();
         for (let i = 0; i < list.length; i += 1) {
           const p = list[i];
           byKey.set(`${p.col},${p.row}`, p);
         }
-        ctx.strokeStyle = hexToRgba(color, 0.28);
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = bondColor;
+        ctx.lineWidth = list[0].mode === "metal" ? 1.8 : 1.2;
         for (let i = 0; i < list.length; i += 1) {
           const p = list[i];
           const right = byKey.get(`${p.col + 1},${p.row}`);
@@ -834,16 +939,45 @@
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
       }
 
-      function drawGroup(list, fill, glow, matKey) {
+      function drawGroup(list, matKey, side) {
         if (!list.length) return;
-        const isSolid = !isGas(matKey);
+        const mat = MATERIALS[matKey];
+        const mode = list[0].mode;
+        const glow = side === "a" ? "#fb923c" : "#38bdf8";
+
         for (let i = 0; i < list.length; i += 1) {
           const p = list[i];
+          let fill = mat.color;
+          let radius = PARTICLE_R;
+
+          if (mode === "ice") {
+            fill = mat.iceColor || "#e0f2fe";
+            radius = PARTICLE_R - 0.5;
+          } else if (mode === "metal") {
+            fill = mat.color;
+            radius = 5;
+            ctx.shadowColor = glow;
+            ctx.shadowBlur = 3;
+            const grad = ctx.createRadialGradient(p.x - 1.5, p.y - 1.5, 0, p.x, p.y, radius);
+            grad.addColorStop(0, "#f8fafc");
+            grad.addColorStop(0.45, mat.color);
+            grad.addColorStop(1, hexToRgba(mat.bond || mat.color, 0.85));
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            continue;
+          } else if (mode === "liquid") {
+            fill = "rgba(125, 211, 252, 0.85)";
+            radius = PARTICLE_R - 1;
+          }
+
           ctx.shadowColor = glow;
-          ctx.shadowBlur = isSolid ? 4 : 8;
+          ctx.shadowBlur = mode === "gas" ? 8 : 4;
           ctx.fillStyle = fill;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, isSolid ? PARTICLE_R - 0.5 : PARTICLE_R, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.shadowBlur = 0;
@@ -983,8 +1117,10 @@
 
       function updateUI() {
         const teq = theoreticalTeq();
-        document.getElementById("hudA").innerHTML = `物体 A<br>${fmt(state.TA, 1)} ℃ · ${MATERIALS[state.matA].name}`;
-        document.getElementById("hudB").innerHTML = `物体 B<br>${fmt(state.TB, 1)} ℃ · ${MATERIALS[state.matB].name}`;
+        document.getElementById("hudA").innerHTML =
+          `物体 A<br>${fmt(state.TA, 1)} ℃ · ${MATERIALS[state.matA].name}<br>${phaseLabel(state.matA, state.TA)}`;
+        document.getElementById("hudB").innerHTML =
+          `物体 B<br>${fmt(state.TB, 1)} ℃ · ${MATERIALS[state.matB].name}<br>${phaseLabel(state.matB, state.TB)}`;
         document.getElementById("qLossVal").textContent = `${fmt(state.Q_loss, 2)} J`;
         document.getElementById("qGainVal").textContent = `${fmt(state.Q_gain, 2)} J`;
         document.getElementById("qErrVal").textContent = `${fmt(Math.abs(state.Q_loss - state.Q_gain), 6)} J`;
@@ -1093,7 +1229,7 @@
       });
 
       function boot() {
-        // 初期：A=水80℃、B=鉄20℃（比熱差がわかりやすい例）
+        // 初期：A=水80℃（液体）、B=鉄20℃（金属固体）
         state.matA = "water";
         state.matB = "iron";
         document.querySelectorAll('.mat-btn[data-obj="a"]').forEach((b) => {

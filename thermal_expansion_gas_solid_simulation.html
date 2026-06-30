@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>気体と固体の熱膨張 — V(T) · L(T)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --accent: #22d3ee;
+      --accent-light: #67e8f9;
+      --accent-warm: #fb923c;
+      --accent-glow: rgba(34, 211, 238, 0.42);
+      --slate-bg: rgba(12, 18, 32, 0.78);
+      --slate-border: rgba(34, 211, 238, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --gas: #38bdf8;
+      --solid: #fb923c;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1524 38%, #101c30 72%, #0a1018 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 55% 42% at 15% 20%, rgba(56, 189, 248, 0.08), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 85% 75%, rgba(251, 146, 60, 0.07), transparent 55%);
+    }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1080px, 96vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .page-header { text-align: center; }
+
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(251, 146, 60, 0.22));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.3rem;
+    }
+
+    h2 {
+      margin: 6px 0 4px;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+
+    #back {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 16px;
+      color: #cffafe;
+      background: rgba(34, 211, 238, 0.14);
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .panel {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: var(--accent-light);
+    }
+
+    .panel h3.gas-title { color: #7dd3fc; }
+    .panel h3.solid-title { color: #fdba74; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+      }
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: min(240px, 34dvh);
+      min-height: 200px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(10, 20, 32, 0.98), rgba(6, 12, 20, 0.99));
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .canvas-wrap.gas { border-color: rgba(56, 189, 248, 0.35); }
+    .canvas-wrap.solid { border-color: rgba(251, 146, 60, 0.35); }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      background: rgba(8, 12, 20, 0.82);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .hud-pill.gas { color: #bae6fd; border-color: rgba(56, 189, 248, 0.4); }
+    .hud-pill.solid { color: #fed7aa; border-color: rgba(251, 146, 60, 0.4); }
+
+    .canvas-caption {
+      margin: 8px 0 0;
+      font-size: 0.76rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      margin: 6px 0;
+    }
+
+    .slider-val {
+      float: right;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .temp-readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .temp-box {
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(125, 211, 252, 0.2);
+    }
+
+    .temp-box .lbl { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    .temp-box .val { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .temp-box.c .val { color: #fdba74; }
+    .temp-box.k .val { color: #7dd3fc; }
+
+    .material-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .mat-btn {
+      min-height: 42px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 0.74rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mat-btn.active {
+      border-color: rgba(251, 146, 60, 0.55);
+      background: rgba(251, 146, 60, 0.14);
+      color: #fed7aa;
+    }
+
+    .formula-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .formula-box {
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .formula-box.gas {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      color: #bae6fd;
+    }
+
+    .formula-box.solid {
+      background: rgba(251, 146, 60, 0.08);
+      border: 1px solid rgba(251, 146, 60, 0.22);
+      color: #fed7aa;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .info-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(125, 211, 252, 0.15);
+    }
+
+    .info-item .lbl { font-size: 0.68rem; color: var(--muted); display: block; }
+    .info-item .val { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .info-item .val.gas { color: #7dd3fc; }
+    .info-item .val.solid { color: #fdba74; }
+
+    .chart-wrap {
+      position: relative;
+      height: min(280px, 36dvh);
+      min-height: 220px;
+    }
+
+    .explain-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    .explain-list li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">↔</div>
+      <h2>気体と固体の熱膨張</h2>
+      <p class="chapter-label">12章 熱と比熱 · 理想気体 V∝T · 固体 L = L₀(1+αΔT)</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <div class="col">
+        <section class="panel" aria-label="気体の熱膨張">
+          <h3 class="gas-title">気体の熱膨張（理想気体）</h3>
+          <div class="canvas-wrap gas">
+            <canvas id="gasCanvas" aria-label="気体粒子と膨張する箱"></canvas>
+            <div class="canvas-hud">
+              <span class="hud-pill gas" id="gasVolHud">V = 100 cm³</span>
+              <span class="hud-pill gas" id="gasPressHud">V/V₀ = 1.00</span>
+            </div>
+          </div>
+          <p class="canvas-caption">温度↑ → 粒子速度↑ → 壁への衝突↑ → 圧力↑ → 体積 V(T)=V₀·T_K/T_K₀</p>
+        </section>
+
+        <section class="panel" aria-label="固体の熱膨張">
+          <h3 class="solid-title">固体の熱膨張（1次元格子）</h3>
+          <div class="canvas-wrap solid">
+            <canvas id="solidCanvas" aria-label="固体格子と伸びる棒"></canvas>
+            <div class="canvas-hud">
+              <span class="hud-pill solid" id="solidLenHud">L = 10.00 cm</span>
+              <span class="hud-pill solid" id="solidAlphaHud">α = 2.4×10⁻⁵ /K</span>
+            </div>
+          </div>
+          <p class="canvas-caption">温度↑ → 振動↑ → 平均格子間隔 d↑ → 棒の長さ L(T)=L₀(1+αΔT)</p>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="panel" aria-label="温度設定">
+          <h3>温度・物質設定</h3>
+          <div class="temp-readout">
+            <div class="temp-box c">
+              <span class="lbl">温度 T</span>
+              <span class="val" id="celsiusVal">20 ℃</span>
+            </div>
+            <div class="temp-box k">
+              <span class="lbl">絶対温度 T_K</span>
+              <span class="val" id="kelvinVal">293 K</span>
+            </div>
+          </div>
+          <label for="tempSlider">
+            温度スライダー
+            <span class="slider-val" id="tempSliderVal">20 ℃</span>
+            <input id="tempSlider" type="range" min="-50" max="300" step="1" value="20">
+          </label>
+
+          <p style="margin:0 0 6px;font-size:0.78rem;color:var(--muted);">固体の物質（線膨張係数 α）</p>
+          <div class="material-row" id="matRow">
+            <button type="button" class="mat-btn" data-mat="iron">鉄<br>α=1.2×10⁻⁵</button>
+            <button type="button" class="mat-btn active" data-mat="aluminum">アルミ<br>α=2.4×10⁻⁵</button>
+            <button type="button" class="mat-btn" data-mat="glass">ガラス<br>α=0.9×10⁻⁵</button>
+            <button type="button" class="mat-btn" data-mat="mercury">水銀<br>α=1.8×10⁻⁵</button>
+          </div>
+
+          <div class="formula-grid">
+            <div class="formula-box gas">
+              <strong>気体</strong>　V(T) = V₀ · (T_K / T_K₀)<br>
+              v = k√T_K　·　V₀ = <span id="v0Label">100</span> cm³ · T_K₀ = 293 K
+            </div>
+            <div class="formula-box solid">
+              <strong>固体</strong>　L(T) = L₀ · (1 + α · ΔT)<br>
+              L₀ = <span id="l0Label">10.00</span> cm · ΔT = T − 20 ℃
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="lbl">気体 体積比 V/V₀</span>
+              <span class="val gas" id="vRatioVal">1.000</span>
+            </div>
+            <div class="info-item">
+              <span class="lbl">固体 長さ比 L/L₀</span>
+              <span class="val solid" id="lRatioVal">1.0000</span>
+            </div>
+            <div class="info-item">
+              <span class="lbl">気体 体積 V</span>
+              <span class="val gas" id="vNowVal">100.0 cm³</span>
+            </div>
+            <div class="info-item">
+              <span class="lbl">固体 長さ L</span>
+              <span class="val solid" id="lNowVal">10.000 cm</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="グラフ">
+          <h3>体積・長さの温度依存</h3>
+          <div class="chart-wrap">
+            <canvas id="expChart" aria-label="V(T)とL(T)のグラフ"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel" aria-label="説明">
+      <h3>熱膨張の比較</h3>
+      <ul class="explain-list">
+        <li>気体は温度が上がると粒子運動が激しくなり、体積が大きくなる。</li>
+        <li>固体は温度が上がると格子間隔が広がり、長さが増える。</li>
+        <li>気体の膨張は大きく、固体の膨張は小さい。</li>
+        <li>固体の膨張は線膨張係数 α によって決まる。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const K_V = 0.5;
+      const K_OFFSET = 273.15;
+      const T_C0 = 20;
+      const T_K0 = T_C0 + K_OFFSET;
+      const V0 = 100;
+      const L0 = 10;
+      const GAS_PARTICLES = 48;
+      const GAS_R = 3;
+      const SOLID_ATOMS = 14;
+      const BOX_H_RATIO = 0.55;
+
+      const MATERIALS = {
+        iron: { name: "鉄", alpha: 1.2e-5, color: "#94a3b8" },
+        aluminum: { name: "アルミニウム", alpha: 2.4e-5, color: "#e2e8f0" },
+        glass: { name: "ガラス", alpha: 0.9e-5, color: "#a5f3fc" },
+        mercury: { name: "水銀", alpha: 1.8e-5, color: "#cbd5e1" },
+      };
+
+      const gasCanvas = document.getElementById("gasCanvas");
+      const solidCanvas = document.getElementById("solidCanvas");
+      const gasCtx = gasCanvas.getContext("2d");
+      const solidCtx = solidCanvas.getContext("2d");
+      const tempSlider = document.getElementById("tempSlider");
+
+      const state = {
+        celsius: T_C0,
+        matKey: "aluminum",
+        simTime: 0,
+        displayV: V0,
+        displayL: L0,
+        displayBoxW: 1,
+      };
+
+      let gasParticles = [];
+      let expChart = null;
+      let lastFrame = null;
+
+      function fmt(n, d) {
+        return Number(n).toFixed(d);
+      }
+
+      function kelvin(c) {
+        return c + K_OFFSET;
+      }
+
+      function speedFromTemp(c) {
+        return K_V * Math.sqrt(Math.max(1, kelvin(c)));
+      }
+
+      // 気体の体積を温度で更新
+      function gasVolume(c) {
+        return V0 * (kelvin(c) / T_K0);
+      }
+
+      // 固体の線膨張係数で長さを更新
+      function solidLength(c, alpha) {
+        return L0 * (1 + alpha * (c - T_C0));
+      }
+
+      function latticeSpacing(L) {
+        return L / (SOLID_ATOMS - 1);
+      }
+
+      function solidVibration(c) {
+        const rel = Math.max(0, (c + 50) / 350);
+        return {
+          amp: 0.8 + rel * 5.5,
+          omega: 4 + rel * 10,
+        };
+      }
+
+      function resizeCanvases() {
+        [gasCanvas, solidCanvas].forEach((c) => {
+          const dpr = window.devicePixelRatio || 1;
+          const rect = c.getBoundingClientRect();
+          c.width = Math.round(rect.width * dpr);
+          c.height = Math.round(rect.height * dpr);
+          c.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+        });
+      }
+
+      function initGasParticles() {
+        gasParticles = [];
+        for (let i = 0; i < GAS_PARTICLES; i += 1) {
+          gasParticles.push({
+            x: Math.random(),
+            y: Math.random(),
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+          });
+        }
+        syncGasSpeeds();
+      }
+
+      function syncGasSpeeds() {
+        const s = speedFromTemp(state.celsius);
+        gasParticles.forEach((p) => {
+          const mag = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / mag) * s;
+          p.vy = (p.vy / mag) * s;
+        });
+      }
+
+      function gasBoxLayout(w, h) {
+        const baseW = w * 0.42;
+        const boxH = h * BOX_H_RATIO;
+        const cx = w * 0.5;
+        const cy = h * 0.54;
+        const volRatio = state.displayV / V0;
+        const boxW = baseW * Math.sqrt(volRatio);
+        return {
+          x0: cx - boxW * 0.5,
+          y0: cy - boxH * 0.5,
+          x1: cx + boxW * 0.5,
+          y1: cy + boxH * 0.5,
+          boxW,
+          boxH,
+          cx,
+          cy,
+        };
+      }
+
+      function updateGasParticles(dt, box) {
+        const s = speedFromTemp(state.celsius);
+        const pad = GAS_R + 1;
+        for (let i = 0; i < gasParticles.length; i += 1) {
+          const p = gasParticles[i];
+          p.vx += (Math.random() - 0.5) * s * 0.15 * dt;
+          p.vy += (Math.random() - 0.5) * s * 0.15 * dt;
+          const mag = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / mag) * s;
+          p.vy = (p.vy / mag) * s;
+
+          let px = box.x0 + p.x * box.boxW + p.vx * dt * 22;
+          let py = box.y0 + p.y * box.boxH + p.vy * dt * 22;
+          if (px < box.x0 + pad) { px = box.x0 + pad; p.vx = Math.abs(p.vx); }
+          if (px > box.x1 - pad) { px = box.x1 - pad; p.vx = -Math.abs(p.vx); }
+          if (py < box.y0 + pad) { py = box.y0 + pad; p.vy = Math.abs(p.vy); }
+          if (py > box.y1 - pad) { py = box.y1 - pad; p.vy = -Math.abs(p.vy); }
+          p.x = (px - box.x0) / box.boxW;
+          p.y = (py - box.y0) / box.boxH;
+        }
+      }
+
+      function drawGas() {
+        const w = gasCanvas.getBoundingClientRect().width;
+        const h = gasCanvas.getBoundingClientRect().height;
+        gasCtx.clearRect(0, 0, w, h);
+
+        const grad = gasCtx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, "rgba(8, 20, 36, 0.95)");
+        grad.addColorStop(1, "rgba(4, 10, 18, 0.98)");
+        gasCtx.fillStyle = grad;
+        gasCtx.fillRect(0, 0, w, h);
+
+        const box = gasBoxLayout(w, h);
+        const tempHue = Math.min(1, (state.celsius + 50) / 350);
+
+        // 固定参照枠（初期体積）
+        const refW = w * 0.42;
+        gasCtx.strokeStyle = "rgba(148, 163, 184, 0.18)";
+        gasCtx.setLineDash([4, 5]);
+        gasCtx.strokeRect(box.cx - refW * 0.5, box.y0, refW, box.boxH);
+        gasCtx.setLineDash([]);
+
+        // 膨張する箱
+        gasCtx.shadowColor = "rgba(56, 189, 248, 0.5)";
+        gasCtx.shadowBlur = 16;
+        gasCtx.fillStyle = `rgba(56, 189, 248, ${0.06 + tempHue * 0.06})`;
+        gasCtx.fillRect(box.x0, box.y0, box.boxW, box.boxH);
+        gasCtx.strokeStyle = `rgba(125, 211, 252, ${0.45 + tempHue * 0.35})`;
+        gasCtx.lineWidth = 2;
+        gasCtx.strokeRect(box.x0, box.y0, box.boxW, box.boxH);
+        gasCtx.shadowBlur = 0;
+
+        // ピストン風の右壁ハイライト
+        gasCtx.fillStyle = "rgba(167, 243, 255, 0.25)";
+        gasCtx.fillRect(box.x1 - 4, box.y0, 4, box.boxH);
+
+        // 粒子
+        for (let i = 0; i < gasParticles.length; i += 1) {
+          const p = gasParticles[i];
+          const px = box.x0 + p.x * box.boxW;
+          const py = box.y0 + p.y * box.boxH;
+          gasCtx.shadowColor = "#38bdf8";
+          gasCtx.shadowBlur = 6;
+          gasCtx.fillStyle = `rgba(186, 230, 253, ${0.65 + tempHue * 0.3})`;
+          gasCtx.beginPath();
+          gasCtx.arc(px, py, GAS_R, 0, Math.PI * 2);
+          gasCtx.fill();
+        }
+        gasCtx.shadowBlur = 0;
+
+        gasCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        gasCtx.fillStyle = "rgba(148, 163, 184, 0.7)";
+        gasCtx.fillText("V₀（初期）", box.cx - refW * 0.5, box.y0 - 6);
+        gasCtx.fillStyle = "#7dd3fc";
+        gasCtx.fillText("V(T)", box.x1 - 28, box.y0 - 6);
+      }
+
+      function drawSolid() {
+        const w = solidCanvas.getBoundingClientRect().width;
+        const h = solidCanvas.getBoundingClientRect().height;
+        solidCtx.clearRect(0, 0, w, h);
+
+        const grad = solidCtx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, "rgba(20, 14, 8, 0.4)");
+        grad.addColorStop(1, "rgba(8, 12, 20, 0.95)");
+        solidCtx.fillStyle = grad;
+        solidCtx.fillRect(0, 0, w, h);
+
+        const mat = MATERIALS[state.matKey];
+        const L = state.displayL;
+        const d = latticeSpacing(L);
+        const { amp, omega } = solidVibration(state.celsius);
+        const margin = 36;
+        const usable = w - margin * 2;
+        const pxPerCm = usable / (L0 * 1.008);
+        const drawL = L * pxPerCm;
+        const xStart = margin;
+        const yMid = h * 0.46;
+        const refEnd = xStart + L0 * pxPerCm;
+
+        // 定規・参照長 L₀
+        solidCtx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+        solidCtx.setLineDash([4, 4]);
+        solidCtx.beginPath();
+        solidCtx.moveTo(xStart, h * 0.72);
+        solidCtx.lineTo(refEnd, h * 0.72);
+        solidCtx.stroke();
+        solidCtx.setLineDash([]);
+        solidCtx.fillStyle = "rgba(148, 163, 184, 0.65)";
+        solidCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        solidCtx.fillText("L₀", refEnd + 4, h * 0.72 + 4);
+
+        const positions = [];
+        for (let i = 0; i < SOLID_ATOMS; i += 1) {
+          const phase = i * 0.85 + state.simTime * omega;
+          const thermal = amp * Math.sin(phase);
+          const xi = i * d * pxPerCm + thermal;
+          positions.push({ x: xStart + xi, y: yMid, phase });
+        }
+
+        // バネ（結合）
+        solidCtx.strokeStyle = "rgba(251, 146, 60, 0.35)";
+        solidCtx.lineWidth = 1.5;
+        for (let i = 0; i < positions.length - 1; i += 1) {
+          const a = positions[i];
+          const b = positions[i + 1];
+          drawSpring(solidCtx, a.x, a.y, b.x, b.y, 5);
+        }
+
+        // 棒の外形
+        const rodY = yMid + 22;
+        solidCtx.fillStyle = "rgba(251, 146, 60, 0.12)";
+        solidCtx.fillRect(xStart, rodY - 8, drawL, 16);
+        solidCtx.strokeStyle = "rgba(251, 146, 60, 0.55)";
+        solidCtx.lineWidth = 1.5;
+        solidCtx.strokeRect(xStart, rodY - 8, drawL, 16);
+
+        // 現在長 L
+        solidCtx.strokeStyle = "#fdba74";
+        solidCtx.beginPath();
+        solidCtx.moveTo(xStart, h * 0.78);
+        solidCtx.lineTo(xStart + drawL, h * 0.78);
+        solidCtx.stroke();
+        solidCtx.fillStyle = "#fdba74";
+        solidCtx.fillText("L(T)", xStart + drawL + 4, h * 0.78 + 4);
+
+        // 原子
+        for (let i = 0; i < positions.length; i += 1) {
+          const p = positions[i];
+          solidCtx.shadowColor = mat.color;
+          solidCtx.shadowBlur = 8;
+          solidCtx.fillStyle = mat.color;
+          solidCtx.beginPath();
+          solidCtx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+          solidCtx.fill();
+          solidCtx.shadowBlur = 0;
+        }
+      }
+
+      function drawSpring(ctx, x1, y1, x2, y2, coils) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len;
+        const ny = dx / len;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let i = 1; i <= coils * 2; i += 1) {
+          const t = i / (coils * 2);
+          const px = x1 + dx * t + nx * (i % 2 === 0 ? 4 : -4);
+          const py = y1 + dy * t + ny * (i % 2 === 0 ? 4 : -4);
+          ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function buildChart() {
+        const temps = [];
+        const vols = [];
+        const lens = [];
+        const alpha = MATERIALS[state.matKey].alpha;
+        for (let t = -50; t <= 300; t += 5) {
+          temps.push(t);
+          vols.push(gasVolume(t));
+          lens.push(solidLength(t, alpha));
+        }
+
+        expChart = new Chart(document.getElementById("expChart"), {
+          type: "line",
+          data: {
+            datasets: [
+              {
+                label: "気体 体積 V (cm³)",
+                data: temps.map((t, i) => ({ x: t, y: vols[i] })),
+                yAxisID: "yGas",
+                borderColor: "#38bdf8",
+                backgroundColor: "rgba(56, 189, 248, 0.12)",
+                tension: 0.15,
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+              {
+                label: "固体 長さ L (cm)",
+                data: temps.map((t, i) => ({ x: t, y: lens[i] })),
+                yAxisID: "ySolid",
+                borderColor: "#fb923c",
+                backgroundColor: "rgba(251, 146, 60, 0.12)",
+                tension: 0.15,
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            parsing: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { labels: { color: "#cbd5e1", font: { size: 10 }, boxWidth: 10 } },
+              tooltip: {
+                callbacks: {
+                  title(items) {
+                    return `T = ${fmt(items[0].parsed.x, 0)} ℃`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                type: "linear",
+                min: -50,
+                max: 300,
+                title: { display: true, text: "温度 T（℃）", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8", stepSize: 50 },
+                grid: { color: "rgba(148, 163, 184, 0.1)" },
+              },
+              yGas: {
+                type: "linear",
+                position: "left",
+                title: { display: true, text: "V (cm³)", color: "#7dd3fc", font: { size: 10 } },
+                ticks: { color: "#7dd3fc" },
+                grid: { color: "rgba(56, 189, 248, 0.08)" },
+              },
+              ySolid: {
+                type: "linear",
+                position: "right",
+                title: { display: true, text: "L (cm)", color: "#fdba74", font: { size: 10 } },
+                ticks: { color: "#fdba74" },
+                grid: { drawOnChartArea: false },
+                min: L0 * 0.999,
+                max: L0 * 1.012,
+              },
+            },
+          },
+          plugins: [currentTempLinePlugin()],
+        });
+      }
+
+      function currentTempLinePlugin() {
+        return {
+          id: "currentTempLine",
+          afterDraw(chart) {
+            const { ctx, chartArea, scales } = chart;
+            const x = scales.x.getPixelForValue(state.celsius);
+            if (x < chartArea.left || x > chartArea.right) return;
+            ctx.save();
+            ctx.strokeStyle = "rgba(250, 204, 21, 0.75)";
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x, chartArea.top);
+            ctx.lineTo(x, chartArea.bottom);
+            ctx.stroke();
+            ctx.fillStyle = "#fde047";
+            ctx.font = "600 10px Inter, sans-serif";
+            ctx.fillText(`${state.celsius}℃`, x + 4, chartArea.top + 12);
+            ctx.restore();
+          },
+        };
+      }
+
+      function refreshChartCurve() {
+        if (!expChart) return;
+        const alpha = MATERIALS[state.matKey].alpha;
+        const temps = [];
+        const vols = [];
+        const lens = [];
+        for (let t = -50; t <= 300; t += 5) {
+          temps.push(t);
+          vols.push(gasVolume(t));
+          lens.push(solidLength(t, alpha));
+        }
+        expChart.data.datasets[0].data = temps.map((t, i) => ({ x: t, y: vols[i] }));
+        expChart.data.datasets[1].data = temps.map((t, i) => ({ x: t, y: lens[i] }));
+        const lMax = solidLength(300, alpha);
+        expChart.options.scales.ySolid.max = lMax * 1.002;
+        expChart.options.scales.ySolid.min = L0 * 0.9995;
+        expChart.update("none");
+      }
+
+      function updateReadouts() {
+        const alpha = MATERIALS[state.matKey].alpha;
+        const V = gasVolume(state.celsius);
+        const L = solidLength(state.celsius, alpha);
+        const TK = kelvin(state.celsius);
+
+        document.getElementById("celsiusVal").textContent = `${state.celsius} ℃`;
+        document.getElementById("kelvinVal").textContent = `${fmt(TK, 1)} K`;
+        document.getElementById("tempSliderVal").textContent = `${state.celsius} ℃`;
+        document.getElementById("gasVolHud").textContent = `V = ${fmt(V, 1)} cm³`;
+        document.getElementById("gasPressHud").textContent = `V/V₀ = ${fmt(V / V0, 3)}`;
+        document.getElementById("solidLenHud").textContent = `L = ${fmt(L, 3)} cm`;
+        document.getElementById("solidAlphaHud").textContent = `α = ${alpha.toExponential(1)} /K`;
+        document.getElementById("vRatioVal").textContent = fmt(V / V0, 3);
+        document.getElementById("lRatioVal").textContent = fmt(L / L0, 5);
+        document.getElementById("vNowVal").textContent = `${fmt(V, 1)} cm³`;
+        document.getElementById("lNowVal").textContent = `${fmt(L, 3)} cm`;
+      }
+
+      function tick(now) {
+        if (lastFrame === null) lastFrame = now;
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+
+        const alpha = MATERIALS[state.matKey].alpha;
+        const targetV = gasVolume(state.celsius);
+        const targetL = solidLength(state.celsius, alpha);
+        const ease = 1 - Math.exp(-dt * 6);
+        state.displayV += (targetV - state.displayV) * ease;
+        state.displayL += (targetL - state.displayL) * ease;
+
+        const w = gasCanvas.getBoundingClientRect().width;
+        const h = gasCanvas.getBoundingClientRect().height;
+        const box = gasBoxLayout(w, h);
+        updateGasParticles(dt, box);
+
+        drawGas();
+        drawSolid();
+        updateReadouts();
+        if (expChart) expChart.draw();
+        requestAnimationFrame(tick);
+      }
+
+      tempSlider.addEventListener("input", () => {
+        state.celsius = Number(tempSlider.value);
+        syncGasSpeeds();
+        refreshChartCurve();
+        updateReadouts();
+      });
+
+      document.querySelectorAll("#matRow .mat-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.matKey = btn.dataset.mat;
+          document.querySelectorAll("#matRow .mat-btn").forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+          refreshChartCurve();
+          updateReadouts();
+        });
+      });
+
+      window.addEventListener("resize", () => {
+        resizeCanvases();
+      });
+
+      function boot() {
+        resizeCanvases();
+        initGasParticles();
+        buildChart();
+        updateReadouts();
+        requestAnimationFrame(tick);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>細胞観察 3D — 動物細胞 · 植物細胞</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #4ade80; --accent-light: #86efac; --accent-glow: rgba(74,222,128,0.35);
+      --slate-bg: rgba(10,18,14,0.82); --slate-border: rgba(74,222,128,0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(165deg,#030504 0%,#0a120e 40%,#0c1812 70%,#050806 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(74,222,128,0.25),rgba(34,197,94,0.2));
+      border: 1px solid rgba(74,222,128,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #dcfce7;
+      background: rgba(34,197,94,0.14); border: 1px solid rgba(74,222,128,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    section.panel h3 {
+      margin: 0 0 10px; font-size: 1.05rem; font-weight: 600; color: var(--accent-light);
+      padding-bottom: 8px; border-bottom: 1px solid rgba(74,222,128,0.2);
+    }
+    .sec-num { color: #64748b; font-size: 0.78rem; font-weight: 700; margin-right: 6px; }
+    .prose { margin: 0 0 12px; font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+    .prose ul { margin: 8px 0; padding-left: 1.2rem; }
+    .prose strong { color: #bbf7d0; }
+    .type-btns, .view-mode-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .type-btns button, .view-mode-btns button {
+      flex: 1 1 130px; padding: 10px 14px; font-family: inherit; font-size: 0.84rem; font-weight: 600;
+      border-radius: 10px; cursor: pointer; border: 1px solid rgba(148,163,184,0.35);
+      background: rgba(255,255,255,0.06); color: #e2e8f0;
+    }
+    .type-btns button.active {
+      background: linear-gradient(135deg,#15803d,#22c55e); color: #fff; border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .view-mode-btns button.active { background: rgba(148,163,184,0.2); color: #f1f5f9; }
+    .view-mode-btns button.em-active { background: rgba(60,60,60,0.55); color: #eee; }
+    .diagram-row { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 12px; }
+    @media (min-width:760px) { .diagram-row { grid-template-columns: 1.25fr 0.75fr; } }
+    .viewport-wrap {
+      position: relative; border-radius: 14px; overflow: hidden;
+      background: #060808; border: 2px solid rgba(80,100,80,0.4);
+      box-shadow: inset 0 0 60px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.45);
+      min-height: min(420px, 52dvh);
+    }
+    .viewport-wrap.em-mode { border-color: rgba(160,160,160,0.3); }
+    .viewport-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    .viewport-labels {
+      position: absolute; inset: 0; pointer-events: none; z-index: 2;
+      display: flex; flex-direction: column; justify-content: space-between; padding: 10px 12px;
+    }
+    .micro-badge {
+      align-self: flex-start; padding: 4px 10px; border-radius: 6px;
+      font-size: 0.68rem; font-weight: 600; color: #a8b4a0;
+      background: rgba(0,0,0,0.6); border: 1px solid rgba(120,130,110,0.35);
+    }
+    .canvas-hint {
+      align-self: flex-end; padding: 5px 10px; border-radius: 999px;
+      font-size: 0.72rem; color: #94a3b8; background: rgba(0,0,0,0.65);
+    }
+    .info-panel {
+      padding: 14px 16px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(74,222,128,0.2); min-height: 220px;
+    }
+    .info-panel h4 { margin: 0 0 8px; font-size: 1rem; color: #fde68a; }
+    .info-panel ul { margin: 0; padding-left: 1.1rem; font-size: 0.86rem; line-height: 1.7; color: #cbd5e1; }
+    .info-panel .tag {
+      display: inline-block; margin-bottom: 8px; padding: 3px 10px; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600; background: rgba(74,222,128,0.15); color: #86efac;
+    }
+    .info-panel .em-block {
+      margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+      background: rgba(80,80,80,0.2); border: 1px solid rgba(160,160,160,0.2);
+      font-size: 0.8rem; color: #d4d4d4; line-height: 1.6;
+    }
+    .legend-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .legend-chips span {
+      font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; cursor: pointer;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.2); color: #94a3b8;
+    }
+    .legend-chips span.on { border-color: #fde68a; color: #fde68a; background: rgba(253,230,138,0.1); }
+    .legend-chips i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .zoom-section { margin-top: 14px; }
+    .zoom-section h4 { margin: 0 0 8px; font-size: 0.88rem; color: #86efac; }
+    .zoom-wrap {
+      position: relative; border-radius: 12px; overflow: hidden;
+      background: #050505; border: 1px solid rgba(120,130,110,0.3);
+      height: min(340px, 40dvh); max-width: 100%;
+    }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 8px; }
+    .compare-table th, .compare-table td { padding: 10px 12px; border: 1px solid rgba(74,222,128,0.18); text-align: center; }
+    .compare-table th { background: rgba(74,222,128,0.1); color: #86efac; }
+    .compare-table td:first-child { text-align: left; }
+    .anim-ctrl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+    .anim-ctrl input[type="range"] { flex: 1; min-width: 120px; accent-color: #22c55e; }
+    .anim-ctrl button {
+      padding: 8px 14px; font-family: inherit; font-size: 0.82rem; font-weight: 600;
+      border-radius: 10px; cursor: pointer; border: 1px solid rgba(74,222,128,0.35);
+      background: rgba(34,197,94,0.15); color: #dcfce7;
+    }
+    .summary-box {
+      padding: 14px 16px; border-radius: 12px;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(74,222,128,0.25);
+    }
+    .summary-box ul { margin: 0; padding-left: 1.2rem; line-height: 1.75; font-size: 0.88rem; color: #bbf7d0; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">🧬</div>
+      <h2>細胞観察 3D — 動物 · 植物</h2>
+      <p class="chapter-label">EX章 · 生物 — 立体モデル · リアルタイムダイナミクス · LM / TEM</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="panel" id="sec1">
+      <h3><span class="sec-num">§1</span>動物細胞 · 植物細胞の違い</h3>
+      <p class="prose">WebGL による<strong>立体細胞モデル</strong>です。ドラッグで回転 · スクロールで拡大 · 「断面表示」で内部を観察。小器官は細胞内を<strong>浮遊 · 回転 · 脈動</strong>し、細胞膜のうねり · 細胞質粒子 · 微小管まで再現します。</p>
+      <ul class="prose">
+        <li><strong>動物細胞</strong>：有機的な 3D 形状 · 中心体 · リソソーム</li>
+        <li><strong>植物細胞</strong>：直方体 · 細胞壁 · 大液胞 · 葉緑体</li>
+      </ul>
+      <div class="type-btns" id="typeBtns">
+        <button type="button" class="active" data-type="animal">動物細胞</button>
+        <button type="button" data-type="plant">植物細胞</button>
+      </div>
+    </section>
+
+    <section class="panel" id="sec2">
+      <h3><span class="sec-num">§2–3</span>3D 細胞構造 · 小器官の説明</h3>
+      <div class="view-mode-btns" id="viewModeBtns">
+        <button type="button" class="active" data-mode="light">🔬 光学顕微鏡（LM）</button>
+        <button type="button" data-mode="em">⚫ 透過電子顕微鏡（TEM）</button>
+      </div>
+      <div class="anim-ctrl">
+        <label for="speedSlider">細胞内の動き</label>
+        <input type="range" id="speedSlider" min="0" max="2.5" step="0.1" value="1">
+        <button type="button" id="animPauseBtn">一時停止</button>
+        <button type="button" id="cutawayBtn">断面表示 OFF</button>
+      </div>
+      <div class="diagram-row">
+        <div class="viewport-wrap" id="mainViewportWrap">
+          <div id="mainViewport" style="width:100%;height:min(420px,52dvh)"></div>
+          <div class="viewport-labels">
+            <span class="micro-badge" id="microBadge">3D · LM · ドラッグで回転</span>
+            <span class="canvas-hint">小器官をクリック</span>
+          </div>
+        </div>
+        <div class="info-panel" id="organelleInfo">
+          <p class="placeholder" style="color:#64748b;font-size:0.86rem">3D モデル上の小器官をクリックすると解説が表示されます。</p>
+        </div>
+      </div>
+      <div class="legend-chips" id="legendChips"></div>
+      <div class="zoom-section">
+        <h4 id="zoomTitle">小器官拡大 — 選択してください</h4>
+        <div class="zoom-wrap" id="zoomWrap">
+          <div id="zoomViewport" style="width:100%;height:100%"></div>
+          <div class="viewport-labels">
+            <span class="micro-badge" id="zoomBadge">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="sec4">
+      <h3><span class="sec-num">§4</span>比較表</h3>
+      <table class="compare-table">
+        <thead><tr><th>構造</th><th>動物</th><th>植物</th></tr></thead>
+        <tbody>
+          <tr><td>細胞壁</td><td>×</td><td>○</td></tr>
+          <tr><td>葉緑体</td><td>×</td><td>○</td></tr>
+          <tr><td>液胞</td><td>小さい</td><td>大きい</td></tr>
+          <tr><td>形</td><td>不定形 3D</td><td>直方体</td></tr>
+          <tr><td>中心体</td><td>○</td><td>×</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel" id="sec5">
+      <h3><span class="sec-num">§5</span>リアルタイムシミュレーション</h3>
+      <p class="prose">§2 の 3D モデル内で、細胞膜の<strong>脈動</strong> · 細胞質粒子の<strong>布朗運動</strong> · ミトコンドリアの<strong>浮遊</strong> · 核内クロマチンの<strong>ゆらぎ</strong> · ER 上の<strong>タンパク質輸送</strong> · ゴルジ<strong>小胞</strong> · 葉緑体の<strong>光パルス</strong> · 液胞の<strong>膨張</strong> · 中心体から伸びる<strong>微小管</strong>が同時に進行します。「断面表示」で内部構造を確認できます。</p>
+    </section>
+
+    <section class="panel" id="sec6">
+      <h3><span class="sec-num">§6</span>まとめ</h3>
+      <div class="summary-box">
+        <ul>
+          <li>細胞は<strong>3 次元</strong> — 平面図より立体モデルが実構造に近い</li>
+          <li>小器官は静止せず、細胞質内を<strong>動き続ける</strong></li>
+          <li>LM と TEM で同じ細胞を<strong>別の視点</strong>から観察できる</li>
+          <li>クリックで<strong>拡大 3D</strong> — グラナ · クリステ · 核孔など</li>
+          <li>細胞は<strong>生命の最小単位</strong></li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+    const ORGANELLES = {
+      membrane: { name: "細胞膜", color: 0xc4a882, animal: true, plant: true,
+        points: ["リン脂質二重層", "選択的透過", "3D では細胞表面を包む球殻/直方体殻"],
+        em: "TEM：約 7 nm の二重線。" },
+      cellWall: { name: "細胞壁", color: 0x7a6348, animal: false, plant: true,
+        points: ["セルロース", "植物の外殻", "細胞膜の外側"],
+        em: "層状 · セルロース微繊維。" },
+      nucleus: { name: "核", color: 0x6b5b95, animal: true, plant: true,
+        points: ["DNA · クロマチン", "核膜 · 核孔", "核小体"],
+        em: "核膜二重 · 核孔 · 核小体。" },
+      mitochondria: { name: "ミトコンドリア", color: 0xc06030, animal: true, plant: true,
+        points: ["ATP 合成", "クリステ", "細胞内を移動"],
+        em: "外膜 · 内膜クリステ。" },
+      chloroplast: { name: "葉緑体", color: 0x2d6b2a, animal: false, plant: true,
+        points: ["光合成", "グラナ", "回転しながら光を受ける"],
+        em: "チラコイド積層（グラナ）。" },
+      vacuole: { name: "液胞", color: 0x8ecae6, animal: true, plant: true,
+        points: ["水 · イオン", "植物で巨大", "膨圧で形を保持"],
+        em: "トンoplast 単膜。" },
+      golgi: { name: "ゴルジ体", color: 0xc87088, animal: true, plant: true,
+        points: ["扁平小胞積層", "タンパク質修飾", "分泌小胞"],
+        em: "シス→トランス積層。" },
+      er: { name: "小胞体", color: 0x9a8ab8, animal: true, plant: true,
+        points: ["粗面 · 滑面 ER", "タンパク質 · 脂質合成", "管状ネットワーク"],
+        em: "リボソーム付き粗面 ER。" },
+      lysosome: { name: "リソソーム", color: 0x8b4040, animal: true, plant: false,
+        points: ["加水分解酵素", "細胞内消化", "小さな単膜小器官"],
+        em: "高電子密度の小胞。" },
+      centrosome: { name: "中心体", color: 0x687888, animal: true, plant: false,
+        points: ["2 本の中心粒", "細胞分裂", "9 三重微細管"],
+        em: "中心粒の筒状断面。" },
+      cytoplasm: { name: "細胞質", color: 0xe8dcc8, animal: true, plant: true,
+        points: ["シトソル", "半流体", "小器官が浮遊する基質"],
+        em: "中程度電子密度。" },
+    };
+
+    let cellType = "animal", viewMode = "light", selectedId = null;
+    let animSpeed = 1, animPaused = false, cutawayEnabled = false;
+    let mainScene, mainCamera, mainRenderer, mainControls, cellRoot, pickables = [];
+    let animParts = [];
+    let membraneMesh = null, membraneGeo = null, membraneBasePos = null, membraneNormTick = 0;
+    let cytoParticles = null;
+    let cutawayLight = null;
+    const CLIP_SHELL_IDS = new Set(["membrane", "cellWall"]);
+    let zoomScene, zoomCamera, zoomRenderer, zoomControls, zoomRoot;
+    const clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const cutPlane = new THREE.Plane(new THREE.Vector3(0.85, 0.15, 0.52).normalize(), 0.05);
+    const _dummy = new THREE.Object3D();
+
+    // ── ジオメトリユーティリティ ──
+    function makeBlobGeometry(radius, detail, bump) {
+      const geo = new THREE.IcosahedronGeometry(radius, detail);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const v = new THREE.Vector3().fromBufferAttribute(pos, i);
+        const n = v.clone().normalize();
+        const k = 1 + bump * (0.35 * Math.sin(n.x * 4.2 + n.y * 2.1) + 0.25 * Math.sin(n.z * 5.3));
+        v.copy(n.multiplyScalar(radius * k));
+        pos.setXYZ(i, v.x, v.y, v.z);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    function physMat(color, opts = {}) {
+      const c = new THREE.Color(color);
+      const m = new THREE.MeshPhysicalMaterial({
+        color: c,
+        roughness: opts.rough ?? 0.35,
+        metalness: opts.metal ?? 0.05,
+        transparent: opts.transparent ?? false,
+        opacity: opts.opacity ?? 1,
+        transmission: opts.transmission ?? 0,
+        thickness: opts.thickness ?? 0.5,
+        clearcoat: opts.clearcoat ?? 0.2,
+        emissive: new THREE.Color(opts.emissive ?? 0x000000),
+        emissiveIntensity: opts.emissiveInt ?? 0,
+        side: opts.side ?? THREE.FrontSide,
+      });
+      m.userData.baseColor = c.clone();
+      return m;
+    }
+
+    function tagMesh(mesh, id, pick = true) {
+      mesh.userData.organelleId = id;
+      if (pick) pickables.push(mesh);
+      return mesh;
+    }
+
+    function applyClippingToMaterial(mat, mesh) {
+      const clip = cutawayEnabled && mesh && CLIP_SHELL_IDS.has(mesh.userData.organelleId);
+      mat.clippingPlanes = clip ? [cutPlane] : [];
+      mat.clipShadows = true;
+      mat.needsUpdate = true;
+    }
+
+    function applyClippingToRoot() {
+      cellRoot.traverse((obj) => {
+        if (!obj.isMesh || !obj.material) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach((m) => applyClippingToMaterial(m, obj));
+      });
+    }
+
+    function setCutaway(on) {
+      cutawayEnabled = on;
+      document.getElementById("cutawayBtn").textContent = on ? "断面表示 ON" : "断面表示 OFF";
+      document.getElementById("cutawayBtn").style.background = on ? "rgba(253,230,138,0.2)" : "";
+      if (cutawayLight) cutawayLight.intensity = on ? 2.2 : 0;
+      mainRenderer.toneMappingExposure = on ? 1.48 : 1.15;
+      if (mainScene.fog) {
+        mainScene.fog.density = on ? 0.018 : (viewMode === "em" ? 0.07 : 0.045);
+      }
+      mainScene.background.setHex(on ? 0x121820 : (viewMode === "em" ? 0x0a0a0a : 0x0a1210));
+      applyClippingToRoot();
+    }
+
+    function disposeCytoParticles() {
+      if (!cytoParticles) return;
+      cellRoot.remove(cytoParticles);
+      cytoParticles.geometry.dispose();
+      cytoParticles.material.dispose();
+      cytoParticles = null;
+    }
+
+    function createCytoplasmParticles(count, isPlant) {
+      disposeCytoParticles();
+      const geo = new THREE.SphereGeometry(0.011, 7, 7);
+      const mat = physMat(0x9a8878, { rough: 0.85, emissive: 0x181410, emissiveInt: 0.08 });
+      cytoParticles = new THREE.InstancedMesh(geo, mat, count);
+      const data = [];
+      for (let i = 0; i < count; i++) {
+        let x, y, z;
+        if (isPlant) {
+          x = (Math.random() - 0.5) * 1.55;
+          y = (Math.random() - 0.5) * 1.15;
+          z = (Math.random() - 0.5) * 0.95;
+        } else {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          const r = 0.12 + Math.random() * 0.62;
+          x = r * Math.sin(phi) * Math.cos(theta);
+          y = r * Math.sin(phi) * Math.sin(theta);
+          z = r * Math.cos(phi);
+        }
+        const sc = 0.55 + Math.random() * 0.9;
+        _dummy.position.set(x, y, z);
+        _dummy.scale.setScalar(sc);
+        _dummy.updateMatrix();
+        cytoParticles.setMatrixAt(i, _dummy.matrix);
+        data.push({ x, y, z, sc, ph: Math.random() * 6.28, sp: 0.25 + Math.random() * 0.55 });
+      }
+      cytoParticles.instanceMatrix.needsUpdate = true;
+      cellRoot.add(cytoParticles);
+      animParts.push({ type: "cytoParticle", mesh: cytoParticles, data });
+    }
+
+    function addMicrotubules(origin) {
+      const g = new THREE.Group();
+      g.userData.organelleId = "centrosome";
+      for (let i = 0; i < 10; i++) {
+        const ang = (i / 10) * Math.PI * 2 + 0.2;
+        const tilt = (Math.random() - 0.5) * 0.8;
+        const curve = new THREE.CatmullRomCurve3([
+          origin.clone(),
+          new THREE.Vector3(origin.x + Math.cos(ang) * 0.25, origin.y + Math.sin(ang) * 0.2 + tilt * 0.1, origin.z + 0.12),
+          new THREE.Vector3(origin.x + Math.cos(ang) * 0.55, origin.y + Math.sin(ang) * 0.42 + tilt * 0.15, origin.z - 0.18),
+          new THREE.Vector3(origin.x + Math.cos(ang) * 0.82, origin.y + Math.sin(ang) * 0.55 + tilt * 0.08, origin.z + 0.05),
+        ]);
+        const tube = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 32, 0.006, 5, false),
+          physMat(0xb8c8d8, { rough: 0.35, transparent: true, opacity: 0.42, emissive: 0x203040, emissiveInt: 0.06 })
+        );
+        g.add(tube);
+      }
+      return g;
+    }
+
+    function makeVacuole(scale = 1, registerPick = true, large = true) {
+      const g = new THREE.Group();
+      g.userData.organelleId = "vacuole";
+      const w = large ? 1.15 : 0.18;
+      const h = large ? 1.0 : 0.16;
+      const d = large ? 0.95 : 0.16;
+      const rad = large ? 0.15 : 0.08;
+
+      const innerGeo = large
+        ? new RoundedBoxGeometry(w * 0.86 * scale, h * 0.86 * scale, d * 0.86 * scale, 8, rad * scale)
+        : new THREE.SphereGeometry(0.07 * scale, 28, 22);
+      const inner = new THREE.Mesh(
+        innerGeo,
+        physMat(0xc8eeff, {
+          rough: 0.04, transmission: 0.08, transparent: true, opacity: 0.82,
+          emissive: 0x3080a8, emissiveInt: 0.22, clearcoat: 0.7, thickness: 0.6,
+        })
+      );
+      g.add(inner);
+
+      const outerGeo = large
+        ? new RoundedBoxGeometry(w * scale, h * scale, d * scale, 8, rad * 1.2 * scale)
+        : new THREE.SphereGeometry(0.085 * scale, 32, 24);
+      const outer = new THREE.Mesh(
+        outerGeo,
+        physMat(0x6ec8e8, {
+          rough: 0.1, transmission: 0.35, thickness: 0.4, transparent: true, opacity: 0.5,
+          clearcoat: 0.95, side: THREE.DoubleSide,
+        })
+      );
+      if (registerPick) tagMesh(outer, "vacuole");
+      g.add(outer);
+
+      const edge = new THREE.Mesh(
+        outerGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0xa8e8ff, transparent: true, opacity: 0.12, wireframe: true, side: THREE.DoubleSide,
+        })
+      );
+      edge.scale.setScalar(1.004);
+      g.add(edge);
+
+      const count = large ? 40 : 10;
+      for (let i = 0; i < count; i++) {
+        const crystal = i % 7 === 0;
+        const p = new THREE.Mesh(
+          crystal
+            ? new THREE.OctahedronGeometry(0.022 * scale * (large ? 1 : 0.6), 0)
+            : new THREE.SphereGeometry(0.014 * scale * (large ? 1 : 0.55), 8, 8),
+          physMat(crystal ? 0xf0f8ff : 0x88cce8, {
+            rough: crystal ? 0.15 : 0.35,
+            emissive: crystal ? 0x406080 : 0x183848,
+            emissiveInt: crystal ? 0.15 : 0.08,
+            clearcoat: crystal ? 0.8 : 0.3,
+          })
+        );
+        if (large) {
+          p.position.set(
+            (Math.random() - 0.5) * w * 0.65 * scale,
+            (Math.random() - 0.5) * h * 0.65 * scale,
+            (Math.random() - 0.5) * d * 0.65 * scale
+          );
+        } else {
+          const t = Math.random() * Math.PI * 2, p2 = Math.acos(2 * Math.random() - 1);
+          const r = 0.03 * scale;
+          p.position.set(r * Math.sin(p2) * Math.cos(t), r * Math.sin(p2) * Math.sin(t), r * Math.cos(p2));
+        }
+        p.userData.drift = { ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.5, base: p.position.clone() };
+        g.add(p);
+        if (registerPick && large) animParts.push({ type: "vacParticle", mesh: p });
+      }
+
+      return g;
+    }
+
+    function makeMitochondrion(scale = 1, registerPick = true) {
+      const g = new THREE.Group();
+      g.userData.organelleId = "mitochondria";
+      const outer = new THREE.Mesh(
+        new THREE.SphereGeometry(0.148 * scale, 32, 24),
+        physMat(0xc87840, { rough: 0.25, transmission: 0.12, transparent: true, opacity: 0.38, clearcoat: 0.65 })
+      );
+      outer.scale.set(2.25, 1.05, 0.92);
+      g.add(outer);
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.14 * scale, 32, 24),
+        physMat(0xc06030, { rough: 0.38, clearcoat: 0.45 })
+      );
+      body.scale.set(2.15, 0.95, 0.82);
+      if (registerPick) tagMesh(body, "mitochondria");
+      g.add(body);
+      for (let i = -3; i <= 3; i++) {
+        const crista = new THREE.Mesh(
+          new THREE.TorusGeometry(0.088 * scale, 0.011 * scale, 10, 32, Math.PI * 0.92),
+          physMat(0xffd4a8, { rough: 0.45, emissive: 0x442200, emissiveInt: 0.18 })
+        );
+        crista.rotation.y = Math.PI / 2;
+        crista.position.set(0, i * 0.038 * scale, (Math.random() - 0.5) * 0.015);
+        g.add(crista);
+      }
+      if (registerPick) pickables.push(body);
+      return g;
+    }
+
+    function makeChloroplast(scale = 1, registerPick = true) {
+      const g = new THREE.Group();
+      const shell = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16 * scale, 36, 28),
+        physMat(0x2d6b2a, { rough: 0.4, clearcoat: 0.35, transmission: 0.05, thickness: 0.2 })
+      );
+      shell.scale.set(1.75, 1.05, 1.05);
+      if (registerPick) tagMesh(shell, "chloroplast");
+      g.add(shell);
+      for (let gx = -2; gx <= 2; gx++) {
+        for (let gy = -2; gy <= 2; gy++) {
+          if (Math.abs(gx) + Math.abs(gy) > 3) continue;
+          const stack = new THREE.Group();
+          for (let s = 0; s < 4; s++) {
+            const gr = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.028 * scale, 0.028 * scale, 0.012 * scale, 10),
+              physMat(0x1a4a18, { rough: 0.55, emissive: 0x0a2008, emissiveInt: 0.12 })
+            );
+            gr.position.y = s * 0.014 * scale;
+            stack.add(gr);
+          }
+          stack.position.set(gx * 0.075 * scale, gy * 0.05 * scale, (Math.random() - 0.5) * 0.025);
+          stack.rotation.set(Math.random() * 0.3, Math.random() * 0.5, Math.random() * 0.2);
+          g.add(stack);
+        }
+      }
+      g.userData.organelleId = "chloroplast";
+      g.userData.spin = 0.15 + Math.random() * 0.1;
+      if (registerPick) pickables.push(shell);
+      return g;
+    }
+
+    function makeNucleus(r = 0.42, registerPick = true) {
+      const g = new THREE.Group();
+      g.userData.organelleId = "nucleus";
+      const outer = new THREE.Mesh(
+        new THREE.SphereGeometry(r, 56, 48),
+        physMat(0x5c4a82, { rough: 0.28, transmission: 0.1, thickness: 0.35, clearcoat: 0.55, transparent: true, opacity: 0.92 })
+      );
+      if (registerPick) tagMesh(outer, "nucleus");
+      g.add(outer);
+      for (let i = 0; i < 22; i++) {
+        const a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI;
+        const pore = new THREE.Mesh(
+          new THREE.TorusGeometry(r * 0.035, r * 0.007, 6, 14),
+          physMat(0x3a2860, { rough: 0.4, emissive: 0x100820, emissiveInt: 0.1 })
+        );
+        pore.position.set(r * 0.94 * Math.sin(b) * Math.cos(a), r * 0.94 * Math.sin(b) * Math.sin(a), r * 0.94 * Math.cos(b));
+        pore.lookAt(0, 0, 0);
+        g.add(pore);
+      }
+      for (let i = 0; i < 22; i++) {
+        const ch = new THREE.Mesh(
+          new THREE.SphereGeometry(0.035 + Math.random() * 0.055, 14, 12),
+          physMat(0x4a3868, { rough: 0.65, transparent: true, opacity: 0.72 })
+        );
+        const a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI;
+        ch.position.set(
+          r * 0.55 * Math.sin(b) * Math.cos(a),
+          r * 0.45 * Math.sin(b) * Math.sin(a),
+          r * 0.5 * Math.cos(b)
+        );
+        ch.userData.orbit = { a, b, r: r * 0.5, sp: 0.3 + Math.random() * 0.4 };
+        g.add(ch);
+        if (registerPick) animParts.push({ type: "chromatin", mesh: ch });
+      }
+      const nucl = new THREE.Mesh(
+        new THREE.SphereGeometry(r * 0.24, 28, 24),
+        physMat(0x3a2860, { rough: 0.22, emissive: 0x201040, emissiveInt: 0.25 })
+      );
+      nucl.position.set(r * 0.12, r * 0.08, 0);
+      g.add(nucl);
+      if (registerPick) pickables.push(outer);
+      return g;
+    }
+
+    function makeER(registerPick = true) {
+      const g = new THREE.Group();
+      g.userData.organelleId = "er";
+      const mat = physMat(0x9a8ab8, { rough: 0.38, transparent: true, opacity: 0.82, clearcoat: 0.25 });
+      const riboMat = physMat(0x505868, { rough: 0.75, emissive: 0x101018, emissiveInt: 0.08 });
+      for (let i = 0; i < 6; i++) {
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(-0.55, i * 0.11 - 0.22, 0),
+          new THREE.Vector3(-0.18, i * 0.11 - 0.28, 0.1),
+          new THREE.Vector3(0.22, i * 0.11 - 0.16, -0.06),
+          new THREE.Vector3(0.58, i * 0.11 - 0.24, 0.03),
+        ]);
+        const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.022 + (i < 3 ? 0.006 : 0), 10, false), mat.clone());
+        if (i < 3 && registerPick) tagMesh(tube, "er");
+        g.add(tube);
+        if (i < 3) {
+          for (let j = 0; j < 14; j++) {
+            const t = j / 14;
+            const pt = curve.getPoint(t);
+            const ribo = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), riboMat.clone());
+            ribo.position.copy(pt).add(new THREE.Vector3(0, 0.022, 0.012));
+            g.add(ribo);
+          }
+        }
+      }
+      for (let i = 0; i < 14; i++) {
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.016, 8, 8),
+          physMat(0x404050, { rough: 0.8 })
+        );
+        dot.userData.t = i / 14;
+        dot.userData.lane = i % 3;
+        g.add(dot);
+        if (registerPick) animParts.push({ type: "erDot", mesh: dot, group: g });
+      }
+      if (registerPick) {
+        const hit = g.children.find((c) => c.userData.organelleId === "er");
+        if (hit) pickables.push(hit);
+      }
+      return g;
+    }
+
+    function makeGolgi(registerPick = true) {
+      const g = new THREE.Group();
+      g.userData.organelleId = "golgi";
+      for (let i = 0; i < 6; i++) {
+        const cist = new THREE.Mesh(
+          new THREE.TorusGeometry(0.22, 0.035, 12, 48, Math.PI * 0.85),
+          physMat(0xc87088, { rough: 0.35, transparent: true, opacity: 0.88 - i * 0.06 })
+        );
+        cist.rotation.x = Math.PI / 2;
+        cist.position.set(i * 0.04, i * 0.055 - 0.12, 0);
+        cist.rotation.z = 0.15 + i * 0.03;
+        if (i === 2 && registerPick) tagMesh(cist, "golgi");
+        g.add(cist);
+      }
+      for (let i = 0; i < 5; i++) {
+        const ves = new THREE.Mesh(
+          new THREE.SphereGeometry(0.028, 12, 12),
+          physMat(0xf0a0b0, { rough: 0.3, clearcoat: 0.6 })
+        );
+        ves.userData.prog = i / 5;
+        g.add(ves);
+        if (registerPick) animParts.push({ type: "golgiVes", mesh: ves, group: g });
+      }
+      if (registerPick) {
+        const hit = g.children.find((c) => c.userData.organelleId === "golgi");
+        if (hit) pickables.push(hit);
+      }
+      return g;
+    }
+
+    function buildAnimalCell() {
+      cellRoot.clear();
+      pickables = [];
+      animParts = [];
+      membraneMesh = null;
+      membraneGeo = null;
+      membraneBasePos = null;
+      cytoParticles = null;
+
+      membraneGeo = makeBlobGeometry(1.05, 5, 0.14);
+      membraneBasePos = Float32Array.from(membraneGeo.attributes.position.array);
+      membraneMesh = new THREE.Mesh(
+        membraneGeo,
+        physMat(0xc4a882, { rough: 0.18, transmission: 0.42, thickness: 0.2, clearcoat: 0.85, transparent: true, opacity: 0.32, side: THREE.DoubleSide })
+      );
+      tagMesh(membraneMesh, "membrane");
+      cellRoot.add(membraneMesh);
+
+      const cyto = new THREE.Mesh(
+        makeBlobGeometry(0.98, 5, 0.11),
+        physMat(0xe8dcc8, { rough: 0.55, transparent: true, opacity: 0.22, transmission: 0.08, thickness: 0.4 })
+      );
+      tagMesh(cyto, "cytoplasm", false);
+      cellRoot.add(cyto);
+
+      const nucleus = makeNucleus(0.38);
+      nucleus.position.set(-0.12, 0.05, 0.05);
+      cellRoot.add(nucleus);
+
+      [[0.35, 0.15, 0.1], [-0.28, -0.2, 0.15], [0.05, -0.25, -0.12], [0.42, -0.08, -0.22]].forEach(([x, y, z], i) => {
+        const mito = makeMitochondrion(0.88 + i * 0.04);
+        mito.position.set(x, y, z);
+        mito.rotation.set(Math.random(), Math.random(), Math.random());
+        mito.userData.drift = { x, y, z, ph: Math.random() * 6.28, amp: 0.035 + i * 0.012, rz: Math.random() * 0.02 };
+        cellRoot.add(mito);
+        animParts.push({ type: "mito", group: mito });
+      });
+
+      const golgi = makeGolgi();
+      golgi.position.set(0.32, -0.05, 0.12);
+      golgi.rotation.y = 0.6;
+      cellRoot.add(golgi);
+
+      const er = makeER();
+      er.position.set(-0.35, -0.05, -0.1);
+      er.rotation.y = -0.4;
+      cellRoot.add(er);
+
+      const lyso = new THREE.Mesh(new THREE.SphereGeometry(0.06, 24, 20), physMat(0x8b4040, { rough: 0.32, clearcoat: 0.3 }));
+      lyso.position.set(0.2, 0.22, 0.18);
+      tagMesh(lyso, "lysosome");
+      cellRoot.add(lyso);
+      animParts.push({ type: "lyso", mesh: lyso, base: lyso.position.clone(), ph: Math.random() * 6.28 });
+
+      const centro = new THREE.Group();
+      centro.userData.organelleId = "centrosome";
+      const cyl = (ox, oy, rz) => {
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.12, 14), physMat(0x687888, { rough: 0.45, emissive: 0x101820, emissiveInt: 0.08 }));
+        c.rotation.z = rz;
+        c.position.set(ox, oy, 0);
+        return c;
+      };
+      const c1 = cyl(-0.04, 0, 0.35); tagMesh(c1, "centrosome");
+      const c2 = cyl(0.04, 0, -0.25);
+      centro.add(c1, c2);
+      centro.position.set(-0.02, 0.28, 0.1);
+      cellRoot.add(centro);
+      animParts.push({ type: "centro", group: centro });
+
+      const mtOrigin = new THREE.Vector3(-0.02, 0.28, 0.1);
+      cellRoot.add(addMicrotubules(mtOrigin));
+
+      const vac = makeVacuole(1, true, false);
+      vac.position.set(0.25, 0.18, -0.08);
+      cellRoot.add(vac);
+      animParts.push({ type: "vacuole", group: vac, baseScale: new THREE.Vector3(1, 1, 1) });
+
+      createCytoplasmParticles(180, false);
+      applyClippingToRoot();
+    }
+
+    function buildPlantCell() {
+      cellRoot.clear();
+      pickables = [];
+      animParts = [];
+      membraneMesh = null;
+      cytoParticles = null;
+
+      const wall = new THREE.Mesh(
+        new RoundedBoxGeometry(2.15, 1.75, 1.55, 6, 0.12),
+        physMat(0x7a6348, { rough: 0.88, transparent: true, opacity: 0.58 })
+      );
+      tagMesh(wall, "cellWall");
+      cellRoot.add(wall);
+
+      const membrane = new THREE.Mesh(
+        new RoundedBoxGeometry(2.0, 1.6, 1.4, 6, 0.1),
+        physMat(0xc4a882, { rough: 0.18, transmission: 0.35, transparent: true, opacity: 0.28, side: THREE.BackSide, clearcoat: 0.5 })
+      );
+      tagMesh(membrane, "membrane");
+      cellRoot.add(membrane);
+
+      const cyto = new THREE.Mesh(
+        new RoundedBoxGeometry(1.92, 1.52, 1.32, 5, 0.08),
+        physMat(0xe8dcc8, { rough: 0.55, transparent: true, opacity: 0.18, transmission: 0.06 })
+      );
+      tagMesh(cyto, "cytoplasm", false);
+      cellRoot.add(cyto);
+
+      const vac = makeVacuole(1, true, true);
+      cellRoot.add(vac);
+      animParts.push({ type: "vacuole", group: vac, baseScale: new THREE.Vector3(1, 1, 1) });
+
+      const nucleus = makeNucleus(0.28);
+      nucleus.position.set(0.55, 0.35, 0.2);
+      cellRoot.add(nucleus);
+
+      [[-0.65, -0.45, 0.35], [0.7, -0.4, -0.25], [-0.5, 0.5, -0.3], [0.45, 0.42, 0.38]].forEach(([x, y, z]) => {
+        const ch = makeChloroplast(0.85);
+        ch.position.set(x, y, z);
+        ch.rotation.set(Math.random() * 0.5, Math.random() * Math.PI, Math.random());
+        cellRoot.add(ch);
+        animParts.push({ type: "chloro", group: ch });
+      });
+
+      [[-0.6, 0.2, 0.4], [0.5, 0.15, -0.35], [-0.2, -0.35, 0.45]].forEach(([x, y, z], i) => {
+        const mito = makeMitochondrion(0.72);
+        mito.position.set(x, y, z);
+        mito.userData.drift = { x, y, z, ph: Math.random() * 6.28, amp: 0.028 + i * 0.008, rz: Math.random() * 0.015 };
+        cellRoot.add(mito);
+        animParts.push({ type: "mito", group: mito });
+      });
+
+      const golgi = makeGolgi();
+      golgi.position.set(0.55, -0.45, 0.25);
+      cellRoot.add(golgi);
+
+      const er = makeER();
+      er.position.set(-0.55, -0.2, 0.15);
+      cellRoot.add(er);
+
+      createCytoplasmParticles(140, true);
+      applyClippingToRoot();
+    }
+
+    function applyViewMode() {
+      const em = viewMode === "em";
+      document.getElementById("mainViewportWrap").classList.toggle("em-mode", em);
+      document.getElementById("zoomWrap").classList.toggle("em-mode", em);
+      mainScene.background = new THREE.Color(em ? 0x0a0a0a : 0x0a1210);
+      mainScene.fog = new THREE.FogExp2(em ? 0x0a0a0a : 0x0a1210, cutawayEnabled ? 0.018 : (em ? 0.07 : 0.045));
+      mainRenderer.toneMappingExposure = cutawayEnabled ? 1.48 : 1.15;
+      if (cutawayEnabled) mainScene.background.setHex(0x121820);
+
+      cellRoot.traverse((obj) => {
+        if (!obj.isMesh || !obj.material?.userData?.baseColor) return;
+        const m = obj.material;
+        if (em) {
+          const g = m.userData.baseColor.getHex();
+          const lum = m.userData.baseColor.r * 0.21 + m.userData.baseColor.g * 0.72 + m.userData.baseColor.b * 0.07;
+          const v = lum > 0.45 ? 0.75 : lum > 0.25 ? 0.45 : 0.22;
+          m.color.setRGB(v, v, v);
+          m.emissive.setRGB(0, 0, 0);
+          m.transmission = Math.min(m.transmission, 0.05);
+        } else {
+          m.color.copy(m.userData.baseColor);
+          m.emissive.setHex(0x000000);
+        }
+      });
+      updateMicroBadge();
+      if (selectedId) buildZoomScene(selectedId);
+    }
+
+    function animateMembrane(t) {
+      if (!membraneMesh || !membraneGeo || !membraneBasePos || cellType !== "animal") return;
+      const pos = membraneGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const bx = membraneBasePos[i * 3];
+        const by = membraneBasePos[i * 3 + 1];
+        const bz = membraneBasePos[i * 3 + 2];
+        const len = Math.sqrt(bx * bx + by * by + bz * bz) || 1;
+        const wobble = 1 + 0.022 * Math.sin(t * 1.4 + i * 0.07) + 0.014 * Math.sin(t * 0.85 + bx * 4.2 + by * 2.1);
+        const s = len * wobble;
+        pos.setXYZ(i, (bx / len) * s, (by / len) * s, (bz / len) * s);
+      }
+      pos.needsUpdate = true;
+      if (++membraneNormTick % 3 === 0) membraneGeo.computeVertexNormals();
+    }
+
+    function animateCell(t, dt) {
+      if (animPaused) return;
+      const s = animSpeed * dt;
+
+      animateMembrane(t);
+      cellRoot.rotation.y = Math.sin(t * 0.12) * 0.035;
+
+      animParts.forEach((p) => {
+        if (p.type === "mito" && p.group.userData.drift) {
+          const d = p.group.userData.drift;
+          p.group.position.x = d.x + Math.sin(t * 0.65 + d.ph) * d.amp;
+          p.group.position.y = d.y + Math.cos(t * 0.5 + d.ph) * d.amp;
+          p.group.position.z = d.z + Math.sin(t * 0.45 + d.ph * 1.3) * d.amp * 0.6;
+          p.group.rotation.y += s * 0.18;
+          p.group.rotation.z += s * (d.rz ?? 0.01);
+        }
+        if (p.type === "chloro") {
+          p.group.rotation.y += s * (p.group.userData.spin ?? 0.2);
+          p.group.rotation.x += s * 0.04;
+          const shell = p.group.children[0];
+          if (shell?.material && viewMode === "light" && p.group.userData.organelleId === "chloroplast") {
+            shell.material.emissive.setHex(0x143010);
+            shell.material.emissiveIntensity = 0.12 + 0.14 * Math.sin(t * 2.2 + p.group.id);
+          }
+        }
+        if (p.type === "vacuole") {
+          const pulse = 1 + 0.028 * Math.sin(t * 1.05);
+          if (p.group) p.group.scale.setScalar(pulse);
+          else if (p.mesh) p.mesh.scale.set(pulse, pulse * 0.98, pulse);
+          const inner = p.group?.children[0];
+          if (inner?.material && viewMode === "light") {
+            inner.material.emissiveIntensity = 0.18 + 0.1 * Math.sin(t * 1.3);
+          }
+        }
+        if (p.type === "vacParticle" && p.mesh.userData.drift) {
+          const d = p.mesh.userData.drift;
+          p.mesh.position.set(
+            d.base.x + Math.sin(t * d.sp + d.ph) * 0.01,
+            d.base.y + Math.sin(t * d.sp * 1.2 + d.ph) * 0.014,
+            d.base.z + Math.cos(t * d.sp * 0.9 + d.ph) * 0.01
+          );
+          p.mesh.rotation.y += s * 0.5;
+        }
+        if (p.type === "chromatin" && p.mesh.userData.orbit) {
+          const o = p.mesh.userData.orbit;
+          o.a += s * o.sp * 0.35;
+          o.b += s * 0.02 * Math.sin(t * 0.5);
+          p.mesh.position.set(
+            o.r * Math.sin(o.b) * Math.cos(o.a),
+            o.r * Math.sin(o.b) * Math.sin(o.a),
+            o.r * Math.cos(o.b)
+          );
+        }
+        if (p.type === "erDot") {
+          p.mesh.userData.t = (p.mesh.userData.t + s * 0.28) % 1;
+          const lane = p.mesh.userData.lane;
+          p.mesh.position.set(-0.55 + p.mesh.userData.t * 1.1, lane * 0.11 - 0.22, Math.sin(p.mesh.userData.t * 14) * 0.05);
+        }
+        if (p.type === "golgiVes") {
+          p.mesh.userData.prog = (p.mesh.userData.prog + s * 0.22) % 1;
+          p.mesh.position.set(0.12 + p.mesh.userData.prog * 0.38, 0.04 - Math.sin(p.mesh.userData.prog * Math.PI) * 0.16, 0.06 + Math.cos(p.mesh.userData.prog * 6.28) * 0.04);
+        }
+        if (p.type === "centro") {
+          p.group.rotation.z = Math.sin(t * 0.38) * 0.09;
+          p.group.rotation.x = Math.cos(t * 0.52) * 0.04;
+        }
+        if (p.type === "lyso" && p.base) {
+          p.mesh.position.x = p.base.x + Math.sin(t * 0.8 + p.ph) * 0.025;
+          p.mesh.position.y = p.base.y + Math.cos(t * 0.65 + p.ph) * 0.02;
+        }
+        if (p.type === "cytoParticle" && p.data) {
+          p.data.forEach((d, i) => {
+            const nx = d.x + Math.sin(t * d.sp + d.ph) * 0.018;
+            const ny = d.y + Math.cos(t * d.sp * 0.85 + d.ph) * 0.018;
+            const nz = d.z + Math.sin(t * d.sp * 0.7 + d.ph * 1.4) * 0.015;
+            _dummy.position.set(nx, ny, nz);
+            _dummy.scale.setScalar(d.sc * (0.92 + 0.08 * Math.sin(t * 2 + d.ph)));
+            _dummy.updateMatrix();
+            p.mesh.setMatrixAt(i, _dummy.matrix);
+          });
+          p.mesh.instanceMatrix.needsUpdate = true;
+        }
+      });
+    }
+
+    function highlightSelection() {
+      cellRoot.traverse((obj) => {
+        if (!obj.isMesh || !obj.material?.userData?.baseColor) return;
+        const id = obj.userData.organelleId || obj.parent?.userData?.organelleId;
+        const sel = id === selectedId;
+        const isChloroShell = viewMode === "light" && obj.parent?.userData?.organelleId === "chloroplast" && obj.parent.children[0] === obj;
+        if (sel) {
+          obj.material.emissive.setHex(0xfde68a);
+          obj.material.emissiveIntensity = 0.38;
+        } else if (!isChloroShell) {
+          obj.material.emissive.setHex(0x000000);
+          obj.material.emissiveIntensity = 0;
+        }
+      });
+    }
+
+    // ── 拡大 3D シーン ──
+    function buildZoomScene(id) {
+      zoomRoot.clear();
+      if (!id || !ORGANELLES[id]) return;
+      const em = viewMode === "em";
+      document.getElementById("zoomTitle").textContent = `小器官拡大 3D — ${ORGANELLES[id].name}`;
+      document.getElementById("zoomBadge").textContent = em ? "TEM ×50,000 相当" : "LM ×2,000 相当";
+
+      let model;
+      const s = 1.8;
+      switch (id) {
+        case "mitochondria": model = makeMitochondrion(s, false); break;
+        case "nucleus": model = makeNucleus(0.55 * s, false); break;
+        case "chloroplast": model = makeChloroplast(s, false); break;
+        case "golgi": model = makeGolgi(false); model.scale.setScalar(s); break;
+        case "er": model = makeER(false); model.scale.setScalar(s); break;
+        case "centrosome":
+          model = new THREE.Group();
+          const mk = (rz) => {
+            const c = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.35, 16), physMat(0x687888));
+            c.rotation.z = rz;
+            model.add(c);
+          };
+          mk(0.4); mk(-0.3);
+          break;
+        case "vacuole":
+          model = makeVacuole(cellType === "plant" ? 1.05 : 0.85, false, cellType === "plant");
+          model.rotation.set(0.42, 0.55, 0.12);
+          break;
+        case "cellWall":
+          model = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1), physMat(0x7a6348, { rough: 0.9 }));
+          break;
+        case "lysosome":
+          model = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 24), physMat(0x8b4040));
+          break;
+        case "membrane":
+          model = new THREE.Mesh(new THREE.SphereGeometry(0.7, 48, 40), physMat(0xc4a882, { transmission: 0.5, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+          break;
+        default:
+          model = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 20), physMat(ORGANELLES[id]?.color ?? 0x888888));
+      }
+      zoomRoot.add(model);
+      if (em) {
+        zoomRoot.traverse((obj) => {
+          if (obj.isMesh && obj.material?.userData?.baseColor) {
+            obj.material.color.setRGB(0.55, 0.55, 0.55);
+          }
+        });
+      }
+      zoomControls.reset();
+    }
+
+    function initMain() {
+      const el = document.getElementById("mainViewport");
+      const w = el.clientWidth, h = el.clientHeight;
+      mainScene = new THREE.Scene();
+      mainScene.background = new THREE.Color(0x0a1210);
+      mainScene.fog = new THREE.FogExp2(0x0a1210, 0.045);
+
+      mainCamera = new THREE.PerspectiveCamera(42, w / h, 0.1, 100);
+      mainCamera.position.set(0, 0.5, 3.2);
+
+      mainRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+      mainRenderer.setSize(w, h);
+      mainRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      mainRenderer.outputColorSpace = THREE.SRGBColorSpace;
+      mainRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+      mainRenderer.toneMappingExposure = 1.15;
+      mainRenderer.localClippingEnabled = true;
+      el.appendChild(mainRenderer.domElement);
+
+      mainControls = new OrbitControls(mainCamera, mainRenderer.domElement);
+      mainControls.enableDamping = true;
+      mainControls.dampingFactor = 0.06;
+      mainControls.minDistance = 1.4;
+      mainControls.maxDistance = 6;
+      mainControls.autoRotate = false;
+
+      mainScene.add(new THREE.HemisphereLight(0xa8c8b0, 0x1a2018, 0.65));
+      mainScene.add(new THREE.AmbientLight(0x304040, 0.35));
+      const key = new THREE.DirectionalLight(0xfff8ee, 1.25);
+      key.position.set(3.5, 4.5, 5);
+      mainScene.add(key);
+      const fill = new THREE.DirectionalLight(0x88aacc, 0.5);
+      fill.position.set(-4.5, -0.5, 2.5);
+      mainScene.add(fill);
+      const rim = new THREE.PointLight(0x4ade80, 0.55, 14);
+      rim.position.set(0, 2.5, -3.5);
+      mainScene.add(rim);
+      const back = new THREE.PointLight(0x6080ff, 0.25, 10);
+      back.position.set(-2, -1, -4);
+      mainScene.add(back);
+
+      cellRoot = new THREE.Group();
+      mainScene.add(cellRoot);
+      cutawayLight = new THREE.PointLight(0xe0f0ff, 0, 10);
+      cutawayLight.position.set(0, 0, 0);
+      mainScene.add(cutawayLight);
+      buildAnimalCell();
+
+      mainRenderer.domElement.addEventListener("pointerdown", onPointerDown);
+      window.addEventListener("resize", onResize);
+    }
+
+    function initZoom() {
+      const el = document.getElementById("zoomViewport");
+      const w = el.clientWidth, h = el.clientHeight;
+      zoomScene = new THREE.Scene();
+      zoomScene.background = new THREE.Color(0x101820);
+      zoomCamera = new THREE.PerspectiveCamera(38, w / h, 0.05, 50);
+      zoomCamera.position.set(0.35, 0.25, 2.0);
+      zoomRenderer = new THREE.WebGLRenderer({ antialias: true });
+      zoomRenderer.setSize(w, h);
+      zoomRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      zoomRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+      zoomRenderer.toneMappingExposure = 1.45;
+      zoomRenderer.outputColorSpace = THREE.SRGBColorSpace;
+      el.appendChild(zoomRenderer.domElement);
+      zoomControls = new OrbitControls(zoomCamera, zoomRenderer.domElement);
+      zoomControls.enableDamping = true;
+      zoomScene.add(new THREE.HemisphereLight(0xd0eeff, 0x1a2530, 0.9));
+      zoomScene.add(new THREE.AmbientLight(0x7090b0, 0.5));
+      const lk = new THREE.DirectionalLight(0xffffff, 1.65);
+      lk.position.set(2.5, 3.5, 4);
+      zoomScene.add(lk);
+      const zFill = new THREE.DirectionalLight(0x88bbee, 0.75);
+      zFill.position.set(-3, 0.5, 2);
+      zoomScene.add(zFill);
+      const zRim = new THREE.PointLight(0xaaeeff, 0.9, 12);
+      zRim.position.set(0, 0.5, 3);
+      zoomScene.add(zRim);
+      zoomRoot = new THREE.Group();
+      zoomScene.add(zoomRoot);
+    }
+
+    function onPointerDown(e) {
+      const rect = mainRenderer.domElement.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, mainCamera);
+      const hits = raycaster.intersectObjects(pickables, false);
+      if (hits.length) {
+        let id = hits[0].object.userData.organelleId;
+        if (!id) {
+          let p = hits[0].object.parent;
+          while (p && !id) { id = p.userData?.organelleId; p = p.parent; }
+        }
+        if (id) selectOrganelle(id);
+      }
+    }
+
+    function selectOrganelle(id) {
+      selectedId = id;
+      showOrganelleInfo(id);
+      highlightSelection();
+      buildLegend();
+      buildZoomScene(id);
+    }
+
+    function showOrganelleInfo(id) {
+      const o = ORGANELLES[id];
+      if (!o) return;
+      const emBlock = o.em ? `<div class="em-block"><strong>TEM：</strong>${o.em}</div>` : "";
+      document.getElementById("organelleInfo").innerHTML = `
+        <span class="tag">${cellType === "animal" ? "動物" : "植物"} · ${viewMode === "em" ? "TEM" : "LM"} · 3D</span>
+        <h4>${o.name}</h4>
+        <ul>${o.points.map((p) => `<li>${p}</li>`).join("")}</ul>${emBlock}`;
+    }
+
+    function buildLegend() {
+      const wrap = document.getElementById("legendChips");
+      wrap.innerHTML = "";
+      Object.entries(ORGANELLES).forEach(([id, o]) => {
+        if (!o[cellType]) return;
+        const span = document.createElement("span");
+        span.className = id === selectedId ? "on" : "";
+        span.innerHTML = `<i style="background:#${o.color.toString(16).padStart(6, "0")}"></i>${o.name}`;
+        span.onclick = () => selectOrganelle(id);
+        wrap.appendChild(span);
+      });
+    }
+
+    function updateMicroBadge() {
+      const b = document.getElementById("microBadge");
+      if (viewMode === "em") {
+        b.textContent = "3D · TEM · 超薄切 · ドラッグで回転";
+      } else {
+        b.textContent = "3D · LM · 位相差風 · ドラッグで回転";
+      }
+    }
+
+    function setCellType(type) {
+      cellType = type;
+      selectedId = null;
+      document.querySelectorAll("#typeBtns button").forEach((b) => b.classList.toggle("active", b.dataset.type === type));
+      if (type === "plant") buildPlantCell(); else buildAnimalCell();
+      if (cutawayLight) cutawayLight.intensity = cutawayEnabled ? 2.2 : 0;
+      applyViewMode();
+      highlightSelection();
+      buildLegend();
+      buildZoomScene(null);
+      document.getElementById("organelleInfo").innerHTML = `<p class="placeholder" style="color:#64748b;font-size:0.86rem">${type === "animal" ? "動物" : "植物"}細胞 3D — 小器官をクリック</p>`;
+      document.getElementById("zoomTitle").textContent = "小器官拡大 — 選択してください";
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.querySelectorAll("#viewModeBtns button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.mode === mode && mode === "light");
+        b.classList.toggle("em-active", b.dataset.mode === mode && mode === "em");
+      });
+      applyViewMode();
+      if (selectedId) showOrganelleInfo(selectedId);
+    }
+
+    function onResize() {
+      const mel = document.getElementById("mainViewport");
+      const mw = mel.clientWidth, mh = mel.clientHeight;
+      mainCamera.aspect = mw / mh;
+      mainCamera.updateProjectionMatrix();
+      mainRenderer.setSize(mw, mh);
+      const zel = document.getElementById("zoomViewport");
+      const zw = zel.clientWidth, zh = zel.clientHeight;
+      zoomCamera.aspect = zw / zh;
+      zoomCamera.updateProjectionMatrix();
+      zoomRenderer.setSize(zw, zh);
+    }
+
+    function loop() {
+      const t = clock.getElapsedTime();
+      const dt = clock.getDelta();
+      animateCell(t, dt);
+      highlightSelection();
+      mainControls.update();
+      mainRenderer.render(mainScene, mainCamera);
+      zoomControls?.update();
+      zoomRenderer?.render(zoomScene, zoomCamera);
+      if (zoomRoot?.children[0]) {
+        zoomRoot.rotation.y += dt * 0.15 * animSpeed;
+        if (selectedId === "vacuole") {
+          const zm = zoomRoot.children[0];
+          const inner = zm.children[0];
+          if (inner?.material?.emissiveIntensity !== undefined) {
+            inner.material.emissiveIntensity = 0.2 + 0.14 * Math.sin(t * 1.4);
+          }
+          zm.rotation.x = 0.42 + Math.sin(t * 0.35) * 0.06;
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+
+    document.querySelectorAll("#typeBtns button").forEach((b) => b.addEventListener("click", () => setCellType(b.dataset.type)));
+    document.querySelectorAll("#viewModeBtns button").forEach((b) => b.addEventListener("click", () => setViewMode(b.dataset.mode)));
+    document.getElementById("speedSlider").addEventListener("input", (e) => { animSpeed = +e.target.value; });
+    document.getElementById("animPauseBtn").addEventListener("click", () => {
+      animPaused = !animPaused;
+      document.getElementById("animPauseBtn").textContent = animPaused ? "再開" : "一時停止";
+    });
+    document.getElementById("cutawayBtn").addEventListener("click", () => setCutaway(!cutawayEnabled));
+
+    initMain();
+    initZoom();
+    buildLegend();
+    updateMicroBadge();
+    loop();
+  </script>
+</body>
+</html>

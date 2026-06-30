@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NaCl 再結晶 — 急冷と放冷の結晶成長</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #06b6d4; --accent-light: #22d3ee; --accent-glow: rgba(6,182,212,0.45);
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(6,182,212,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+      --na: #a78bfa; --cl: #34d399;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0c1524 38%,#101c30 72%,#0a1018 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1240px,97vw); margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(167,139,250,0.25),rgba(6,182,212,0.3));
+      border: 1px solid rgba(167,139,250,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); text-shadow: 0 0 20px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #cffafe;
+      background: rgba(6,182,212,0.14); border: 1px solid rgba(6,182,212,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .main-grid {
+      display: grid; grid-template-columns: 1fr; gap: 10px;
+    }
+    @media (min-width:960px) {
+      .main-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        grid-template-rows: auto auto auto;
+      }
+      .cell-canvas { grid-column: 1; grid-row: 1; }
+      .cell-controls { grid-column: 1; grid-row: 2; }
+      .cell-size-chart { grid-column: 2; grid-row: 1; }
+      .cell-ts-chart { grid-column: 2; grid-row: 2; }
+      .cell-explain { grid-column: 1 / -1; grid-row: 3; }
+    }
+    .panel {
+      border-radius: 14px; padding: 12px 14px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+    }
+    .panel h3 { margin: 0 0 8px; font-size: 0.92rem; font-weight: 600; color: var(--accent-light); }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg,rgba(10,20,32,0.98),rgba(6,12,20,0.99));
+      border: 1px solid rgba(56,189,248,0.3);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.92rem; font-weight: 700; color: #e0f2fe; }
+    .viz-legend { margin: 4px 0 0; font-size: 0.76rem; color: #94a3b8; line-height: 1.45; }
+    #growthCanvas { display: block; width: 100%; height: min(380px,42dvh); min-height: 260px; }
+    .chart-wrap { position: relative; height: min(220px,28dvh); min-height: 180px; }
+    .info-strip {
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 8px;
+    }
+    @media (min-width:640px) { .info-strip { grid-template-columns: repeat(4,1fr); } }
+    .info-item {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(125,211,252,0.18);
+    }
+    .info-item .label { display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px; }
+    .info-item .val { font-size: 0.88rem; font-weight: 700; color: #e0f2fe; font-variant-numeric: tabular-nums; }
+    .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width:640px) { .controls-grid { grid-template-columns: 1fr 1fr; } }
+    label { display: block; font-size: 0.84rem; font-weight: 500; color: #e2e8f0; margin-bottom: 5px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 8px; }
+    select {
+      width: 100%; padding: 10px 12px; border-radius: 10px; font-family: inherit;
+      font-size: 0.86rem; color: #e2e8f0; background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(56,189,248,0.35); cursor: pointer;
+    }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #7dd3fc; font-variant-numeric: tabular-nums; }
+    .mode-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mode-btns button {
+      flex: 1 1 calc(33% - 6px); min-width: 96px; min-height: 44px; padding: 8px 6px;
+      font-family: inherit; font-size: 0.8rem;
+      font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.07); color: #e2e8f0;
+    }
+    .mode-btns button.active {
+      background: linear-gradient(135deg,#0891b2,#06b6d4); color: #fff; border: none;
+      box-shadow: 0 0 14px var(--accent-glow);
+    }
+    .btn-row { display: flex; gap: 8px; grid-column: 1 / -1; }
+    .btn-row button {
+      flex: 1; min-height: 46px; padding: 10px; font-family: inherit; font-size: 0.88rem;
+      font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.07); color: #e2e8f0;
+    }
+    .btn-row button.primary {
+      background: linear-gradient(135deg,#0891b2,#06b6d4); color: #fff; border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: #94a3b8; }
+    .legend-row span { display: inline-flex; align-items: center; gap: 5px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.na { background: var(--na); }
+    .dot.cl { background: var(--cl); }
+    .explain-text { margin: 0; font-size: 0.84rem; line-height: 1.7; color: #cbd5e1; }
+    .explain-text p { margin: 0 0 10px; }
+    .explain-text ul { margin: 0; padding-left: 1.2rem; }
+    .explain-text li { margin-bottom: 6px; }
+    .explain-text strong { color: #fde68a; }
+    .comment-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(6,182,212,0.1); border: 1px solid rgba(56,189,248,0.28);
+      font-size: 0.82rem; line-height: 1.6; color: #bae6fd;
+    }
+    .formula-mini {
+      margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+      background: rgba(255,255,255,0.04); font-size: 0.78rem; color: #94a3b8; line-height: 1.5;
+    }
+    .formula-mini code { color: #e0f2fe; font-size: 0.82rem; }
+    .dist-explain {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.22);
+    }
+    .dist-explain-title {
+      margin: 0 0 6px; font-size: 0.8rem; font-weight: 700; color: #c4b5fd;
+    }
+    .dist-explain-body {
+      margin: 0; font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .dist-explain-body strong { color: #fde68a; font-weight: 600; }
+    .dist-explain-body em { color: #7dd3fc; font-style: normal; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">◆</div>
+      <h2>NaCl 再結晶 — 結晶成長シミュレーション</h2>
+      <p class="chapter-label">EX章 · 物性 · 急冷と放冷で比較する再結晶</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <!-- ① 左上：結晶成長 Canvas -->
+      <div class="cell-canvas viz-block">
+        <div class="viz-head">
+          <p class="viz-label">溶液中のイオンと結晶成長</p>
+          <p class="viz-legend">紫＝Na⁺ · 緑＝Cl⁻ · 立方体＝NaCl 結晶（岩塩型 · 立方晶系）</p>
+        </div>
+        <canvas id="growthCanvas"></canvas>
+        <div class="info-strip" style="padding:0 14px 12px">
+          <div class="info-item"><span class="label">温度 T</span><span class="val" id="infoT">—</span></div>
+          <div class="info-item"><span class="label">過飽和度 S</span><span class="val" id="infoS">—</span></div>
+          <div class="info-item"><span class="label">結晶数</span><span class="val" id="infoN">—</span></div>
+          <div class="info-item"><span class="label">平均粒径</span><span class="val" id="infoMean">—</span></div>
+        </div>
+      </div>
+
+      <!-- ③ 右上：結晶サイズ分布 -->
+      <div class="cell-size-chart panel">
+        <h3>結晶サイズ分布</h3>
+        <p style="margin:0 0 6px;font-size:0.76rem;color:#64748b">横軸＝粒径 · 縦軸＝結晶の個数</p>
+        <div class="chart-wrap"><canvas id="sizeChart"></canvas></div>
+        <div class="dist-explain" id="distExplain">
+          <p class="dist-explain-title">なぜこの分布になる？</p>
+          <p class="dist-explain-body" id="distExplainBody">冷却モードを選び「再結晶開始」を押すと、ここにグラフの読み取りと理由が表示されます。</p>
+        </div>
+      </div>
+
+      <!-- ② 左下：操作パネル -->
+      <div class="cell-controls panel">
+        <h3>操作パネル</h3>
+        <div class="controls-grid">
+          <div>
+            <label>冷却モード</label>
+            <div class="mode-btns">
+              <button type="button" id="btnFast" class="active">急冷</button>
+              <button type="button" id="btnMedium">中速</button>
+              <button type="button" id="btnSlow">放冷</button>
+            </div>
+            <p style="margin:6px 0 0;font-size:0.72rem;color:#64748b;line-height:1.45">
+              小粒径 ← 急冷 · <strong style="color:#94a3b8">7–16 ← 中速</strong> · 大粒径 ← 放冷
+            </p>
+          </div>
+          <div>
+            <label for="concSlider">初期 NaCl 濃度（T<sub>start</sub> での飽和度比）</label>
+            <input type="range" id="concSlider" min="95" max="115" value="102" step="1">
+            <span class="slider-val" id="concVal">102 %（ほぼ飽和）</span>
+          </div>
+          <div>
+            <label for="tStartSlider">初期温度 T<sub>start</sub></label>
+            <input type="range" id="tStartSlider" min="70" max="90" value="80" step="1">
+            <span class="slider-val" id="tStartVal">80 ℃</span>
+          </div>
+          <div>
+            <label for="tEndSlider">最終温度 T<sub>end</sub></label>
+            <input type="range" id="tEndSlider" min="10" max="30" value="20" step="1">
+            <span class="slider-val" id="tEndVal">20 ℃</span>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="primary" id="btnStart">再結晶開始</button>
+            <button type="button" id="btnReset">リセット</button>
+          </div>
+        </div>
+        <div class="legend-row">
+          <span><i class="dot na"></i> Na⁺（自由イオン）</span>
+          <span><i class="dot cl"></i> Cl⁻（自由イオン）</span>
+          <span>◆ 岩塩型立方結晶</span>
+        </div>
+        <div class="formula-mini">
+          溶解度 <code>C<sub>sat</sub>(T)</code> は温度が高いほど大 · 過飽和度 <code>S = C / C<sub>sat</sub>(T)</code> · <code>S &gt; 1</code> で核形成
+        </div>
+        <div class="comment-box" id="statusBox">冷却モードを選び「再結晶開始」を押してください。</div>
+      </div>
+
+      <!-- ④ 右中央：温度・過飽和度 -->
+      <div class="cell-ts-chart panel">
+        <h3>温度 · 過飽和度の時間変化</h3>
+        <p style="margin:0 0 6px;font-size:0.76rem;color:#64748b">橙＝温度 T · 紫＝過飽和度 S（1 を超えると核形成しやすい）</p>
+        <div class="chart-wrap"><canvas id="tsChart"></canvas></div>
+      </div>
+
+      <!-- ⑤ 右下：説明 -->
+      <div class="cell-explain panel">
+        <h3>再結晶と結晶系のポイント</h3>
+        <div class="explain-text">
+          <p>再結晶では<strong>「溶かしてから、ゆっくり冷やす」</strong>ことで大きくてきれいな結晶が得られます。</p>
+          <ul>
+            <li><strong>急冷</strong> → 1–6（小粒径多数） · <strong>中速</strong> → 7–16（中粒径） · <strong>放冷</strong> → 17–25+（大粒径少数）</li>
+            <li><strong>急冷</strong>すると、過飽和度が短時間で急上昇し、多数の核が一気にできます → <strong>小さな結晶がたくさん</strong>（細かい粉末状）。</li>
+            <li><strong>中速</strong>は核の数と成長時間のバランスが中程度 → <strong>7–10 · 11–16</strong> の中粒径帯が主になります。</li>
+            <li><strong>放冷</strong>すると、核の数は少なめ → 既存の核が時間をかけて成長 → <strong>大きな結晶が少数</strong>。</li>
+            <li>NaCl は<strong>立方晶系</strong>（岩塩型 · FCC）です。ゆっくり成長させると<strong>サイコロ型</strong>の透明な結晶が観察されます。</li>
+            <li>溶解度曲線：温度が下がると飽和溶解度が下がるため、同じ濃度でも低温ほど過飽和（S &gt; 1）になりやすくなります。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── DOM ──
+    const canvas = document.getElementById("growthCanvas");
+    const ctx = canvas.getContext("2d");
+    const btnFast = document.getElementById("btnFast");
+    const btnMedium = document.getElementById("btnMedium");
+    const btnSlow = document.getElementById("btnSlow");
+    const btnStart = document.getElementById("btnStart");
+    const btnReset = document.getElementById("btnReset");
+    const concSlider = document.getElementById("concSlider");
+    const tStartSlider = document.getElementById("tStartSlider");
+    const tEndSlider = document.getElementById("tEndSlider");
+
+    let mode = "fast";
+    let running = false;
+    let animId = null;
+    let simTime = 0;
+    let lastFrame = 0;
+
+    // ── シミュレーション状態 ──
+    let T = 80, T_start = 80, T_end = 20;
+    let C_sat_start = 1.0, C0 = 1.02, C_actual = 1.02;
+    let crystals = [];
+    let ions = [];
+    let historyTime = [];
+    let historyT = [];
+    let historyS = [];
+    let crystallizedUnits = 0;
+
+    const TOTAL_UNITS = 520;
+    const ION_DISPLAY = 280;
+    const NUCLEATION_S = 1.03;
+    const SIZE_BINS = ["1–3", "4–6", "7–10", "11–16", "17–24", "25+"];
+    const SIZE_EDGES = [1, 4, 7, 11, 17, 25, 999];
+
+    // 冷却モード別パラメータ（中速＝7–16 向け）
+    const MODE_CFG = {
+      fast: {
+        label: "急冷", coolSec: 14, timeLimit: 90, doneFrac: 0.55,
+        maxCrystals: 48, nucBase: 2.8, nucAttempts: 3, nucDampAfter: 99, nucDampMul: 1,
+        growBase: 0.4, sizePerUnit: 0.08, compK: 0.35, growMul: 3.5,
+        seedOne: false, distAt: 99, distBoost: 1, distLargeAt: 99, distLargeBoost: 1,
+        spawnLo: 1, spawnHi: 1.5, irrLo: 0.25, irrHi: 0.45, sharpLo: 0.35, sharpHi: 0.3,
+        idleMsg: "急冷：1–6 に偏る小結晶が多数できます。",
+        startMsg: "急冷を開始 — 過飽和度が急上昇します…",
+        runMsg: (T, S, n) => `急冷中… T=${T.toFixed(1)} ℃ · S=${S.toFixed(2)} · 結晶 ${n} 個`,
+      },
+      medium: {
+        label: "中速", coolSec: 36, timeLimit: 105, doneFrac: 0.7,
+        maxCrystals: 11, nucBase: 0.1, nucAttempts: 1, nucDampAfter: 5, nucDampMul: 0.12,
+        growBase: 1.5, sizePerUnit: 0.132, compK: 0.09, growMul: 3.2,
+        seedOne: false, distAt: 6, distBoost: 1.2, distLargeAt: 12, distLargeBoost: 1.15,
+        spawnLo: 1.5, spawnHi: 1, irrLo: 0.08, irrHi: 0.2, sharpLo: 0.55, sharpHi: 0.35,
+        idleMsg: "中速：7–10 · 11–16 の中粒径帯が増えやすいモードです。濃度 108–112 % が目安。",
+        startMsg: "中速冷却を開始 — 核は中程度 · 中粒径に育ちます…",
+        runMsg: (T, S, n) => `中速冷却中… T=${T.toFixed(1)} ℃ · S=${S.toFixed(2)} · 結晶 ${n} 個`,
+      },
+      slow: {
+        label: "放冷", coolSec: 85, timeLimit: 150, doneFrac: 0.82,
+        maxCrystals: 4, nucBase: 0.035, nucAttempts: 1, nucDampAfter: 2, nucDampMul: 0.08,
+        growBase: 3.2, sizePerUnit: 0.19, compK: 0.06, growMul: 3.5,
+        seedOne: true, distAt: 6, distBoost: 1.4, distLargeAt: 16, distLargeBoost: 1.35,
+        spawnLo: 2, spawnHi: 0.5, irrLo: 0.02, irrHi: 0.08, sharpLo: 0.85, sharpHi: 0.15,
+        idleMsg: "放冷：少数の大結晶（17–25+）が育ちます。濃度 102–108 % が目安。",
+        startMsg: "放冷を開始 — ゆっくり過飽和に近づきます…",
+        runMsg: (T, S, n) => `放冷中… T=${T.toFixed(1)} ℃ · S=${S.toFixed(2)} · 結晶 ${n} 個`,
+      },
+    };
+
+    function cfg() { return MODE_CFG[mode] || MODE_CFG.fast; }
+
+    function setMode(next) {
+      mode = next;
+      [btnFast, btnMedium, btnSlow].forEach((b) => b.classList.remove("active"));
+      if (next === "fast") btnFast.classList.add("active");
+      if (next === "medium") btnMedium.classList.add("active");
+      if (next === "slow") btnSlow.classList.add("active");
+      if (!running) {
+        document.getElementById("statusBox").textContent = cfg().idleMsg;
+        updateDistExplain();
+      }
+    }
+
+    // 溶解度 C_sat(T)：20 ℃ を 1.0 とした相対値（温度↑で単調増加）
+    function satAtTemp(temp) {
+      const tCl = Math.max(T_end, Math.min(T_start, temp));
+      const lo = 1.0;
+      const hi = 1.0 + 0.55 * ((T_start - T_end) / 60);
+      return lo + ((tCl - T_end) / (T_start - T_end)) * (hi - lo);
+    }
+
+    function supersaturation() {
+      const cs = satAtTemp(T);
+      return cs > 1e-6 ? C_actual / cs : 1;
+    }
+
+    // 急冷モードの冷却プロファイル：T(t) = T_start − k_fast · t
+    function coolingRate() {
+      const span = T_start - T_end;
+      return span / cfg().coolSec;
+    }
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function initIons() {
+      ions = [];
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const pad = 24;
+      for (let i = 0; i < ION_DISPLAY; i++) {
+        ions.push({
+          x: pad + Math.random() * (w - pad * 2),
+          y: pad + Math.random() * (h - pad * 2),
+          type: i % 2 === 0 ? "Na" : "Cl",
+          vx: (Math.random() - 0.5) * 1.2,
+          vy: (Math.random() - 0.5) * 1.2,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    function resetSim() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      animId = null;
+      simTime = 0;
+      lastFrame = 0;
+      T_start = +tStartSlider.value;
+      T_end = +tEndSlider.value;
+      if (T_end >= T_start - 5) T_end = T_start - 10;
+      T = T_start;
+      C_sat_start = satAtTemp(T_start);
+      C0 = C_sat_start * (+concSlider.value / 100);
+      C_actual = C0;
+      crystallizedUnits = 0;
+      crystals = [];
+      historyTime = [0];
+      historyT = [T];
+      historyS = [supersaturation()];
+      initIons();
+      updateInfo();
+      updateCharts();
+      drawFrame();
+      document.getElementById("statusBox").textContent = running
+        ? "シミュレーション実行中…"
+        : "冷却モードを選び「再結晶開始」を押してください。";
+    }
+
+    function spawnCrystal() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const pad = 40;
+      const c = cfg();
+      crystals.push({
+        x: pad + Math.random() * (w - pad * 2),
+        y: pad + Math.random() * (h - pad * 2),
+        size: c.spawnLo + Math.random() * c.spawnHi,
+        rot: Math.random() * Math.PI * 2,
+        irregular: c.irrLo + Math.random() * c.irrHi,
+        sharp: c.sharpLo + Math.random() * c.sharpHi,
+        units: 2,
+        growAcc: 0,
+      });
+    }
+
+    function seedSlowCrystalIfNeeded(S) {
+      const c = cfg();
+      if (!c.seedOne || crystals.length > 0 || S < 1.04) return;
+      spawnCrystal();
+    }
+
+    // 核形成と結晶成長
+    function stepPhysics(dt) {
+      const c = cfg();
+      const rate = coolingRate();
+      T = Math.max(T_end, T - rate * dt);
+      const S = supersaturation();
+
+      seedSlowCrystalIfNeeded(S);
+
+      if (S > NUCLEATION_S && crystals.length < c.maxCrystals) {
+        for (let a = 0; a < c.nucAttempts; a++) {
+          let pNuc = c.nucBase * (S - 1) * (S - 1) * dt;
+          if (crystals.length >= c.nucDampAfter) pNuc *= c.nucDampMul;
+          if (Math.random() < pNuc) spawnCrystal();
+        }
+      }
+
+      let freeUnits = Math.max(0, TOTAL_UNITS - crystallizedUnits);
+      const competition = 1 / Math.sqrt(1 + crystals.length * c.compK);
+
+      crystals.forEach((cr) => {
+        if (freeUnits <= 0) return;
+        let distFactor = 1;
+        if (cr.size > c.distAt) distFactor *= c.distBoost;
+        if (cr.size > c.distLargeAt) distFactor *= c.distLargeBoost;
+        const dSize = c.growBase * S * competition * distFactor * dt * (0.65 + Math.random() * 0.35);
+        cr.growAcc = (cr.growAcc || 0) + dSize * c.growMul;
+        const unitsGain = Math.min(freeUnits, Math.floor(cr.growAcc));
+        if (unitsGain > 0) {
+          cr.growAcc -= unitsGain;
+          cr.size += unitsGain * c.sizePerUnit;
+          cr.units += unitsGain;
+          crystallizedUnits += unitsGain;
+          freeUnits -= unitsGain;
+          C_actual = Math.max(0.05, C0 * (1 - crystallizedUnits / TOTAL_UNITS));
+        }
+      });
+
+      if (historyTime.length === 0 || simTime - historyTime[historyTime.length - 1] >= 0.25) {
+        historyTime.push(simTime);
+        historyT.push(T);
+        historyS.push(supersaturation());
+        if (historyTime.length > 120) {
+          historyTime.shift(); historyT.shift(); historyS.shift();
+        }
+      }
+    }
+
+    function updateIons(dt) {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const pad = 12;
+      const mobility = 18 + (T - T_end) * 0.15;
+      ions.forEach((ion) => {
+        ion.phase += dt * 3;
+        ion.vx += (Math.random() - 0.5) * mobility * dt;
+        ion.vy += (Math.random() - 0.5) * mobility * dt;
+        ion.vx *= 0.92;
+        ion.vy *= 0.92;
+        ion.x += ion.vx;
+        ion.y += ion.vy;
+        if (ion.x < pad) { ion.x = pad; ion.vx *= -0.5; }
+        if (ion.x > w - pad) { ion.x = w - pad; ion.vx *= -0.5; }
+        if (ion.y < pad) { ion.y = pad; ion.vy *= -0.5; }
+        if (ion.y > h - pad) { ion.y = h - pad; ion.vy *= -0.5; }
+      });
+    }
+
+    function drawCube(cx, cy, s, rot, irregular, sharp) {
+      const h = s * 0.55;
+      const w = s * 0.5;
+      const r = irregular * s * 0.15;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+
+      const top = [
+        [-w + r, -h], [w - r, -h], [w, -h + r], [w, h - r], [w - r, h],
+        [-w + r, h], [-w, h - r], [-w, -h + r],
+      ];
+      const left = [[-w, -h], [-w, h], [-w - w * 0.55, h + h * 0.45], [-w - w * 0.55, -h + h * 0.45]];
+      const right = [[w, -h], [w, h], [0, h + h * 0.45], [0, -h + h * 0.45]];
+
+      function poly(pts, fill, stroke) {
+        ctx.beginPath();
+        pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = sharp > 0.6 ? 1.2 : 0.6;
+          ctx.lineJoin = sharp > 0.6 ? "miter" : "round";
+          ctx.stroke();
+        }
+      }
+
+      poly(left, "rgba(52,211,153,0.55)", `rgba(52,211,153,${0.35 + sharp * 0.4})`);
+      poly(right, "rgba(167,139,250,0.5)", `rgba(167,139,250,${0.35 + sharp * 0.4})`);
+      poly(top, "rgba(186,230,253,0.75)", `rgba(224,242,254,${0.5 + sharp * 0.45})`);
+      ctx.restore();
+    }
+
+    function drawFrame() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, "#0c1a2e");
+      grad.addColorStop(1, "#071018");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "rgba(56,189,248,0.08)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      const freeFrac = Math.max(0, 1 - crystallizedUnits / TOTAL_UNITS);
+      const visibleIons = Math.floor(ions.length * freeFrac);
+
+      for (let i = 0; i < visibleIons; i++) {
+        const ion = ions[i];
+        const pulse = 0.7 + 0.3 * Math.sin(ion.phase);
+        ctx.beginPath();
+        ctx.arc(ion.x, ion.y, ion.type === "Na" ? 2.2 * pulse : 2 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = ion.type === "Na" ? "rgba(167,139,250,0.85)" : "rgba(52,211,153,0.85)";
+        ctx.fill();
+      }
+
+      crystals.sort((a, b) => a.size - b.size);
+      crystals.forEach((c) => drawCube(c.x, c.y, c.size * 3.2, c.rot, c.irregular, c.sharp));
+
+      if (running) {
+        ctx.fillStyle = "rgba(186,230,253,0.9)";
+        ctx.font = "600 11px Inter, sans-serif";
+        ctx.fillText(`t = ${simTime.toFixed(1)} s`, 12, 20);
+      }
+    }
+
+    // 結晶サイズ分布の更新
+    function sizeHistogram() {
+      const counts = new Array(SIZE_BINS.length).fill(0);
+      crystals.forEach((c) => {
+        const s = Math.round(c.size);
+        for (let i = 0; i < SIZE_EDGES.length - 1; i++) {
+          if (s >= SIZE_EDGES[i] && s < SIZE_EDGES[i + 1]) { counts[i]++; break; }
+        }
+      });
+      return counts;
+    }
+
+    function meanSize() {
+      if (!crystals.length) return 0;
+      return crystals.reduce((a, c) => a + c.size, 0) / crystals.length;
+    }
+
+    // 結晶サイズ分布の下：なぜこの結果になるかの解説
+    function updateDistExplain() {
+      const body = document.getElementById("distExplainBody");
+      if (!body) return;
+
+      const counts = sizeHistogram();
+      const total = crystals.length;
+      const S = supersaturation();
+      const avg = meanSize();
+
+      if (total === 0 && !running && simTime === 0) {
+        if (mode === "fast") {
+          body.innerHTML =
+            "【急冷の予想】棒グラフは<strong>左側（1–6）</strong>に偏ります。" +
+            "S が急上昇 → 核が多数 → 1 核あたりの溶質が少なく<strong>小粒径</strong>になります。";
+        } else if (mode === "medium") {
+          body.innerHTML =
+            "【中速の予想】棒グラフの<strong>7–10 · 11–16</strong> が最も高くなりやすいです。" +
+            "核の数も成長時間も「中くらい」→ 急冷ほど細かくなく、放冷ほど巨大にもなりません。" +
+            "<br><em>7–16 のコツ：</em><strong>中速</strong> · 濃度 <strong>108–112 %</strong> · T<sub>start</sub> 85 ℃ · T<sub>end</sub> 15 ℃ 前後。";
+        } else {
+          body.innerHTML =
+            "【放冷の予想】棒グラフは<strong>17–24 · 25+</strong> に偏ります。" +
+            "核は少数 → 長時間成長 → <strong>大粒径</strong>。" +
+            "<br><em>25+ のコツ：</em>放冷 · 濃度 <strong>102–108 %</strong> · 完了まで待つ。";
+        }
+        return;
+      }
+
+      if (total === 0) {
+        body.textContent = "まだ結晶がありません。S > 1 になると核が形成され、ここに分布の理由が表示されます。";
+        return;
+      }
+
+      let peakIdx = 0;
+      for (let i = 1; i < counts.length; i++) {
+        if (counts[i] > counts[peakIdx]) peakIdx = i;
+      }
+      const peakLabel = SIZE_BINS[peakIdx];
+      const peakCount = counts[peakIdx];
+      const small = counts[0] + counts[1] + counts[2];
+      const large = counts[3] + counts[4] + counts[5];
+      const smallPct = Math.round((small / total) * 100);
+
+      const mid = counts[2] + counts[3];
+      const midPct = Math.round((mid / total) * 100);
+
+      if (mode === "fast") {
+        body.innerHTML =
+          `現在 <strong>${total} 個</strong> · 最多 <em>${peakLabel}</em>（${peakCount} 個） · 平均 ${avg.toFixed(1)}。<br>` +
+          `【急冷】S=${S.toFixed(2)} が短時間で上昇 → 核多数 → 左側（1–6）に偏る（小粒径 ${smallPct}%）。`;
+      } else if (mode === "medium") {
+        body.innerHTML =
+          `現在 <strong>${total} 個</strong> · 最多 <em>${peakLabel}</em>（${peakCount} 個） · 7–16 は ${mid} 個（${midPct}%）。<br>` +
+          `【中速で 7–16 が増える理由】` +
+          `① 冷却は中程度 → 核 <strong>${total} 個前後</strong>（急冷より少 · 放冷より多） ` +
+          `② 1 核あたりの溶質が中程度 → 粒径 <em>7–16</em> で頭打ちになりやすい ` +
+          `③ 濃度が高すぎると核増 → 左寄り · 低すぎると大きくならない → <strong>108–112 %</strong> が目安。`;
+      } else {
+        const largePct = Math.round((large / total) * 100);
+        const has25 = counts[5] > 0;
+        const tip25 = has25
+          ? `25+ が ${counts[5]} 個 — 放冷成功。`
+          : total > 5
+            ? `核 ${total} 個と多い → 濃度を 105 % 前後に。`
+            : `完了まで待つと 25+ になりやすい。`;
+        body.innerHTML =
+          `現在 <strong>${total} 個</strong> · 最多 <em>${peakLabel}</em> · 平均 ${avg.toFixed(1)}。<br>` +
+          `【放冷】核少数 → 長時間成長 → 右側（大粒径 ${largePct}%）。${tip25}`;
+      }
+    }
+
+    function updateInfo() {
+      const S = supersaturation();
+      document.getElementById("infoT").textContent = `${T.toFixed(1)} ℃`;
+      document.getElementById("infoS").textContent = S.toFixed(2);
+      document.getElementById("infoN").textContent = String(crystals.length);
+      document.getElementById("infoMean").textContent = crystals.length
+        ? `${meanSize().toFixed(1)}（相対）` : "—";
+      updateDistExplain();
+    }
+
+    let sizeChart, tsChart;
+
+    function initCharts() {
+      const sizeCtx = document.getElementById("sizeChart").getContext("2d");
+      sizeChart = new Chart(sizeCtx, {
+        type: "bar",
+        data: {
+          labels: SIZE_BINS,
+          datasets: [{
+            label: "結晶数",
+            data: sizeHistogram(),
+            backgroundColor: "rgba(6,182,212,0.55)",
+            borderColor: "rgba(34,211,238,0.9)",
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+          scales: {
+            x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "rgba(148,163,184,0.1)" } },
+            y: { beginAtZero: true, ticks: { color: "#94a3b8", stepSize: 1 }, grid: { color: "rgba(148,163,184,0.12)" } },
+          },
+          plugins: { legend: { display: false } },
+        },
+      });
+
+      const tsCtx = document.getElementById("tsChart").getContext("2d");
+      tsChart = new Chart(tsCtx, {
+        type: "line",
+        data: {
+          labels: historyTime.map((t) => t.toFixed(1)),
+          datasets: [
+            {
+              label: "温度 T (℃)",
+              data: historyT,
+              borderColor: "#fb923c",
+              backgroundColor: "rgba(251,146,60,0.12)",
+              yAxisID: "yT",
+              tension: 0.2,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            {
+              label: "過飽和度 S",
+              data: historyS,
+              borderColor: "#a78bfa",
+              backgroundColor: "rgba(167,139,250,0.12)",
+              yAxisID: "yS",
+              tension: 0.2,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 150 },
+          scales: {
+            x: {
+              title: { display: true, text: "時間 (s)", color: "#64748b", font: { size: 10 } },
+              ticks: { color: "#94a3b8", maxTicksLimit: 8, font: { size: 10 } },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            yT: {
+              type: "linear", position: "left",
+              title: { display: true, text: "T (℃)", color: "#fb923c", font: { size: 10 } },
+              ticks: { color: "#fb923c" },
+              grid: { color: "rgba(148,163,184,0.08)" },
+              suggestedMin: T_end - 5, suggestedMax: T_start + 5,
+            },
+            yS: {
+              type: "linear", position: "right",
+              title: { display: true, text: "S", color: "#a78bfa", font: { size: 10 } },
+              ticks: { color: "#a78bfa" },
+              grid: { drawOnChartArea: false },
+              suggestedMin: 0.9, suggestedMax: 1.35,
+            },
+          },
+          plugins: {
+            legend: { labels: { color: "#cbd5e1", boxWidth: 12, font: { size: 11 } } },
+          },
+        },
+      });
+    }
+
+    function updateCharts() {
+      if (!sizeChart || !tsChart) return;
+      sizeChart.data.datasets[0].data = sizeHistogram();
+      sizeChart.update("none");
+      tsChart.data.labels = historyTime.map((t) => t.toFixed(1));
+      tsChart.data.datasets[0].data = [...historyT];
+      tsChart.data.datasets[1].data = [...historyS];
+      tsChart.options.scales.yT.suggestedMin = T_end - 5;
+      tsChart.options.scales.yT.suggestedMax = T_start + 5;
+      tsChart.update("none");
+    }
+
+    function tick(now) {
+      if (!running) return;
+      if (!lastFrame) lastFrame = now;
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      simTime += dt;
+
+      stepPhysics(dt);
+      updateIons(dt);
+      drawFrame();
+      updateInfo();
+
+      if (Math.floor(simTime * 4) !== Math.floor((simTime - dt) * 4)) updateCharts();
+
+      const S = supersaturation();
+      const c = cfg();
+      const done = T <= T_end + 0.2 && crystallizedUnits > TOTAL_UNITS * c.doneFrac;
+      if (done || simTime > c.timeLimit) {
+        running = false;
+        updateCharts();
+        const maxS = Math.round(Math.max(...crystals.map((cr) => cr.size), 0));
+        const midN = sizeHistogram()[2] + sizeHistogram()[3];
+        let msg;
+        if (mode === "fast") {
+          msg = `急冷完了：${crystals.length} 個 · 平均 ${meanSize().toFixed(1)} — 1–6 に偏った小結晶。`;
+        } else if (mode === "medium") {
+          msg = `中速完了：${crystals.length} 個 · 7–16 が ${midN} 個 · 最大 ${maxS.toFixed(0)} — 中粒径帯が主な分布です。`;
+        } else if (maxS >= 25) {
+          msg = `放冷完了：${crystals.length} 個 · 最大 ${maxS}（25+）— 大結晶が少数できました。`;
+        } else {
+          msg = `放冷完了：${crystals.length} 個 · 最大 ${maxS} — 濃度 105 % 前後で再試行すると 25+ になりやすいです。`;
+        }
+        document.getElementById("statusBox").textContent = msg;
+        updateInfo();
+        return;
+      }
+      document.getElementById("statusBox").textContent = c.runMsg(T, S, crystals.length);
+      animId = requestAnimationFrame(tick);
+    }
+
+    function startSim() {
+      if (running) return;
+      T_start = +tStartSlider.value;
+      T_end = +tEndSlider.value;
+      if (T_end >= T_start - 5) T_end = T_start - 10;
+      resetSim();
+      running = true;
+      lastFrame = 0;
+      document.getElementById("statusBox").textContent = cfg().startMsg;
+      animId = requestAnimationFrame(tick);
+    }
+
+    btnFast.addEventListener("click", () => setMode("fast"));
+    btnMedium.addEventListener("click", () => setMode("medium"));
+    btnSlow.addEventListener("click", () => setMode("slow"));
+    btnStart.addEventListener("click", startSim);
+    btnReset.addEventListener("click", resetSim);
+
+    concSlider.addEventListener("input", () => {
+      document.getElementById("concVal").textContent = `${concSlider.value} %（${+concSlider.value >= 102 ? "やや過飽和寄り" : "ほぼ飽和"}）`;
+      if (!running) resetSim();
+    });
+    tStartSlider.addEventListener("input", () => {
+      document.getElementById("tStartVal").textContent = `${tStartSlider.value} ℃`;
+      if (!running) resetSim();
+    });
+    tEndSlider.addEventListener("input", () => {
+      document.getElementById("tEndVal").textContent = `${tEndSlider.value} ℃`;
+      if (!running) resetSim();
+    });
+
+    window.addEventListener("resize", () => { resizeCanvas(); drawFrame(); });
+
+    resizeCanvas();
+    initCharts();
+    resetSim();
+  </script>
+</body>
+</html>

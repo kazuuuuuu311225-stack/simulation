@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>理想気体の内部エネルギー — U = (f/2) nRT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a78bfa; --accent-light: #c4b5fd;
+      --panel: rgba(12,18,32,0.84); --border: rgba(167,139,250,0.24);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12,#0f1024 45%,#0a1018);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(24px,env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 48% 40% at 16% 14%, rgba(167,139,250,0.1), transparent 55%),
+        radial-gradient(ellipse 45% 38% at 84% 86%, rgba(251,191,36,0.08), transparent 55%);
+    }
+    .shell { position: relative; z-index: 1; width: min(1280px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg,rgba(167,139,250,0.28),rgba(251,191,36,0.22));
+      border: 1px solid rgba(167,139,250,0.35); font-size: 1.2rem;
+      box-shadow: 0 0 24px rgba(167,139,250,0.25);
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; font-size: clamp(1rem,2.8vw,1.35rem); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #ede9fe; background: rgba(167,139,250,0.14);
+      border: 1px solid rgba(167,139,250,0.38); border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .intro-panel {
+      padding: 14px 16px; border-radius: 16px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.28);
+      font-size: 0.84rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .intro-panel strong { color: #ede9fe; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "canvas" "readout" "hist" "derive" "ctrl" "ugraph" "calc" "footer";
+      align-items: start;
+    }
+    @media (min-width: 980px) {
+      .sim-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "canvas readout"
+          "hist derive"
+          "ctrl ugraph"
+          "calc calc"
+          "footer footer";
+      }
+    }
+    .panel { padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4); align-self: start; }
+    .panel h3 { margin: 0 0 10px; font-size: 0.88rem; color: var(--accent-light); font-weight: 600; }
+    .area-canvas { grid-area: canvas; }
+    .area-hist { grid-area: hist; }
+    .area-ctrl { grid-area: ctrl; }
+    .area-readout { grid-area: readout; }
+    .area-derive { grid-area: derive; }
+    .area-ugraph { grid-area: ugraph; }
+    .area-calc { grid-area: calc; }
+    .panel-note {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+      font-size: 0.76rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .panel-note-canvas { background: rgba(167,139,250,0.07); border: 1px solid rgba(167,139,250,0.22); }
+    .panel-note-hist { background: rgba(129,140,248,0.07); border: 1px solid rgba(129,140,248,0.22); }
+    .panel-note-ctrl { background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.2); margin-top: 0; }
+    .panel-note-ugraph { background: rgba(129,140,248,0.07); border: 1px solid rgba(129,140,248,0.22); margin-top: 10px; }
+    .panel-note h4 { margin: 0 0 8px; font-size: 0.72rem; font-weight: 700; color: #e0e7ff; }
+    .panel-note ul { margin: 0; padding-left: 1.15rem; }
+    .panel-note li { margin-bottom: 6px; }
+    .panel-note li:last-child { margin-bottom: 0; }
+    .panel-note strong { color: #c7d2fe; }
+    .panel-note .note-tip {
+      margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(129,140,248,0.2);
+      font-size: 0.72rem; color: #a5b4fc;
+    }
+    .area-footer { grid-area: footer; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg,rgba(8,14,24,0.98),rgba(4,8,16,0.99));
+      border: 1px solid rgba(167,139,250,0.35);
+      box-shadow: inset 0 0 40px rgba(167,139,250,0.06);
+    }
+    .viz-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #ede9fe; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    .canvas-wrap { position: relative; width: 100%; height: min(280px,34dvh); min-height: 220px; }
+    #motionCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+    .canvas-hud { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+    .hud-chip {
+      padding: 5px 10px; border-radius: 9px; font-size: 0.64rem; font-weight: 600;
+      background: rgba(6,10,18,0.88); border: 1px solid rgba(167,139,250,0.28); font-variant-numeric: tabular-nums;
+    }
+    .hud-chip.hot { border-color: rgba(251,146,60,0.45); color: #fed7aa; }
+    .hud-chip.cold { border-color: rgba(129,140,248,0.45); color: #c7d2fe; }
+    .vol-note {
+      margin: 0; padding: 8px 14px 12px; font-size: 0.68rem; color: #a5b4fc; line-height: 1.55;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .chart-wrap { height: min(200px,26dvh); min-height: 175px; position: relative; }
+    .readout-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 10px; }
+    @media (min-width: 520px) { .readout-grid { grid-template-columns: repeat(3,1fr); } }
+    .readout-card {
+      padding: 10px 8px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid rgba(148,163,184,0.15);
+    }
+    .readout-card .lbl { font-size: 0.56rem; color: var(--muted); line-height: 1.3; }
+    .readout-card .num { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 3px; }
+    .readout-card.v .num { color: #c4b5fd; }
+    .readout-card.e .num { color: #7dd3fc; }
+    .readout-card.u .num { color: #fde047; font-size: 0.9rem; }
+    .readout-card.t .num { color: #fdba74; }
+    .compare-box {
+      margin-top: 10px; padding: 11px 12px; border-radius: 12px;
+      background: rgba(253,224,71,0.06); border: 1px solid rgba(253,224,71,0.28);
+    }
+    .compare-box h4 { margin: 0 0 8px; font-size: 0.72rem; color: #fde047; font-weight: 700; }
+    .compare-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.68rem; margin-bottom: 6px; color: #cbd5e1; }
+    .compare-row .val { font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; }
+    .formula-box {
+      padding: 10px 12px; border-radius: 12px; margin-top: 8px;
+      background: rgba(253,224,71,0.08); border: 1px solid rgba(253,224,71,0.3);
+      font-size: 0.78rem; font-weight: 700; color: #fde047; line-height: 1.6; text-align: center;
+    }
+    .law-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .law-row span {
+      flex: 1; min-width: 100px; padding: 7px 8px; border-radius: 9px;
+      font-size: 0.66rem; font-weight: 600; text-align: center; line-height: 1.4;
+    }
+    .law-u { background: rgba(253,224,71,0.1); color: #fde047; }
+    .law-t { background: rgba(251,146,60,0.12); color: #fed7aa; }
+    .law-v { background: rgba(129,140,248,0.12); color: #c7d2fe; }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); margin-bottom: 4px; }
+    .ctrl-row label span.val { color: #c4b5fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+    select, input[type="range"] { width: 100%; accent-color: var(--accent); }
+    select {
+      padding: 9px 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem;
+      background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid rgba(148,163,184,0.25);
+    }
+    .preset-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+    .preset-row button {
+      flex: 1; min-width: 72px; padding: 8px 6px; border-radius: 10px; cursor: pointer;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600;
+      border: 1px solid rgba(148,163,184,0.25); background: rgba(255,255,255,0.04); color: #cbd5e1;
+    }
+    .preset-row button.active { border-color: rgba(167,139,250,0.6); background: rgba(167,139,250,0.18); color: #ede9fe; }
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+    .toggle-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .toggle-row span { font-size: 0.74rem; color: #cbd5e1; }
+    .derive-steps { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+    .step-btn {
+      flex: 1; min-width: 44px; padding: 7px 4px; border-radius: 9px; cursor: pointer;
+      font-family: inherit; font-size: 0.66rem; font-weight: 700; border: 2px solid rgba(148,163,184,0.25);
+      background: rgba(255,255,255,0.04); color: #cbd5e1; transition: all 0.2s;
+    }
+    .step-btn.active { border-color: rgba(251,191,36,0.7); background: rgba(251,191,36,0.15); color: #fde68a; }
+    .derive-body { padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); }
+    .derive-title { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; color: #fde68a; }
+    .derive-eqn {
+      margin: 8px 0; padding: 10px; border-radius: 10px; text-align: center;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.25);
+      font-size: clamp(0.8rem,2.2vw,0.95rem); font-weight: 700; color: #c7d2fe; line-height: 1.55;
+    }
+    .derive-text { margin: 0; font-size: 0.76rem; line-height: 1.7; color: #cbd5e1; }
+    .mini-canvas-wrap { height: min(150px,20dvh); min-height: 132px; margin-top: 10px; border-radius: 10px; overflow: hidden; background: #060a12; border: 1px solid rgba(251,191,36,0.25); }
+    #miniCanvas { width: 100%; height: 100%; display: block; }
+    .derive-nav { display: flex; gap: 8px; margin-top: 10px; }
+    .derive-nav button {
+      flex: 1; padding: 8px; border-radius: 10px; cursor: pointer; font-family: inherit;
+      font-size: 0.72rem; font-weight: 600; border: 1px solid rgba(167,139,250,0.35);
+      background: rgba(167,139,250,0.1); color: #c4b5fd;
+    }
+    .derive-nav button:disabled { opacity: 0.4; cursor: default; }
+    .explain { margin: 0; padding-left: 1.2rem; font-size: 0.84rem; line-height: 1.75; color: #cbd5e1; }
+    .explain li { margin-bottom: 6px; }
+    .status { padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.6; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); color: #c4b5fd; margin-top: 8px; }
+    .match-bar-wrap { margin-top: 8px; }
+    .match-bar-wrap .lbl { font-size: 0.64rem; color: var(--muted); margin-bottom: 4px; }
+    .match-bar { height: 10px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
+    .match-bar-fill { height: 100%; border-radius: 999px; width: 0%; background: linear-gradient(90deg,#818cf8,#fde047); transition: width 0.2s ease-out; }
+    #calcPanel { margin-top: 0; }
+    @media (min-width: 980px) {
+      #calcPanel {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      }
+    }
+    @media (min-width: 1100px) {
+      #calcPanel { grid-template-columns: repeat(5, 1fr); }
+    }
+    #calcPanel h4 { margin: 0 0 8px; font-size: 0.72rem; color: #c4b5fd; font-weight: 700; }
+    .calc-block {
+      margin-bottom: 8px; padding: 10px 11px; border-radius: 11px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .calc-block:last-child { margin-bottom: 0; }
+    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #c4b5fd; }
+    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #67e8f9; }
+    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #fde047; }
+    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #818cf8; }
+    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #4ade80; }
+    .calc-label { margin: 0 0 4px; font-size: 0.68rem; font-weight: 700; color: #a5b4fc; }
+    .calc-line { margin: 3px 0; font-size: 0.76rem; color: #e2e8f0; line-height: 1.55; font-variant-numeric: tabular-nums; }
+    .calc-line.sub { margin-left: 0.5rem; font-size: 0.72rem; color: #94a3b8; }
+    .num-v { font-weight: 700; color: #c4b5fd; }
+    .num-e { font-weight: 700; color: #67e8f9; }
+    .num-u { font-weight: 700; color: #fde047; }
+    .num-t { font-weight: 700; color: #fdba74; }
+    .derive-calc {
+      margin: 8px 0 0; padding: 9px 10px; border-radius: 10px;
+      background: rgba(253,224,71,0.06); border: 1px solid rgba(253,224,71,0.22);
+      font-size: 0.72rem; line-height: 1.65; color: #fde68a; font-variant-numeric: tabular-nums;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">U</div>
+      <h2>理想気体の内部エネルギー</h2>
+      <p class="chapter-label">14章 · U = (f/2) nRT · 分子運動エネルギーの総和</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="intro-panel">
+      理想気体の<strong>内部エネルギー U</strong>は、分子の<strong>運動エネルギーの総和</strong>です。
+      単原子気体では <strong>U = (3/2) nRT</strong>。一般には自由度 <strong>f</strong> を用いて <strong>U = (f/2) nRT</strong>。
+      理想気体では分子間力がないため、<strong>U は温度 T だけで決まり、体積 V には依存しません</strong>。
+    </section>
+
+    <div class="sim-grid">
+      <!-- ① 分子運動アニメーション -->
+      <section class="panel area-canvas">
+        <div class="viz-block">
+          <div class="viz-head">
+            <p class="viz-label">① 分子の熱運動（Canvas）</p>
+          </div>
+          <p class="viz-legend">T ↑ → 速さ ↑ · V を変えても T 一定なら速度分布は変わらない（U = U(T)）</p>
+          <div class="canvas-wrap"><canvas id="motionCanvas"></canvas></div>
+          <div class="canvas-hud">
+            <div class="hud-chip" id="hudT">T = — K</div>
+            <div class="hud-chip" id="hudV">V = — L</div>
+            <div class="hud-chip" id="hudN">n = — mol</div>
+            <div class="hud-chip" id="hudF">f = —</div>
+          </div>
+          <p class="vol-note" id="volNote">—</p>
+        </div>
+        <div class="panel-note panel-note-canvas">
+          <h4>この画面で見ること</h4>
+          <ul>
+            <li>箱の中で分子が<strong>不規則に運動</strong>しています（並進運動のモデル）。</li>
+            <li><strong>T ↑</strong> → 分子の速さ ↑ → 軌道が長く・激しく見えます。</li>
+            <li><strong>V</strong> を変えても <strong>T 一定</strong>なら速さ分布は変わりません（U = U(T)）。</li>
+            <li>f = 5, 6 では分子の形が変わり、回転・振動の自由度をイメージできます。</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ④ 平均速度・エネルギー -->
+      <section class="panel area-readout">
+        <h3>② 平均速度 · 運動エネルギー · 内部エネルギー U</h3>
+        <div class="law-row">
+          <span class="law-u">U = (f/2) nRT</span>
+          <span class="law-t">⟨E_k⟩ ∝ T</span>
+          <span class="law-v">U ⊥ V</span>
+        </div>
+        <div class="readout-grid">
+          <div class="readout-card v"><div class="lbl">平均速度 ⟨v⟩</div><div class="num" id="dVmean">—</div></div>
+          <div class="readout-card v"><div class="lbl">平均二乗速度 ⟨v²⟩</div><div class="num" id="dVsq">—</div></div>
+          <div class="readout-card e"><div class="lbl">1分子 ⟨E_k⟩</div><div class="num" id="dEk">—</div></div>
+          <div class="readout-card e"><div class="lbl">理論 (3/2)k_B T</div><div class="num" id="dEkTh">—</div></div>
+          <div class="readout-card u"><div class="lbl">U（並進・sim）</div><div class="num" id="dUsim">—</div></div>
+          <div class="readout-card u"><div class="lbl">U（理論）</div><div class="num" id="dUth">—</div></div>
+        </div>
+        <div class="compare-box">
+          <h4>sim と理論の比較</h4>
+          <div class="compare-row"><span>並進運動 U_trans（sim）</span><span class="val" id="dUtrans">—</span></div>
+          <div class="compare-row" id="rowExtra" style="display:none"><span>回転・振動 ((f−3)/2)nRT</span><span class="val" id="dUextra">—</span></div>
+          <div class="compare-row"><span>誤差（並進 vs (3/2)nRT）</span><span class="val" id="dErr">—</span></div>
+        </div>
+        <div class="match-bar-wrap">
+          <div class="lbl">並進エネルギーと (3/2)nRT の一致度</div>
+          <div class="match-bar"><div class="match-bar-fill" id="matchFill"></div></div>
+        </div>
+        <div class="formula-box" id="mainFormula">U = (f/2) nRT</div>
+        <p class="status" id="readoutMsg">—</p>
+      </section>
+
+      <!-- ② 速度分布 -->
+      <section class="panel area-hist">
+        <h3>③ 速度分布 — マックスウェル分布</h3>
+        <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+        <div class="panel-note panel-note-hist">
+          <h4>グラフの読み方</h4>
+          <ul>
+            <li>横軸＝速さ <strong>v</strong>、縦軸＝その速さ付近の<strong>分子数</strong>です。</li>
+            <li><strong>紫の棒</strong>＝sim の分子、<strong>ピンクの曲線</strong>＝理論（2D マックスウェル分布）。</li>
+            <li><strong>T ↑</strong> → 速い分子が増え、グラフは<strong>右へ</strong>ずれて<strong>広がる</strong>。</li>
+            <li><strong>V</strong> を変えても T 一定なら分布の形は変わりません（U は V に依存しない）。</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ⑤ 導出ステップ -->
+      <section class="panel area-derive">
+        <h3>④ U の導出（5ステップ）</h3>
+        <div class="derive-steps" id="stepBtns"></div>
+        <div class="derive-body">
+          <p class="derive-title" id="deriveTitle">—</p>
+          <div class="derive-eqn" id="deriveEqn">—</div>
+          <div class="derive-calc" id="deriveCalc">—</div>
+          <p class="derive-text" id="deriveText">—</p>
+          <div class="mini-canvas-wrap"><canvas id="miniCanvas"></canvas></div>
+          <div class="derive-nav">
+            <button type="button" id="btnPrev">← 前へ</button>
+            <button type="button" id="btnNext">次へ →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ③ 操作パネル -->
+      <section class="panel area-ctrl">
+        <h3>⑤ 操作</h3>
+        <div class="ctrl-row">
+          <label>温度 T（K）<span class="val" id="tVal">300 K</span></label>
+          <input type="range" id="tSlider" min="100" max="800" step="10" value="300">
+        </div>
+        <div class="preset-row">
+          <button type="button" class="tp" data-t="100">100 K</button>
+          <button type="button" class="tp active" data-t="300">300 K</button>
+          <button type="button" class="tp" data-t="500">500 K</button>
+          <button type="button" class="tp" data-t="800">800 K</button>
+        </div>
+        <div class="ctrl-row">
+          <label>体積 V（L）<span class="val" id="vVal">10.0 L</span></label>
+          <input type="range" id="vSlider" min="4" max="30" step="0.5" value="10">
+        </div>
+        <div class="ctrl-row">
+          <label>モル数 n（mol）<span class="val" id="nVal">1.00 mol</span></label>
+          <input type="range" id="nSlider" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div class="ctrl-row">
+          <label>自由度 f（分子の種類）<span class="val" id="fVal">f = 3</span></label>
+          <select id="fSelect">
+            <option value="3">f = 3 — 単原子（He, Ar）</option>
+            <option value="5">f = 5 — 二原子（N₂, O₂）</option>
+            <option value="6">f = 6 — 多原子（CO₂ など）</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <input type="checkbox" id="deriveToggle">
+          <span>導出モード — ステップを順番に読む</span>
+        </div>
+        <p class="status" id="ctrlMsg">T を変えると ⟨E_k⟩ と U が増減。V を変えても T 一定なら U は変わりません。</p>
+        <div class="panel-note panel-note-ctrl">
+          <h4>操作のポイント</h4>
+          <ul>
+            <li><strong>T</strong> … ⟨E_k⟩ と U の大きさを決める主なパラメータ。</li>
+            <li><strong>V</strong> … 箱の見た目サイズのみ（T 一定なら U 不変）。</li>
+            <li><strong>n</strong> … 分子数・U の総量が比例して変化。</li>
+            <li><strong>f</strong> … ⑥ の U–T グラフの<strong>傾き</strong>が変わる。</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ⑥ U–T グラフ -->
+      <section class="panel area-ugraph">
+        <h3>⑥ U – T グラフ</h3>
+        <div class="chart-wrap"><canvas id="uChart"></canvas></div>
+        <div class="panel-note panel-note-ugraph">
+          <h4>グラフの読み方</h4>
+          <ul>
+            <li>横軸＝温度 <strong>T</strong>（K）、縦軸＝内部エネルギー <strong>U</strong>（J）です。</li>
+            <li><strong>青紫の直線</strong>＝理論式 <strong>U = (f/2) nRT</strong>。T に比例する直線（原点を通る）になります。</li>
+            <li>直線の<strong>傾き</strong>＝ <strong>(f/2) nR</strong>。f や n を大きくすると傾きが急になります。</li>
+            <li><strong>黄色の点</strong>＝いまの T で sim から求めた <strong>U_trans（並進分）</strong>。f = 3 のとき青紫の直線の上に乗ります。</li>
+            <li><strong>ピンクの点</strong>＝T を変えたときの sim の記録。温度を上げるほど右・上へ移動します。</li>
+            <li>f &gt; 3 のとき、黄色点は並進分のみなので理論直線（総 U）より<strong>下</strong>にあります。回転・振動分は式の f に含まれます。</li>
+          </ul>
+          <p class="note-tip" id="uGraphTip">—</p>
+        </div>
+      </section>
+
+      <!-- 計算式（全幅） -->
+      <section class="panel area-calc">
+        <h3>計算式（代入値つき）</h3>
+        <div id="calcPanel">
+          <div class="calc-block">
+            <p class="calc-label">平均二乗速度 ⟨v²⟩</p>
+            <p class="calc-line">⟨v²⟩ = (1/N) Σ v_i²</p>
+            <p class="calc-line sub">→ ⟨v²⟩ = <span id="cVsq" class="num-v">—</span></p>
+            <p class="calc-line sub">⟨v⟩ = <span id="cVmean" class="num-v">—</span></p>
+          </div>
+          <div class="calc-block">
+            <p class="calc-label">1分子 ⟨E_k⟩</p>
+            <p class="calc-line">⟨E_k⟩ = ½ m ⟨v²⟩</p>
+            <p class="calc-line sub">→ ½ × <span id="cM">—</span> × <span id="cVsq2">—</span> = <span id="cEkSim" class="num-e">—</span></p>
+            <p class="calc-line">理論 (3/2) k_B T</p>
+            <p class="calc-line sub">→ (3/2) × <span id="cKb">—</span> × <span id="cT" class="num-t">—</span> = <span id="cEkTh" class="num-e">—</span></p>
+          </div>
+          <div class="calc-block">
+            <p class="calc-label">U_trans（並進）</p>
+            <p class="calc-line">U_trans = n N_A ⟨E_k⟩</p>
+            <p class="calc-line sub">N = <span id="cN">—</span></p>
+            <p class="calc-line sub">→ sim = <span id="cUtransCalc" class="num-u">—</span></p>
+            <p class="calc-line">理論 (3/2) n R T</p>
+            <p class="calc-line sub">→ (3/2) × <span id="cNmol">—</span> × <span id="cR">—</span> × <span id="cT2" class="num-t">—</span> = <span id="cUtransTh" class="num-u">—</span></p>
+          </div>
+          <div class="calc-block" id="calcBlockExtra">
+            <p class="calc-label">U（自由度 f）</p>
+            <p class="calc-line">U = (f/2) n R T</p>
+            <p class="calc-line sub">→ (<span id="cF">—</span>/2) × <span id="cNmol2">—</span> × <span id="cR2">—</span> × <span id="cT3" class="num-t">—</span> = <span id="cUthCalc" class="num-u">—</span></p>
+            <p class="calc-line sub" id="cExtraLine">—</p>
+          </div>
+          <div class="calc-block">
+            <p class="calc-label">U = U(T)</p>
+            <p class="calc-line">V = <span id="cVvol" class="num-v">—</span> でも T, n, f 一定 → U 一定</p>
+            <p class="calc-line sub">U_trans ≈ <span id="cUconst" class="num-u">—</span>（T = <span id="cT4" class="num-t">—</span> K）</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 説明 -->
+      <section class="panel area-footer">
+        <h3>まとめ</h3>
+        <ul class="explain">
+          <li>理想気体の内部エネルギーは<strong>分子の運動エネルギーの総和</strong>である。</li>
+          <li>単原子理想気体では <strong>U = (3/2) nRT</strong>。</li>
+          <li>一般には自由度 f を用いて <strong>U = (f/2) nRT</strong>。</li>
+          <li>理想気体では分子間力がないため、内部エネルギーは<strong>温度だけで決まり、体積には依存しない</strong>（U = U(T)）。</li>
+          <li>温度を上げると分子の平均運動エネルギーが増え、内部エネルギーも増加する。</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const KB = 1.380649e-23;
+      const R = 8.314462618;
+      const NA = 6.02214076e23;
+      const M = 6.64e-27; // He に近い単原子分子質量 [kg]
+      const HIST_BINS = 24;
+      const HIST_VMAX = 2200;
+      const MAX_VIS = 220;
+
+      const STEPS = [
+        {
+          title: "ステップ 1 — 1分子の平均運動エネルギー",
+          eqn: "⟨E_k⟩ = (3/2) k_B T",
+          text: "気体分子は不規則に動き、1分子あたりの平均運動エネルギーは温度 T に比例します。3次元の並進運動（x,y,z）から (3/2)k_B T になります。",
+        },
+        {
+          title: "ステップ 2 — N 個の総運動エネルギー",
+          eqn: "U = N ⟨E_k⟩ = (3/2) N k_B T",
+          text: "分子が N 個あれば、内部エネルギー（並進分）は N 倍。シミュレーションの U_trans も、すべての (1/2)mv² を足し合わせたものです。",
+        },
+        {
+          title: "ステップ 3 — N k_B = n R",
+          eqn: "U = (3/2) n R T",
+          text: "モル数 n [mol] とすると N = n N_A、かつ R = N_A k_B より U = (3/2) n R T と書けます。",
+        },
+        {
+          title: "ステップ 4 — 自由度 f への一般化",
+          eqn: "U = (f/2) n R T",
+          text: "回転・振動の自由度を含めると f=5（二原子）, f=6（多原子）など。並進 3 自由度に加え、内部自由度分だけ U が増えます。",
+        },
+        {
+          title: "ステップ 5 — U = U(T)（体積に依存しない）",
+          eqn: "U = U(T)  （理想気体）",
+          text: "分子間力がない理想気体では、U は分子の運動エネルギーだけで決まります。V を変えても T 一定なら ⟨E_k⟩ は変わらず、U も一定です。",
+        },
+      ];
+
+      const canvas = document.getElementById("motionCanvas");
+      const ctx = canvas.getContext("2d");
+      const miniCanvas = document.getElementById("miniCanvas");
+      const mCtx = miniCanvas.getContext("2d");
+      const tSlider = document.getElementById("tSlider");
+      const vSlider = document.getElementById("vSlider");
+      const nSlider = document.getElementById("nSlider");
+      const fSelect = document.getElementById("fSelect");
+      const deriveToggle = document.getElementById("deriveToggle");
+
+      const state = {
+        T: 300, targetT: 300,
+        V_L: 10, targetV: 10,
+        n: 1, f: 3,
+        deriveOn: false, step: 0,
+        parts: [],
+        boxW: 400, boxH: 280,
+        simTime: 0, lastRateT: 0,
+        uTrail: [],
+        lastV_L: 10,
+      };
+
+      let histChart, uChart, lastFrame, miniT = 0, clock = 0;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function fmtSci(n) {
+        if (!Number.isFinite(n) || n === 0) return "0";
+        if (Math.abs(n) >= 1000 || Math.abs(n) < 0.01) return n.toExponential(2);
+        return fmt(n, 2);
+      }
+
+      function randNormal() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+
+      function sampleVelocity(T) {
+        const s = Math.sqrt(KB * T / M);
+        return { vx: randNormal() * s, vy: randNormal() * s };
+      }
+
+      function visCount() {
+        return Math.min(MAX_VIS, Math.max(60, Math.round(state.n * 120)));
+      }
+
+      function volumeM3() { return state.V_L * 1e-3; }
+
+      // 平均二乗速度を計算
+      function computeStats() {
+        let sumV = 0, sumV2 = 0;
+        state.parts.forEach((p) => {
+          const v2 = p.vx * p.vx + p.vy * p.vy;
+          sumV += Math.sqrt(v2);
+          sumV2 += v2;
+        });
+        const nVis = state.parts.length || 1;
+        const vMean = sumV / nVis;
+        const v2Mean = sumV2 / nVis;
+        const ekMean = 0.5 * M * v2Mean;
+        const N = state.n * NA;
+        const uTransSim = N * ekMean;
+        const uTransTh = 1.5 * state.n * R * state.T;
+        const uTheory = (state.f / 2) * state.n * R * state.T;
+        const uExtra = Math.max(0, (state.f - 3) / 2) * state.n * R * state.T;
+        return { vMean, v2Mean, ekMean, uTransSim, uTransTh, uTheory, uExtra, ekTh: 1.5 * KB * state.T };
+      }
+
+      function maxwellBins(T, binW, nPart) {
+        const pts = [];
+        for (let i = 0; i < HIST_BINS; i += 1) {
+          const v = (i + 0.5) * binW;
+          const f = 2 * Math.PI * (M / (2 * Math.PI * KB * T)) * v * Math.exp(-M * v * v / (2 * KB * T));
+          pts.push({ x: v, y: nPart * f * binW });
+        }
+        return pts;
+      }
+
+      function histogramData() {
+        const counts = new Array(HIST_BINS).fill(0);
+        const binW = HIST_VMAX / HIST_BINS;
+        state.parts.forEach((p) => {
+          const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+          const idx = Math.min(HIST_BINS - 1, Math.floor(v / binW));
+          if (idx >= 0) counts[idx] += 1;
+        });
+        return { counts, binW };
+      }
+
+      function resizeCanvas() {
+        const wrap = canvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(1, wrap.clientWidth);
+        const h = Math.max(1, wrap.clientHeight);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const scale = Math.cbrt(state.V_L / 10);
+        state.boxW = w * 0.82 * scale;
+        state.boxH = h * 0.78 * scale;
+      }
+
+      function initParticles(fullResample) {
+        const want = visCount();
+        if (fullResample || state.parts.length !== want) {
+          state.parts = [];
+          const pad = 0.06;
+          for (let i = 0; i < want; i += 1) {
+            const v = sampleVelocity(state.T);
+            state.parts.push({
+              px: pad + Math.random() * (1 - 2 * pad),
+              py: pad + Math.random() * (1 - 2 * pad),
+              vx: v.vx, vy: v.vy,
+              angle: Math.random() * Math.PI * 2,
+              spin: (Math.random() - 0.5) * 4,
+            });
+          }
+        }
+      }
+
+      function rescaleTemperature(dt) {
+        const blend = 1 - Math.exp(-dt * 2.5);
+        const oldT = state.T;
+        state.T += (state.targetT - state.T) * blend;
+        if (oldT > 1) {
+          const s = Math.sqrt(state.T / oldT);
+          state.parts.forEach((p) => { p.vx *= s; p.vy *= s; });
+        }
+      }
+
+      function rescaleVolume() {
+        const blend = 0.12;
+        state.V_L += (state.targetV - state.V_L) * blend;
+        if (Math.abs(state.V_L - state.lastV_L) > 0.05) {
+          state.lastV_L = state.V_L;
+          const ratio = Math.cbrt(state.targetV / state.V_L);
+          state.parts.forEach((p) => {
+            p.px = 0.5 + (p.px - 0.5) * ratio;
+            p.py = 0.5 + (p.py - 0.5) * ratio;
+            p.px = Math.max(0.04, Math.min(0.96, p.px));
+            p.py = Math.max(0.04, Math.min(0.96, p.py));
+          });
+        }
+      }
+
+      function updateParticles(dt) {
+        const move = 0.000018 * Math.sqrt(state.T / 300);
+        const brown = Math.sqrt(KB * state.T / M) * 0.00008;
+        state.parts.forEach((p) => {
+          p.vx += randNormal() * brown * Math.sqrt(dt);
+          p.vy += randNormal() * brown * Math.sqrt(dt);
+          p.px += p.vx * dt * move;
+          p.py += p.vy * dt * move;
+          p.angle += p.spin * dt * Math.sqrt(state.T / 300);
+
+          if (p.px < 0.02) { p.px = 0.02; p.vx = Math.abs(p.vx); }
+          if (p.px > 0.98) { p.px = 0.98; p.vx = -Math.abs(p.vx); }
+          if (p.py < 0.02) { p.py = 0.02; p.vy = Math.abs(p.vy); }
+          if (p.py > 0.98) { p.py = 0.98; p.vy = -Math.abs(p.vy); }
+        });
+      }
+
+      function drawMolecule(x, y, r, f, angle, speed) {
+        if (f <= 3) {
+          ctx.fillStyle = "#a78bfa";
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(237,233,254,0.5)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          return;
+        }
+        const sep = r * 1.6;
+        const cx1 = x - Math.cos(angle) * sep * 0.5;
+        const cy1 = y - Math.sin(angle) * sep * 0.5;
+        const cx2 = x + Math.cos(angle) * sep * 0.5;
+        const cy2 = y + Math.sin(angle) * sep * 0.5;
+        ctx.strokeStyle = "rgba(251,191,36,0.6)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx1, cy1);
+        ctx.lineTo(cx2, cy2);
+        ctx.stroke();
+        ctx.fillStyle = f >= 6 ? "#4ade80" : "#c4b5fd";
+        [[cx1, cy1, r * 0.85], [cx2, cy2, r * 0.85]].forEach(([cx, cy, cr]) => {
+          ctx.beginPath();
+          ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        if (f >= 6) {
+          const cx3 = x + Math.cos(angle + Math.PI / 2) * sep * 0.35;
+          const cy3 = y + Math.sin(angle + Math.PI / 2) * sep * 0.35;
+          ctx.fillStyle = "#fde047";
+          ctx.beginPath();
+          ctx.arc(cx3, cy3, r * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (speed > 200) {
+          ctx.strokeStyle = "rgba(253,224,71,0.35)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x, y, r * 2.2, angle, angle + Math.PI * 0.8);
+          ctx.stroke();
+        }
+      }
+
+      function drawMotion() {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        ctx.fillStyle = "#060a12";
+        ctx.fillRect(0, 0, w, h);
+        const bx = (w - state.boxW) / 2;
+        const by = (h - state.boxH) / 2;
+
+        ctx.strokeStyle = "rgba(167,139,250,0.55)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx, by, state.boxW, state.boxH);
+        ctx.fillStyle = "rgba(167,139,250,0.04)";
+        ctx.fillRect(bx, by, state.boxW, state.boxH);
+
+        const r = Math.max(3, Math.min(7, state.boxW / 55));
+        state.parts.forEach((p) => {
+          const x = bx + p.px * state.boxW;
+          const y = by + p.py * state.boxH;
+          const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+          drawMolecule(x, y, r, state.f, p.angle, spd);
+        });
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 10px sans-serif";
+        ctx.fillText(`V ∝ ${fmt(state.V_L, 1)} L`, bx + 6, by - 6);
+      }
+
+      function chartBase() {
+        return {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 10 } } },
+        };
+      }
+
+      function buildCharts() {
+        const hist = histogramData();
+        histChart = new Chart(document.getElementById("histChart"), {
+          type: "bar",
+          data: {
+            datasets: [
+              {
+                label: "分子数（速さビン）",
+                data: hist.counts.map((c, i) => ({ x: (i + 0.5) * hist.binW, y: c })),
+                backgroundColor: "rgba(167,139,250,0.55)", borderColor: "#a78bfa", borderWidth: 1,
+                parsing: false, order: 2,
+              },
+              {
+                label: "理論（2D マックスウェル）",
+                data: maxwellBins(state.T, hist.binW, state.parts.length),
+                type: "line", parsing: false, borderColor: "#f472b6", borderWidth: 2.5,
+                pointRadius: 0, tension: 0.35, order: 1,
+              },
+            ],
+          },
+          options: {
+            ...chartBase(), parsing: false,
+            scales: {
+              x: { type: "linear", min: 0, max: HIST_VMAX, title: { display: true, text: "速さ v（m/s）", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+              y: { type: "linear", title: { display: true, text: "分子数", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" }, beginAtZero: true },
+            },
+          },
+        });
+
+        const uLine = [];
+        for (let t = 100; t <= 800; t += 20) uLine.push({ x: t, y: (state.f / 2) * state.n * R * t });
+        uChart = new Chart(document.getElementById("uChart"), {
+          type: "scatter",
+          data: {
+            datasets: [
+              { label: "U = (f/2)nRT", data: uLine, borderColor: "#818cf8", showLine: true, pointRadius: 0, borderWidth: 2.5 },
+              { label: "U_trans（sim）", data: [], backgroundColor: "#fde047", borderColor: "#fff", borderWidth: 2, pointRadius: 8, showLine: false },
+              { label: "記録", data: state.uTrail, backgroundColor: "rgba(244,114,182,0.7)", pointRadius: 4, showLine: false },
+            ],
+          },
+          options: {
+            ...chartBase(), parsing: false,
+            scales: {
+              x: { type: "linear", min: 100, max: 800, title: { display: true, text: "T（K）", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+              y: { type: "linear", title: { display: true, text: "U（J）", color: "#94a3b8" }, ticks: { color: "#94a3b8", callback: (v) => fmtSci(v) }, grid: { color: "rgba(148,163,184,0.08)" } },
+            },
+          },
+        });
+      }
+
+      function refreshCharts() {
+        if (!histChart) return;
+        const hist = histogramData();
+        histChart.data.datasets[0].data = hist.counts.map((c, i) => ({ x: (i + 0.5) * hist.binW, y: c }));
+        histChart.data.datasets[1].data = maxwellBins(state.T, hist.binW, state.parts.length);
+        histChart.update("none");
+
+        const st = computeStats();
+        uChart.data.datasets[1].data = [{ x: state.T, y: st.uTransSim }];
+        uChart.data.datasets[2].data = state.uTrail;
+        const uLine = [];
+        for (let t = 100; t <= 800; t += 20) uLine.push({ x: t, y: (state.f / 2) * state.n * R * t });
+        uChart.data.datasets[0].data = uLine;
+        uChart.data.datasets[0].label = `U = (${state.f}/2)nRT`;
+        uChart.update("none");
+      }
+
+      function buildStepButtons() {
+        const wrapEl = document.getElementById("stepBtns");
+        wrapEl.innerHTML = "";
+        STEPS.forEach((_, i) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "step-btn"; b.textContent = String(i + 1);
+          b.addEventListener("click", () => setStep(i));
+          wrapEl.appendChild(b);
+        });
+      }
+
+      function setStep(i) {
+        state.step = Math.max(0, Math.min(STEPS.length - 1, i));
+        miniT = 0;
+        document.querySelectorAll(".step-btn").forEach((b, j) => b.classList.toggle("active", j === state.step));
+        const s = STEPS[state.step];
+        document.getElementById("deriveTitle").textContent = s.title;
+        document.getElementById("deriveEqn").textContent = s.eqn;
+        document.getElementById("deriveText").textContent = s.text;
+        document.getElementById("btnPrev").disabled = state.step === 0;
+        document.getElementById("btnNext").disabled = state.step === STEPS.length - 1;
+        updateDeriveCalc(computeStats());
+        drawMiniStep(state.step, 0);
+      }
+
+      function drawMiniStep(step, dt) {
+        miniT += dt;
+        const wrap = miniCanvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(1, wrap.clientWidth);
+        const h = Math.max(1, wrap.clientHeight);
+        if (miniCanvas.width !== Math.round(w * dpr) || miniCanvas.height !== Math.round(h * dpr)) {
+          miniCanvas.width = Math.round(w * dpr);
+          miniCanvas.height = Math.round(h * dpr);
+          miniCanvas.style.width = w + "px";
+          miniCanvas.style.height = h + "px";
+        }
+        mCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        mCtx.fillStyle = "#060a12";
+        mCtx.fillRect(0, 0, w, h);
+        const pad = 12;
+        const bx = pad, by = pad, bw = w - pad * 2, bh = h - pad * 2;
+        const drawers = [drawMini1, drawMini2, drawMini3, drawMini4, drawMini5];
+        if (drawers[step]) drawers[step](bx, by, bw, bh);
+      }
+
+      function drawMini1(bx, by, bw, bh) {
+        const cy = by + bh * 0.5;
+        const phase = (miniT * 0.6) % 1;
+        const px = bx + bw * (0.15 + phase * 0.55);
+        mCtx.fillStyle = "#a78bfa";
+        mCtx.beginPath();
+        mCtx.arc(px, cy, 7, 0, Math.PI * 2);
+        mCtx.fill();
+        mCtx.strokeStyle = "#67e8f9";
+        mCtx.lineWidth = 2;
+        mCtx.beginPath();
+        mCtx.moveTo(px + 10, cy);
+        mCtx.lineTo(px + 40, cy);
+        mCtx.stroke();
+        mCtx.fillStyle = "#fde047";
+        mCtx.font = "600 9px sans-serif";
+        mCtx.fillText("⟨E_k⟩ = ½mv²", px + 12, cy - 12);
+        mCtx.fillStyle = "#94a3b8";
+        mCtx.font = "9px sans-serif";
+        mCtx.fillText("= (3/2) k_B T", bx + 8, by + bh - 6);
+      }
+
+      function drawMini2(bx, by, bw, bh) {
+        let sum = 0;
+        for (let i = 0; i < 8; i += 1) {
+          const x = bx + bw * (0.12 + (i % 4) * 0.22);
+          const y = by + bh * (0.25 + Math.floor(i / 4) * 0.45);
+          const e = 0.6 + 0.4 * Math.sin(miniT * 2 + i);
+          sum += e;
+          mCtx.fillStyle = `rgba(253,224,71,${0.35 + e * 0.4})`;
+          mCtx.fillRect(x, y, 18, 14);
+          mCtx.fillStyle = "#cbd5e1";
+          mCtx.font = "8px sans-serif";
+          mCtx.fillText("½mv²", x + 2, y + 10);
+        }
+        mCtx.fillStyle = "#fde047";
+        mCtx.font = "600 10px sans-serif";
+        mCtx.fillText(`U = Σ ½mv² ≈ ${fmt(sum, 1)}（相対）`, bx + 8, by + bh - 6);
+      }
+
+      function drawMini3(bx, by, bw, bh) {
+        mCtx.fillStyle = "#c4b5fd";
+        mCtx.font = "600 11px sans-serif";
+        mCtx.fillText("N = n N_A", bx + bw * 0.08, by + bh * 0.35);
+        mCtx.fillText("R = N_A k_B", bx + bw * 0.08, by + bh * 0.55);
+        mCtx.fillStyle = "#fde047";
+        mCtx.font = "600 12px sans-serif";
+        mCtx.fillText("U = (3/2) n R T", bx + bw * 0.08, by + bh * 0.78);
+      }
+
+      function drawMini4(bx, by, bw, bh) {
+        const bars = [{ f: 3, h: 0.35, c: "#a78bfa", l: "f=3" }, { f: 5, h: 0.58, c: "#818cf8", l: "f=5" }, { f: 6, h: 0.72, c: "#fde047", l: "f=6" }];
+        bars.forEach((b, i) => {
+          const x = bx + bw * (0.12 + i * 0.28);
+          const bhBar = bh * b.h * (0.7 + 0.3 * Math.sin(miniT + i));
+          mCtx.fillStyle = b.c;
+          mCtx.fillRect(x, by + bh - bhBar - 10, bw * 0.18, bhBar);
+          mCtx.fillStyle = "#cbd5e1";
+          mCtx.font = "9px sans-serif";
+          mCtx.fillText(b.l, x + 4, by + bh - 2);
+        });
+        mCtx.fillStyle = "#fde68a";
+        mCtx.font = "600 9px sans-serif";
+        mCtx.fillText("U = (f/2)nRT", bx + 8, by + 14);
+      }
+
+      function drawMini5(bx, by, bw, bh) {
+        const cy = by + bh * 0.55;
+        const sizes = [0.55, 0.85, 1.0];
+        const seeds = [[0.2, 0.1], [0.5, -0.15], [0.7, 0.2], [0.35, 0.25], [0.6, -0.05]];
+        sizes.forEach((s, i) => {
+          const wBox = bw * 0.22 * s;
+          const x = bx + bw * (0.1 + i * 0.3);
+          mCtx.strokeStyle = "rgba(167,139,250,0.7)";
+          mCtx.strokeRect(x, cy - wBox * 0.4, wBox, wBox * 0.8);
+          seeds.forEach(([sx, sy]) => {
+            const px = x + wBox * (0.25 + sx * 0.5);
+            const py = cy + sy * wBox * 0.35;
+            mCtx.fillStyle = "#a78bfa";
+            mCtx.beginPath();
+            mCtx.arc(px, py, 3, 0, Math.PI * 2);
+            mCtx.fill();
+          });
+        });
+        mCtx.fillStyle = "#94a3b8";
+        mCtx.font = "9px sans-serif";
+        mCtx.fillText("V を変えても T 一定 → U 同じ", bx + 8, by + bh - 6);
+      }
+
+      function fmtMass(n) { return `${fmtSci(n)} kg`; }
+
+      function updateCalcPanel(st) {
+        const N = state.n * NA;
+        document.getElementById("cVsq").textContent = `${fmt(st.v2Mean / 1e6, 2)}×10⁶ m²/s²`;
+        document.getElementById("cVmean").textContent = `${fmt(st.vMean, 0)} m/s`;
+        document.getElementById("cM").textContent = fmtSci(M);
+        document.getElementById("cVsq2").textContent = `${fmt(st.v2Mean / 1e6, 2)}×10⁶`;
+        document.getElementById("cEkSim").textContent = `${fmtSci(st.ekMean)} J`;
+        document.getElementById("cKb").textContent = fmtSci(KB);
+        document.getElementById("cT").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("cEkTh").textContent = `${fmtSci(st.ekTh)} J`;
+        document.getElementById("cN").textContent = `${fmtSci(N)} 個（n = ${fmt(state.n, 2)} mol）`;
+        document.getElementById("cUtransCalc").textContent = `${fmtSci(st.uTransSim)} J`;
+        document.getElementById("cNmol").textContent = `${fmt(state.n, 2)} mol`;
+        document.getElementById("cR").textContent = `${fmt(R, 2)} J/(mol·K)`;
+        document.getElementById("cT2").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("cUtransTh").textContent = `${fmtSci(st.uTransTh)} J`;
+        document.getElementById("cF").textContent = String(state.f);
+        document.getElementById("cNmol2").textContent = `${fmt(state.n, 2)} mol`;
+        document.getElementById("cR2").textContent = `${fmt(R, 2)} J/(mol·K)`;
+        document.getElementById("cT3").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("cUthCalc").textContent = `${fmtSci(st.uTheory)} J`;
+        document.getElementById("cVvol").textContent = `${fmt(state.V_L, 1)} L`;
+        document.getElementById("cUconst").textContent = fmtSci(st.uTransSim);
+        document.getElementById("cT4").textContent = fmt(state.T, 0);
+
+        const extraLine = document.getElementById("cExtraLine");
+        if (state.f > 3) {
+          extraLine.textContent =
+            `= (3/2)nRT + ((${state.f}−3)/2)nRT = ${fmtSci(st.uTransTh)} + ${fmtSci(st.uExtra)} = ${fmtSci(st.uTheory)} J`;
+        } else {
+          extraLine.textContent = `f = 3（単原子）→ U = U_trans = (3/2)nRT`;
+        }
+      }
+
+      function updateDeriveCalc(st) {
+        const N = state.n * NA;
+        const lines = [
+          `⟨E_k⟩ = ½ m ⟨v²⟩ = ½ × ${fmtSci(M)} × ${fmt(st.v2Mean / 1e6, 2)}×10⁶ = ${fmtSci(st.ekMean)} J\n`
+          + `理論 (3/2)k_B T = (3/2) × ${fmtSci(KB)} × ${fmt(state.T, 0)} = ${fmtSci(st.ekTh)} J`,
+          `U = N ⟨E_k⟩ = ${fmtSci(N)} × ${fmtSci(st.ekMean)} = ${fmtSci(st.uTransSim)} J\n`
+          + `（sim から Σ ½mv² を N 個分に換算）`,
+          `N k_B = n R → U = (3/2) n R T\n`
+          + `= (3/2) × ${fmt(state.n, 2)} × ${fmt(R, 2)} × ${fmt(state.T, 0)} = ${fmtSci(st.uTransTh)} J`,
+          `U = (f/2) n R T = (${state.f}/2) × ${fmt(state.n, 2)} × ${fmt(R, 2)} × ${fmt(state.T, 0)}\n`
+          + `= ${fmtSci(st.uTheory)} J`
+          + (state.f > 3 ? `（並進 ${fmtSci(st.uTransTh)} + 回転振動 ${fmtSci(st.uExtra)}）` : ""),
+          `V = ${fmt(state.V_L, 1)} L に変えても T = ${fmt(state.T, 0)} K → ⟨E_k⟩ ≈ ${fmtSci(st.ekMean)} J\n`
+          + `U_trans ≈ ${fmtSci(st.uTransSim)} J（V に依存しない U = U(T)）`,
+        ];
+        document.getElementById("deriveCalc").textContent = lines[state.step] || "—";
+      }
+
+      function updateUI() {
+        const st = computeStats();
+        const err = Math.abs(st.uTransSim - st.uTransTh) / st.uTransTh * 100;
+        const match = Math.max(0, 100 - err);
+
+        document.getElementById("dVmean").textContent = `${fmt(st.vMean, 0)} m/s`;
+        document.getElementById("dVsq").textContent = `${fmt(st.v2Mean / 1e6, 2)}×10⁶ m²/s²`;
+        document.getElementById("dEk").textContent = `${fmtSci(st.ekMean)} J`;
+        document.getElementById("dEkTh").textContent = `${fmtSci(st.ekTh)} J`;
+        document.getElementById("dUsim").textContent = `${fmtSci(st.uTransSim)} J`;
+        document.getElementById("dUth").textContent = `${fmtSci(st.uTheory)} J`;
+        document.getElementById("dUtrans").textContent = `${fmtSci(st.uTransSim)} J`;
+        document.getElementById("dErr").textContent = `${fmt(err, 1)} %`;
+
+        const rowExtra = document.getElementById("rowExtra");
+        if (state.f > 3) {
+          rowExtra.style.display = "";
+          document.getElementById("dUextra").textContent = `${fmtSci(st.uExtra)} J`;
+        } else rowExtra.style.display = "none";
+
+        document.getElementById("matchFill").style.width = `${Math.min(100, match)}%`;
+        document.getElementById("hudT").textContent = `T = ${fmt(state.T, 0)} K（${fmt(state.T - 273.15, 0)} ℃）`;
+        document.getElementById("hudV").textContent = `V = ${fmt(state.V_L, 1)} L`;
+        document.getElementById("hudN").textContent = `n = ${fmt(state.n, 2)} mol`;
+        document.getElementById("hudF").textContent = `f = ${state.f}`;
+        document.getElementById("tVal").textContent = `${fmt(state.targetT, 0)} K`;
+        document.getElementById("vVal").textContent = `${fmt(state.targetV, 1)} L`;
+        document.getElementById("nVal").textContent = `${fmt(state.n, 2)} mol`;
+        document.getElementById("fVal").textContent = `f = ${state.f}`;
+
+        const hudT = document.getElementById("hudT");
+        hudT.classList.toggle("hot", state.T >= 450);
+        hudT.classList.toggle("cold", state.T <= 150);
+
+        document.getElementById("volNote").textContent =
+          `💡 V = ${fmt(state.V_L, 1)} L に変更しても T = ${fmt(state.T, 0)} K なら ⟨v⟩ ≈ ${fmt(st.vMean, 0)} m/s、U_trans ≈ ${fmtSci(st.uTransSim)} J はほぼ一定（U = U(T)）。`;
+
+        document.getElementById("mainFormula").textContent =
+          state.f === 3
+            ? `U = (3/2) nRT ≈ ${fmtSci(st.uTheory)}（sim 並進 ${fmtSci(st.uTransSim)}）`
+            : `U = (${state.f}/2) nRT ≈ ${fmtSci(st.uTheory)}（並進 ${fmtSci(st.uTransSim)} + 回転振動 ${fmtSci(st.uExtra)}）`;
+
+        document.getElementById("readoutMsg").textContent =
+          state.f === 3
+            ? `単原子：U_sim（並進）≈ U_theory = (3/2)nRT。温度を上げると U が比例して増えます。`
+            : `f=${state.f}：並進分 (3/2)nRT に加え、回転・振動で +${fmtSci(st.uExtra)} J。総 U = (f/2)nRT。`;
+
+        if (state.uTrail.length === 0 || Math.abs(state.uTrail[state.uTrail.length - 1].x - state.T) > 10) {
+          state.uTrail.push({ x: state.T, y: st.uTransSim });
+          if (state.uTrail.length > 24) state.uTrail.shift();
+        } else state.uTrail[state.uTrail.length - 1] = { x: state.T, y: st.uTransSim };
+
+        updateCalcPanel(st);
+        updateDeriveCalc(st);
+
+        const slope = (state.f / 2) * state.n * R;
+        document.getElementById("uGraphTip").textContent =
+          state.f === 3
+            ? `💡 いま：傾き (f/2)nR = (${state.f}/2)×${fmt(state.n, 2)}×${fmt(R, 2)} ≈ ${fmtSci(slope)} J/K。T = ${fmt(state.T, 0)} K → U ≈ ${fmtSci(st.uTheory)} J。黄色点 ≈ 青紫の直線上。`
+            : `💡 いま：傾き ≈ ${fmtSci(slope)} J/K（f = ${state.f}）。黄色点は並進 U_trans。青紫の直線は総 U = (f/2)nRT ≈ ${fmtSci(st.uTheory)} J。`;
+      }
+
+      function onControlChange() {
+        const newT = Number(tSlider.value);
+        const newV = Number(vSlider.value);
+        const newN = Number(nSlider.value);
+        const newF = Number(fSelect.value);
+
+        if (Math.abs(newN - state.n) > 0.05) {
+          state.n = newN;
+          initParticles(true);
+        }
+        if (newF !== state.f) state.f = newF;
+
+        state.targetT = newT;
+        state.targetV = newV;
+        state.deriveOn = deriveToggle.checked;
+        document.querySelector(".area-derive").style.opacity = state.deriveOn ? "1" : "0.55";
+
+        document.querySelectorAll(".tp").forEach((b) => {
+          b.classList.toggle("active", Number(b.dataset.t) === state.targetT);
+        });
+
+        resizeCanvas();
+        updateUI();
+        refreshCharts();
+      }
+
+      function tick(now) {
+        if (lastFrame == null) lastFrame = now;
+        const dt = Math.min(0.04, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+
+        rescaleTemperature(dt);
+        rescaleVolume();
+        updateParticles(dt);
+        drawMotion();
+
+        if (state.simTime - state.lastRateT >= 0.4) {
+          updateUI();
+          refreshCharts();
+          state.lastRateT = state.simTime;
+        }
+        drawMiniStep(state.step, dt);
+        requestAnimationFrame(tick);
+      }
+
+      document.getElementById("btnPrev").addEventListener("click", () => setStep(state.step - 1));
+      document.getElementById("btnNext").addEventListener("click", () => setStep(state.step + 1));
+      tSlider.addEventListener("input", onControlChange);
+      vSlider.addEventListener("input", onControlChange);
+      nSlider.addEventListener("input", onControlChange);
+      fSelect.addEventListener("change", onControlChange);
+      deriveToggle.addEventListener("change", () => { onControlChange(); if (deriveToggle.checked) setStep(state.step); });
+      document.querySelectorAll(".tp").forEach((b) => {
+        b.addEventListener("click", () => { tSlider.value = b.dataset.t; onControlChange(); });
+      });
+      window.addEventListener("resize", () => { resizeCanvas(); if (histChart) histChart.resize(); if (uChart) uChart.resize(); });
+
+      function boot() {
+        if (typeof Chart === "undefined") {
+          document.getElementById("ctrlMsg").textContent = "Chart.js を読み込めません。";
+          return;
+        }
+        buildStepButtons();
+        setStep(0);
+        state.targetT = Number(tSlider.value);
+        state.targetV = Number(vSlider.value);
+        state.n = Number(nSlider.value);
+        state.f = Number(fSelect.value);
+        state.V_L = state.targetV;
+        state.lastV_L = state.V_L;
+        resizeCanvas();
+        initParticles(true);
+        buildCharts();
+        updateUI();
+        state.lastRateT = state.simTime;
+        requestAnimationFrame(() => {
+          resizeCanvas();
+          if (histChart) histChart.resize();
+          if (uChart) uChart.resize();
+          requestAnimationFrame(tick);
+        });
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+      else boot();
+    })();
+  </script>
+</body>
+</html>

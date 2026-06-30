@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>熱効率とコジェネレーション — η · η_total</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --hot: #fb923c;
+      --cold: #38bdf8;
+      --work: #a78bfa;
+      --waste: #64748b;
+      --recover: #34d399;
+      --accent: #22d3ee;
+      --accent-light: #67e8f9;
+      --glow: rgba(34, 211, 238, 0.38);
+      --bg-panel: rgba(12, 18, 32, 0.84);
+      --border: rgba(34, 211, 238, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1524 40%, #101c30 70%, #0a1018 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 50% 40% at 12% 18%, rgba(251,146,60,0.09), transparent 55%),
+        radial-gradient(ellipse 55% 42% at 88% 82%, rgba(34,211,238,0.08), transparent 55%);
+    }
+    .shell {
+      position: relative; z-index: 1;
+      width: min(1200px, 96vw); margin: 0 auto;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 50px; height: 50px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg, rgba(251,146,60,0.25), rgba(52,211,153,0.22));
+      border: 1px solid rgba(34,211,238,0.35);
+      box-shadow: 0 0 24px var(--glow);
+      font-size: 1.4rem;
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; text-shadow: 0 0 20px var(--glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600;
+    }
+
+    /* ── ヒーロー：式とフェーズ ── */
+    .hero-panel {
+      padding: 16px 18px; border-radius: 18px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      box-shadow: 0 8px 36px rgba(0,0,0,0.45);
+    }
+    .eq-row {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+      font-size: clamp(0.95rem, 2.5vw, 1.15rem); font-weight: 700;
+      font-variant-numeric: tabular-nums; margin-bottom: 14px;
+    }
+    .eq-chip { padding: 8px 14px; border-radius: 12px; border: 2px solid transparent; }
+    .eq-chip.hot { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.45); }
+    .eq-chip.work { background: rgba(167,139,250,0.12); color: #c4b5fd; border-color: rgba(167,139,250,0.45); }
+    .eq-chip.rec { background: rgba(52,211,153,0.12); color: #6ee7b7; border-color: rgba(52,211,153,0.45); }
+    .eq-chip.neutral { background: rgba(255,255,255,0.05); color: #cbd5e1; border-color: rgba(148,163,184,0.25); }
+    .phase-bar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .phase-step {
+      padding: 6px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+      background: rgba(255,255,255,0.04); color: var(--muted);
+      border: 1px solid rgba(148,163,184,0.2); transition: all 0.25s;
+    }
+    .phase-step.active { color: #fff; background: rgba(34,211,238,0.18); border-color: rgba(34,211,238,0.55); box-shadow: 0 0 12px rgba(34,211,238,0.2); }
+    .phase-step.done { color: #6ee7b7; border-color: rgba(52,211,153,0.45); }
+
+    /* ── エネルギー分割バー ── */
+    .energy-split {
+      padding: 14px 16px; border-radius: 16px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+    }
+    .energy-split h4 { margin: 0 0 8px; font-size: 0.82rem; color: var(--accent-light); font-weight: 600; }
+    .split-track {
+      display: flex; height: 32px; border-radius: 10px; overflow: hidden;
+      background: rgba(255,255,255,0.06); margin-bottom: 8px;
+    }
+    .split-seg {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 700; min-width: 0; transition: width 0.2s;
+      white-space: nowrap; overflow: hidden;
+    }
+    .split-seg.w { background: linear-gradient(90deg, #7c3aed, #a78bfa); color: #ede9fe; }
+    .split-seg.qout { background: linear-gradient(90deg, #475569, #64748b); color: #e2e8f0; }
+    .split-seg.rec { background: linear-gradient(90deg, #059669, #34d399); color: #ecfdf5; }
+    .split-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.72rem; color: var(--muted); }
+    .split-legend span::before {
+      content: ""; display: inline-block; width: 10px; height: 10px;
+      border-radius: 3px; margin-right: 5px; vertical-align: middle;
+    }
+    .split-legend .lw::before { background: var(--work); }
+    .split-legend .lq::before { background: var(--waste); }
+    .split-legend .lr::before { background: var(--recover); }
+
+    /* ── 効率ゲージ ── */
+    .gauge-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .gauge {
+      padding: 12px 10px; border-radius: 14px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .gauge .g-lbl { font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; }
+    .gauge .g-val { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .gauge .g-sub { font-size: 0.62rem; color: var(--muted); margin-top: 4px; }
+    .gauge .g-bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); margin-top: 8px; overflow: hidden; }
+    .gauge .g-fill { height: 100%; border-radius: 999px; transition: width 0.25s; }
+    .gauge.eta .g-val { color: #fdba74; }
+    .gauge.eta .g-fill { background: var(--hot); }
+    .gauge.carnot .g-val { color: #94a3b8; }
+    .gauge.carnot .g-fill { background: #64748b; }
+    .gauge.total .g-val { color: #6ee7b7; }
+    .gauge.total .g-fill { background: var(--recover); }
+
+    /* ── グリッド ── */
+    .sim-grid {
+      display: grid; gap: 12px;
+      grid-template-columns: 1fr;
+      grid-template-areas: "engine" "cogen" "ctrl";
+    }
+    @media (min-width: 980px) {
+      .sim-grid {
+        grid-template-columns: 1.15fr 0.85fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          "engine ctrl"
+          "cogen ctrl";
+      }
+      .area-ctrl { align-self: stretch; }
+    }
+    .panel {
+      padding: 14px 16px; border-radius: 16px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .panel h3 { margin: 0 0 10px; font-size: 0.94rem; color: var(--accent-light); font-weight: 600; }
+    .area-engine { grid-area: engine; }
+    .area-cogen { grid-area: cogen; }
+    .area-ctrl { grid-area: ctrl; }
+
+    .canvas-wrap {
+      position: relative; border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg, rgba(8,14,24,0.98), rgba(4,8,14,0.99));
+      border: 1px solid rgba(56,189,248,0.32);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 0 28px rgba(34,211,238,0.06);
+    }
+    .canvas-wrap.engine-h { height: min(300px, 38dvh); min-height: 260px; }
+    .canvas-wrap.cogen-h { height: min(220px, 28dvh); min-height: 190px; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .canvas-hud {
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 10px;
+    }
+    .hud-caption {
+      align-self: center; padding: 6px 16px; border-radius: 999px;
+      font-size: 0.76rem; font-weight: 700; color: #fde047;
+      background: rgba(0,0,0,0.55); border: 1px solid rgba(253,224,71,0.35);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .hud-caption.show { opacity: 1; }
+
+    .ctrl-row { margin-bottom: 11px; }
+    .ctrl-row label {
+      display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px;
+    }
+    .ctrl-row label span.val { color: #bae6fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 6px; }
+    .metrics {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 12px 0;
+    }
+    .metric {
+      padding: 11px 10px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 2px solid transparent;
+    }
+    .metric.hot { border-color: rgba(251,146,60,0.35); }
+    .metric.work { border-color: rgba(167,139,250,0.35); }
+    .metric.waste { border-color: rgba(100,116,139,0.35); }
+    .metric.rec { border-color: rgba(52,211,153,0.35); }
+    .metric .lbl { font-size: 0.65rem; color: var(--muted); }
+    .metric .num { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .metric.hot .num { color: #fdba74; }
+    .metric.work .num { color: #c4b5fd; }
+    .metric.waste .num { color: #cbd5e1; }
+    .metric.rec .num { color: #6ee7b7; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-row button {
+      flex: 1; min-height: 46px; padding: 10px; font-family: inherit;
+      font-size: 0.88rem; font-weight: 700; border-radius: 12px; cursor: pointer;
+      border: 1px solid rgba(34,211,238,0.45);
+      background: linear-gradient(135deg, rgba(34,211,238,0.28), rgba(56,189,248,0.12));
+      color: #cffafe; transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-row button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,211,238,0.2); }
+    .btn-row button.secondary { background: rgba(15,23,42,0.75); border-color: rgba(148,163,184,0.3); color: var(--muted); }
+    .btn-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .status {
+      margin-top: 10px; padding: 11px 13px; border-radius: 10px; font-size: 0.82rem; line-height: 1.6;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.22); color: #bae6fd;
+    }
+    .learn-grid {
+      display: grid; gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .learn-card {
+      padding: 12px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .learn-card strong { display: block; font-size: 0.82rem; color: var(--accent-light); margin-bottom: 4px; }
+    .learn-card p { margin: 0; font-size: 0.8rem; line-height: 1.65; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚡</div>
+      <h2>熱効率とコジェネレーション</h2>
+      <p class="chapter-label">高温 → 低温への熱の流れで仕事をし、廃熱を回収して総合効率を高める</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="hero-panel">
+      <div class="eq-row">
+        <span class="eq-chip hot" id="heroEta">η = W_out / Q_in</span>
+        <span class="eq-chip neutral" id="heroCarnot">η_C = 1 − Tc/Th</span>
+        <span class="eq-chip work" id="heroFirstLaw">Q_in = W_out + Q_out</span>
+        <span class="eq-chip rec" id="heroTotal">η_total = (W + Q_rec) / Q_in</span>
+      </div>
+      <div class="phase-bar">
+        <span class="phase-step" id="ph0">① 待機</span>
+        <span class="phase-step" id="ph1">② 加熱 Q_in</span>
+        <span class="phase-step" id="ph2">③ 膨張 → W_out</span>
+        <span class="phase-step" id="ph3">④ 廃熱 → 復帰</span>
+        <span class="phase-step" id="ph4">⑤ 回収 → η_total</span>
+      </div>
+    </section>
+
+    <section class="energy-split">
+      <h4>Q_in の行き先 — 入った熱は「仕事」と「廃熱」に分かれる（コジェネで廃熱の一部を再利用）</h4>
+      <div class="split-track">
+        <div class="split-seg w" id="segW" style="width:0%">W</div>
+        <div class="split-seg qout" id="segQout" style="width:0%">Q_out</div>
+        <div class="split-seg rec" id="segRec" style="width:0%">回収</div>
+      </div>
+      <div class="split-legend">
+        <span class="lw">W_out（有用な仕事）</span>
+        <span class="lq">Q_out（捨てられる廃熱）</span>
+        <span class="lr">Q_recovered（回収して温水などに）</span>
+      </div>
+    </section>
+
+    <div class="gauge-row">
+      <div class="gauge eta">
+        <div class="g-lbl">熱効率 η</div>
+        <div class="g-val" id="gEta">—</div>
+        <div class="g-sub">η = W_out / Q_in</div>
+        <div class="g-bar"><div class="g-fill" id="gEtaBar" style="width:0%"></div></div>
+      </div>
+      <div class="gauge carnot">
+        <div class="g-lbl">理論上限 η_C（カルノー）</div>
+        <div class="g-val" id="gCarnot">—</div>
+        <div class="g-sub">η_C = 1 − Tc/Th</div>
+        <div class="g-bar"><div class="g-fill" id="gCarnotBar" style="width:0%"></div></div>
+      </div>
+      <div class="gauge total">
+        <div class="g-lbl">総合効率 η_total</div>
+        <div class="g-val" id="gTotal">—</div>
+        <div class="g-sub">電力＋回収熱</div>
+        <div class="g-bar"><div class="g-fill" id="gTotalBar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="sim-grid">
+      <section class="panel area-engine">
+        <h3>熱機関 — 粒子の速さ · 熱の流れ · ピストン仕事</h3>
+        <div class="canvas-wrap engine-h">
+          <canvas id="engineCanvas"></canvas>
+          <div class="canvas-hud">
+            <div class="hud-caption" id="hudCaption"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel area-cogen">
+        <h3>コジェネレーション — 廃熱回収 · 温水タンク</h3>
+        <div class="canvas-wrap cogen-h">
+          <canvas id="cogenCanvas"></canvas>
+        </div>
+      </section>
+
+      <section class="panel area-ctrl">
+        <h3>操作パネル</h3>
+        <div class="ctrl-row">
+          <label>高温側 Th<span class="val" id="thVal">600 K（327 ℃）</span></label>
+          <input type="range" id="thSlider" min="300" max="800" step="10" value="600">
+        </div>
+        <div class="ctrl-row">
+          <label>低温側 Tc<span class="val" id="tcVal">300 K（27 ℃）</span></label>
+          <input type="range" id="tcSlider" min="250" max="350" step="5" value="300">
+        </div>
+        <div class="ctrl-row">
+          <label>入熱 Q_in<span class="val" id="qinVal">2000 J</span></label>
+          <input type="range" id="qinSlider" min="500" max="4000" step="100" value="2000">
+        </div>
+        <div class="ctrl-row">
+          <label>廃熱回収率 r<span class="val" id="rVal">0.50</span></label>
+          <input type="range" id="rSlider" min="0" max="0.8" step="0.05" value="0.5">
+        </div>
+        <div class="metrics">
+          <div class="metric hot"><div class="lbl">Q_in 入った熱</div><div class="num" id="mQin">0 J</div></div>
+          <div class="metric work"><div class="lbl">W_out 仕事</div><div class="num" id="mWout">0 J</div></div>
+          <div class="metric waste"><div class="lbl">Q_out 廃熱</div><div class="num" id="mQout">0 J</div></div>
+          <div class="metric rec"><div class="lbl">Q_rec 回収熱</div><div class="num" id="mQrec">0 J</div></div>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="startBtn">▶ サイクル開始</button>
+          <button type="button" id="resetBtn" class="secondary">リセット</button>
+        </div>
+        <p class="status" id="statusMsg">Th と Tc の差が大きいほど η_C が高くなります。「サイクル開始」で ②→⑤ を順に見てください。</p>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h3>高校生向けポイント</h3>
+      <div class="learn-grid">
+        <div class="learn-card">
+          <strong>なぜ仕事ができる？</strong>
+          <p>高温 Th と低温 Tc の「温度差」があると、熱が Th → Tc に流れ、その過程で気体が膨張してピストンを押します（W_out）。</p>
+        </div>
+        <div class="learn-card">
+          <strong>η = W_out / Q_in の意味</strong>
+          <p>入れた熱 Q_in のうち、どれだけが「有用な仕事」になったか。残りは廃熱 Q_out として捨てられます。</p>
+        </div>
+        <div class="learn-card">
+          <strong>η_C = 1 − Tc/Th</strong>
+          <p>カルノーサイクルの理論上限。実際の熱機関は摩擦などで η &lt; η_C になります。Th を上げる・Tc を下げると上限が上がります。</p>
+        </div>
+        <div class="learn-card">
+          <strong>コジェネレーション</strong>
+          <p>捨てていた廃熱 Q_out の一部（r × Q_out）を温水などに再利用。電力 η に加え、熱も使うので η_total が η より大きくなります。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const R = 8.314;
+      const N = 0.06;
+      const V0 = 0.55;
+      const V_MAX = 2.4;
+      const REAL_FRAC = 0.58; // 実機関 ≈ カルノー上限の58%（教学用）
+      const HEAT_DUR = 1.6;
+      const EXPAND_DUR = 2.2;
+      const EXHAUST_DUR = 1.0;
+      const RETURN_DUR = 1.2;
+      const COGEN_DUR = 1.8;
+
+      const engineCanvas = document.getElementById("engineCanvas");
+      const cogenCanvas = document.getElementById("cogenCanvas");
+      const eCtx = engineCanvas.getContext("2d");
+      const cCtx = cogenCanvas.getContext("2d");
+      const hudCaption = document.getElementById("hudCaption");
+      const statusMsg = document.getElementById("statusMsg");
+
+      const state = {
+        Th: 600, Tc: 300, QinTarget: 2000, r: 0.5,
+        Tgas: 300, V: V0, Vdisp: V0,
+        Qin: 0, Wout: 0, Qout: 0, Qrec: 0,
+        Wtarget: 0,
+        phase: "idle", phaseT: 0, simTime: 0,
+        heatFlow: 0, workPulse: 0, exhaustFlow: 0, recoverFlow: 0,
+        tankFill: 0.12, tankBubbles: [],
+        hotParticles: [], coldParticles: [], gasParticles: [],
+        flowParticles: [], recoverParticles: [],
+        crankAngle: 0,
+        savedV: V0,
+      };
+
+      let lastFrame = null;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function kelvinToC(T) { return fmt(T - 273.15, 0); }
+      function volM3(vL) { return vL * 1e-3; }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
+
+      // Carnot効率 η_C = 1 − Tc/Th
+      function carnotEta() {
+        return Math.max(0, Math.min(1, 1 - state.Tc / state.Th));
+      }
+
+      // 熱効率を計算 η = W_out / Q_in
+      function etaEngine() {
+        return state.Qin > 1 ? state.Wout / state.Qin : 0;
+      }
+
+      // コジェネ総合効率 η_total = (W_out + Q_recovered) / Q_in
+      function etaTotal() {
+        return state.Qin > 1 ? (state.Wout + state.Qrec) / state.Qin : 0;
+      }
+
+      function targetWout() {
+        return state.QinTarget * REAL_FRAC * carnotEta();
+      }
+
+      function pressurePa() {
+        return (N * R * state.Tgas) / volM3(state.V);
+      }
+
+      function initParticles() {
+        state.hotParticles = [];
+        state.coldParticles = [];
+        state.gasParticles = [];
+        state.flowParticles = [];
+        state.recoverParticles = [];
+        state.tankBubbles = [];
+        for (let i = 0; i < 32; i += 1) {
+          state.hotParticles.push({ nx: Math.random(), ny: Math.random(), vx: 0, vy: 0, trail: [] });
+          state.coldParticles.push({ nx: Math.random(), ny: Math.random(), vx: 0, vy: 0, trail: [] });
+        }
+        for (let i = 0; i < 48; i += 1) {
+          state.gasParticles.push({ nx: Math.random(), ny: Math.random(), vx: 0, vy: 0, trail: [] });
+        }
+        syncParticleSpeeds();
+      }
+
+      // 粒子速度 v = k * sqrt(T)
+      function syncParticleSpeeds() {
+        const kh = 0.62 * Math.sqrt(state.Th);
+        const kc = 0.62 * Math.sqrt(state.Tc);
+        const kg = 0.62 * Math.sqrt(state.Tgas);
+        function setSpeed(list, k) {
+          list.forEach((p) => {
+            if (!p.vx && !p.vy) { p.vx = (Math.random() - 0.5) * 2; p.vy = (Math.random() - 0.5) * 2; }
+            const m = Math.hypot(p.vx, p.vy) || 1;
+            p.vx = (p.vx / m) * k;
+            p.vy = (p.vy / m) * k;
+          });
+        }
+        setSpeed(state.hotParticles, kh);
+        setSpeed(state.coldParticles, kc);
+        setSpeed(state.gasParticles, kg);
+      }
+
+      function resizeCanvas(canvas, ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return false;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return true;
+      }
+
+      function engineLayout() {
+        const w = engineCanvas.getBoundingClientRect().width || 500;
+        const h = engineCanvas.getBoundingClientRect().height || 280;
+        const hotBox = { x: w * 0.04, y: h * 0.06, w: w * 0.22, h: h * 0.38 };
+        const coldBox = { x: w * 0.04, y: h * 0.54, w: w * 0.22, h: h * 0.38 };
+        const cx = w * 0.56;
+        const cylW = Math.min(w * 0.22, 110);
+        const x0 = cx - cylW / 2;
+        const headY = h * 0.08;
+        const footY = h * 0.88;
+        const stroke = footY - headY - 40;
+        const frac = (state.Vdisp - V0) / (V_MAX - V0);
+        const pistonY = headY + 32 + frac * stroke;
+        return { w, h, hotBox, coldBox, cx, cylW, x0, headY, footY, pistonY, frac, stroke };
+      }
+
+      function spawnFlowParticle(x1, y1, x2, y2, color) {
+        if (state.flowParticles.length > 40) return;
+        state.flowParticles.push({
+          x: x1, y: y1, tx: x2, ty: y2, t: Math.random(),
+          color, speed: 0.35 + Math.random() * 0.25,
+        });
+      }
+
+      function updateFlowParticles(dt) {
+        state.flowParticles.forEach((p) => {
+          p.t += p.speed * dt;
+          if (p.t > 1) { p.t = 0; p.x = p.tx; p.y = p.ty; }
+        });
+        state.flowParticles = state.flowParticles.filter((p) => p.t <= 1);
+      }
+
+      function drawFlowParticles(ctx) {
+        state.flowParticles.forEach((p) => {
+          const t = p.t;
+          const x = p.x + (p.tx - p.x) * t;
+          const y = p.y + (p.ty - p.y) * t;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, 6);
+          g.addColorStop(0, `rgba(${p.color},0.95)`);
+          g.addColorStop(1, `rgba(${p.color},0)`);
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      function moveParticles(list, box, dt, speedMul) {
+        const left = box.x + 8;
+        const top = box.y + 26;
+        const iw = box.w - 16;
+        const ih = box.h - 34;
+        list.forEach((p) => {
+          p.nx += (p.vx * dt * speedMul) / iw;
+          p.ny += (p.vy * dt * speedMul) / ih;
+          if (p.nx < 0) { p.nx = 0; p.vx = Math.abs(p.vx); }
+          if (p.nx > 1) { p.nx = 1; p.vx = -Math.abs(p.vx); }
+          if (p.ny < 0) { p.ny = 0; p.vy = Math.abs(p.vy); }
+          if (p.ny > 1) { p.ny = 1; p.vy = -Math.abs(p.vy); }
+          const px = left + p.nx * iw;
+          const py = top + p.ny * ih;
+          p.trail.push({ x: px, y: py });
+          if (p.trail.length > 6) p.trail.shift();
+        });
+      }
+
+      function drawReservoir(ctx, box, label, T, rgb, particles, active, icon) {
+        const glow = active ? 0.35 : 0.08;
+        ctx.save();
+        ctx.shadowColor = `rgba(${rgb},${glow})`;
+        ctx.shadowBlur = active ? 18 : 0;
+        const bg = ctx.createLinearGradient(box.x, box.y, box.x, box.y + box.h);
+        bg.addColorStop(0, active ? `rgba(${rgb},0.22)` : "rgba(255,255,255,0.04)");
+        bg.addColorStop(1, active ? `rgba(${rgb},0.08)` : "rgba(255,255,255,0.02)");
+        ctx.fillStyle = bg;
+        ctx.strokeStyle = active ? `rgba(${rgb},0.6)` : "rgba(148,163,184,0.25)";
+        ctx.lineWidth = 2;
+        roundRect(ctx, box.x, box.y, box.w, box.h, 12);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.font = "700 12px Noto Sans JP, sans-serif";
+        ctx.fillStyle = active ? "#f8fafc" : "#94a3b8";
+        ctx.fillText(icon + " " + label, box.x + 10, box.y + 18);
+        ctx.font = "600 11px sans-serif";
+        ctx.fillStyle = "#7dd3fc";
+        ctx.fillText(`${fmt(T, 0)} K`, box.x + 10, box.y + box.h - 22);
+        ctx.font = "500 10px sans-serif";
+        ctx.fillStyle = "#64748b";
+        ctx.fillText(`${kelvinToC(T)} ℃`, box.x + 10, box.y + box.h - 8);
+
+        const left = box.x + 10;
+        const top = box.y + 28;
+        const iw = box.w - 20;
+        const ih = box.h - 42;
+        particles.forEach((p) => {
+          p.trail.forEach((pt, i) => {
+            ctx.fillStyle = `rgba(${rgb},${0.08 + (i / 6) * 0.2})`;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          const px = left + p.nx * iw;
+          const py = top + p.ny * ih;
+          const g = ctx.createRadialGradient(px, py, 0, px, py, 5);
+          g.addColorStop(0, `rgba(${rgb},1)`);
+          g.addColorStop(1, `rgba(${rgb},0.2)`);
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      function drawFlowArrow(ctx, x1, y1, x2, y2, alpha, label, rgb) {
+        if (alpha < 0.04) return;
+        ctx.strokeStyle = `rgba(${rgb},${alpha})`;
+        ctx.fillStyle = `rgba(${rgb},${alpha})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const ang = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 11 * Math.cos(ang - 0.45), y2 - 11 * Math.sin(ang - 0.45));
+        ctx.lineTo(x2 - 11 * Math.cos(ang + 0.45), y2 - 11 * Math.sin(ang + 0.45));
+        ctx.closePath();
+        ctx.fill();
+        if (label) {
+          ctx.font = "700 11px Noto Sans JP, sans-serif";
+          ctx.fillStyle = `rgba(${rgb},${Math.min(1, alpha + 0.3)})`;
+          ctx.fillText(label, (x1 + x2) / 2 - 20, (y1 + y2) / 2 - 8);
+        }
+      }
+
+      function drawEngineCylinder(L) {
+        const { x0, cylW, headY, footY, pistonY, cx } = L;
+        const wallGrad = eCtx.createLinearGradient(x0 - 8, 0, x0 + cylW + 8, 0);
+        wallGrad.addColorStop(0, "#475569");
+        wallGrad.addColorStop(0.5, "#64748b");
+        wallGrad.addColorStop(1, "#475569");
+        eCtx.fillStyle = wallGrad;
+        eCtx.fillRect(x0 - 8, headY - 14, cylW + 16, footY - headY + 22);
+
+        eCtx.fillStyle = "#080e18";
+        eCtx.fillRect(x0, headY, cylW, footY - headY);
+
+        const gasTop = pistonY + 16;
+        const gasH = Math.max(4, footY - gasTop);
+        const tNorm = Math.min(1, (state.Tgas - state.Tc) / Math.max(1, state.Th - state.Tc));
+        const gg = eCtx.createLinearGradient(0, gasTop, 0, footY);
+        gg.addColorStop(0, `rgba(251,146,60,${0.15 + tNorm * 0.35})`);
+        gg.addColorStop(0.5, `rgba(249,115,22,${0.08 + tNorm * 0.15})`);
+        gg.addColorStop(1, "rgba(56,189,248,0.12)");
+        eCtx.fillStyle = gg;
+        eCtx.fillRect(x0 + 3, gasTop, cylW - 6, gasH);
+
+        const left = x0 + 10;
+        const right = x0 + cylW - 10;
+        const top = gasTop + 8;
+        const ih = Math.max(8, gasH - 16);
+        state.gasParticles.forEach((p) => {
+          p.trail.forEach((pt, i) => {
+            eCtx.fillStyle = `rgba(186,230,253,${0.05 + (i / 6) * 0.25})`;
+            eCtx.beginPath();
+            eCtx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+            eCtx.fill();
+          });
+          const px = left + p.nx * (right - left);
+          const py = top + p.ny * ih;
+          const g = eCtx.createRadialGradient(px, py, 0, px, py, 6);
+          g.addColorStop(0, "#e0f2fe");
+          g.addColorStop(1, "rgba(56,189,248,0.3)");
+          eCtx.fillStyle = g;
+          eCtx.beginPath();
+          eCtx.arc(px, py, 3.5, 0, Math.PI * 2);
+          eCtx.fill();
+        });
+
+        // ピストン
+        const pistGrad = eCtx.createLinearGradient(0, pistonY, 0, pistonY + 18);
+        pistGrad.addColorStop(0, "#cbd5e1");
+        pistGrad.addColorStop(1, "#64748b");
+        eCtx.fillStyle = pistGrad;
+        eCtx.fillRect(x0 + 2, pistonY, cylW - 4, 16);
+        eCtx.strokeStyle = "#94a3b8";
+        eCtx.lineWidth = 1;
+        eCtx.strokeRect(x0 + 2, pistonY, cylW - 4, 16);
+
+        // コネクティングロッド + クランク（ピストン位置と連動）
+        const rodTop = pistonY + 16;
+        const crankY = headY - 6;
+        const crankR = 20;
+        state.crankAngle = L.frac * Math.PI * 1.8;
+        const crankX = cx + Math.cos(state.crankAngle) * crankR;
+        const crankPinY = crankY + Math.sin(state.crankAngle) * crankR * 0.45;
+        eCtx.strokeStyle = "#64748b";
+        eCtx.lineWidth = 4;
+        eCtx.beginPath();
+        eCtx.moveTo(x0 + cylW / 2, rodTop);
+        eCtx.lineTo(crankX, crankPinY);
+        eCtx.stroke();
+        eCtx.fillStyle = "#475569";
+        eCtx.beginPath();
+        eCtx.arc(cx, crankY, crankR, 0, Math.PI * 2);
+        eCtx.stroke();
+        eCtx.beginPath();
+        eCtx.arc(crankX, crankPinY, 5, 0, Math.PI * 2);
+        eCtx.fill();
+
+        if (state.phase === "expand" || state.workPulse > 0.05) {
+          eCtx.strokeStyle = `rgba(167,139,250,${0.55 + state.workPulse * 0.45})`;
+          eCtx.lineWidth = 3;
+          eCtx.shadowColor = "rgba(167,139,250,0.6)";
+          eCtx.shadowBlur = 8;
+          eCtx.beginPath();
+          eCtx.moveTo(x0 + cylW + 10, pistonY + 8);
+          eCtx.lineTo(x0 + cylW + 52, pistonY + 8);
+          eCtx.stroke();
+          eCtx.shadowBlur = 0;
+          eCtx.fillStyle = "#c4b5fd";
+          eCtx.font = "700 12px Noto Sans JP, sans-serif";
+          eCtx.fillText("W_out →", x0 + cylW + 56, pistonY + 12);
+        }
+
+        eCtx.font = "600 11px sans-serif";
+        eCtx.fillStyle = "#7dd3fc";
+        eCtx.fillText(`P = ${fmt(pressurePa() / 1000, 0)} kPa`, x0, headY - 20);
+        eCtx.fillStyle = "#94a3b8";
+        eCtx.fillText(`V = ${fmt(state.V, 2)} L`, x0 + cylW - 55, headY - 20);
+      }
+
+      function drawEngineScene() {
+        const L = engineLayout();
+        eCtx.clearRect(0, 0, L.w, L.h);
+        const bg = eCtx.createRadialGradient(L.w * 0.5, L.h * 0.4, 0, L.w * 0.5, L.h * 0.5, L.w * 0.7);
+        bg.addColorStop(0, "#0a1220");
+        bg.addColorStop(1, "#040810");
+        eCtx.fillStyle = bg;
+        eCtx.fillRect(0, 0, L.w, L.h);
+
+        const hotOn = state.phase === "heat" || state.Qin > 0;
+        const coldOn = state.phase === "exhaust" || state.phase === "return" || state.phase === "cogen" || state.Qout > 0;
+        drawReservoir(eCtx, L.hotBox, "高温 Th", state.Th, "251,146,60", state.hotParticles, hotOn, "🔥");
+        drawReservoir(eCtx, L.coldBox, "低温 Tc", state.Tc, "56,189,248", state.coldParticles, coldOn, "❄");
+
+        if (state.phase === "heat" || state.heatFlow > 0.05) {
+          const a = 0.45 + state.heatFlow * 0.5;
+          drawFlowArrow(eCtx, L.hotBox.x + L.hotBox.w, L.hotBox.y + L.hotBox.h * 0.5,
+            L.x0 - 6, L.headY + 24, a, "+Q_in", "251,146,60");
+          if (Math.random() < 0.25) {
+            spawnFlowParticle(L.hotBox.x + L.hotBox.w, L.hotBox.y + L.hotBox.h * 0.5,
+              L.x0 - 6, L.headY + 24, "251,146,60");
+          }
+        }
+        if (state.phase === "exhaust" || state.phase === "return" || state.exhaustFlow > 0.05) {
+          const a = 0.35 + state.exhaustFlow * 0.5;
+          drawFlowArrow(eCtx, L.x0 + L.cylW / 2, L.footY,
+            L.coldBox.x + L.coldBox.w * 0.5, L.coldBox.y + 4, a, "Q_out", "100,116,139");
+          if (Math.random() < 0.2) {
+            spawnFlowParticle(L.x0 + L.cylW / 2, L.footY,
+              L.coldBox.x + L.coldBox.w * 0.5, L.coldBox.y + 4, "148,163,184");
+          }
+        }
+
+        drawFlowParticles(eCtx);
+        drawEngineCylinder(L);
+      }
+
+      function drawCogenScene() {
+        const w = cogenCanvas.getBoundingClientRect().width || 500;
+        const h = cogenCanvas.getBoundingClientRect().height || 240;
+        cCtx.clearRect(0, 0, w, h);
+        const bg = cCtx.createLinearGradient(0, 0, w, h);
+        bg.addColorStop(0, "#080e18");
+        bg.addColorStop(1, "#040810");
+        cCtx.fillStyle = bg;
+        cCtx.fillRect(0, 0, w, h);
+
+        const eng = { x: w * 0.04, y: h * 0.2, w: w * 0.2, h: h * 0.55 };
+        const unit = { x: w * 0.38, y: h * 0.14, w: w * 0.24, h: h * 0.62 };
+        const tank = { x: w * 0.72, y: h * 0.22, w: w * 0.22, h: h * 0.52 };
+
+        // 熱機関ブロック
+        cCtx.fillStyle = "rgba(71,85,105,0.35)";
+        cCtx.strokeStyle = "rgba(148,163,184,0.45)";
+        cCtx.lineWidth = 2;
+        roundRect(cCtx, eng.x, eng.y, eng.w, eng.h, 12);
+        cCtx.fill();
+        cCtx.stroke();
+        cCtx.font = "700 11px Noto Sans JP, sans-serif";
+        cCtx.fillStyle = "#94a3b8";
+        cCtx.fillText("発電用", eng.x + 10, eng.y + 16);
+        cCtx.fillText("熱機関", eng.x + 10, eng.y + 30);
+        cCtx.font = "700 12px sans-serif";
+        cCtx.fillStyle = "#c4b5fd";
+        cCtx.fillText(`W=${fmt(state.Wout, 0)}J`, eng.x + 10, eng.y + eng.h - 12);
+
+        // 回収ユニット（コイル）
+        const unitOn = state.phase === "cogen" || state.recoverFlow > 0.05 || state.Qrec > 0;
+        cCtx.fillStyle = unitOn ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)";
+        cCtx.strokeStyle = unitOn ? "rgba(52,211,153,0.55)" : "rgba(148,163,184,0.25)";
+        roundRect(cCtx, unit.x, unit.y, unit.w, unit.h, 12);
+        cCtx.fill();
+        cCtx.stroke();
+        cCtx.font = "700 11px Noto Sans JP, sans-serif";
+        cCtx.fillStyle = unitOn ? "#6ee7b7" : "#94a3b8";
+        cCtx.fillText("熱回収", unit.x + 10, unit.y + 16);
+        cCtx.fillText("ユニット", unit.x + 10, unit.y + 30);
+        // コイル描画
+        cCtx.strokeStyle = unitOn ? "rgba(52,211,153,0.7)" : "rgba(100,116,139,0.4)";
+        cCtx.lineWidth = 2;
+        for (let i = 0; i < 5; i += 1) {
+          const cy = unit.y + 50 + i * 14;
+          cCtx.beginPath();
+          cCtx.moveTo(unit.x + 12, cy);
+          cCtx.bezierCurveTo(unit.x + unit.w * 0.35, cy - 10, unit.x + unit.w * 0.65, cy + 10, unit.x + unit.w - 12, cy);
+          cCtx.stroke();
+        }
+        cCtx.font = "600 10px sans-serif";
+        cCtx.fillStyle = "#64748b";
+        cCtx.fillText(`r = ${fmt(state.r, 2)}`, unit.x + 10, unit.y + unit.h - 10);
+
+        // 温水タンク
+        const fillH = tank.h * state.tankFill;
+        cCtx.fillStyle = "rgba(30,41,59,0.8)";
+        cCtx.strokeStyle = "rgba(251,146,60,0.5)";
+        cCtx.lineWidth = 2;
+        roundRect(cCtx, tank.x, tank.y, tank.w, tank.h, 14);
+        cCtx.fill();
+        cCtx.stroke();
+        const waterGrad = cCtx.createLinearGradient(0, tank.y + tank.h - fillH, 0, tank.y + tank.h);
+        waterGrad.addColorStop(0, `rgba(251,146,60,${0.35 + state.tankFill * 0.45})`);
+        waterGrad.addColorStop(1, `rgba(234,88,12,${0.25 + state.tankFill * 0.35})`);
+        cCtx.fillStyle = waterGrad;
+        cCtx.fillRect(tank.x + 4, tank.y + tank.h - fillH, tank.w - 8, fillH - 4);
+        cCtx.font = "700 12px Noto Sans JP, sans-serif";
+        cCtx.fillStyle = "#fdba74";
+        cCtx.fillText("温水", tank.x + tank.w / 2 - 16, tank.y + 18);
+        cCtx.font = "600 10px sans-serif";
+        cCtx.fillStyle = "#fde047";
+        cCtx.fillText(`Q_rec = ${fmt(state.Qrec, 0)} J`, tank.x + 6, tank.y + tank.h - 8);
+
+        // パイプ
+        cCtx.strokeStyle = "rgba(148,163,184,0.5)";
+        cCtx.lineWidth = 5;
+        cCtx.lineCap = "round";
+        cCtx.beginPath();
+        cCtx.moveTo(eng.x + eng.w, eng.y + eng.h * 0.65);
+        cCtx.lineTo(unit.x, unit.y + unit.h * 0.45);
+        cCtx.stroke();
+        cCtx.beginPath();
+        cCtx.moveTo(unit.x + unit.w, unit.y + unit.h * 0.5);
+        cCtx.lineTo(tank.x, tank.y + tank.h * 0.55);
+        cCtx.stroke();
+
+        if (unitOn) {
+          const a = Math.max(state.recoverFlow, state.phase === "cogen" ? 0.65 : 0.25);
+          drawFlowArrow(cCtx, eng.x + eng.w, eng.y + eng.h * 0.65,
+            unit.x, unit.y + unit.h * 0.45, a, "Q_out", "148,163,184");
+          drawFlowArrow(cCtx, unit.x + unit.w, unit.y + unit.h * 0.5,
+            tank.x, tank.y + tank.h * 0.55, a * 0.85, "回収", "52,211,153");
+          if (Math.random() < 0.18) {
+            state.recoverParticles.push({
+              x: unit.x + unit.w, y: unit.y + unit.h * 0.5,
+              tx: tank.x, ty: tank.y + tank.h * 0.55, t: 0, a: 1,
+            });
+          }
+        }
+
+        state.recoverParticles.forEach((p) => {
+          p.t += 0.02;
+          const x = p.x + (p.tx - p.x) * p.t;
+          const y = p.y + (p.ty - p.y) * p.t;
+          cCtx.fillStyle = `rgba(52,211,153,${p.a * (1 - p.t)})`;
+          cCtx.beginPath();
+          cCtx.arc(x, y, 4, 0, Math.PI * 2);
+          cCtx.fill();
+        });
+        state.recoverParticles = state.recoverParticles.filter((p) => p.t < 1);
+
+        // 気泡
+        if (state.tankFill > 0.3 && Math.random() < 0.08) {
+          state.tankBubbles.push({
+            x: tank.x + 10 + Math.random() * (tank.w - 20),
+            y: tank.y + tank.h - fillH,
+            vy: -20 - Math.random() * 30, r: 2 + Math.random() * 3, a: 0.7,
+          });
+        }
+        state.tankBubbles.forEach((b) => {
+          b.y += b.vy * 0.016;
+          b.a -= 0.008;
+          cCtx.strokeStyle = `rgba(255,255,255,${b.a})`;
+          cCtx.lineWidth = 1;
+          cCtx.beginPath();
+          cCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          cCtx.stroke();
+        });
+        state.tankBubbles = state.tankBubbles.filter((b) => b.a > 0 && b.y > tank.y);
+
+        // 効率比較バー
+        const barY = h * 0.88;
+        const barW = w * 0.88;
+        const barX = w * 0.06;
+        cCtx.fillStyle = "rgba(255,255,255,0.06)";
+        roundRect(cCtx, barX, barY, barW, 14, 7);
+        cCtx.fill();
+        const etaW = barW * etaEngine();
+        const totalW = barW * etaTotal();
+        cCtx.fillStyle = "rgba(167,139,250,0.7)";
+        cCtx.fillRect(barX, barY, etaW, 14);
+        cCtx.fillStyle = "rgba(52,211,153,0.55)";
+        cCtx.fillRect(barX + etaW, barY, Math.max(0, totalW - etaW), 14);
+        cCtx.font = "700 11px Noto Sans JP, sans-serif";
+        cCtx.fillStyle = "#6ee7b7";
+        cCtx.fillText(`η_total ${fmt(etaTotal() * 100, 1)}%  >  η ${fmt(etaEngine() * 100, 1)}%`, barX, barY - 6);
+      }
+
+      // サイクル：加熱 → 膨張 → 廃熱 → 復帰 → 回収
+      function stepCycle(dt) {
+        state.phaseT += dt;
+        if (state.phase === "heat") {
+          const t = Math.min(1, state.phaseT / HEAT_DUR);
+          state.Qin = state.QinTarget * t;
+          state.Tgas = state.Tc + (state.Th - state.Tc) * t;
+          state.V = V0;
+          state.heatFlow = 0.55 + 0.45 * Math.sin(state.simTime * 7);
+          syncParticleSpeeds();
+          setCaption("② 高温側から Q_in が入る → 粒子が速くなる（v ∝ √T）");
+          statusMsg.textContent = `加熱中：入熱 Q_in = ${fmt(state.Qin, 0)} J。まだ仕事 W_out ≈ 0 → 熱は内部エネルギーに。`;
+          if (t >= 1) {
+            state.phase = "expand";
+            state.phaseT = 0;
+            state.Tgas = state.Th;
+            state.Wtarget = targetWout();
+            syncParticleSpeeds();
+          }
+        } else if (state.phase === "expand") {
+          const t = Math.min(1, state.phaseT / EXPAND_DUR);
+          state.Wout = state.Wtarget * t;
+          state.V = V0 + (V_MAX - V0) * t;
+          state.savedV = state.V;
+          state.Tgas = Math.max(state.Tc + 20, state.Th - (state.Th - state.Tc) * t * 0.35);
+          state.workPulse = 0.6 + 0.4 * Math.sin(state.simTime * 10);
+          syncParticleSpeeds();
+          setCaption("③ 気体が膨張 → ピストンが動く → 外部に仕事 W_out");
+          statusMsg.textContent = `膨張：dW = P·dV。W_out = ${fmt(state.Wout, 0)} J。第一法則 ΔU = Q − W。`;
+          if (t >= 1) {
+            state.phase = "exhaust";
+            state.phaseT = 0;
+            state.Wout = state.Wtarget;
+            state.Qout = Math.max(0, state.Qin - state.Wout);
+            state.savedV = V_MAX;
+            state.exhaustFlow = 1;
+          }
+        } else if (state.phase === "exhaust") {
+          const t = Math.min(1, state.phaseT / EXHAUST_DUR);
+          state.Tgas = state.Th - (state.Th - state.Tc) * t;
+          state.exhaustFlow = 1 - t * 0.2;
+          syncParticleSpeeds();
+          setCaption("④ 廃熱 Q_out が低温側へ流れる");
+          statusMsg.textContent = `廃熱：Q_out = Q_in − W_out = ${fmt(state.Qout, 0)} J → 低温 Tc 側へ`;
+          if (t >= 1) {
+            state.phase = "return";
+            state.phaseT = 0;
+            state.Tgas = state.Tc;
+            syncParticleSpeeds();
+          }
+        } else if (state.phase === "return") {
+          const t = Math.min(1, state.phaseT / RETURN_DUR);
+          // ピストン・体積・温度を初期状態へ戻す
+          state.V = V0 + (state.savedV - V0) * (1 - t);
+          state.Tgas = state.Tc;
+          state.exhaustFlow = Math.max(0, 0.5 * (1 - t));
+          syncParticleSpeeds();
+          setCaption("④ 熱を逃がし終えた → ピストンが元の位置に戻る（サイクル完了）");
+          statusMsg.textContent = `復帰中：V → ${fmt(V0, 2)} L、T → Tc = ${fmt(state.Tc, 0)} K。次のサイクル準備完了。`;
+          if (t >= 1) {
+            state.V = V0;
+            state.Vdisp = V0;
+            state.Tgas = state.Tc;
+            state.exhaustFlow = 0;
+            syncParticleSpeeds();
+            state.phase = "cogen";
+            state.phaseT = 0;
+          }
+        } else if (state.phase === "cogen") {
+          const t = Math.min(1, state.phaseT / COGEN_DUR);
+          // 廃熱回収 Q_recovered = r * Q_out
+          state.Qrec = state.r * state.Qout * t;
+          state.tankFill = 0.15 + t * 0.72;
+          state.recoverFlow = 0.55 + 0.45 * Math.sin(state.simTime * 6);
+          setCaption("⑤ 廃熱を回収 → 温水に利用 → η_total が η より大きくなる");
+          statusMsg.textContent = `コジェネ：Q_recovered = r × Q_out = ${fmt(state.r, 2)} × ${fmt(state.Qout, 0)} = ${fmt(state.Qrec, 0)} J`;
+          if (t >= 1) {
+            state.phase = "done";
+            state.Qrec = state.r * state.Qout;
+            state.tankFill = 0.87;
+            setCaption("");
+            statusMsg.textContent =
+              `完了！ η = ${fmt(etaEngine() * 100, 1)}%（理論上限 η_C = ${fmt(carnotEta() * 100, 1)}%）` +
+              ` → コジェネで η_total = ${fmt(etaTotal() * 100, 1)}%`;
+          }
+        }
+      }
+
+      function setCaption(text) {
+        if (text) {
+          hudCaption.textContent = text;
+          hudCaption.classList.add("show");
+        } else {
+          hudCaption.classList.remove("show");
+        }
+      }
+
+      function setPhaseUI() {
+        const map = { idle: 0, heat: 1, expand: 2, exhaust: 3, return: 3, cogen: 4, done: 5 };
+        const idx = map[state.phase] ?? 0;
+        for (let i = 0; i < 5; i += 1) {
+          const el = document.getElementById(`ph${i}`);
+          el.classList.remove("active", "done");
+          if (i < idx) el.classList.add("done");
+          else if (i === idx) el.classList.add("active");
+        }
+      }
+
+      function updateSplitBar() {
+        const q = state.Qin || state.QinTarget || 1;
+        const wPct = Math.max(0, (state.Wout / q) * 100);
+        const qOutPct = Math.max(0, ((state.Qout - state.Qrec) / q) * 100);
+        const recPct = Math.max(0, (state.Qrec / q) * 100);
+        const segW = document.getElementById("segW");
+        const segQout = document.getElementById("segQout");
+        const segRec = document.getElementById("segRec");
+        segW.style.width = `${wPct}%`;
+        segQout.style.width = `${qOutPct}%`;
+        segRec.style.width = `${recPct}%`;
+        segW.textContent = state.Wout > 5 ? `W ${fmt(state.Wout, 0)}J` : "";
+        segQout.textContent = state.Qout - state.Qrec > 5 ? `Q_out ${fmt(state.Qout - state.Qrec, 0)}J` : "";
+        segRec.textContent = state.Qrec > 5 ? `回収 ${fmt(state.Qrec, 0)}J` : "";
+      }
+
+      function updateGauges() {
+        const eta = etaEngine() * 100;
+        const etaC = carnotEta() * 100;
+        const etaT = etaTotal() * 100;
+        document.getElementById("gEta").textContent = `${fmt(eta, 1)}%`;
+        document.getElementById("gCarnot").textContent = `${fmt(etaC, 1)}%`;
+        document.getElementById("gTotal").textContent = `${fmt(etaT, 1)}%`;
+        document.getElementById("gEtaBar").style.width = `${Math.min(100, eta)}%`;
+        document.getElementById("gCarnotBar").style.width = `${Math.min(100, etaC)}%`;
+        document.getElementById("gTotalBar").style.width = `${Math.min(100, etaT)}%`;
+      }
+
+      function updateUI() {
+        document.getElementById("thVal").textContent = `${state.Th} K（${kelvinToC(state.Th)} ℃）`;
+        document.getElementById("tcVal").textContent = `${state.Tc} K（${kelvinToC(state.Tc)} ℃）`;
+        document.getElementById("qinVal").textContent = `${state.QinTarget} J`;
+        document.getElementById("rVal").textContent = fmt(state.r, 2);
+        document.getElementById("mQin").textContent = `${fmt(state.Qin, 0)} J`;
+        document.getElementById("mWout").textContent = `${fmt(state.Wout, 0)} J`;
+        document.getElementById("mQout").textContent = `${fmt(state.Qout, 0)} J`;
+        document.getElementById("mQrec").textContent = `${fmt(state.Qrec, 0)} J`;
+        document.getElementById("heroEta").textContent = `η = ${fmt(etaEngine() * 100, 1)}% = W/Q_in`;
+        document.getElementById("heroCarnot").textContent = `η_C = ${fmt(carnotEta() * 100, 1)}% = 1−Tc/Th`;
+        document.getElementById("heroFirstLaw").textContent =
+          `Q_in ${fmt(state.Qin, 0)} = W ${fmt(state.Wout, 0)} + Q_out ${fmt(state.Qout, 0)} J`;
+        document.getElementById("heroTotal").textContent = `η_total = ${fmt(etaTotal() * 100, 1)}%`;
+        setPhaseUI();
+        updateSplitBar();
+        updateGauges();
+        startBtn.disabled = state.phase !== "idle" && state.phase !== "done";
+      }
+
+      function readControls() {
+        state.Th = Number(thSlider.value);
+        state.Tc = Number(tcSlider.value);
+        if (state.Tc >= state.Th - 5) {
+          state.Tc = state.Th - 10;
+          tcSlider.value = state.Tc;
+        }
+        state.QinTarget = Number(qinSlider.value);
+        state.r = Number(rSlider.value);
+        syncParticleSpeeds();
+        if (state.phase === "idle" || state.phase === "done") {
+          state.Qrec = state.r * state.Qout;
+          state.Wtarget = targetWout();
+        }
+        updateUI();
+      }
+
+      function startCycle() {
+        if (state.phase !== "idle" && state.phase !== "done") return;
+        state.Qin = 0;
+        state.Wout = 0;
+        state.Qout = 0;
+        state.Qrec = 0;
+        state.Tgas = state.Tc;
+        state.V = V0;
+        state.Vdisp = V0;
+        state.tankFill = 0.12;
+        state.Wtarget = targetWout();
+        state.phase = "heat";
+        state.phaseT = 0;
+        state.heatFlow = 1;
+        state.exhaustFlow = 0;
+        state.recoverFlow = 0;
+        state.flowParticles = [];
+        state.recoverParticles = [];
+        state.tankBubbles = [];
+        syncParticleSpeeds();
+        setCaption("② 高温側から Q_in が入る → 粒子が速くなる（v ∝ √T）");
+        statusMsg.textContent = "サイクル開始：まず熱 Q_in を加えます。";
+      }
+
+      function resetAll() {
+        state.phase = "idle";
+        state.phaseT = 0;
+        state.simTime = 0;
+        state.Qin = 0;
+        state.Wout = 0;
+        state.Qout = 0;
+        state.Qrec = 0;
+        state.Tgas = state.Tc;
+        state.V = V0;
+        state.Vdisp = V0;
+        state.tankFill = 0.12;
+        state.heatFlow = 0;
+        state.workPulse = 0;
+        state.exhaustFlow = 0;
+        state.recoverFlow = 0;
+        initParticles();
+        setCaption("");
+        statusMsg.textContent = "リセットしました。Th と Tc の差を変えてから「サイクル開始」を押してください。";
+        updateUI();
+      }
+
+      function updateGasParticles(dt, L) {
+        const left = L.x0 + 10;
+        const right = L.x0 + L.cylW - 10;
+        const top = L.pistonY + 22;
+        const ih = Math.max(8, L.footY - top - 10);
+        state.gasParticles.forEach((p) => {
+          p.nx += (p.vx * dt * 16) / (right - left);
+          p.ny += (p.vy * dt * 16) / ih;
+          if (p.nx < 0) { p.nx = 0; p.vx = Math.abs(p.vx); }
+          if (p.nx > 1) { p.nx = 1; p.vx = -Math.abs(p.vx); }
+          if (p.ny < 0) { p.ny = 0; p.vy = Math.abs(p.vy); }
+          if (p.ny > 1) { p.ny = 1; p.vy = -Math.abs(p.vy); }
+          const px = left + p.nx * (right - left);
+          const py = top + p.ny * ih;
+          p.trail.push({ x: px, y: py });
+          if (p.trail.length > 6) p.trail.shift();
+        });
+      }
+
+      function tick(now) {
+        if (lastFrame === null) lastFrame = now;
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+        state.Vdisp += (state.V - state.Vdisp) * (1 - Math.exp(-dt * 12));
+        state.heatFlow = Math.max(0, state.heatFlow - dt * 0.7);
+        state.workPulse = Math.max(0, state.workPulse - dt * 1.3);
+        state.exhaustFlow = Math.max(0, state.exhaustFlow - dt * 0.45);
+        state.recoverFlow = Math.max(0, state.recoverFlow - dt * 0.55);
+
+        if (state.phase !== "idle") stepCycle(dt);
+
+        const L = engineLayout();
+        moveParticles(state.hotParticles, L.hotBox, dt, 18);
+        moveParticles(state.coldParticles, L.coldBox, dt, 18);
+        updateGasParticles(dt, L);
+        updateFlowParticles(dt);
+
+        drawEngineScene();
+        drawCogenScene();
+        updateUI();
+
+        requestAnimationFrame(tick);
+      }
+
+      const thSlider = document.getElementById("thSlider");
+      const tcSlider = document.getElementById("tcSlider");
+      const qinSlider = document.getElementById("qinSlider");
+      const rSlider = document.getElementById("rSlider");
+      const startBtn = document.getElementById("startBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      thSlider.addEventListener("input", readControls);
+      tcSlider.addEventListener("input", readControls);
+      qinSlider.addEventListener("input", readControls);
+      rSlider.addEventListener("input", readControls);
+      startBtn.addEventListener("click", startCycle);
+      resetBtn.addEventListener("click", resetAll);
+      window.addEventListener("resize", () => {
+        resizeCanvas(engineCanvas, eCtx);
+        resizeCanvas(cogenCanvas, cCtx);
+        drawEngineScene();
+        drawCogenScene();
+      });
+
+      function boot() {
+        readControls();
+        initParticles();
+        if (!resizeCanvas(engineCanvas, eCtx) || !resizeCanvas(cogenCanvas, cCtx)) {
+          requestAnimationFrame(boot);
+          return;
+        }
+        updateUI();
+        drawEngineScene();
+        drawCogenScene();
+        requestAnimationFrame(tick);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      } else {
+        requestAnimationFrame(boot);
+      }
+    })();
+  </script>
+</body>
+</html>

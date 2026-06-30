@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>黒体放射 — HR図 · 太陽スペクトル · シミュレーション</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [["\\(", "\\)"], ["$", "$"]], displayMath: [["\\[", "\\]"], ["$$", "$$"]] },
+      startup: { pageReady: () => MathJax.startup.defaultPageReady() },
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fb923c; --accent-light: #fdba74; --accent-glow: rgba(251,146,60,0.4);
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(251,146,60,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0c1524 38%,#101c30 72%,#0a1018 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(920px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(251,146,60,0.25),rgba(251,191,36,0.2));
+      border: 1px solid rgba(251,146,60,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #ffedd5;
+      background: rgba(251,146,60,0.14); border: 1px solid rgba(251,146,60,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .global-ctrl {
+      position: sticky; top: 0; z-index: 20; padding: 12px 14px; border-radius: 14px;
+      background: rgba(10,16,28,0.92); border: 1px solid rgba(251,146,60,0.35);
+      backdrop-filter: blur(10px); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .global-ctrl label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 8px; }
+    .temp-readout {
+      display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 8px;
+      font-size: 0.84rem; font-variant-numeric: tabular-nums;
+    }
+    .temp-readout span { color: #fdba74; font-weight: 700; }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    section.panel h3 {
+      margin: 0 0 10px; font-size: 1.05rem; font-weight: 600; color: var(--accent-light);
+      padding-bottom: 8px; border-bottom: 1px solid rgba(251,146,60,0.2);
+    }
+    .sec-num { color: #64748b; font-size: 0.78rem; font-weight: 700; margin-right: 6px; }
+    .prose { margin: 0 0 12px; font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+    .prose ul { margin: 8px 0; padding-left: 1.2rem; }
+    .prose li { margin-bottom: 6px; }
+    .prose strong { color: #fde68a; }
+    .formula-block {
+      margin: 12px 0; padding: 14px 16px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(251,146,60,0.2); overflow-x: auto;
+    }
+    .calc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+    @media (min-width:640px) { .calc-grid { grid-template-columns: repeat(3,1fr); } }
+    .calc-item {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(251,191,36,0.18);
+    }
+    .calc-item .label { display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 4px; }
+    .calc-item .val { font-size: 0.92rem; font-weight: 700; color: #e0f2fe; font-variant-numeric: tabular-nums; }
+    #colorCanvas, #colorCanvas2 {
+      display: block; width: 100%; max-width: 520px; height: 120px; margin: 12px auto 0;
+      border-radius: 12px; border: 2px solid rgba(255,255,255,0.15);
+      box-shadow: 0 0 30px rgba(251,146,60,0.25);
+    }
+    .chart-wrap { position: relative; height: min(340px,48dvh); min-height: 260px; margin-top: 10px; }
+    .chart-wrap.hr { height: min(380px,52dvh); }
+    .star-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .star-btns button {
+      padding: 8px 12px; font-family: inherit; font-size: 0.78rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; border: 1px solid rgba(148,163,184,0.35);
+      background: rgba(255,255,255,0.06); color: #e2e8f0;
+    }
+    .star-btns button:hover { border-color: rgba(251,146,60,0.5); color: #ffedd5; }
+    .star-btns button.active {
+      background: linear-gradient(135deg,#ea580c,#fb923c); color: #fff; border: none;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .summary-box {
+      padding: 14px 16px; border-radius: 12px;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.25);
+    }
+    .summary-box ul { margin: 0; padding-left: 1.2rem; line-height: 1.75; font-size: 0.88rem; color: #fde68a; }
+    .legend-note { margin: 8px 0 0; font-size: 0.76rem; color: #64748b; line-height: 1.5; }
+    .hr-legend {
+      display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; font-size: 0.74rem; color: #94a3b8;
+    }
+    .hr-legend span::before {
+      content: ""; display: inline-block; width: 12px; height: 8px; margin-right: 5px;
+      border-radius: 2px; vertical-align: middle;
+    }
+    .hr-legend .ms::before { background: rgba(34,211,238,0.35); }
+    .hr-legend .gi::before { background: rgba(251,146,60,0.35); }
+    .hr-legend .wd::before { background: rgba(167,139,250,0.35); }
+    .sky-panel { padding: 0; overflow: hidden; }
+    .sky-panel .sky-head { padding: 16px 18px 0; }
+    .sky-wrap {
+      position: relative; margin: 12px 0 0; border-radius: 0 0 14px 14px; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    #nightSkyCanvas {
+      display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; min-height: 280px;
+      cursor: crosshair; touch-action: none;
+    }
+    .sky-overlay {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px 14px;
+      display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; justify-content: space-between;
+      pointer-events: none;
+      background: linear-gradient(to top, rgba(2,6,16,0.88) 0%, rgba(2,6,16,0.45) 55%, transparent 100%);
+    }
+    .sky-chip {
+      font-size: 0.74rem; color: #cbd5e1; padding: 5px 10px; border-radius: 999px;
+      background: rgba(15,23,42,0.72); border: 1px solid rgba(148,163,184,0.25);
+      backdrop-filter: blur(6px);
+    }
+    .sky-chip strong { color: #fde68a; font-weight: 600; }
+    .mag-scale {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;
+      padding: 0 18px 16px;
+    }
+    .mag-scale-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+      font-size: 0.76rem; color: #94a3b8;
+    }
+    .mag-scale-item canvas { flex-shrink: 0; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">☀</div>
+      <h2>黒体放射 — HR図 · 太陽スペクトル</h2>
+      <p class="chapter-label">15章 · 黒体放射 · プランク分布 · 星の温度と明るさ</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="global-ctrl">
+      <label for="tempSlider">温度 T（全セクション連動）</label>
+      <input type="range" id="tempSlider" min="2500" max="35000" value="5800" step="100">
+      <div class="temp-readout">
+        <span id="readT">T = 5800 K</span>
+        <span id="readPeak">λ_peak = 500 nm</span>
+        <span id="readColor">黒体色</span>
+        <span id="readHr">HR位置（太陽サイズ仮定）</span>
+      </div>
+    </div>
+
+    <section class="panel" id="sec1">
+      <h3><span class="sec-num">§1</span>黒体放射とは？</h3>
+      <p class="prose">物体は温度に応じて光を出します。温度が<strong>高いほど短波長（青）</strong>、<strong>低いほど長波長（赤）</strong>の成分が強くなります。星の見た目の色も表面温度で決まります。</p>
+      <ul class="prose">
+        <li>星の色 ＝ 表面温度のサイン</li>
+        <li><strong>黒体</strong> ＝ 温度だけで光の出方が決まる理想の物体（最も「効率よく」辐射するモデル）</li>
+      </ul>
+      <canvas id="colorCanvas" width="840" height="240" aria-label="黒体の色"></canvas>
+      <p class="legend-note">スライダーで赤 → 橙 → 黄 → 白 → 青白へ変化します。</p>
+    </section>
+
+    <section class="panel" id="sec2">
+      <h3><span class="sec-num">§2</span>プランク分布の式</h3>
+      <div class="formula-block">
+        \[ B(\lambda, T) = \frac{2hc^2}{\lambda^5} \cdot \frac{1}{\exp\!\left(\dfrac{hc}{\lambda k T}\right) - 1} \]
+      </div>
+      <ul class="prose">
+        <li>\(h = 6.626\times10^{-34}\,\mathrm{J\,s}\) · \(c = 3.00\times10^{8}\,\mathrm{m/s}\) · \(k = 1.381\times10^{-23}\,\mathrm{J/K}\)</li>
+        <li>\(\lambda\) が短いほど \(\lambda^5\) で急減 · \(T\) が高いほど短波長側が強い → <strong>星の色</strong>を決める</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="sec3">
+      <h3><span class="sec-num">§3</span>プランク分布の計算（JavaScript）</h3>
+      <p class="prose">波長 200〜3000 nm を 10 nm 刻みで <code>planck(λ, T)</code> を計算（λ はメートル）。</p>
+      <div class="calc-grid">
+        <div class="calc-item"><span class="label">B(460 nm)</span><span class="val" id="calcB460">—</span></div>
+        <div class="calc-item"><span class="label">B(530 nm)</span><span class="val" id="calcB530">—</span></div>
+        <div class="calc-item"><span class="label">B(620 nm)</span><span class="val" id="calcB620">—</span></div>
+        <div class="calc-item"><span class="label">B(λ_peak)</span><span class="val" id="calcBpeak">—</span></div>
+        <div class="calc-item"><span class="label">B_max</span><span class="val" id="calcBmax">—</span></div>
+        <div class="calc-item"><span class="label">サンプル</span><span class="val">281 点</span></div>
+      </div>
+    </section>
+
+    <section class="panel" id="sec4">
+      <h3><span class="sec-num">§4</span>黒体の色変化（Canvas · RGB）</h3>
+      <p class="prose">\(R \propto B(620\,\mathrm{nm})\)、\(G \propto B(530\,\mathrm{nm})\)、\(B \propto B(460\,\mathrm{nm})\) を正規化して RGB 化（簡易モデル）。</p>
+      <canvas id="colorCanvas2" width="840" height="200"></canvas>
+      <p class="legend-note" id="rgbLabel">RGB = —</p>
+    </section>
+
+    <section class="panel" id="sec5">
+      <h3><span class="sec-num">§5</span>プランク分布グラフ</h3>
+      <p class="prose">横軸：波長（nm）· 縦軸：\(B(\lambda,T)\)（その温度の最大で正規化）。</p>
+      <div class="chart-wrap"><canvas id="spectrumChart"></canvas></div>
+    </section>
+
+    <section class="panel" id="sec6">
+      <h3><span class="sec-num">§6</span>ウィーンの変位則</h3>
+      <div class="formula-block">\[ \lambda_{\mathrm{peak}} = \frac{b}{T}, \quad b = 2.898\times10^{-3}\,\mathrm{m\cdot K} \]</div>
+      <p class="prose">§5 グラフの<strong>黄色破線</strong>が \(\lambda_{\mathrm{peak}}\)。</p>
+      <div class="calc-item" style="max-width:280px"><span class="label">λ_peak</span><span class="val" id="wienPeak">—</span></div>
+    </section>
+
+    <section class="panel" id="sec7">
+      <h3><span class="sec-num">§7</span>HR図（星の温度と明るさ）</h3>
+      <p class="prose">
+        横軸：温度（<strong>右が高温</strong>）· 縦軸：絶対等級 \(M_V\)（上ほど明るい）。
+        オレンジの点はスライダーの温度（半径を太陽と同じと仮定した位置）。星の色と HR 上の位置が対応します。
+      </p>
+      <div class="hr-legend">
+        <span class="ms">主系列（おおむね）</span>
+        <span class="gi">巨星・超巨星</span>
+        <span class="wd">白色矮星</span>
+      </div>
+      <div class="chart-wrap hr"><canvas id="hrChart"></canvas></div>
+      <p class="legend-note" id="hrNote">—</p>
+    </section>
+
+    <section class="panel sky-panel" id="sec8sky">
+      <div class="sky-head">
+        <h3><span class="sec-num">§8</span>夜空の星 — 見かけの明るさ</h3>
+        <p class="prose">
+          HR図の<strong>絶対等級</strong>は「10 pc 離れたときの明るさ」です。実際に空を見上げるとき感じるのは
+          <strong>見かけ等級</strong>（数字が小さいほど明るい）。同じ温度でも、距離やサイズが違えば見え方は変わります。
+          下の夜空は代表的な星を、実際の見かけ等級に近い<strong>光の強さ・大きさ</strong>で描いています。
+        </p>
+      </div>
+      <div class="sky-wrap">
+        <canvas id="nightSkyCanvas" width="1200" height="600" aria-label="夜空の星の明るさ"></canvas>
+        <div class="sky-overlay">
+          <span class="sky-chip" id="skyHint">星をクリック · スライダー連動</span>
+          <span class="sky-chip">等級スケール → 右端（数字↑＝暗い）</span>
+        </div>
+      </div>
+      <div class="mag-scale" id="magScale"></div>
+      <p class="legend-note" style="padding:0 18px 16px">
+        太陽の見かけ等級は約 −26.7 — 昼間は空が明るすぎて他の星は見えません。6 等級付近が肉眼の限界です。
+      </p>
+    </section>
+
+    <section class="panel" id="sec8">
+      <h3><span class="sec-num">§9</span>太陽スペクトルとの比較</h3>
+      <p class="prose">
+        太陽は <strong>5800 K の黒体に近い</strong>滑らかな分布ですが、大気中の元素が特定の波長を<strong>吸収</strong>するため、
+        スペクトルに<strong>吸収線</strong>（ギザギザ）が入ります。吸収線の位置から元素を同定できます（スペクトル分析）。
+      </p>
+      <div class="chart-wrap"><canvas id="solarCompareChart"></canvas></div>
+      <p class="legend-note">橙：黒体 5800 K · 緑：太陽スペクトル（吸収線は簡易モデル）</p>
+    </section>
+
+    <section class="panel" id="sec9">
+      <h3><span class="sec-num">§10</span>星の分類（O 〜 M 型）</h3>
+      <p class="prose">ボタンで温度 · 黒体色 · スペクトル · HR · 夜空の星をハイライトします。</p>
+      <div class="star-btns" id="starTypeBtns"></div>
+    </section>
+
+    <section class="panel" id="sec10">
+      <h3><span class="sec-num">§11</span>まとめ</h3>
+      <div class="summary-box">
+        <ul>
+          <li>温度が高いほど<strong>青</strong>、低いほど<strong>赤</strong></li>
+          <li>星の色は表面温度の表れ</li>
+          <li><strong>HR図</strong>は「温度 × 絶対的な明るさ」の地図 — 夜空で感じる<strong>見かけの明るさ</strong>は距離も効く</li>
+          <li>太陽はほぼ黒体だが<strong>吸収線</strong>がある → 元素分析に使う</li>
+          <li>夜空の<strong>見かけ等級</strong>は距離とサイズも反映 — HR 図の絶対等級とは別の尺度</li>
+          <li>プランク分布は量子論の出発点 · ウィーンの法則 \(\lambda_{\mathrm{peak}}=b/T\)</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const H = 6.626e-34, C = 3e8, K = 1.381e-23, WIEN_B = 2.898e-3;
+    const T_SUN = 5778, M_SUN = 4.83;
+    const LAMBDA_MIN_NM = 200, LAMBDA_MAX_NM = 3000, LAMBDA_STEP_NM = 10;
+
+    const STAR_TYPES = [
+      { type: "O", T: 30000 }, { type: "B", T: 15000 }, { type: "A", T: 10000 },
+      { type: "F", T: 7000 }, { type: "G", T: 5800 }, { type: "K", T: 4000 }, { type: "M", T: 3000 },
+    ];
+
+    // 代表的な星（HR図 · 夜空用）— V: 見かけ等級, sky: 夜空上の正規化座標
+    const HR_STARS = [
+      { id: "sirius", name: "シリウス", T: 9940, Mv: -1.46, V: -1.46, sky: { nx: 0.78, ny: 0.62 } },
+      { id: "betelgeuse", name: "ベテルギウス", T: 3500, Mv: -5.14, V: 0.42, sky: { nx: 0.22, ny: 0.24 } },
+      { id: "rigel", name: "リゲル", T: 12100, Mv: -8.2, V: 0.13, sky: { nx: 0.18, ny: 0.72 } },
+      { id: "altair", name: "アルタイル", T: 7550, Mv: 2.21, V: 0.76, sky: { nx: 0.52, ny: 0.18 } },
+      { id: "sun", name: "太陽 (G2V)", T: 5778, Mv: 4.83, V: -26.74, sky: null },
+      { id: "procyon", name: "プロキオン", T: 6530, Mv: 2.66, V: 0.34, sky: { nx: 0.34, ny: 0.48 } },
+      { id: "spica", name: "スピカ", T: 22400, Mv: -3.55, V: 0.97, sky: { nx: 0.86, ny: 0.28 } },
+      { id: "antares", name: "アンタレス", T: 3660, Mv: -5.09, V: 1.09, sky: { nx: 0.58, ny: 0.78 } },
+    ];
+
+    const MAG_REFERENCE = [
+      { mag: -1.5, label: "−1.5 等（シリウス級）" },
+      { mag: 0, label: "0 等" },
+      { mag: 1, label: "1 等" },
+      { mag: 2, label: "2 等" },
+      { mag: 3, label: "3 等" },
+      { mag: 4, label: "4 等" },
+      { mag: 5, label: "5 等" },
+      { mag: 6, label: "6 等（肉眼限界）" },
+    ];
+
+    // 太陽スペクトル吸収線（簡易）
+    const ABSORPTION_LINES = [
+      { c: 656, w: 7, d: 0.38, label: "Hα" },
+      { c: 486, w: 5, d: 0.32, label: "Hβ" },
+      { c: 434, w: 4, d: 0.22, label: "Hγ" },
+      { c: 410, w: 3.5, d: 0.18, label: "Hδ" },
+      { c: 589, w: 5, d: 0.28, label: "Na D" },
+      { c: 518, w: 4, d: 0.14, label: "Mg" },
+      { c: 422, w: 3, d: 0.12, label: "Ca" },
+      { c: 393, w: 3, d: 0.15, label: "Ca K" },
+      { c: 770, w: 12, d: 0.1, label: "O₂" },
+    ];
+
+    let temperatureK = 5800;
+    let peakNm = 500;
+    let highlightStarId = "sun";
+    let spectrumChart = null, hrChart = null, solarChart = null;
+    let skyHoverId = null;
+    const tempSlider = document.getElementById("tempSlider");
+    const nightSkyCanvas = document.getElementById("nightSkyCanvas");
+    let skyBgStars = [];
+
+    // プランク分布の計算
+    function planck(lambdaM, T) {
+      if (T <= 0 || lambdaM <= 0) return 0;
+      const c1 = (2 * H * C * C) / Math.pow(lambdaM, 5);
+      const x = (H * C) / (lambdaM * K * T);
+      if (x > 700) return 0;
+      const denom = Math.exp(x) - 1;
+      if (denom <= 0 || !Number.isFinite(denom)) return 0;
+      return c1 / denom;
+    }
+
+    function nmToM(nm) { return nm * 1e-9; }
+    function wienPeakNm(T) { return (WIEN_B / T) * 1e9; }
+
+    function buildSpectrum(T, normalize = true) {
+      const labels = [], raw = [];
+      let maxB = 0;
+      for (let nm = LAMBDA_MIN_NM; nm <= LAMBDA_MAX_NM; nm += LAMBDA_STEP_NM) {
+        const B = planck(nmToM(nm), T);
+        labels.push(nm);
+        raw.push(B);
+        if (B > maxB) maxB = B;
+      }
+      const values = normalize && maxB > 0 ? raw.map((b) => b / maxB) : raw;
+      return { labels, values, maxB, raw };
+    }
+
+    // 太陽スペクトル（黒体 + 吸収線）
+    function solarSpectrumNm(nm) {
+      let y = planck(nmToM(nm), T_SUN);
+      ABSORPTION_LINES.forEach(({ c, w, d }) => {
+        y *= 1 - d * Math.exp(-Math.pow((nm - c) / w, 2));
+      });
+      return y;
+    }
+
+    function buildSolarCompare() {
+      const labels = [], bb = [], sun = [];
+      let maxB = 0;
+      for (let nm = LAMBDA_MIN_NM; nm <= LAMBDA_MAX_NM; nm += LAMBDA_STEP_NM) {
+        const b = planck(nmToM(nm), T_SUN);
+        const s = solarSpectrumNm(nm);
+        labels.push(nm);
+        bb.push(b);
+        sun.push(s);
+        maxB = Math.max(maxB, b, s);
+      }
+      return {
+        labels,
+        bb: bb.map((v) => v / maxB),
+        sun: sun.map((v) => v / maxB),
+      };
+    }
+
+    // 黒体色の RGB 変換
+    function blackbodyRGB(T) {
+      const r = planck(nmToM(620), T), g = planck(nmToM(530), T), b = planck(nmToM(460), T);
+      const max = Math.max(r, g, b, 1e-40);
+      let R = Math.pow(r / max, 0.45), G = Math.pow(g / max, 0.45), B = Math.pow(b / max, 0.45);
+      if (wienPeakNm(T) < 450) { R *= 0.85; G *= 0.92; B = Math.min(1, B * 1.12); }
+      if (T > 12000) { B = Math.min(1, B * 1.08); }
+      const s = 255;
+      return { rgb: [Math.round(R * s), Math.round(G * s), Math.round(B * s)], css: `rgb(${Math.round(R * s)},${Math.round(G * s)},${Math.round(B * s)})` };
+    }
+
+    function starDisplayColor(star) {
+      const { rgb } = blackbodyRGB(star.T);
+      return { r: rgb[0], g: rgb[1], b: rgb[2], css: `rgb(${rgb.join(",")})` };
+    }
+
+    // 見かけ等級 → 相対フラックス（ポグソンの法則）
+    function magToFlux(mag, refMag = 0) {
+      return Math.pow(10, -0.4 * (mag - refMag));
+    }
+
+    // 夜空：背景星を疑似乱数で生成（再描画ごとに固定）
+    function initSkyBackground(seed = 20260326) {
+      skyBgStars = [];
+      let s = seed;
+      const rnd = () => {
+        s = (s * 16807 + 0) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+      for (let i = 0; i < 520; i++) {
+        skyBgStars.push({
+          nx: rnd(),
+          ny: rnd() * 0.92 + 0.04,
+          mag: 4.2 + rnd() * 2.4,
+          tw: rnd() * Math.PI * 2,
+        });
+      }
+    }
+
+    // 1 つの星を光のにじみ・スパイク付きで描画
+    function paintStar(ctx, x, y, mag, rgb, opts = {}) {
+      const {
+        highlighted = false, hovered = false, label = "", showLabel = true, twinkle = 0,
+      } = opts;
+      const flux = magToFlux(mag, 0);
+      const flicker = 1 + twinkle * 0.06;
+      const coreR = (0.55 + 3.2 * Math.pow(flux, 0.38)) * flicker;
+      const glowR = coreR * (5.5 + 14 * Math.pow(flux, 0.22));
+      const [r, g, b] = rgb;
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+      glow.addColorStop(0, `rgba(${Math.min(255, r + 40)},${Math.min(255, g + 40)},${Math.min(255, b + 50)},${0.92 * flicker})`);
+      glow.addColorStop(0.06, `rgba(${r},${g},${b},${0.55 * flicker})`);
+      glow.addColorStop(0.22, `rgba(${r},${g},${b},${0.14 * flicker})`);
+      glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 明るい星の回折スパイク
+      if (mag < 1.8) {
+        const spikeLen = coreR * (6 + 18 * Math.pow(flux, 0.3));
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.35 * flicker})`;
+        ctx.lineWidth = Math.max(0.6, coreR * 0.22);
+        for (let a = 0; a < 4; a++) {
+          const ang = (Math.PI / 4) * a + twinkle * 0.02;
+          ctx.beginPath();
+          ctx.moveTo(x - Math.cos(ang) * spikeLen, y - Math.sin(ang) * spikeLen);
+          ctx.lineTo(x + Math.cos(ang) * spikeLen, y + Math.sin(ang) * spikeLen);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = `rgba(255,255,255,${0.22 * flicker})`;
+        ctx.lineWidth = Math.max(0.4, coreR * 0.12);
+        for (let a = 0; a < 4; a++) {
+          const ang = (Math.PI / 4) * a + Math.PI / 8;
+          ctx.beginPath();
+          ctx.moveTo(x - Math.cos(ang) * spikeLen * 0.45, y - Math.sin(ang) * spikeLen * 0.45);
+          ctx.lineTo(x + Math.cos(ang) * spikeLen * 0.45, y + Math.sin(ang) * spikeLen * 0.45);
+          ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = `rgba(255,255,255,${0.95 * flicker})`;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(0.35, coreR * 0.42), 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalCompositeOperation = "source-over";
+
+      if (highlighted || hovered) {
+        ctx.strokeStyle = highlighted ? "rgba(253,230,138,0.95)" : "rgba(255,255,255,0.55)";
+        ctx.lineWidth = highlighted ? 2.5 : 1.5;
+        ctx.setLineDash(highlighted ? [] : [4, 4]);
+        ctx.beginPath();
+        ctx.arc(x, y, glowR * 0.55, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (showLabel && label) {
+        ctx.font = `${highlighted || hovered ? "600" : "500"} ${highlighted ? 13 : 11}px "Noto Sans JP",Inter,sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const tx = x + glowR * 0.35 + 6;
+        const ty = y - 2;
+        ctx.fillStyle = "rgba(2,6,16,0.75)";
+        ctx.fillText(label, tx + 1, ty + 1);
+        ctx.fillStyle = highlighted || hovered ? "#fde68a" : "rgba(226,232,240,0.92)";
+        ctx.fillText(label, tx, ty);
+        if (highlighted || hovered) {
+          ctx.font = "500 10px Inter,sans-serif";
+          ctx.fillStyle = "rgba(148,163,184,0.95)";
+          ctx.fillText(`${mag >= 0 ? "+" : ""}${mag.toFixed(2)} 等`, tx, ty + 14);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawNightSkyFrame(t = 0) {
+      if (!nightSkyCanvas) return;
+      const cv = nightSkyCanvas;
+      const ctx = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      if (!W || !H) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // 夜空グラデーション + 天の川
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#02040a");
+      sky.addColorStop(0.35, "#050c18");
+      sky.addColorStop(0.7, "#081222");
+      sky.addColorStop(1, "#030810");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
+
+      const mw = ctx.createRadialGradient(W * 0.55, H * 0.42, 0, W * 0.55, H * 0.42, W * 0.55);
+      mw.addColorStop(0, "rgba(80,100,140,0.09)");
+      mw.addColorStop(0.45, "rgba(60,80,120,0.05)");
+      mw.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = mw;
+      ctx.fillRect(0, 0, W, H);
+
+      const horizon = ctx.createLinearGradient(0, H * 0.72, 0, H);
+      horizon.addColorStop(0, "rgba(15,30,55,0)");
+      horizon.addColorStop(1, "rgba(8,18,35,0.35)");
+      ctx.fillStyle = horizon;
+      ctx.fillRect(0, H * 0.72, W, H * 0.28);
+
+      // 地平線のシルエット
+      ctx.fillStyle = "rgba(4,8,14,0.85)";
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 8) {
+        const y = H * 0.88 + Math.sin(x * 0.008) * H * 0.018 + Math.sin(x * 0.023 + 1) * H * 0.01;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+
+      const padX = W * 0.04, padY = H * 0.06;
+      const skyW = W * 0.78, skyH = H * 0.82;
+
+      // 背景の暗い星
+      skyBgStars.forEach((bg) => {
+        const flux = magToFlux(bg.mag, 0);
+        const tw = Math.sin(t * 1.2 + bg.tw) * 0.5;
+        const x = padX + bg.nx * skyW;
+        const y = padY + bg.ny * skyH;
+        const r = 0.35 + 1.1 * Math.pow(flux, 0.45);
+        ctx.fillStyle = `rgba(210,225,255,${(0.15 + 0.55 * Math.pow(flux, 0.5)) * (1 + tw * 0.08)})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 代表星（見かけ等級順に暗い方から描いて明るい星が手前）
+      const visibleStars = HR_STARS.filter((s) => s.sky).slice().sort((a, b) => b.V - a.V);
+      visibleStars.forEach((star) => {
+        const { r, g, b } = starDisplayColor(star);
+        const x = padX + star.sky.nx * skyW;
+        const y = padY + star.sky.ny * skyH;
+        const tw = Math.sin(t * 0.9 + star.sky.nx * 12) * 0.5;
+        paintStar(ctx, x, y, star.V, [r, g, b], {
+          highlighted: star.id === highlightStarId,
+          hovered: star.id === skyHoverId,
+          label: star.name,
+          showLabel: true,
+          twinkle: tw,
+        });
+      });
+
+      // 右端：等級スケール（同じ空間で比較）
+      const scaleX = W * 0.88;
+      const scaleTop = H * 0.1, scaleBot = H * 0.82;
+      ctx.fillStyle = "rgba(148,163,184,0.35)";
+      ctx.fillRect(scaleX - 1, scaleTop, 2, scaleBot - scaleTop);
+      ctx.font = "600 10px Inter,sans-serif";
+      ctx.fillStyle = "rgba(148,163,184,0.85)";
+      ctx.textAlign = "center";
+      ctx.save();
+      ctx.translate(scaleX + 28, (scaleTop + scaleBot) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("見かけ等級（上ほど明るい）", 0, 0);
+      ctx.restore();
+
+      MAG_REFERENCE.forEach(({ mag, label }) => {
+        const flux = magToFlux(mag, 0);
+        const y = scaleTop + (scaleBot - scaleTop) * (1 - (mag + 1.5) / 7.5);
+        paintStar(ctx, scaleX, y, mag, [220, 235, 255], { showLabel: false, twinkle: 0 });
+        ctx.font = "500 9px Inter,sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(148,163,184,0.8)";
+        ctx.fillText(label.split("（")[0], scaleX + 14 + 3 * Math.pow(flux, 0.35), y + 3);
+      });
+    }
+
+    function resizeNightSkyCanvas() {
+      if (!nightSkyCanvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = nightSkyCanvas.getBoundingClientRect();
+      const w = Math.max(600, Math.round(rect.width * dpr));
+      nightSkyCanvas.width = w;
+      nightSkyCanvas.height = Math.round(w / 2);
+    }
+
+    let skyAnimId = null;
+    function startSkyLoop() {
+      if (skyAnimId != null) return;
+      const loop = (ts) => {
+        drawNightSkyFrame(ts * 0.001);
+        skyAnimId = requestAnimationFrame(loop);
+      };
+      skyAnimId = requestAnimationFrame(loop);
+    }
+
+    function skyCanvasPoint(star, W, H) {
+      const padX = W * 0.04, padY = H * 0.06;
+      const skyW = W * 0.78, skyH = H * 0.82;
+      return { x: padX + star.sky.nx * skyW, y: padY + star.sky.ny * skyH };
+    }
+
+    function initNightSkyInteraction() {
+      if (!nightSkyCanvas) return;
+      const pickStar = (clientX, clientY) => {
+        const rect = nightSkyCanvas.getBoundingClientRect();
+        const dpr = nightSkyCanvas.width / rect.width;
+        const px = (clientX - rect.left) * dpr;
+        const py = (clientY - rect.top) * dpr;
+        const W = nightSkyCanvas.width, H = nightSkyCanvas.height;
+        let best = null, bestD = 36;
+        HR_STARS.filter((s) => s.sky).forEach((star) => {
+          const { x, y } = skyCanvasPoint(star, W, H);
+          const flux = magToFlux(star.V, 0);
+          const hitR = 10 + 26 * Math.pow(flux, 0.35);
+          const d = Math.hypot(px - x, py - y);
+          if (d < hitR && d < bestD) { best = star; bestD = d; }
+        });
+        return best;
+      };
+
+      nightSkyCanvas.addEventListener("mousemove", (e) => {
+        const star = pickStar(e.clientX, e.clientY);
+        skyHoverId = star ? star.id : null;
+        nightSkyCanvas.style.cursor = star ? "pointer" : "crosshair";
+        if (star) {
+          document.getElementById("skyHint").innerHTML =
+            `<strong>${star.name}</strong> · 見かけ ${star.V >= 0 ? "+" : ""}${star.V.toFixed(2)} 等 · 絶対 ${star.Mv} · T=${star.T} K`;
+        } else {
+          updateSkyHint();
+        }
+      });
+      nightSkyCanvas.addEventListener("mouseleave", () => {
+        skyHoverId = null;
+        updateSkyHint();
+      });
+      nightSkyCanvas.addEventListener("click", (e) => {
+        const star = pickStar(e.clientX, e.clientY);
+        if (star) setTemperature(star.T, star.id);
+      });
+    }
+
+    function updateSkyHint() {
+      const el = document.getElementById("skyHint");
+      if (!el || skyHoverId) return;
+      const hs = HR_STARS.find((s) => s.id === highlightStarId);
+      el.innerHTML = hs && hs.sky
+        ? `選択中：<strong>${hs.name}</strong>（見かけ ${hs.V >= 0 ? "+" : ""}${hs.V.toFixed(2)} 等）`
+        : "星をクリック · 温度スライダーと HR 図と連動";
+    }
+
+    function initMagScaleLegend() {
+      const wrap = document.getElementById("magScale");
+      if (!wrap) return;
+      MAG_REFERENCE.slice(0, 5).forEach(({ mag, label }) => {
+        const item = document.createElement("div");
+        item.className = "mag-scale-item";
+        const mini = document.createElement("canvas");
+        mini.width = 36; mini.height = 36;
+        const mctx = mini.getContext("2d");
+        mctx.fillStyle = "#020408";
+        mctx.fillRect(0, 0, 36, 36);
+        paintStar(mctx, 18, 18, mag, [220, 235, 255], { showLabel: false });
+        item.appendChild(mini);
+        const txt = document.createElement("span");
+        txt.textContent = label;
+        item.appendChild(txt);
+        wrap.appendChild(item);
+      });
+    }
+
+    // HR：太陽と同じ半径と仮定した絶対等級
+    function sunSizedMv(T) {
+      const ratio = Math.pow(T / T_SUN, 4);
+      return M_SUN - 2.5 * Math.log10(Math.max(ratio, 1e-12));
+    }
+
+    function drawColorCanvas(id) {
+      const cv = document.getElementById(id);
+      if (!cv) return;
+      const ctx = cv.getContext("2d"), w = cv.width, h = cv.height;
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      for (let i = 0; i <= 24; i++) {
+        const t = 2500 + (35000 - 2500) * (i / 24);
+        grad.addColorStop(i / 24, blackbodyRGB(t).css);
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      const mx = ((temperatureK - 2500) / (35000 - 2500)) * w;
+      const { css } = blackbodyRGB(temperatureK);
+      ctx.fillStyle = css;
+      ctx.fillRect(Math.max(0, mx - 36), h * 0.28, 72, h * 0.44);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(Math.max(0, mx - 36), h * 0.28, 72, h * 0.44);
+      ctx.fillStyle = "#fff";
+      ctx.font = "600 13px Inter,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${Math.round(temperatureK)} K`, mx, h * 0.2);
+    }
+
+    function fmtSci(x) {
+      if (!Number.isFinite(x) || x === 0) return "0";
+      if (x >= 1e6 || x < 1e-2) return x.toExponential(2);
+      return x.toFixed(2);
+    }
+
+    const peakLinePlugin = {
+      id: "wienPeakLine",
+      afterDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!scales.x || chart.canvas.id !== "spectrumChart") return;
+        const x = scales.x.getPixelForValue(peakNm);
+        if (x < chartArea.left - 2 || x > chartArea.right + 2) return;
+        ctx.save();
+        ctx.strokeStyle = "#fde68a";
+        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "600 11px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`λ_peak=${Math.round(peakNm)} nm`, x, chartArea.top + 14);
+        ctx.restore();
+      },
+    };
+
+    // HR図：背景領域
+    const hrRegionsPlugin = {
+      id: "hrRegions",
+      beforeDatasetsDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!scales.x || !scales.y) return;
+        const fill = (x0, x1, y0, y1, color) => {
+          const px0 = scales.x.getPixelForValue(x0), px1 = scales.x.getPixelForValue(x1);
+          const py0 = scales.y.getPixelForValue(y0), py1 = scales.y.getPixelForValue(y1);
+          ctx.fillStyle = color;
+          ctx.fillRect(Math.min(px0, px1), Math.min(py0, py1), Math.abs(px1 - px0), Math.abs(py1 - py0));
+        };
+        fill(2500, 6000, -7, 2, "rgba(251,146,60,0.12)");
+        fill(3500, 40000, -1, 14, "rgba(34,211,238,0.07)");
+        fill(7000, 40000, 8, 16, "rgba(167,139,250,0.1)");
+      },
+    };
+
+    function initSpectrumChart() {
+      const { labels, values } = buildSpectrum(temperatureK);
+      spectrumChart = new Chart(document.getElementById("spectrumChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "B(λ,T) / B_max",
+            data: values,
+            borderColor: "#fb923c",
+            backgroundColor: "rgba(251,146,60,0.12)",
+            fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 180 },
+          scales: {
+            x: { title: { display: true, text: "波長 λ (nm)", color: "#94a3b8" }, ticks: { color: "#94a3b8", maxTicksLimit: 10 }, grid: { color: "rgba(148,163,184,0.1)" } },
+            y: { title: { display: true, text: "B / B_max", color: "#94a3b8" }, min: 0, max: 1.05, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.12)" } },
+          },
+          plugins: { legend: { labels: { color: "#cbd5e1" } } },
+        },
+        plugins: [peakLinePlugin],
+      });
+    }
+
+    function initHrChart() {
+      const starPts = HR_STARS.map((s) => ({
+        x: s.T, y: s.Mv, name: s.name, id: s.id,
+        backgroundColor: s.id === highlightStarId ? "#fde68a" : starDisplayColor(s).css,
+        radius: s.id === highlightStarId ? 9 : 6,
+        borderColor: s.id === highlightStarId ? "#fff" : "rgba(255,255,255,0.5)",
+        borderWidth: s.id === highlightStarId ? 2 : 1,
+      }));
+
+      hrChart = new Chart(document.getElementById("hrChart"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "代表的な星",
+              data: starPts,
+              pointBackgroundColor: starPts.map((p) => p.backgroundColor),
+              pointBorderColor: starPts.map((p) => p.borderColor),
+              pointBorderWidth: starPts.map((p) => p.borderWidth),
+              pointRadius: starPts.map((p) => p.radius),
+            },
+            {
+              label: "スライダー（太陽半径仮定）",
+              data: [{ x: temperatureK, y: sunSizedMv(temperatureK) }],
+              pointBackgroundColor: "#fb923c",
+              pointBorderColor: "#fff",
+              pointRadius: 10,
+              pointStyle: "star",
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+          scales: {
+            x: {
+              type: "logarithmic",
+              min: 2500, max: 40000,
+              title: { display: true, text: "表面温度 T (K) → 右が高温", color: "#94a3b8" },
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              reverse: true,
+              min: -10, max: 16,
+              title: { display: true, text: "絶対等級 MV（上ほど明るい）", color: "#94a3b8" },
+              ticks: { color: "#94a3b8", stepSize: 2 },
+              grid: { color: "rgba(148,163,184,0.12)" },
+            },
+          },
+          plugins: {
+            legend: { labels: { color: "#cbd5e1", boxWidth: 12 } },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const d = ctx.raw;
+                  if (ctx.datasetIndex === 0 && d.name) return `${d.name}: T=${d.x} K, MV=${d.y}`;
+                  return `T=${Math.round(d.x)} K, MV=${d.y.toFixed(2)}（太陽サイズ仮定）`;
+                },
+              },
+            },
+          },
+        },
+        plugins: [hrRegionsPlugin],
+      });
+    }
+
+    function initSolarChart() {
+      const { labels, bb, sun } = buildSolarCompare();
+      solarChart = new Chart(document.getElementById("solarCompareChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            { label: "黒体 5800 K", data: bb, borderColor: "#fb923c", backgroundColor: "rgba(251,146,60,0.08)", fill: false, tension: 0.25, pointRadius: 0, borderWidth: 2 },
+            { label: "太陽スペクトル（簡易）", data: sun, borderColor: "#34d399", backgroundColor: "rgba(52,211,153,0.06)", fill: false, tension: 0.2, pointRadius: 0, borderWidth: 2 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: "波長 λ (nm)", color: "#94a3b8" }, ticks: { color: "#94a3b8", maxTicksLimit: 12 }, grid: { color: "rgba(148,163,184,0.1)" } },
+            y: { title: { display: true, text: "相対強度", color: "#94a3b8" }, min: 0, max: 1.05, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.12)" } },
+          },
+          plugins: { legend: { labels: { color: "#cbd5e1" } } },
+        },
+      });
+    }
+
+    function updateSpectrumChart() {
+      if (!spectrumChart) return;
+      const { labels, values } = buildSpectrum(temperatureK);
+      spectrumChart.data.labels = labels;
+      spectrumChart.data.datasets[0].data = values;
+      spectrumChart.update("none");
+    }
+
+    function updateHrChart() {
+      if (!hrChart) return;
+      const ds0 = hrChart.data.datasets[0];
+      HR_STARS.forEach((s, i) => {
+        ds0.data[i] = { x: s.T, y: s.Mv, name: s.name, id: s.id };
+        ds0.pointBackgroundColor[i] = s.id === highlightStarId ? "#fde68a" : starDisplayColor(s).css;
+        ds0.pointRadius[i] = s.id === highlightStarId ? 9 : 6;
+        ds0.pointBorderWidth[i] = s.id === highlightStarId ? 2 : 1;
+      });
+      hrChart.data.datasets[1].data = [{ x: temperatureK, y: sunSizedMv(temperatureK) }];
+      hrChart.update("none");
+      const hs = HR_STARS.find((s) => s.id === highlightStarId);
+      document.getElementById("hrNote").textContent = hs
+        ? `ハイライト：${hs.name}（T=${hs.T} K, MV=${hs.Mv}）· スライダー点は太陽と同じ半径を仮定`
+        : `スライダー T=${Math.round(temperatureK)} K → MV≈${sunSizedMv(temperatureK).toFixed(2)}（太陽半径仮定）`;
+    }
+
+    function updateCalcPanel() {
+      const pk = nmToM(peakNm);
+      document.getElementById("calcB460").textContent = fmtSci(planck(nmToM(460), temperatureK)) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcB530").textContent = fmtSci(planck(nmToM(530), temperatureK)) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcB620").textContent = fmtSci(planck(nmToM(620), temperatureK)) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcBpeak").textContent = fmtSci(planck(pk, temperatureK)) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcBmax").textContent = fmtSci(buildSpectrum(temperatureK).maxB) + " W·m⁻³·sr⁻¹";
+    }
+
+    function highlightTypeBtn() {
+      document.querySelectorAll("#starTypeBtns button").forEach((btn) => {
+        btn.classList.toggle("active", +btn.dataset.t === temperatureK);
+      });
+    }
+
+    function setTemperature(T, starId) {
+      temperatureK = Math.max(2500, Math.min(35000, T));
+      tempSlider.value = temperatureK;
+      peakNm = wienPeakNm(temperatureK);
+      if (starId) highlightStarId = starId;
+      else {
+        const nearest = HR_STARS.reduce((best, s) =>
+          Math.abs(s.T - temperatureK) < Math.abs(best.T - temperatureK) ? s : best, HR_STARS[0]);
+        if (Math.abs(nearest.T - temperatureK) < 800) highlightStarId = nearest.id;
+      }
+      const { css, rgb } = blackbodyRGB(temperatureK);
+      document.getElementById("readT").textContent = `T = ${Math.round(temperatureK).toLocaleString()} K`;
+      document.getElementById("readPeak").textContent = `λ_peak = ${Math.round(peakNm)} nm`;
+      document.getElementById("readColor").textContent = `RGB (${rgb.join(", ")})`;
+      document.getElementById("readHr").textContent = `MV ≈ ${sunSizedMv(temperatureK).toFixed(2)}（太陽半径仮定）`;
+      document.getElementById("wienPeak").textContent = `${Math.round(peakNm)} nm`;
+      document.getElementById("rgbLabel").textContent = `RGB = (${rgb.join(", ")}) · ${css}`;
+      drawColorCanvas("colorCanvas");
+      drawColorCanvas("colorCanvas2");
+      updateCalcPanel();
+      updateSpectrumChart();
+      updateHrChart();
+      highlightTypeBtn();
+      updateSkyHint();
+    }
+
+    function initStarTypeButtons() {
+      const wrap = document.getElementById("starTypeBtns");
+      STAR_TYPES.forEach(({ type, T }) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.t = T;
+        btn.textContent = `${type}型 (${T.toLocaleString()} K)`;
+        btn.addEventListener("click", () => {
+          const match = HR_STARS.find((s) => Math.abs(s.T - T) < 1500);
+          setTemperature(T, match ? match.id : null);
+        });
+        wrap.appendChild(btn);
+      });
+      HR_STARS.forEach((s) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.t = s.T;
+        btn.textContent = s.name;
+        btn.style.fontSize = "0.72rem";
+        btn.addEventListener("click", () => setTemperature(s.T, s.id));
+        wrap.appendChild(btn);
+      });
+    }
+
+    tempSlider.addEventListener("input", () => setTemperature(+tempSlider.value));
+
+    initStarTypeButtons();
+    initSpectrumChart();
+    initHrChart();
+    initSolarChart();
+    initSkyBackground();
+    initMagScaleLegend();
+    resizeNightSkyCanvas();
+    initNightSkyInteraction();
+    startSkyLoop();
+    window.addEventListener("resize", () => { resizeNightSkyCanvas(); });
+    setTemperature(5800, "sun");
+  </script>
+</body>
+</html>

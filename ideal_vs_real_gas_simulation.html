@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>理想気体 vs 実在気体 — Van der Waals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #22d3ee; --accent-light: #67e8f9;
+      --panel: rgba(12,18,32,0.84); --border: rgba(34,211,238,0.24);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12,#0c1524 45%,#0a1018);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(24px,env(safe-area-inset-bottom));
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 45% 38% at 14% 18%, rgba(167,139,250,0.09), transparent 55%),
+        radial-gradient(ellipse 45% 38% at 86% 82%, rgba(244,114,182,0.08), transparent 55%);
+    }
+    .shell { position: relative; z-index: 1; width: min(1240px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 6px;
+      background: linear-gradient(135deg,rgba(167,139,250,0.24),rgba(244,114,182,0.2));
+      border: 1px solid rgba(34,211,238,0.35); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; color: var(--accent-light); font-weight: 700; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "ideal" "real" "ctrl" "pv" "pt" "eqn";
+    }
+    @media (min-width: 980px) {
+      .sim-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+          "ideal pv"
+          "real pt"
+          "ctrl eqn";
+      }
+    }
+    .panel { padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: opacity 0.25s, box-shadow 0.25s; }
+    .panel h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--accent-light); font-weight: 600; }
+    .panel.dimmed { opacity: 0.45; }
+    .panel.focus-ideal { border-color: rgba(167,139,250,0.55); box-shadow: 0 0 24px rgba(167,139,250,0.12); }
+    .panel.focus-real { border-color: rgba(244,114,182,0.55); box-shadow: 0 0 24px rgba(244,114,182,0.12); }
+    .area-ideal { grid-area: ideal; }
+    .area-real { grid-area: real; }
+    .area-ctrl { grid-area: ctrl; }
+    .area-pv { grid-area: pv; }
+    .area-pt { grid-area: pt; }
+    .area-eqn { grid-area: eqn; }
+    .canvas-wrap {
+      position: relative; height: min(220px,28dvh); min-height: 190px;
+      border-radius: 14px; overflow: hidden; background: linear-gradient(180deg,#080e18,#040810);
+    }
+    .canvas-wrap.ideal { border: 1px solid rgba(167,139,250,0.35); }
+    .canvas-wrap.real { border: 1px solid rgba(244,114,182,0.35); }
+    canvas { display: block; width: 100%; height: 100%; }
+    .canvas-hud { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; gap: 6px; pointer-events: none; flex-wrap: wrap; }
+    .hud-chip {
+      padding: 6px 10px; border-radius: 9px; font-size: 0.68rem; font-weight: 600;
+      background: rgba(6,10,18,0.88); border: 1px solid rgba(34,211,238,0.28); font-variant-numeric: tabular-nums;
+    }
+    .hud-chip.hot { border-color: rgba(251,146,60,0.45); color: #fed7aa; }
+    .chart-wrap { height: min(195px,25dvh); min-height: 165px; position: relative; }
+    .mode-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+    .mode-btn {
+      flex: 1; min-width: 120px; min-height: 42px; padding: 8px;
+      font-family: inherit; font-size: 0.74rem; font-weight: 700;
+      border-radius: 11px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
+    }
+    .mode-btn.ideal { background: rgba(167,139,250,0.12); color: #c4b5fd; border-color: rgba(167,139,250,0.35); }
+    .mode-btn.ideal.active { background: rgba(167,139,250,0.28); border-color: rgba(167,139,250,0.75); }
+    .mode-btn.real { background: rgba(244,114,182,0.12); color: #f9a8d4; border-color: rgba(244,114,182,0.35); }
+    .mode-btn.real.active { background: rgba(244,114,182,0.24); border-color: rgba(244,114,182,0.7); }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--muted); margin-bottom: 4px; }
+    .ctrl-row label span.val { color: #bae6fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+    select {
+      width: 100%; padding: 9px 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem;
+      background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid rgba(148,163,184,0.25);
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .pvt-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin: 10px 0; }
+    @media (min-width: 520px) { .pvt-grid { grid-template-columns: repeat(4,1fr); } }
+    .pvt-card { padding: 9px 7px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.04); border: 2px solid rgba(148,163,184,0.15); }
+    .pvt-card .lbl { font-size: 0.6rem; color: var(--muted); }
+    .pvt-card .num { font-size: 0.88rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .pvt-card.p .num { color: #fdba74; }
+    .pvt-card.v .num { color: #c4b5fd; }
+    .pvt-card.t .num { color: #7dd3fc; }
+    .pvt-card.k .num { font-size: 0.78rem; color: #6ee7b7; }
+    .status { padding: 10px 12px; border-radius: 10px; font-size: 0.78rem; line-height: 1.6; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); color: #bae6fd; }
+    .eqn-panel { padding: 12px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.15); }
+    .eqn-block { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.12); }
+    .eqn-block:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .eqn-tag { font-size: 0.68rem; font-weight: 700; margin-bottom: 4px; }
+    .eqn-tag.ideal { color: #c4b5fd; }
+    .eqn-tag.real { color: #f9a8d4; }
+    .eqn-main { font-size: clamp(0.82rem,2.2vw,1.05rem); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.55; }
+    .eqn-sub { margin-top: 6px; font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+    .explain { margin: 0; padding-left: 1.2rem; font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚛</div>
+      <h2>理想気体 vs 実在気体 — Van der Waals</h2>
+      <p class="chapter-label">14章 · 粒子相互作用 · PV/PT 比較</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="sim-grid">
+      <section class="panel area-ideal focus-ideal" id="panelIdeal">
+        <h3>① 理想気体 — 粒子間相互作用なし</h3>
+        <div class="canvas-wrap ideal">
+          <canvas id="idealCanvas"></canvas>
+          <div class="canvas-hud">
+            <div class="hud-chip hot" id="idealColl">衝突 — 回/s</div>
+            <div class="hud-chip" id="idealHudP">P — kPa</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel area-real dimmed" id="panelReal">
+        <h3>② 実在気体 — 引力 · 斥力（Van der Waals）</h3>
+        <div class="canvas-wrap real">
+          <canvas id="realCanvas"></canvas>
+          <div class="canvas-hud">
+            <div class="hud-chip hot" id="realColl">衝突 — 回/s</div>
+            <div class="hud-chip" id="realHudP">P — kPa</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel area-ctrl">
+        <h3>③ 操作パネル</h3>
+        <div class="mode-row">
+          <button type="button" class="mode-btn ideal active" id="btnIdeal">理想気体（PV = nRT）</button>
+          <button type="button" class="mode-btn real" id="btnReal">実在気体（Van der Waals）</button>
+        </div>
+        <div class="ctrl-row">
+          <label>物質（a, b）<span class="val" id="subVal">CO₂</span></label>
+          <select id="subSelect">
+            <option value="CO2" selected>CO₂ — a=3.59, b=0.0427</option>
+            <option value="N2">N₂ — a=1.39, b=0.0391</option>
+            <option value="He">He — a=0.034, b=0.0237</option>
+          </select>
+        </div>
+        <div class="pvt-grid">
+          <div class="pvt-card p"><div class="lbl">P（表示）</div><div class="num" id="dP">—</div></div>
+          <div class="pvt-card v"><div class="lbl">V</div><div class="num" id="dV">—</div></div>
+          <div class="pvt-card t"><div class="lbl">T</div><div class="num" id="dT">—</div></div>
+          <div class="pvt-card k"><div class="lbl">PV/T</div><div class="num" id="dK">—</div></div>
+        </div>
+        <div class="ctrl-row">
+          <label>体積 V（L）<span class="val" id="vVal">—</span></label>
+          <input type="range" id="vSlider" min="0.5" max="10" step="0.1" value="3.0">
+        </div>
+        <div class="ctrl-row">
+          <label>温度 T<span class="val" id="tVal">—</span></label>
+          <input type="range" id="tSlider" min="-60" max="200" step="5" value="27">
+        </div>
+        <p class="status" id="statusMsg">理想気体：粒子は独立に運動し、P = nRT/V で記述されます。</p>
+      </section>
+
+      <section class="panel area-pv">
+        <h3>④ PV グラフ — 理想 vs 実在（等温線）</h3>
+        <div class="chart-wrap"><canvas id="pvChart"></canvas></div>
+      </section>
+
+      <section class="panel area-pt">
+        <h3>⑤ PT グラフ — 理想（直線）vs 実在（非線形）</h3>
+        <div class="chart-wrap"><canvas id="ptChart"></canvas></div>
+      </section>
+
+      <section class="panel area-eqn">
+        <h3>⑥ 状態方程式</h3>
+        <div class="eqn-panel">
+          <div class="eqn-block">
+            <div class="eqn-tag ideal">理想気体</div>
+            <div class="eqn-main" id="eqnIdeal">PV = nRT</div>
+            <div class="eqn-sub" id="eqnIdealSub">—</div>
+          </div>
+          <div class="eqn-block">
+            <div class="eqn-tag real">実在気体（Van der Waals）</div>
+            <div class="eqn-main" id="eqnVdW">P = nRT/(V−nb) − a(n/V)²</div>
+            <div class="eqn-sub" id="eqnVdWSub">—</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h3>ポイント</h3>
+      <ul class="explain">
+        <li>理想気体は粒子間相互作用がないと仮定したモデル。</li>
+        <li>実在気体では粒子間に引力と斥力があり、PV曲線が非線形になる。</li>
+        <li>温度が低いと引力が強くなり、凝縮が起こりやすい。</li>
+        <li>Van der Waals方程式は実在気体の振る舞いをよく表す。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const N = 1;
+      const R = 0.08314; // L·bar/(mol·K)
+      const K_V = 0.5;
+      const V_MIN = 0.5, V_MAX = 10;
+      const NP = 48;
+
+      const SUBSTANCES = {
+        CO2: { label: "CO₂", a: 3.59, b: 0.0427, att: 1.0 },
+        N2: { label: "N₂", a: 1.39, b: 0.0391, att: 0.55 },
+        He: { label: "He", a: 0.034, b: 0.0237, att: 0.12 },
+      };
+
+      const idealCanvas = document.getElementById("idealCanvas");
+      const realCanvas = document.getElementById("realCanvas");
+      const iCtx = idealCanvas.getContext("2d");
+      const rCtx = realCanvas.getContext("2d");
+      const vSlider = document.getElementById("vSlider");
+      const tSlider = document.getElementById("tSlider");
+      const subSelect = document.getElementById("subSelect");
+      const statusMsg = document.getElementById("statusMsg");
+
+      const state = {
+        mode: "ideal",
+        substance: "CO2",
+        T: 300, V: 3, Vdisp: 3,
+        Pideal: 0, Pvdw: 0,
+        idealParts: [], realParts: [],
+        idealFlashes: [], realFlashes: [],
+        idealColl: 0, realColl: 0,
+        idealRate: 0, realRate: 0,
+        simTime: 0, lastRateT: 0,
+        lastChartKey: "",
+      };
+
+      let pvChart, ptChart, lastFrame;
+
+      function fmt(n, d) { return Number(n).toFixed(d); }
+      function toK(C) { return C + 273.15; }
+      function sub() { return SUBSTANCES[state.substance]; }
+
+      // 理想気体圧力 P = nRT / V
+      function calcPIdeal(vL, tK) {
+        return (N * R * tK) / vL * 100;
+      }
+
+      // Van der Waals圧力
+      function calcPVdW(vL, tK, s) {
+        const vb = N * s.b;
+        if (vL <= vb + 0.001) return null;
+        return ((N * R * tK) / (vL - vb) - s.a * (N / vL) ** 2) * 100;
+      }
+
+      function pvOverT(pKPa, vL, tK) {
+        return (pKPa * vL) / tK;
+      }
+
+      function syncThermo() {
+        state.T = toK(Number(tSlider.value));
+        state.V = Number(vSlider.value);
+        const s = sub();
+        const vMin = Math.max(V_MIN, N * s.b + 0.06);
+        if (state.V < vMin) { state.V = vMin; vSlider.value = vMin; }
+        state.Pideal = calcPIdeal(state.V, state.T);
+        state.Pvdw = calcPVdW(state.V, state.T, s);
+        if (state.Pvdw == null || state.Pvdw < 0) state.Pvdw = 0;
+      }
+
+      function activeP() {
+        return state.mode === "ideal" ? state.Pideal : state.Pvdw;
+      }
+
+      function initIdealParticles() {
+        state.idealParts = [];
+        for (let i = 0; i < NP; i += 1) {
+          state.idealParts.push({ nx: Math.random(), ny: Math.random(), vx: 0, vy: 0 });
+        }
+        syncIdealSpeeds();
+      }
+
+      function initRealParticles(L) {
+        state.realParts = [];
+        const pad = 14;
+        for (let i = 0; i < NP; i += 1) {
+          state.realParts.push({
+            x: L.x0 + pad + Math.random() * (L.boxW - 2 * pad),
+            y: L.y0 + pad + Math.random() * (L.boxH - 2 * pad),
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+          });
+        }
+        syncRealSpeeds();
+      }
+
+      // 粒子速度 v = k_v * sqrt(T_K)
+      function syncIdealSpeeds() {
+        const sp = K_V * Math.sqrt(state.T);
+        state.idealParts.forEach((p) => {
+          if (!p.vx && !p.vy) { p.vx = (Math.random() - 0.5) * 2; p.vy = (Math.random() - 0.5) * 2; }
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * sp; p.vy = (p.vy / m) * sp;
+        });
+      }
+
+      function syncRealSpeeds() {
+        const sp = K_V * Math.sqrt(state.T);
+        state.realParts.forEach((p) => {
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * sp; p.vy = (p.vy / m) * sp;
+        });
+      }
+
+      function resizeCanvas(canvas, ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return false;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return true;
+      }
+
+      function boxLayout(canvas) {
+        const w = canvas.getBoundingClientRect().width || 400;
+        const h = canvas.getBoundingClientRect().height || 210;
+        const vVisual = Math.max(V_MIN, Math.min(V_MAX, state.Vdisp));
+        const frac = (vVisual - V_MIN) / (V_MAX - V_MIN);
+        const boxW = w * (0.34 + frac * 0.56);
+        const boxH = h * 0.72;
+        return { w, h, x0: (w - boxW) / 2, y0: h * 0.14, boxW, boxH };
+      }
+
+      function updateIdealParticles(dt, L) {
+        const Lft = L.x0 + 6, top = L.y0 + 6;
+        const rgt = L.x0 + L.boxW - 6, bot = L.y0 + L.boxH - 6;
+        const iw = rgt - Lft, ih = bot - top;
+        const sp = K_V * Math.sqrt(state.T);
+        state.idealParts.forEach((p) => {
+          p.vx += (Math.random() - 0.5) * sp * 0.05 * dt;
+          p.vy += (Math.random() - 0.5) * sp * 0.05 * dt;
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * sp; p.vy = (p.vy / m) * sp;
+          let px = Lft + p.nx * iw + p.vx * dt * 52;
+          let py = top + p.ny * ih + p.vy * dt * 52;
+          if (px <= Lft) { px = Lft; p.vx = Math.abs(p.vx); p.nx = 0; state.idealColl++; state.idealFlashes.push({ x: Lft, y: py, t: 0.32, s: "L" }); }
+          else if (px >= rgt) { px = rgt; p.vx = -Math.abs(p.vx); p.nx = 1; state.idealColl++; state.idealFlashes.push({ x: rgt, y: py, t: 0.32, s: "R" }); }
+          else p.nx = (px - Lft) / iw;
+          if (py <= top) { py = top; p.vy = Math.abs(p.vy); p.ny = 0; state.idealColl++; state.idealFlashes.push({ x: px, y: top, t: 0.32, s: "T" }); }
+          else if (py >= bot) { py = bot; p.vy = -Math.abs(p.vy); p.ny = 1; state.idealColl++; state.idealFlashes.push({ x: px, y: bot, t: 0.32, s: "B" }); }
+          else p.ny = (py - top) / ih;
+        });
+      }
+
+      // 粒子間引力・斥力
+      function applyVdWForces(dt, L) {
+        const parts = state.realParts;
+        const s = sub();
+        const pad = 10;
+        const Lft = L.x0 + pad, top = L.y0 + pad;
+        const rgt = L.x0 + L.boxW - pad, bot = L.y0 + L.boxH - pad;
+        const rRep = 9, rAtt = 42;
+        const cold = Math.max(0, 1 - state.T / 380);
+        const repK = 520 * (1 + (V_MAX - state.V) / V_MAX);
+        const attK = 95 * cold * s.att;
+
+        for (let i = 0; i < parts.length; i += 1) {
+          for (let j = i + 1; j < parts.length; j += 1) {
+            let dx = parts[j].x - parts[i].x, dy = parts[j].y - parts[i].y;
+            let dist = Math.hypot(dx, dy) || 0.5;
+            let fx = 0, fy = 0;
+            if (dist < rRep) {
+              const f = repK * (1 - dist / rRep);
+              fx = -f * dx / dist; fy = -f * dy / dist;
+            } else if (dist < rAtt && attK > 0) {
+              const f = attK * (1 - (dist - rRep) / (rAtt - rRep));
+              fx = f * dx / dist; fy = f * dy / dist;
+            }
+            parts[i].vx += fx * dt; parts[i].vy += fy * dt;
+            parts[j].vx -= fx * dt; parts[j].vy -= fy * dt;
+          }
+        }
+        const sp = K_V * Math.sqrt(state.T);
+        parts.forEach((p) => {
+          p.vx += (Math.random() - 0.5) * sp * 0.04 * dt;
+          p.vy += (Math.random() - 0.5) * sp * 0.04 * dt;
+          const m = Math.hypot(p.vx, p.vy) || 1;
+          p.vx = (p.vx / m) * sp; p.vy = (p.vy / m) * sp;
+          p.x += p.vx * dt * 52; p.y += p.vy * dt * 52;
+          if (p.x <= Lft) { p.x = Lft; p.vx = Math.abs(p.vx); state.realColl++; state.realFlashes.push({ x: Lft, y: p.y, t: 0.32, s: "L" }); }
+          else if (p.x >= rgt) { p.x = rgt; p.vx = -Math.abs(p.vx); state.realColl++; state.realFlashes.push({ x: rgt, y: p.y, t: 0.32, s: "R" }); }
+          if (p.y <= top) { p.y = top; p.vy = Math.abs(p.vy); state.realColl++; state.realFlashes.push({ x: p.x, y: top, t: 0.32, s: "T" }); }
+          else if (p.y >= bot) { p.y = bot; p.vy = -Math.abs(p.vy); state.realColl++; state.realFlashes.push({ x: p.x, y: bot, t: 0.32, s: "B" }); }
+        });
+      }
+
+      function drawFlashes(ctx, flashes) {
+        flashes.forEach((f) => {
+          ctx.fillStyle = `rgba(251,146,60,${(f.t / 0.32) * 0.75})`;
+          if (f.s === "L" || f.s === "R") ctx.fillRect(f.x - 2, f.y - 8, 4, 16);
+          else ctx.fillRect(f.x - 8, f.y - 2, 16, 4);
+        });
+      }
+
+      function drawIdealScene(L) {
+        iCtx.clearRect(0, 0, L.w, L.h);
+        iCtx.fillStyle = "#060a12";
+        iCtx.fillRect(0, 0, L.w, L.h);
+        const tN = Math.min(1, (state.T - 220) / 220);
+        const g = iCtx.createLinearGradient(L.x0, L.y0, L.x0 + L.boxW, L.y0 + L.boxH);
+        g.addColorStop(0, `rgba(167,139,250,${0.08 + tN * 0.12})`);
+        g.addColorStop(1, `rgba(56,189,248,${0.05 + tN * 0.08})`);
+        iCtx.fillStyle = g;
+        iCtx.fillRect(L.x0, L.y0, L.boxW, L.boxH);
+        iCtx.strokeStyle = "rgba(167,139,250,0.55)";
+        iCtx.lineWidth = 3;
+        iCtx.strokeRect(L.x0, L.y0, L.boxW, L.boxH);
+        const lf = L.x0 + 8, tp = L.y0 + 8, iw = L.boxW - 16, ih = L.boxH - 16;
+        state.idealParts.forEach((p) => {
+          iCtx.fillStyle = "rgba(196,181,253,0.92)";
+          iCtx.beginPath();
+          iCtx.arc(lf + p.nx * iw, tp + p.ny * ih, 3.2, 0, Math.PI * 2);
+          iCtx.fill();
+        });
+        drawFlashes(iCtx, state.idealFlashes);
+        const rn = Math.min(1, state.idealRate / 850);
+        iCtx.fillStyle = `rgba(167,139,250,${0.18 + rn * 0.42})`;
+        iCtx.fillRect(L.x0, L.y0 + L.boxH + 6, L.boxW * rn, 5);
+      }
+
+      function drawRealScene(L) {
+        rCtx.clearRect(0, 0, L.w, L.h);
+        rCtx.fillStyle = "#060a12";
+        rCtx.fillRect(0, 0, L.w, L.h);
+        const cold = Math.max(0, 1 - state.T / 360);
+        const g = rCtx.createLinearGradient(L.x0, L.y0, L.x0 + L.boxW, L.y0 + L.boxH);
+        g.addColorStop(0, `rgba(244,114,182,${0.07 + cold * 0.12})`);
+        g.addColorStop(1, `rgba(251,146,60,${0.05})`);
+        rCtx.fillStyle = g;
+        rCtx.fillRect(L.x0, L.y0, L.boxW, L.boxH);
+        rCtx.strokeStyle = "rgba(244,114,182,0.55)";
+        rCtx.lineWidth = 3;
+        rCtx.strokeRect(L.x0, L.y0, L.boxW, L.boxH);
+        const parts = state.realParts;
+        for (let i = 0; i < parts.length; i += 1) {
+          for (let j = i + 1; j < parts.length; j += 1) {
+            const dist = Math.hypot(parts[j].x - parts[i].x, parts[j].y - parts[i].y);
+            if (dist < 38) {
+              rCtx.strokeStyle = `rgba(244,114,182,${0.08 * (1 - dist / 38)})`;
+              rCtx.beginPath();
+              rCtx.moveTo(parts[i].x, parts[i].y);
+              rCtx.lineTo(parts[j].x, parts[j].y);
+              rCtx.stroke();
+            }
+          }
+        }
+        parts.forEach((p) => {
+          rCtx.fillStyle = "rgba(249,168,212,0.92)";
+          rCtx.beginPath();
+          rCtx.arc(p.x, p.y, 3.4, 0, Math.PI * 2);
+          rCtx.fill();
+        });
+        drawFlashes(rCtx, state.realFlashes);
+        const rn = Math.min(1, state.realRate / 850);
+        rCtx.fillStyle = `rgba(244,114,182,${0.18 + rn * 0.42})`;
+        rCtx.fillRect(L.x0, L.y0 + L.boxH + 6, L.boxW * rn, 5);
+      }
+
+      // PV曲線比較
+      function idealPVCurve(tK) {
+        const pts = [];
+        for (let v = V_MIN; v <= V_MAX; v += 0.1) pts.push({ x: v, y: calcPIdeal(v, tK) });
+        return pts;
+      }
+
+      function vdWPVCurve(tK, s) {
+        const pts = [];
+        const vStart = N * s.b + 0.03;
+        const step = tK < 310 && s.a > 1 ? 0.025 : 0.06;
+        for (let v = vStart; v <= V_MAX; v += step) {
+          const p = calcPVdW(v, tK, s);
+          if (p != null && p > -300 && p < 12000) pts.push({ x: v, y: Math.max(0, p) });
+        }
+        return pts;
+      }
+
+      function idealPTCurve(vL) {
+        const pts = [];
+        for (let t = 220; t <= 480; t += 4) pts.push({ x: t, y: calcPIdeal(vL, t) });
+        return pts;
+      }
+
+      function vdWPTCurve(vL, s) {
+        const pts = [];
+        for (let t = 220; t <= 480; t += 4) {
+          const p = calcPVdW(vL, t, s);
+          if (p != null && p > 0 && p < 12000) pts.push({ x: t, y: p });
+        }
+        return pts;
+      }
+
+      function scaleOpts(xL, yL, yMax) {
+        return {
+          x: { type: "linear", title: { display: true, text: xL, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" } },
+          y: { type: "linear", title: { display: true, text: yL, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.08)" }, min: 0, max: yMax || 8000 },
+        };
+      }
+
+      function buildCharts() {
+        const base = {
+          responsive: true, maintainAspectRatio: false, animation: false, parsing: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 10 } } },
+        };
+        syncThermo();
+        const s = sub();
+        pvChart = new Chart(document.getElementById("pvChart"), {
+          type: "scatter",
+          data: { datasets: [
+            { label: "理想 P=nRT/V", data: idealPVCurve(state.T), borderColor: "#a78bfa", showLine: true, pointRadius: 0, borderWidth: 2.5, tension: 0.1 },
+            { label: "vdW 等温線", data: vdWPVCurve(state.T, s), borderColor: "#f472b6", showLine: true, pointRadius: 0, borderWidth: 2.5, tension: 0.15 },
+            { label: "現在点(理想)", data: [{ x: state.V, y: state.Pideal }], backgroundColor: "#a78bfa", pointRadius: 7, showLine: false },
+            { label: "現在点(vdW)", data: [{ x: state.V, y: state.Pvdw }], backgroundColor: "#f472b6", pointRadius: 7, showLine: false },
+          ]},
+          options: { ...base, scales: scaleOpts("V（L）", "P（kPa）", 8000) },
+        });
+        ptChart = new Chart(document.getElementById("ptChart"), {
+          type: "scatter",
+          data: { datasets: [
+            { label: "理想 P∝T", data: idealPTCurve(state.V), borderColor: "#a78bfa", showLine: true, pointRadius: 0, borderWidth: 2.5 },
+            { label: "vdW P(T)", data: vdWPTCurve(state.V, s), borderColor: "#f472b6", showLine: true, pointRadius: 0, borderWidth: 2.5, tension: 0.12 },
+            { label: "現在点(理想)", data: [{ x: state.T, y: state.Pideal }], backgroundColor: "#a78bfa", pointRadius: 7, showLine: false },
+            { label: "現在点(vdW)", data: [{ x: state.T, y: state.Pvdw }], backgroundColor: "#f472b6", pointRadius: 7, showLine: false },
+          ]},
+          options: { ...base, scales: scaleOpts("T（K）", "P（kPa）", 6000) },
+        });
+      }
+
+      function refreshCharts(force) {
+        if (!pvChart || !ptChart) return;
+        syncThermo();
+        const key = `${state.substance}:${fmt(state.V, 2)}:${fmt(state.T, 0)}:${state.mode}`;
+        if (!force && key === state.lastChartKey) return;
+        state.lastChartKey = key;
+        const s = sub();
+        pvChart.data.datasets[0].data = idealPVCurve(state.T);
+        pvChart.data.datasets[1].data = vdWPVCurve(state.T, s);
+        pvChart.data.datasets[2].data = [{ x: state.V, y: state.Pideal }];
+        pvChart.data.datasets[3].data = [{ x: state.V, y: state.Pvdw }];
+        pvChart.update("none");
+        ptChart.data.datasets[0].data = idealPTCurve(state.V);
+        ptChart.data.datasets[1].data = vdWPTCurve(state.V, s);
+        ptChart.data.datasets[2].data = [{ x: state.T, y: state.Pideal }];
+        ptChart.data.datasets[3].data = [{ x: state.T, y: state.Pvdw }];
+        ptChart.update("none");
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        document.getElementById("btnIdeal").classList.toggle("active", mode === "ideal");
+        document.getElementById("btnReal").classList.toggle("active", mode === "real");
+        document.getElementById("panelIdeal").classList.toggle("focus-ideal", mode === "ideal");
+        document.getElementById("panelIdeal").classList.toggle("dimmed", mode === "real");
+        document.getElementById("panelReal").classList.toggle("focus-real", mode === "real");
+        document.getElementById("panelReal").classList.toggle("dimmed", mode === "ideal");
+        statusMsg.textContent = mode === "ideal"
+          ? "理想気体：粒子は独立に運動。P = nRT/V（PVグラフは単調減少、PTグラフは直線）。"
+          : "実在気体：引力で低温時に凝縮、斥力で体積縮小時に P 急上昇。PV・PT とも非線形。";
+        state.lastChartKey = "";
+        updateUI();
+      }
+
+      function updateUI() {
+        syncThermo();
+        const s = sub();
+        const pAct = activeP();
+        const kAct = pvOverT(pAct, state.V, state.T);
+        const kIdeal = pvOverT(state.Pideal, state.V, state.T);
+
+        document.getElementById("dP").textContent = `${fmt(pAct, 0)} kPa`;
+        document.getElementById("dV").textContent = `${fmt(state.V, 2)} L`;
+        document.getElementById("dT").textContent = `${fmt(state.T, 0)} K`;
+        document.getElementById("dK").textContent = `${fmt(kAct, 2)} J/K`;
+        document.getElementById("vVal").textContent = `${fmt(state.V, 2)} L`;
+        document.getElementById("tVal").textContent = `${fmt(state.T, 0)} K（${fmt(state.T - 273.15, 0)} ℃）`;
+        document.getElementById("subVal").textContent = s.label;
+        document.getElementById("idealHudP").textContent = `P = ${fmt(state.Pideal, 0)} kPa`;
+        document.getElementById("realHudP").textContent = `P = ${fmt(state.Pvdw, 0)} kPa`;
+        document.getElementById("idealColl").textContent = `衝突 ${fmt(state.idealRate, 0)} 回/s`;
+        document.getElementById("realColl").textContent = `衝突 ${fmt(state.realRate, 0)} 回/s`;
+        document.getElementById("eqnIdeal").innerHTML =
+          `${fmt(state.Pideal, 0)}×${fmt(state.V, 2)} = ${fmt(N, 0)}×8.31×${fmt(state.T, 0)}`;
+        document.getElementById("eqnIdealSub").textContent = `P = nRT/V = ${fmt(state.Pideal, 0)} kPa · PV/T = ${fmt(kIdeal, 2)} J/K`;
+        document.getElementById("eqnVdW").innerHTML = `P = nRT/(V−nb) − a(n/V)² · ${s.label}`;
+        document.getElementById("eqnVdWSub").textContent =
+          `a=${s.a}, b=${s.b} → P = ${fmt(state.Pvdw, 0)} kPa · PV/T = ${fmt(pvOverT(state.Pvdw, state.V, state.T), 2)} J/K`;
+      }
+
+      function onControlChange() {
+        syncIdealSpeeds();
+        syncRealSpeeds();
+        state.lastChartKey = "";
+        refreshCharts(false);
+        updateUI();
+      }
+
+      function tick(now) {
+        if (lastFrame == null) lastFrame = now;
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        state.simTime += dt;
+        state.Vdisp += (state.V - state.Vdisp) * (1 - Math.exp(-dt * 10));
+        if (state.simTime - state.lastRateT >= 0.5) {
+          const el = state.simTime - state.lastRateT;
+          state.idealRate = state.idealColl / el;
+          state.realRate = state.realColl / el;
+          state.idealColl = 0;
+          state.realColl = 0;
+          state.lastRateT = state.simTime;
+        }
+        state.idealFlashes.forEach((f) => { f.t -= dt; });
+        state.realFlashes.forEach((f) => { f.t -= dt; });
+        state.idealFlashes = state.idealFlashes.filter((f) => f.t > 0);
+        state.realFlashes = state.realFlashes.filter((f) => f.t > 0);
+        const iL = boxLayout(idealCanvas);
+        const rL = boxLayout(realCanvas);
+        if (state.realParts.length === 0) initRealParticles(rL);
+        updateIdealParticles(dt, iL);
+        applyVdWForces(dt, rL);
+        drawIdealScene(iL);
+        drawRealScene(rL);
+        requestAnimationFrame(tick);
+      }
+
+      document.getElementById("btnIdeal").addEventListener("click", () => setMode("ideal"));
+      document.getElementById("btnReal").addEventListener("click", () => setMode("real"));
+      vSlider.addEventListener("input", onControlChange);
+      tSlider.addEventListener("input", onControlChange);
+      subSelect.addEventListener("change", () => {
+        state.substance = subSelect.value;
+        state.lastChartKey = "";
+        refreshCharts(true);
+        updateUI();
+      });
+      window.addEventListener("resize", () => {
+        resizeCanvas(idealCanvas, iCtx);
+        resizeCanvas(realCanvas, rCtx);
+        state.realParts = [];
+      });
+
+      function boot() {
+        if (typeof Chart === "undefined") { statusMsg.textContent = "Chart.js を読み込めません。"; return; }
+        initIdealParticles();
+        syncThermo();
+        if (!resizeCanvas(idealCanvas, iCtx) || !resizeCanvas(realCanvas, rCtx)) {
+          requestAnimationFrame(boot);
+          return;
+        }
+        initRealParticles(boxLayout(realCanvas));
+        buildCharts();
+        setMode("ideal");
+        updateUI();
+        state.lastRateT = 0;
+        drawIdealScene(boxLayout(idealCanvas));
+        drawRealScene(boxLayout(realCanvas));
+        requestAnimationFrame(tick);
+      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      else requestAnimationFrame(boot);
+    })();
+  </script>
+</body>
+</html>
