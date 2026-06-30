@@ -107,8 +107,30 @@
       border-radius: 14px; overflow: hidden; padding: 12px 14px;
       background: rgba(10,18,14,0.82); border: 1px solid rgba(74,222,128,0.22);
     }
-    .graph-wrap canvas { display: block; width: 100%; height: min(220px, 26dvh); min-height: 180px; }
-    .viz-legend { margin: 4px 0 8px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.45; }
+    .graph-wrap h3 { margin: 0 0 6px; font-size: 0.95rem; font-weight: 600; color: var(--accent-light); }
+    .graph-guide {
+      margin: 0 0 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(74,222,128,0.18);
+      font-size: 0.8rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .graph-guide strong { color: #86efac; }
+    .graph-guide ul { margin: 6px 0 0; padding-left: 1.15rem; }
+    .graph-guide li { margin-bottom: 3px; }
+    .graph-readout {
+      margin: 8px 0 0; font-size: 0.78rem; color: #94a3b8;
+      display: flex; flex-wrap: wrap; gap: 8px 16px; font-variant-numeric: tabular-nums;
+    }
+    .graph-readout span b { color: #86efac; font-weight: 600; }
+    .graph-wrap canvas { display: block; width: 100%; height: min(240px, 28dvh); min-height: 200px; }
+    .viewport-toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center;
+    }
+    .viewport-toolbar button {
+      padding: 6px 12px; font-family: inherit; font-size: 0.76rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; border: 1px solid rgba(74,222,128,0.3);
+      background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viewport-toolbar button.active { background: rgba(34,197,94,0.18); color: #86efac; }
     .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
     @media (min-width:640px) { .controls-grid { grid-template-columns: repeat(3,1fr); } }
     label { display: block; font-size: 0.86rem; color: #cbd5e1; margin-bottom: 4px; }
@@ -181,10 +203,27 @@
     <div class="legend-row" id="viewLegend">
       <span class="on">全体表示</span><span>光反応フォーカス</span><span>暗反応フォーカス</span>
     </div>
+    <div class="viewport-toolbar">
+      <button type="button" id="membraneBtn" class="active">葉緑体膜：表示（薄く）</button>
+    </div>
 
     <div class="graph-wrap">
-      <p class="viz-legend"><strong>光合成速度</strong> — グルコース生成量 / 時間 · 光 · CO₂ · 温度で変化</p>
+      <h3>光合成速度グラフ</h3>
+      <div class="graph-guide">
+        <strong>読み方</strong> — 暗反応（カルビン回路）で作られた<strong>グルコースの累積量</strong>が、時間とともにどれだけ増えるかを示します。
+        <ul>
+          <li><strong>横軸</strong>：シミュレーション時間（秒）</li>
+          <li><strong>縦軸</strong>：累積グルコース量（相対単位 · 上ほど多い）</li>
+          <li><strong>緑の線</strong>：実際の生成の推移（傾きが急＝速い光合成）</li>
+          <li>光 · CO₂ · 温度のスライダーを変えると、線の<strong>傾き（速度）</strong>が変わります</li>
+        </ul>
+      </div>
       <canvas id="graphCanvas"></canvas>
+      <p class="graph-readout" id="graphReadout">
+        <span>現在 <b id="graphNowGlc">0.00</b>（累積）</span>
+        <span>速度 <b id="graphNowRate">0.00</b> /s</span>
+        <span>経過 <b id="graphNowTime">0.0</b> s</span>
+      </p>
     </div>
 
     <section class="panel">
@@ -207,8 +246,8 @@
     </section>
   </div>
 
-  <script src="vendor/three.min.js"></script>
-  <script src="vendor/OrbitControls.js"></script>
+  <script src="three.min.js"></script>
+  <script src="OrbitControls.js"></script>
   <script>
   (function () {
     "use strict";
@@ -218,7 +257,7 @@
       return false;
     };
     if (typeof THREE === "undefined") {
-      statusEl.textContent = "Three.js の読み込みに失敗しました。vendor/ フォルダを確認してください。";
+      statusEl.textContent = "Three.js の読み込みに失敗しました。three.min.js と OrbitControls.js があるか確認してください。";
       return;
     }
 
@@ -236,6 +275,8 @@
 
     let scene, camera, renderer, controls;
     let chloroRoot, granaGroup, stromaGroup, calvinGroup, sunLight;
+    let envelopeMesh, envelopeEdge;
+    let membraneOn = true;
     let granaDiscs = [];
     let particleGroup, electronPath, camPos, camTarget;
     const photons = [], electrons = [], o2Bubbles = [], carriers = [], co2Mols = [], glcParts = [];
@@ -342,17 +383,26 @@
         new THREE.Vector3(-0.35, -0.1, 0.1),
       ]);
 
-      const envelope = new THREE.Mesh(
+      envelopeMesh = new THREE.Mesh(
         new THREE.SphereGeometry(1.15, 48, 36),
-        physMat(0x2d6b2a, { rough: 0.32, transmission: 0.12, transparent: true, opacity: 0.38, clearcoat: 0.45, side: THREE.DoubleSide })
+        physMat(0x2d6b2a, { rough: 0.35, transparent: true, opacity: 0.07, side: THREE.DoubleSide })
       );
-      envelope.scale.set(1.85, 1.15, 1.05);
-      chloroRoot.add(envelope);
+      envelopeMesh.scale.set(1.85, 1.15, 1.05);
+      envelopeMesh.material.depthWrite = false;
+      chloroRoot.add(envelopeMesh);
+
+      envelopeEdge = new THREE.Mesh(
+        new THREE.SphereGeometry(1.15, 28, 20),
+        new THREE.MeshBasicMaterial({ color: 0x4ade80, wireframe: true, transparent: true, opacity: 0.22 })
+      );
+      envelopeEdge.scale.copy(envelopeMesh.scale);
+      envelopeEdge.renderOrder = 1;
+      chloroRoot.add(envelopeEdge);
 
       stromaGroup = new THREE.Group();
       const stromaFluid = new THREE.Mesh(
         new THREE.SphereGeometry(1.0, 32, 24),
-        physMat(0x5090b8, { rough: 0.5, transmission: 0.08, transparent: true, opacity: 0.14, thickness: 0.6 })
+        physMat(0x5090b8, { rough: 0.5, transmission: 0.04, transparent: true, opacity: 0.06, thickness: 0.4 })
       );
       stromaFluid.scale.set(1.7, 1.0, 0.95);
       stromaGroup.add(stromaFluid);
@@ -377,7 +427,7 @@
 
       chloroRoot.add(particleGroup);
       particleGroup.renderOrder = 20;
-      envelope.renderOrder = 0;
+      envelopeMesh.renderOrder = 0;
       const innerLight = new THREE.PointLight(0xe8ffe8, 1.1, 5);
       innerLight.position.set(0, 0, 0);
       chloroRoot.add(innerLight);
@@ -664,30 +714,61 @@
       graphCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
+    function fmtAxis(v) {
+      if (v >= 100) return v.toFixed(0);
+      if (v >= 10) return v.toFixed(1);
+      if (v >= 1) return v.toFixed(2);
+      if (v >= 0.01) return v.toFixed(3);
+      return "0";
+    }
+
     function drawGraph() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = graphCanvas.width / dpr, h = graphCanvas.height / dpr;
       const p = getParams();
-      const padL = 52, padT = 22, padB = 32, padR = 14;
+      const padL = 62, padT = 16, padB = 38, padR = 18;
       const plotW = w - padL - padR, plotH = h - padT - padB;
       const x0 = padL, y0 = padT + plotH;
-      const tMax = Math.max(10, simTime + 1);
+      const tMax = Math.max(10, Math.ceil(simTime / 5) * 5 || 10);
       const previewRate = p.light * p.co2 * p.tempF * 0.8;
 
       graphCtx.fillStyle = "#0f1a14";
       graphCtx.fillRect(0, 0, w, h);
-      graphCtx.fillStyle = "#0f1a14";
       graphCtx.fillRect(x0, y0 - plotH, plotW, plotH);
-      graphCtx.strokeStyle = "rgba(148,163,184,0.25)";
-      for (let i = 1; i <= 4; i++) {
+
+      let yMax = Math.max(0.5, totalGlc * 1.25, previewRate * tMax * 0.15, 0.01);
+      history.forEach(function (pt) { if (pt.r > yMax * 0.9) yMax = pt.r * 1.15; });
+      yMax = Math.max(0.5, Math.ceil(yMax * 10) / 10);
+
+      graphCtx.strokeStyle = "rgba(148,163,184,0.22)";
+      graphCtx.lineWidth = 1;
+      graphCtx.font = "500 9px Inter,sans-serif";
+      graphCtx.fillStyle = "#94a3b8";
+      graphCtx.textAlign = "right";
+      for (let i = 0; i <= 4; i++) {
         const gy = y0 - (plotH * i) / 4;
-        graphCtx.beginPath(); graphCtx.moveTo(x0, gy); graphCtx.lineTo(x0 + plotW, gy); graphCtx.stroke();
+        const yVal = (yMax * i) / 4;
+        graphCtx.beginPath();
+        graphCtx.moveTo(x0, gy);
+        graphCtx.lineTo(x0 + plotW, gy);
+        graphCtx.stroke();
+        graphCtx.fillText(fmtAxis(yVal), x0 - 6, gy + 3);
       }
+
+      graphCtx.textAlign = "center";
+      for (let i = 0; i <= 4; i++) {
+        const tVal = (tMax * i) / 4;
+        const gx = x0 + (plotW * i) / 4;
+        graphCtx.beginPath();
+        graphCtx.moveTo(gx, y0);
+        graphCtx.lineTo(gx, y0 - plotH);
+        graphCtx.stroke();
+        graphCtx.fillText(fmtAxis(tVal), gx, y0 + 14);
+      }
+
       graphCtx.strokeStyle = "#86efac";
       graphCtx.lineWidth = 2;
       graphCtx.strokeRect(x0, y0 - plotH, plotW, plotH);
-
-      const maxG = Math.max(0.5, totalGlc * 1.3, previewRate * tMax * 0.5, ...history.map((pt) => pt.r));
 
       if (!running && previewRate > 0.01) {
         graphCtx.strokeStyle = "rgba(74,222,128,0.35)";
@@ -698,7 +779,7 @@
           const t = (tMax * i) / 40;
           const g = previewRate * t * 0.15;
           const px = x0 + (t / tMax) * plotW;
-          const py = y0 - (g / maxG) * plotH;
+          const py = y0 - (g / yMax) * plotH;
           if (i === 0) graphCtx.moveTo(px, py); else graphCtx.lineTo(px, py);
         }
         graphCtx.stroke();
@@ -709,23 +790,44 @@
         graphCtx.strokeStyle = "#4ade80";
         graphCtx.lineWidth = 3;
         graphCtx.beginPath();
-        history.forEach((pt, i) => {
+        history.forEach(function (pt, i) {
           const px = x0 + (pt.t / tMax) * plotW;
-          const py = y0 - (pt.r / maxG) * plotH;
+          const py = y0 - (pt.r / yMax) * plotH;
           if (i === 0) graphCtx.moveTo(px, py); else graphCtx.lineTo(px, py);
         });
         graphCtx.stroke();
+
+        const last = history[history.length - 1];
+        const lx = x0 + (last.t / tMax) * plotW;
+        const ly = y0 - (last.r / yMax) * plotH;
+        graphCtx.fillStyle = "#fde68a";
+        graphCtx.beginPath();
+        graphCtx.arc(lx, ly, 4, 0, Math.PI * 2);
+        graphCtx.fill();
       }
 
       graphCtx.fillStyle = "#cbd5e1";
-      graphCtx.font = "700 11px Inter,sans-serif";
+      graphCtx.font = "700 10px Inter,sans-serif";
       graphCtx.textAlign = "center";
-      graphCtx.fillText("時間 t [s]", x0 + plotW / 2, h - 6);
+      graphCtx.fillText("時間 t [秒]", x0 + plotW / 2, h - 4);
+      graphCtx.save();
+      graphCtx.translate(14, y0 - plotH / 2);
+      graphCtx.rotate(-Math.PI / 2);
+      graphCtx.fillText("累積グルコース量", 0, 0);
+      graphCtx.restore();
+
+      graphCtx.fillStyle = "#64748b";
+      graphCtx.font = "500 9px Inter,sans-serif";
       graphCtx.textAlign = "left";
-      graphCtx.fillText("グルコース", 8, y0 - plotH * 0.5);
+      graphCtx.fillText("単位：相対量（比較用）", x0 + 4, y0 - plotH + 12);
+      graphCtx.textAlign = "right";
       graphCtx.fillStyle = "#86efac";
       graphCtx.font = "600 10px Inter,sans-serif";
-      graphCtx.fillText("速度 " + glucoseRate.toFixed(2), x0 + plotW - 70, y0 - plotH + 14);
+      graphCtx.fillText("現在の速度 " + glucoseRate.toFixed(2) + " /s", x0 + plotW, y0 - plotH + 12);
+
+      document.getElementById("graphNowGlc").textContent = totalGlc.toFixed(2);
+      document.getElementById("graphNowRate").textContent = glucoseRate.toFixed(2);
+      document.getElementById("graphNowTime").textContent = simTime.toFixed(1);
     }
 
     function updateInfo() {
@@ -878,7 +980,15 @@
       document.getElementById("runStatus").textContent = "ストロマ · カルビン回路 · CO₂ 固定 · 糖生成を強調";
     });
     document.getElementById("resetBtn").addEventListener("click", resetSim);
-    ["lightSlider", "co2Slider", "tempSlider"].forEach((id) => {
+    document.getElementById("membraneBtn").addEventListener("click", function () {
+      membraneOn = !membraneOn;
+      if (envelopeMesh) envelopeMesh.visible = membraneOn;
+      if (envelopeEdge) envelopeEdge.visible = membraneOn;
+      var btn = document.getElementById("membraneBtn");
+      btn.classList.toggle("active", membraneOn);
+      btn.textContent = membraneOn ? "葉緑体膜：表示（薄く）" : "葉緑体膜：非表示";
+    });
+    ["lightSlider", "co2Slider", "tempSlider"].forEach(function (id) {
       document.getElementById(id).addEventListener("input", updateSliders);
     });
     window.addEventListener("resize", () => { clearTimeout(window._phR); window._phR = setTimeout(onResize, 100); });
