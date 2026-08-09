@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 水素スペクトル ライマン・バルマー・パッシェン 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f0520 45%, #1a0a3a 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.4), rgba(56,189,248,0.35));
+      border: 1px solid rgba(167,139,250,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c4b5fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e9d5ff; background: rgba(167,139,250,0.14);
+      border: 1px solid rgba(167,139,250,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(167,139,250,0.12));
+      border: 1px solid rgba(167,139,250,0.32);
+    }
+    .formula-main { font-size: 0.88rem; font-weight: 800; color: #e9d5ff; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(167,139,250,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e9d5ff; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(520px, 58dvh); min-height: 360px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.7rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(167,139,250,0.7); color: #e9d5ff; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(56,189,248,0.65); color: #bae6fd; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .series-btn {
+      flex: 1; min-width: 88px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .series-btn.active { background: rgba(167,139,250,0.28); color: #f3e8ff; border-color: rgba(167,139,250,0.65); }
+    .series-btn.lyman.active { background: rgba(139,92,246,0.35); border-color: rgba(167,139,250,0.7); }
+    .series-btn.balmer.active { background: rgba(56,189,248,0.25); border-color: rgba(56,189,248,0.65); color: #e0f2fe; }
+    .series-btn.paschen.active { background: rgba(248,113,113,0.22); border-color: rgba(248,113,113,0.55); color: #fecaca; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.2);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #c4b5fd; }
+    .hud-card {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+    .hud-card .val { font-size: 0.88rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hud-card .val.big { font-size: 1.05rem; color: #fde68a; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #a78bfa; }
+    .ctrl-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ctrl-btns button {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(148,163,184,0.3); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .ctrl-btns button.active { background: rgba(74,222,128,0.2); color: #bbf7d0; border-color: rgba(74,222,128,0.5); }
+    .spectrum-block {
+      border-radius: 14px; overflow: hidden; background: #0A0A0A;
+      border: 1px solid rgba(167,139,250,0.32);
+    }
+    .spectrum-head { padding: 10px 14px 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .spectrum-head p { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e9d5ff; }
+    .spectrum-legend { display: flex; gap: 10px; font-size: 0.68rem; font-weight: 600; }
+    .spectrum-legend span { display: inline-flex; align-items: center; gap: 4px; }
+    #spectrumCanvas { display: block; width: 100%; height: 160px; background: #050508; }
+    .hint-box {
+      padding: 12px 14px; border-radius: 12px; font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.22);
+    }
+    .edu-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; line-height: 1.7; color: #cbd5e1; }
+    .edu-list li { margin-bottom: 6px; }
+    .series-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .series-tag {
+      padding: 4px 8px; border-radius: 6px; font-size: 0.62rem; font-weight: 700;
+      border: 1px solid rgba(148,163,184,0.25);
+    }
+    .series-tag.lyman { color: #c4b5fd; background: rgba(139,92,246,0.15); }
+    .series-tag.balmer { color: #7dd3fc; background: rgba(56,189,248,0.12); }
+    .series-tag.paschen { color: #fca5a5; background: rgba(248,113,113,0.12); }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">🌈</div>
+      <p class="chapter-label">第28章 ② — 原子核と放射線 · スペクトル</p>
+      <h2>水素原子スペクトル — ライマン・バルマー・パッシェン 3D</h2>
+      <p class="tagline">なぜ特定の波長だけ光るのか？ エネルギー準位と電子遷移で解明</p>
+      <a id="back" href="00_folder_atom.html">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">E<sub>n</sub> = −13.6 eV / n²　·　ΔE = E<sub>i</sub> − E<sub>f</sub>　·　λ = hc / ΔE</div>
+        <div class="formula-sub">青＝電子 · 黄＝光子 · 右の横線＝エネルギー準位（n=1〜6）· 下＝スペクトル線</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">水素原子 — 3Dエネルギー準位＋電子遷移</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子（e⁻）</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>光子（放出）</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>原子核</span>
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>準位線</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">水素原子\nボーア模型</div>
+              <div class="status-badge" id="statusBadge">ドラッグで回転 · スクロールで拡大</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="series-btn lyman active" data-series="lyman">ライマン（n→1）</button>
+              <button type="button" class="series-btn balmer" data-series="balmer">バルマー（n→2）</button>
+              <button type="button" class="series-btn paschen" data-series="paschen">パッシェン（n→3）</button>
+              <button type="button" id="btnRandom">ランダム遷移</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnPause" class="active">一時停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">遷移データ HUD</p>
+            <div class="hud-card">
+              <div class="lbl">系列</div>
+              <div class="val big" id="hudSeries">ライマン系列（Lyman）</div>
+              <div class="series-tags">
+                <span class="series-tag lyman">紫外 91〜121 nm</span>
+                <span class="series-tag balmer">可視 410〜656 nm</span>
+                <span class="series-tag paschen">赤外 820〜1875 nm</span>
+              </div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card">
+                <div class="lbl">n<sub>initial</sub>（遷移前）</div>
+                <div class="val" id="hudNi">—</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">n<sub>final</sub>（遷移後）</div>
+                <div class="val" id="hudNf">—</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">E<sub>n</sub>（遷移前）</div>
+                <div class="val" id="hudEi">—</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">ΔE（光子エネルギー）</div>
+                <div class="val" id="hudDE">—</div>
+              </div>
+            </div>
+            <div class="hud-card">
+              <div class="lbl">波長 λ</div>
+              <div class="val big" id="hudLambda">—</div>
+            </div>
+            <div class="slider-row">
+              <label>最大準位 n<sub>max</sub> <span id="lblNmax">6</span></label>
+              <input type="range" id="slNmax" min="3" max="10" step="1" value="6">
+            </div>
+            <div class="slider-row">
+              <label>光子表示速度 <span id="lblPhotonSpd">1.0×</span></label>
+              <input type="range" id="slPhotonSpd" min="0.3" max="2.5" step="0.1" value="1.0">
+            </div>
+            <div class="slider-row">
+              <label>電子軌道速度 <span id="lblOrbitSpd">1.0×</span></label>
+              <input type="range" id="slOrbitSpd" min="0.2" max="3" step="0.1" value="1.0">
+            </div>
+            <div class="ctrl-btns">
+              <button type="button" id="btnNextTrans">次の遷移</button>
+              <button type="button" id="btnAutoPlay" class="active">自動再生</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel spectrum-block">
+      <div class="spectrum-head">
+        <p>スペクトル線（波長 λ）</p>
+        <div class="spectrum-legend">
+          <span><i class="color-chip" style="background:#7c3aed;color:#7c3aed"></i>ライマン</span>
+          <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>バルマー</span>
+          <span><i class="color-chip" style="background:#991b1b;color:#991b1b"></i>パッシェン</span>
+        </div>
+      </div>
+      <canvas id="spectrumCanvas"></canvas>
+    </section>
+
+    <section class="panel">
+      <h3>比較のポイント（高校生向け）</h3>
+      <div class="hint-box" id="hintText">
+        <strong>水素原子</strong>は決まったエネルギー準位（n=1,2,3…）しか持てない。
+        電子が高い準位から低い準位へ<strong>ジャンプ</strong>するとき、差分 ΔE だけの光が<strong>1本の線</strong>として出る。
+        だから「なぜ特定の波長だけ？」→ <strong>ΔE = hc/λ</strong> だから！
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li><strong>ライマン系列</strong>（n→1）— 紫外線 91〜121 nm · 太陽の紫外で観測</li>
+        <li><strong>バルマー系列</strong>（n→2）— 可視光！ Hα（656 nm 赤）· Hβ（486 nm 青緑）が有名</li>
+        <li><strong>パッシェン系列</strong>（n→3）— 赤外線 820〜1875 nm</li>
+        <li>終状態 n が違うだけで、同じ水素でも<strong>全く違う波長</strong>の系列になる</li>
+        <li>ボーア模型の核心：<strong>エネルギーは量子化</strong>されている → 連続スペクトルではなく<strong>線スペクトル</strong></li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const E_RYD = 13.605693;
+      const HC_EV_NM = 1239.841984;
+
+      const SERIES = {
+        lyman: {
+          name: "ライマン系列", nameEn: "Lyman", nf: 1,
+          hint: "<strong>ライマン系列</strong> — 終状態 n=1（基底状態）。紫外線 91〜121 nm。すべて n≥2 → n=1 の遷移。",
+          region: "紫外線", lambdaRange: [91, 122],
+        },
+        balmer: {
+          name: "バルマー系列", nameEn: "Balmer", nf: 2,
+          hint: "<strong>バルマー系列</strong> — 終状態 n=2。可視光！ Hα=656 nm（赤）· Hβ=486 nm · Hγ=434 nm · Hδ=410 nm。",
+          region: "可視光", lambdaRange: [410, 656],
+          labels: { 3: "Hα", 4: "Hβ", 5: "Hγ", 6: "Hδ" },
+        },
+        paschen: {
+          name: "パッシェン系列", nameEn: "Paschen", nf: 3,
+          hint: "<strong>パッシェン系列</strong> — 終状態 n=3。赤外線 820〜1875 nm。n≥4 → n=3 の遷移。",
+          region: "赤外線", lambdaRange: [820, 1875],
+        },
+      };
+
+      const INIT_ROT_X = 0.3, INIT_ROT_Y = 0.5, INIT_ZOOM = 10;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const specCanvas = document.getElementById("spectrumCanvas");
+      const specCtx = specCanvas.getContext("2d");
+
+      let nMax = 6;
+      let photonSpeed = 1.0;
+      let orbitSpeed = 1.0;
+      let paused = false;
+      let autoPlay = true;
+      let seriesKey = "lyman";
+      let electronN = 3;
+      let transIdx = 0;
+      let simTime = 0;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let nucleus, electron, orbitRing, levelGroup, photons = [];
+      let transAnim = null;
+      let spectrumLines = [];
+      let flashLines = [];
+
+      function En(n) { return -E_RYD / (n * n); }
+      function deltaE(ni, nf) { return En(ni) - En(nf); }
+      function wavelengthNm(ni, nf) { return HC_EV_NM / Math.abs(deltaE(ni, nf)); }
+
+      function getTransitions(key, maxN) {
+        const nf = SERIES[key].nf;
+        const list = [];
+        for (let ni = nf + 1; ni <= maxN; ni++) {
+          list.push({ ni, nf, lambda: wavelengthNm(ni, nf), dE: deltaE(ni, nf) });
+        }
+        return list;
+      }
+
+      function wavelengthToRgb(nm) {
+        if (nm < 380) {
+          const t = Math.max(0, Math.min(1, (nm - 280) / 100));
+          return { r: Math.round(80 + 100 * t), g: 0, b: Math.round(120 + 80 * t) };
+        }
+        if (nm > 750) {
+          const t = Math.max(0, Math.min(1, (2000 - nm) / 1250));
+          return { r: Math.round(80 + 60 * t), g: 0, b: 0 };
+        }
+        let r, g, b;
+        if (nm < 440) { r = -(nm - 440) / 60; g = 0; b = 1; }
+        else if (nm < 490) { r = 0; g = (nm - 440) / 50; b = 1; }
+        else if (nm < 510) { r = 0; g = 1; b = -(nm - 510) / 20; }
+        else if (nm < 580) { r = (nm - 510) / 70; g = 1; b = 0; }
+        else if (nm < 645) { r = 1; g = -(nm - 645) / 65; b = 0; }
+        else { r = 1; g = 0; b = 0; }
+        let f = 1;
+        if (nm < 420) f = 0.3 + 0.7 * (nm - 380) / 40;
+        else if (nm > 700) f = 0.3 + 0.7 * (780 - nm) / 80;
+        return {
+          r: Math.round(255 * Math.max(0, Math.min(1, r * f))),
+          g: Math.round(255 * Math.max(0, Math.min(1, g * f))),
+          b: Math.round(255 * Math.max(0, Math.min(1, b * f))),
+        };
+      }
+
+      function rgbStr(c) { return `rgb(${c.r},${c.g},${c.b})`; }
+      function rgbaStr(c, a) { return `rgba(${c.r},${c.g},${c.b},${a})`; }
+
+      function orbitRadius(n) { return 0.35 + (n * n) * 0.14; }
+      function levelY(n) { return (En(n) + E_RYD) / E_RYD * 3.2 - 1.2; }
+
+      function buildAtom() {
+        nucleus = new THREE.Mesh(
+          new THREE.SphereGeometry(0.14, 20, 20),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xf87171, emissive: 0xff4444, emissiveIntensity: 1.4,
+            metalness: 0.4, roughness: 0.15,
+          })
+        );
+        worldGroup.add(nucleus);
+
+        orbitRing = new THREE.Mesh(
+          new THREE.TorusGeometry(orbitRadius(electronN), 0.018, 8, 64),
+          new THREE.MeshBasicMaterial({
+            color: 0x38bdf8, transparent: true, opacity: 0.45, side: THREE.DoubleSide,
+          })
+        );
+        orbitRing.rotation.x = Math.PI / 2;
+        worldGroup.add(orbitRing);
+
+        electron = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09, 14, 14),
+          new THREE.MeshPhysicalMaterial({
+            color: 0x38bdf8, emissive: 0x60a5fa, emissiveIntensity: 1.6,
+            metalness: 0.3, roughness: 0.2,
+          })
+        );
+        worldGroup.add(electron);
+
+        levelGroup = new THREE.Group();
+        levelGroup.position.set(3.2, 0, 0);
+        worldGroup.add(levelGroup);
+        rebuildLevels();
+      }
+
+      function rebuildLevels() {
+        while (levelGroup.children.length) {
+          const c = levelGroup.children[0];
+          levelGroup.remove(c);
+          if (c.geometry) c.geometry.dispose();
+          if (c.material) c.material.dispose();
+        }
+        for (let n = 1; n <= nMax; n++) {
+          const y = levelY(n);
+          const pts = [new THREE.Vector3(-0.5, y, 0), new THREE.Vector3(0.5, y, 0)];
+          const line = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(pts),
+            new THREE.LineBasicMaterial({
+              color: n === 1 ? 0xfbbf24 : 0xa78bfa,
+              transparent: true, opacity: n === 1 ? 0.9 : 0.55,
+            })
+          );
+          line.userData = { n, y };
+          levelGroup.add(line);
+        }
+        const zeroPts = [new THREE.Vector3(-0.55, levelY(1) + 0.15, 0), new THREE.Vector3(0.55, levelY(1) + 0.15, 0)];
+        levelGroup.add(new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(zeroPts),
+          new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.35 })
+        ));
+        rebuildSpectrumLines();
+      }
+
+      function highlightLevels(ni, nf) {
+        levelGroup.children.forEach((c) => {
+          if (!c.userData.n) return;
+          const n = c.userData.n;
+          const active = n === ni || n === nf;
+          c.material.opacity = active ? 1.0 : (n === 1 ? 0.5 : 0.3);
+          c.material.color.setHex(active ? 0xfde047 : (n === 1 ? 0xfbbf24 : 0xa78bfa));
+        });
+      }
+
+      function setOrbitRing(n) {
+        worldGroup.remove(orbitRing);
+        orbitRing.geometry.dispose();
+        orbitRing = new THREE.Mesh(
+          new THREE.TorusGeometry(orbitRadius(n), 0.018, 8, 64),
+          new THREE.MeshBasicMaterial({
+            color: 0x38bdf8, transparent: true, opacity: 0.45, side: THREE.DoubleSide,
+          })
+        );
+        orbitRing.rotation.x = Math.PI / 2;
+        worldGroup.add(orbitRing);
+      }
+
+      function spawnPhoton(lambda) {
+        const col = wavelengthToRgb(lambda);
+        const colHex = (col.r << 16) | (col.g << 8) | col.b;
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 12, 12),
+          new THREE.MeshPhysicalMaterial({
+            color: colHex, emissive: colHex, emissiveIntensity: 2.0,
+            transparent: true, opacity: 0.95,
+          })
+        );
+        m.userData = {
+          life: 0, maxLife: 2.2 / photonSpeed,
+          vx: 0.06 * photonSpeed, vy: 0.02 * photonSpeed,
+          lambda,
+        };
+        m.position.set(0, 0.1, 0);
+        worldGroup.add(m);
+        photons.push(m);
+      }
+
+      function triggerTransition(ni, nf) {
+        if (transAnim) return;
+        const lam = wavelengthNm(ni, nf);
+        const dE = deltaE(ni, nf);
+        highlightLevels(ni, nf);
+        updateHUD(ni, nf, lam, dE);
+
+        transAnim = {
+          t: 0, dur: 0.45,
+          ni, nf,
+          r0: orbitRadius(ni), r1: orbitRadius(nf),
+          ang0: simTime * orbitSpeed * (1.1 / ni),
+          lambda: lam,
+        };
+        electronN = nf;
+
+        const lineKey = `${ni}-${nf}`;
+        flashLines.push({ lambda: lam, series: seriesKey, t: 0, dur: 1.2 });
+        const existing = spectrumLines.find((l) => l.ni === ni && l.nf === nf);
+        if (existing) existing.flash = 1.0;
+        else spectrumLines.push({ ni, nf, lambda: lam, series: seriesKey, flash: 1.0 });
+      }
+
+      function updateHUD(ni, nf, lam, dE) {
+        const s = SERIES[seriesKey];
+        document.getElementById("hudSeries").textContent = `${s.name}（${s.nameEn}）`;
+        document.getElementById("hudNi").textContent = String(ni);
+        document.getElementById("hudNf").textContent = String(nf);
+        document.getElementById("hudEi").textContent = En(ni).toFixed(2) + " eV";
+        document.getElementById("hudDE").textContent = dE.toFixed(2) + " eV";
+        document.getElementById("hudLambda").textContent = lam.toFixed(1) + " nm";
+        document.getElementById("hintText").innerHTML = s.hint;
+        const label = s.labels && s.labels[ni] ? ` · ${s.labels[ni]}` : "";
+        document.getElementById("modeBadge").textContent =
+          `${ni} → ${nf} 遷移${label}\nλ = ${lam.toFixed(1)} nm · ΔE = ${dE.toFixed(2)} eV`;
+      }
+
+      function nextTransition() {
+        const trans = getTransitions(seriesKey, nMax);
+        if (!trans.length) return;
+        const t = trans[transIdx % trans.length];
+        transIdx++;
+        triggerTransition(t.ni, t.nf);
+      }
+
+      function randomTransition() {
+        const keys = ["lyman", "balmer", "paschen"];
+        const k = keys[Math.floor(Math.random() * keys.length)];
+        const trans = getTransitions(k, nMax);
+        if (!trans.length) return;
+        const t = trans[Math.floor(Math.random() * trans.length)];
+        seriesKey = k;
+        document.querySelectorAll(".series-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.series === k);
+        });
+        transIdx = trans.indexOf(t) + 1;
+        triggerTransition(t.ni, t.nf);
+      }
+
+      function rebuildSpectrumLines() {
+        spectrumLines = [];
+        ["lyman", "balmer", "paschen"].forEach((k) => {
+          getTransitions(k, nMax).forEach((t) => {
+            spectrumLines.push({ ni: t.ni, nf: t.nf, lambda: t.lambda, series: k, flash: 0 });
+          });
+        });
+      }
+
+      function lambdaToX(lam, w) {
+        const logMin = Math.log10(80);
+        const logMax = Math.log10(2000);
+        const logL = Math.log10(Math.max(80, Math.min(2000, lam)));
+        return 40 + (logL - logMin) / (logMax - logMin) * (w - 80);
+      }
+
+      function drawSpectrum() {
+        const dpr = Math.min(devicePixelRatio, 2);
+        const rect = specCanvas.getBoundingClientRect();
+        const w = Math.max(rect.width, 300);
+        const h = 160;
+        specCanvas.width = w * dpr;
+        specCanvas.height = h * dpr;
+        specCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        specCtx.fillStyle = "#050508";
+        specCtx.fillRect(0, 0, w, h);
+
+        const regions = [
+          { label: "紫外", x0: 80, x1: 380, color: "rgba(139,92,246,0.08)" },
+          { label: "可視", x0: 380, x1: 750, color: "rgba(56,189,248,0.06)" },
+          { label: "赤外", x0: 750, x1: 2000, color: "rgba(248,113,113,0.06)" },
+        ];
+        regions.forEach((r) => {
+          const x0 = lambdaToX(r.x0, w);
+          const x1 = lambdaToX(r.x1, w);
+          specCtx.fillStyle = r.color;
+          specCtx.fillRect(x0, 20, x1 - x0, h - 50);
+        });
+
+        specCtx.strokeStyle = "rgba(148,163,184,0.2)";
+        specCtx.lineWidth = 1;
+        [100, 200, 400, 500, 600, 700, 1000, 1500].forEach((lam) => {
+          const x = lambdaToX(lam, w);
+          specCtx.beginPath();
+          specCtx.moveTo(x, 18);
+          specCtx.lineTo(x, h - 28);
+          specCtx.stroke();
+          specCtx.fillStyle = "#64748b";
+          specCtx.font = "9px Inter, Noto Sans JP, sans-serif";
+          specCtx.fillText(lam + " nm", x - 12, h - 10);
+        });
+
+        spectrumLines.forEach((line) => {
+          const x = lambdaToX(line.lambda, w);
+          const col = wavelengthToRgb(line.lambda);
+          const alpha = 0.35 + (line.flash || 0) * 0.65;
+          const height = 30 + (line.flash || 0) * 70;
+          const grad = specCtx.createLinearGradient(x, h - 30, x, h - 30 - height);
+          grad.addColorStop(0, rgbaStr(col, alpha));
+          grad.addColorStop(1, rgbaStr(col, alpha * 0.1));
+          specCtx.fillStyle = grad;
+          specCtx.fillRect(x - 2, h - 30 - height, 4, height);
+          if (line.flash > 0.5) {
+            specCtx.shadowColor = rgbStr(col);
+            specCtx.shadowBlur = 12;
+            specCtx.fillStyle = rgbaStr(col, line.flash);
+            specCtx.fillRect(x - 3, h - 30 - height - 5, 6, height + 5);
+            specCtx.shadowBlur = 0;
+          }
+        });
+
+        specCtx.fillStyle = "#94a3b8";
+        specCtx.font = "10px Inter, Noto Sans JP, sans-serif";
+        specCtx.fillText("波長 λ (nm) — 対数スケール", w / 2 - 70, 14);
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const rw = Math.max(wrap.clientWidth, 1);
+        const rh = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, rw / rh, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xa78bfa, 0.6, 20);
+        rim.position.set(-3, 2, 2);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildAtom();
+
+        const grid = new THREE.GridHelper(12, 24, 0x475569, 0x1e293b);
+        grid.position.y = -1.8;
+        worldGroup.add(grid);
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-0.9, Math.min(0.9, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        renderer.domElement.addEventListener("pointerleave", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = Math.max(6, Math.min(18, zoom + e.deltaY * 0.006));
+        }, { passive: false });
+
+        new ResizeObserver(() => {
+          const w = Math.max(wrap.clientWidth, 1);
+          const h = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(w, h);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          drawSpectrum();
+        }).observe(wrap);
+        new ResizeObserver(() => drawSpectrum()).observe(specCanvas);
+      }
+
+      function resetSim() {
+        transAnim = null;
+        photons.forEach((p) => {
+          worldGroup.remove(p);
+          p.geometry.dispose();
+          p.material.dispose();
+        });
+        photons = [];
+        flashLines = [];
+        electronN = seriesKey === "lyman" ? 2 : seriesKey === "balmer" ? 3 : 4;
+        transIdx = 0;
+        setOrbitRing(electronN);
+        highlightLevels(electronN, SERIES[seriesKey].nf);
+        spectrumLines.forEach((l) => { l.flash = 0; });
+        const s = SERIES[seriesKey];
+        document.getElementById("hudSeries").textContent = `${s.name}（${s.nameEn}）`;
+        document.getElementById("hudNi").textContent = "—";
+        document.getElementById("hudNf").textContent = String(SERIES[seriesKey].nf);
+        document.getElementById("hudEi").textContent = "—";
+        document.getElementById("hudDE").textContent = "—";
+        document.getElementById("hudLambda").textContent = "—";
+        document.getElementById("modeBadge").textContent = "水素原子\nボーア模型";
+        document.getElementById("hintText").innerHTML = s.hint;
+      }
+
+      function bindControls() {
+        document.querySelectorAll(".series-btn[data-series]").forEach((b) => {
+          b.addEventListener("click", () => {
+            seriesKey = b.dataset.series;
+            document.querySelectorAll(".series-btn[data-series]").forEach((x) => {
+              x.classList.toggle("active", x.dataset.series === seriesKey);
+            });
+            transIdx = 0;
+            electronN = SERIES[seriesKey].nf + 1;
+            setOrbitRing(electronN);
+            resetSim();
+            document.getElementById("hintText").innerHTML = SERIES[seriesKey].hint;
+          });
+        });
+        document.getElementById("btnRandom").addEventListener("click", randomTransition);
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").classList.toggle("active", !paused);
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnNextTrans").addEventListener("click", nextTransition);
+        document.getElementById("btnAutoPlay").addEventListener("click", () => {
+          autoPlay = !autoPlay;
+          document.getElementById("btnAutoPlay").classList.toggle("active", autoPlay);
+        });
+        document.getElementById("slNmax").addEventListener("input", (e) => {
+          nMax = +e.target.value;
+          document.getElementById("lblNmax").textContent = String(nMax);
+          rebuildLevels();
+        });
+        document.getElementById("slPhotonSpd").addEventListener("input", (e) => {
+          photonSpeed = +e.target.value;
+          document.getElementById("lblPhotonSpd").textContent = photonSpeed.toFixed(1) + "×";
+        });
+        document.getElementById("slOrbitSpd").addEventListener("input", (e) => {
+          orbitSpeed = +e.target.value;
+          document.getElementById("lblOrbitSpd").textContent = orbitSpeed.toFixed(1) + "×";
+        });
+      }
+
+      let autoTimer = 0;
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = paused ? 0 : Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        if (!paused) simTime += dt;
+
+        if (!paused && autoPlay && !transAnim) {
+          autoTimer += dt;
+          if (autoTimer > 2.8) { autoTimer = 0; nextTransition(); }
+        }
+
+        if (transAnim && !paused) {
+          transAnim.t += dt;
+          const u = Math.min(1, transAnim.t / transAnim.dur);
+          const ease = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+          const r = transAnim.r0 + (transAnim.r1 - transAnim.r0) * ease;
+          const ang = transAnim.ang0 + simTime * orbitSpeed * 0.3;
+          electron.position.set(Math.cos(ang) * r, 0.05 * Math.sin(u * Math.PI), Math.sin(ang) * r);
+          if (u >= 1) {
+            spawnPhoton(transAnim.lambda);
+            setOrbitRing(transAnim.nf);
+            transAnim = null;
+          }
+        } else if (!transAnim) {
+          const r = orbitRadius(electronN);
+          const ang = simTime * orbitSpeed * (1.1 / electronN);
+          electron.position.set(Math.cos(ang) * r, 0, Math.sin(ang) * r);
+        }
+
+        photons = photons.filter((p) => {
+          const d = p.userData;
+          d.life += dt;
+          p.position.x += d.vx;
+          p.position.y += d.vy * 0.5;
+          p.material.opacity = Math.max(0, 0.95 * (1 - d.life / d.maxLife));
+          p.material.emissiveIntensity = 2.0 * (1 - d.life / d.maxLife);
+          if (d.life >= d.maxLife) {
+            worldGroup.remove(p);
+            p.geometry.dispose();
+            p.material.dispose();
+            return false;
+          }
+          return true;
+        });
+
+        spectrumLines.forEach((l) => {
+          if (l.flash > 0) l.flash = Math.max(0, l.flash - dt * 0.8);
+        });
+        flashLines = flashLines.filter((f) => {
+          f.t += dt;
+          return f.t < f.dur;
+        });
+
+        if (!paused) rotY += dt * 0.012;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 0.8,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0.8, 0, 0);
+
+        drawSpectrum();
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        drawSpectrum();
+        nextTransition();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

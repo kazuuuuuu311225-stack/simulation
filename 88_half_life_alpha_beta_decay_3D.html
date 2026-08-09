@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 半減期・α崩壊・β崩壊 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #120a1a 45%, #1a0f2a 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.35), rgba(248,113,113,0.35));
+      border: 1px solid rgba(167,139,250,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c4b5fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a78bfa; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ede9fe; background: rgba(167,139,250,0.14);
+      border: 1px solid rgba(167,139,250,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(167,139,250,0.1));
+      border: 1px solid rgba(167,139,250,0.32);
+    }
+    .formula-main { font-size: 0.84rem; font-weight: 800; color: #ede9fe; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(167,139,250,0.32); }
+    .viz-head { padding: 10px 14px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #ede9fe; }
+    .mode-tabs { display: flex; gap: 4px; }
+    .mode-tab {
+      padding: 5px 10px; font-size: 0.66rem; font-weight: 700; border-radius: 8px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.05); color: #94a3b8;
+      font-family: inherit;
+    }
+    .mode-tab.active { background: rgba(167,139,250,0.3); color: #ede9fe; border-color: rgba(167,139,250,0.6); }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(380px, 42dvh); min-height: 280px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #populationPanel {
+      position: absolute; left: 10px; bottom: 10px; right: 10px; z-index: 4;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(167,139,250,0.4);
+      border-radius: 10px; padding: 8px 10px; pointer-events: none;
+      display: none;
+    }
+    #populationPanel.show { display: block; }
+    .pop-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .pop-title { font-size: 0.62rem; font-weight: 800; color: #a78bfa; }
+    .pop-count { font-size: 1.1rem; font-weight: 800; color: #fde68a; font-variant-numeric: tabular-nums; }
+    .pop-count small { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
+    .pop-grid {
+      display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px;
+    }
+    .pop-dot {
+      aspect-ratio: 1; border-radius: 50%; background: #a78bfa;
+      box-shadow: 0 0 6px rgba(167,139,250,0.6);
+      transition: transform 0.25s, opacity 0.35s, background 0.35s;
+    }
+    .pop-dot.dead { background: #1e293b; box-shadow: none; opacity: 0.25; transform: scale(0.6); }
+    .pop-dot.flash { background: #f87171; box-shadow: 0 0 10px #f87171; transform: scale(1.3); }
+    #decayOverlay {
+      position: absolute; inset: 0; z-index: 6; pointer-events: none;
+      display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+      background: rgba(0,0,0,0.55);
+    }
+    #decayOverlay.show { display: flex; }
+    .decay-eq {
+      font-size: clamp(1.2rem, 4vw, 1.8rem); font-weight: 800; color: #fff;
+      text-shadow: 0 0 20px rgba(167,139,250,0.8); text-align: center; line-height: 1.5;
+    }
+    .decay-eq .hl { color: #fde047; }
+    .decay-eq .arr { color: #a78bfa; margin: 0 0.3em; }
+    .decay-msg { font-size: 0.82rem; font-weight: 700; color: #fecaca; text-align: center; max-width: 90%; }
+    .nuclide-compare {
+      position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+      width: 130px; z-index: 4; pointer-events: none;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .nc-card {
+      background: rgba(2,6,23,0.92); border-radius: 10px; padding: 8px 10px; text-align: center;
+    }
+    .nc-card.before { border: 1px solid rgba(148,163,184,0.4); }
+    .nc-card.after { border: 1px solid rgba(74,222,128,0.5); opacity: 0.4; transition: opacity 0.4s; }
+    .nc-card.after.lit { opacity: 1; box-shadow: 0 0 12px rgba(74,222,128,0.3); }
+    .nc-lbl { font-size: 0.55rem; font-weight: 800; color: #94a3b8; }
+    .nc-sym { font-size: 1.5rem; font-weight: 800; color: #fde68a; line-height: 1.1; }
+    .nc-sub { font-size: 0.6rem; color: #cbd5e1; font-weight: 600; }
+    .nc-arrow { text-align: center; font-size: 0.9rem; color: #a78bfa; font-weight: 800; }
+    #bigCounter {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      z-index: 4; pointer-events: none; text-align: center;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(251,191,36,0.5);
+      border-radius: 12px; padding: 10px 14px; min-width: 100px;
+    }
+    #bigCounter .bc-pct { font-size: 2rem; font-weight: 800; color: #fde68a; line-height: 1; }
+    #bigCounter .bc-lbl { font-size: 0.58rem; color: #94a3b8; font-weight: 700; margin-top: 4px; }
+    #bigCounter .bc-frac { font-size: 0.72rem; color: #cbd5e1; font-weight: 600; margin-top: 2px; }
+    #halfLifeFlash {
+      position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%) scale(0.8);
+      z-index: 7; pointer-events: none; opacity: 0;
+      font-size: 1.4rem; font-weight: 800; color: #4ade80;
+      text-shadow: 0 0 20px rgba(74,222,128,0.8);
+      background: rgba(20,83,45,0.85); border: 2px solid #4ade80;
+      border-radius: 12px; padding: 10px 20px; white-space: nowrap;
+      transition: opacity 0.35s, transform 0.35s;
+    }
+    #halfLifeFlash.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    #decayGraphWrap {
+      padding: 8px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); background: #0A0A0A;
+    }
+    #decayGraphWrap .graph-title {
+      display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700;
+      color: #c4b5fd; margin-bottom: 6px;
+    }
+    #decayGraph { width: 100%; height: 150px; border-radius: 8px; background: rgba(15,23,42,0.5); border: 1px solid rgba(167,139,250,0.25); }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 8; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.68rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(167,139,250,0.7); color: #ede9fe; }
+    .status-badge { top: 12px; right: 148px; border: 1px solid rgba(248,113,113,0.65); color: #fecaca; max-width: 200px; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.66rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(167,139,250,0.3); color: #ede9fe; border-color: rgba(167,139,250,0.65); font-weight: 800; }
+    .act-btn.active { background: rgba(74,222,128,0.2); color: #86efac; border-color: rgba(74,222,128,0.5); }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.2);
+      display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: min(780px, 85dvh);
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #c4b5fd; }
+    .hud-section { font-size: 0.66rem; font-weight: 800; color: #a78bfa; margin: 4px 0 2px; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(167,139,250,0.45); background: rgba(76,29,149,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hud-card .val.big { font-size: 1rem; color: #fde68a; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #a78bfa; }
+    .change-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+    .change-chip {
+      font-size: 0.62rem; font-weight: 700; padding: 3px 7px; border-radius: 6px;
+      background: rgba(167,139,250,0.15); color: #c4b5fd; border: 1px solid rgba(167,139,250,0.3);
+    }
+    .change-chip.down { background: rgba(248,113,113,0.15); color: #fca5a5; border-color: rgba(248,113,113,0.3); }
+    .change-chip.up { background: rgba(74,222,128,0.15); color: #86efac; border-color: rgba(74,222,128,0.3); }
+    .hint-box {
+      padding: 12px 14px; border-radius: 12px; font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.22);
+    }
+    .edu-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; line-height: 1.7; color: #cbd5e1; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⏳</div>
+      <p class="chapter-label">第28章 ⑥ — 半減期・放射性崩壊</p>
+      <h2>半減期 — α崩壊・β崩壊 3D</h2>
+      <p class="tagline">1個ずつ崩壊を見る · たくさんの原子で半減期を体感</p>
+      <a id="back" href="00_folder_atom.html">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">半減期＝残りが<strong>半分</strong>になる時間　·　N(t)=N₀e<sup>−λt</sup></div>
+        <div class="formula-sub">α: Z−2,A−4 · β⁻: Z+1（中性子→陽子＋電子）</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head">
+              <p class="viz-label">放射性崩壊ビジュアル</p>
+              <div class="mode-tabs">
+                <button type="button" class="mode-tab active" data-view="single">① 1個ずつ見る</button>
+                <button type="button" class="mode-tab" data-view="population">② 半減期を体感</button>
+              </div>
+            </div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>陽子</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>中性子</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>α（2p+2n）</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>β⁻電子</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">²³⁸U\nα崩壊</div>
+              <div class="status-badge" id="statusBadge">👆「α崩壊を見る」から始めよう</div>
+              <div id="bigCounter">
+                <div class="bc-pct" id="bcPct">100%</div>
+                <div class="bc-lbl">残りの割合</div>
+                <div class="bc-frac" id="bcFrac">1000 / 1000</div>
+              </div>
+              <div class="nuclide-compare">
+                <div class="nc-card before">
+                  <div class="nc-lbl">崩壊前</div>
+                  <div class="nc-sym" id="ncBefore">²³⁸U</div>
+                  <div class="nc-sub" id="ncBeforeZN">Z=92 N=146</div>
+                </div>
+                <div class="nc-arrow">↓</div>
+                <div class="nc-card after" id="ncAfterCard">
+                  <div class="nc-lbl">崩壊後</div>
+                  <div class="nc-sym" id="ncAfter">²³⁴Th</div>
+                  <div class="nc-sub" id="ncAfterZN">Z=90 N=144</div>
+                </div>
+              </div>
+              <div id="decayOverlay">
+                <div class="decay-eq" id="decayEq"></div>
+                <div class="decay-msg" id="decayMsg"></div>
+              </div>
+              <div id="halfLifeFlash">半分になった！ T½</div>
+              <div id="populationPanel">
+                <div class="pop-header">
+                  <span class="pop-title">200個の原子イメージ（1マス≈5個）</span>
+                  <span class="pop-count" id="popCount">200<small> / 200</small></span>
+                </div>
+                <div class="pop-grid" id="popGrid"></div>
+              </div>
+            </div>
+            <div id="decayGraphWrap">
+              <div class="graph-title">
+                <span>半減期グラフ — 時間が T½ 進むと残りが半分に</span>
+                <span id="graphTimeLabel">t = 0</span>
+              </div>
+              <canvas id="decayGraph"></canvas>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="btnAlpha">▶ α崩壊を見る</button>
+              <button type="button" class="act-btn primary" id="btnBeta">▶ β崩壊を見る</button>
+              <button type="button" class="act-btn" id="btnHalfLife">▶ 半減期シミュ開始</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnPause" class="active">一時停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">いま何が起きている？</p>
+            <div class="hud-card highlight">
+              <div class="lbl">モード</div>
+              <div class="val big" id="hudMode">1個ずつ崩壊を見る</div>
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">放出されたもの</div>
+              <div class="val big" id="hudParticle">—</div>
+            </div>
+            <div class="hud-card">
+              <div class="lbl">数の変化</div>
+              <div class="change-row" id="hudChanges">
+                <span class="change-chip">まずボタンを押してみよう</span>
+              </div>
+            </div>
+            <p class="hud-section">半減期</p>
+            <div class="hud-grid">
+              <div class="hud-card">
+                <div class="lbl">N₀ 最初の数</div>
+                <div class="val" id="hudN0">1000</div>
+              </div>
+              <div class="hud-card highlight">
+                <div class="lbl">N(t) 残り</div>
+                <div class="val big" id="hudNt">1000</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">T₁/₂ 半減期</div>
+                <div class="val" id="hudHalfLife">1.0</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">経過時間 t</div>
+                <div class="val" id="hudTime">0.00</div>
+              </div>
+            </div>
+            <p class="hud-section">コントロール</p>
+            <div class="slider-row">
+              <label>半減期の長さ <span id="lblHalfLife">1.0</span></label>
+              <input type="range" id="slHalfLife" min="0.5" max="4" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+              <label>原子の数 N₀ <span id="lblN0">1000</span></label>
+              <input type="range" id="slN0" min="200" max="2000" step="100" value="1000">
+            </div>
+            <div class="slider-row">
+              <label>時間の速さ <span id="lblTimeSpd">1.0×</span></label>
+              <input type="range" id="slTimeSpd" min="0.3" max="4" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+              <label>原子核の大きさ <span id="lblNucZoom">2.0×</span></label>
+              <input type="range" id="slNucZoom" min="1.2" max="3.5" step="0.1" value="2">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>体感のコツ</h3>
+      <div class="hint-box" id="hintText">
+        <strong>①「α崩壊を見る」</strong> — 1個の原子核からα粒子（2個の陽子+2個の中性子）が飛び出すのを見る。Zが2減る！<br>
+        <strong>②「半減期を体感」</strong> — たくさんの原子がランダムに消えていく。時間がT½進むと<strong>ちょうど半分</strong>残る。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>1個の崩壊は<strong>ランダム</strong>。でも大量の原子では<strong>半分になる時間が決まっている</strong></li>
+        <li><strong>α崩壊</strong>：⁴He を放出 → <strong>Z−2, A−4</strong></li>
+        <li><strong>β⁻崩壊</strong>：中性子→陽子+電子 → <strong>Z+1, N−1</strong></li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const ELEMENTS = [
+        "","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar",
+        "K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr",
+        "Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe",
+        "Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu",
+        "Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn","Fr","Ra",
+        "Ac","Th","Pa","U","Np","Pu"
+      ];
+
+      const PRESETS = {
+        alpha: { Z: 92, N: 146, A: 238, eq: "²³⁸U → ²³⁴Th + α", msg: "4個の核子（2陽子+2中性子）がヘリウム核として飛び出す！",
+          changes: [{ t: "Z", d: "−2" }, { t: "N", d: "−2" }, { t: "A", d: "−4" }],
+          particle: "α線（⁴He²⁺）", afterZ: 90, afterN: 144, afterA: 234 },
+        beta: { Z: 6, N: 8, A: 14, eq: "¹⁴C → ¹⁴N + β⁻", msg: "中性子が陽子に変わり、電子（β⁻）が飛び出す！",
+          changes: [{ t: "Z", d: "+1" }, { t: "N", d: "−1" }, { t: "A", d: "±0" }],
+          particle: "β⁻線（電子）", afterZ: 7, afterN: 7, afterA: 14 },
+      };
+
+      const POP_CELLS = 200;
+      const MAX_VIS = 28;
+      const DECAY_DUR = 1.8;
+      const LN2 = Math.LN2;
+      const INIT_ROT_X = 0.22, INIT_ROT_Y = 0.6, INIT_ZOOM = 10;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const decayCanvas = document.getElementById("decayGraph");
+      const dCtx = decayCanvas.getContext("2d");
+
+      let viewMode = "single";
+      let Z = 92, N = 146, A = 238;
+      let N0 = 1000, Ncur = 1000;
+      let halfLife = 1, lambda = LN2;
+      let simTime = 0, timeSpeed = 1, nucZoom = 2;
+      let paused = false, halfLifeRunning = false, decaying = false;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+      let popAlive = POP_CELLS;
+      let popDots = [];
+      let halfLifeFlashT = 0;
+      let lastHalfMark = 0;
+
+      let scene, camera, renderer, worldGroup, nucleusGroup, labelSprite;
+      let nucleonMeshes = [], emitParticles = [];
+      let detachMeshes = [];
+
+      function sym(z) { return ELEMENTS[z] || "?"; }
+      function superscript(n) {
+        const d = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+        return String(n).split("").map((c) => d[+c]).join("");
+      }
+      function fmtNuclide(a, z) { return superscript(a) + sym(z); }
+
+      function calcLambda() { return LN2 / halfLife; }
+      function calcNt(t) { return N0 * Math.exp(-lambda * t); }
+
+      function buildPopGrid() {
+        const grid = document.getElementById("popGrid");
+        grid.innerHTML = "";
+        popDots = [];
+        for (let i = 0; i < POP_CELLS; i++) {
+          const d = document.createElement("div");
+          d.className = "pop-dot";
+          grid.appendChild(d);
+          popDots.push(d);
+        }
+      }
+
+      function updatePopGrid() {
+        const alive = Math.round((Ncur / N0) * POP_CELLS);
+        popAlive = alive;
+        popDots.forEach((d, i) => {
+          d.classList.toggle("dead", i >= alive);
+          d.classList.remove("flash");
+        });
+        document.getElementById("popCount").innerHTML = alive + "<small> / " + POP_CELLS + "</small>";
+      }
+
+      function flashPopDots(n) {
+        const alive = Math.round((Ncur / N0) * POP_CELLS);
+        for (let k = 0; k < n && k < alive; k++) {
+          const idx = Math.floor(Math.random() * alive);
+          if (popDots[idx]) {
+            popDots[idx].classList.add("flash");
+            setTimeout(() => popDots[idx]?.classList.remove("flash"), 400);
+          }
+        }
+      }
+
+      function updateCompareCards(beforeA, beforeZ, beforeN, afterA, afterZ, afterN, lit) {
+        document.getElementById("ncBefore").textContent = fmtNuclide(beforeA, beforeZ);
+        document.getElementById("ncBeforeZN").textContent = "Z=" + beforeZ + " N=" + beforeN;
+        document.getElementById("ncAfter").textContent = fmtNuclide(afterA, afterZ);
+        document.getElementById("ncAfterZN").textContent = "Z=" + afterZ + " N=" + afterN;
+        document.getElementById("ncAfterCard").classList.toggle("lit", lit);
+      }
+
+      function updateBigCounter() {
+        const pct = Math.max(0, Math.min(100, Math.round((Ncur / N0) * 100)));
+        document.getElementById("bcPct").textContent = pct + "%";
+        document.getElementById("bcFrac").textContent = Math.round(Ncur) + " / " + N0;
+      }
+
+      function updateHUD(extra) {
+        lambda = calcLambda();
+        document.getElementById("hudMode").textContent = viewMode === "single" ? "1個ずつ崩壊を見る" : "半減期を体感（たくさんの原子）";
+        document.getElementById("hudN0").textContent = String(N0);
+        document.getElementById("hudNt").textContent = String(Math.round(Ncur));
+        document.getElementById("hudHalfLife").textContent = halfLife.toFixed(1);
+        document.getElementById("hudTime").textContent = simTime.toFixed(2);
+        document.getElementById("hudParticle").textContent = extra?.particle || "—";
+        document.getElementById("modeBadge").textContent = fmtNuclide(A, Z) + "\n" + (viewMode === "single" ? "崩壊デモ" : "半減期");
+        const ch = document.getElementById("hudChanges");
+        if (extra?.changes) {
+          ch.innerHTML = extra.changes.map((c) => {
+            const cls = c.d.startsWith("+") ? "up" : c.d.startsWith("−") || c.d.startsWith("-") ? "down" : "";
+            return '<span class="change-chip ' + cls + '">' + c.t + " " + c.d + "</span>";
+          }).join("");
+        }
+        updateBigCounter();
+        if (halfLifeRunning) {
+          document.getElementById("statusBadge").textContent = "原子がランダムに崩壊中… 残り " + Math.round(Ncur);
+        } else if (decaying) {
+          document.getElementById("statusBadge").textContent = "崩壊アニメーション再生中";
+        } else {
+          document.getElementById("statusBadge").textContent = viewMode === "single"
+            ? "👆「α崩壊を見る」から始めよう" : "👆「半減期シミュ開始」で点が減るのを見よう";
+        }
+      }
+
+      function showOverlay(eq, msg) {
+        document.getElementById("decayEq").innerHTML = eq;
+        document.getElementById("decayMsg").textContent = msg;
+        document.getElementById("decayOverlay").classList.add("show");
+      }
+      function hideOverlay() { document.getElementById("decayOverlay").classList.remove("show"); }
+
+      function fibSpherePos(i, total, r) {
+        const phi = Math.acos(1 - 2 * (i + 0.5) / total);
+        const th = Math.PI * (1 + Math.sqrt(5)) * i;
+        return { x: r * Math.sin(phi) * Math.cos(th), y: r * Math.sin(phi) * Math.sin(th), z: r * Math.cos(phi) };
+      }
+
+      function clearGroup(grp, dispose) {
+        while (grp.children.length) {
+          const c = grp.children[0];
+          grp.remove(c);
+          if (dispose && c.geometry) c.geometry.dispose();
+          if (dispose && c.material) {
+            if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose());
+            else c.material.dispose();
+          }
+        }
+      }
+
+      function rebuildNucleus(z, n) {
+        clearGroup(nucleusGroup, true);
+        nucleonMeshes = [];
+        const total = z + n;
+        const visTotal = Math.min(total, MAX_VIS);
+        const visZ = Math.max(1, Math.round(z * visTotal / total));
+        const visN = visTotal - visZ;
+        const r = 0.35 + Math.cbrt(visTotal) * 0.06;
+        const types = [];
+        for (let i = 0; i < visZ; i++) types.push("p");
+        for (let i = 0; i < visN; i++) types.push("n");
+        types.forEach((type, i) => {
+          const pos = fibSpherePos(i, visTotal, r);
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.09, 16, 16),
+            new THREE.MeshPhysicalMaterial({
+              color: type === "p" ? 0xf87171 : 0x94a3b8,
+              emissive: type === "p" ? 0xef4444 : 0x64748b,
+              emissiveIntensity: type === "p" ? 1.0 : 0.5,
+              metalness: 0.3, roughness: 0.25,
+            })
+          );
+          m.position.set(pos.x, pos.y, pos.z);
+          m.userData = { type, phase: Math.random() * 6.28, basePos: { x: pos.x, y: pos.y, z: pos.z }, idx: i };
+          nucleusGroup.add(m);
+          nucleonMeshes.push(m);
+        });
+        if (total > MAX_VIS) {
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(r + 0.12, 0.015, 6, 48),
+            new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.35 })
+          );
+          nucleusGroup.add(ring);
+        }
+      }
+
+      function pickDetach(type, count) {
+        const pool = nucleonMeshes.filter((m) => m.userData.type === type && !m.userData.detaching);
+        const picked = [];
+        for (let i = 0; i < count && pool.length; i++) {
+          const idx = Math.floor(Math.random() * pool.length);
+          picked.push(pool.splice(idx, 1)[0]);
+        }
+        return picked;
+      }
+
+      function emitAlphaFrom(meshes) {
+        const group = new THREE.Group();
+        meshes.forEach((m) => {
+          const clone = m.clone();
+          clone.material = m.material.clone();
+          const wp = new THREE.Vector3();
+          m.getWorldPosition(wp);
+          clone.position.copy(wp);
+          group.add(clone);
+          m.userData.detaching = true;
+          m.visible = false;
+        });
+        const glow = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 14, 14),
+          new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.35 })
+        );
+        group.add(glow);
+        worldGroup.add(group);
+        group.userData = { type: "alpha", vx: -0.06, vy: 0.01, vz: 0, life: 2.5, spin: 0.8 };
+        emitParticles.push(group);
+        detachMeshes = meshes;
+      }
+
+      function emitBeta() {
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 12, 12),
+          new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, emissive: 0x60a5fa, emissiveIntensity: 2 })
+        );
+        m.position.set(0.5, 0, 0);
+        worldGroup.add(m);
+        m.userData = { type: "beta", vx: -0.18, vy: 0.04, vz: 0.02, life: 1.8 };
+        emitParticles.push(m);
+        const trail = new THREE.PointLight(0x38bdf8, 1.5, 3);
+        m.add(trail);
+      }
+
+      function playAlphaDecay() {
+        if (decaying) return;
+        viewMode = "single";
+        setViewMode("single");
+        decaying = true;
+        const p = PRESETS.alpha;
+        const bZ = Z, bN = N, bA = A;
+        const newZ = bZ - 2, newN = bN - 2, newA = bA - 4;
+        Z = p.Z; N = p.N; A = p.A;
+        rebuildNucleus(Z, N);
+        updateCompareCards(bA, bZ, bN, newA, newZ, newN, false);
+        updateHUD({ particle: "準備中…", changes: p.changes });
+
+        showOverlay('<span class="hl">' + fmtNuclide(bA, bZ) + '</span><span class="arr">→</span><span class="hl">' + fmtNuclide(newA, newZ) + '</span> + <span class="hl">α</span>', "まもなく α粒子が飛び出します");
+
+        setTimeout(() => {
+          document.getElementById("decayMsg").textContent = p.msg;
+          const p2 = pickDetach("p", 2);
+          const n2 = pickDetach("n", 2);
+          emitAlphaFrom([...p2, ...n2]);
+          nucleusGroup.children.forEach((c) => { if (c.material) c.material.emissiveIntensity = 2; });
+        }, 600);
+
+        setTimeout(() => {
+          hideOverlay();
+          Z = newZ; N = newN; A = newA;
+          rebuildNucleus(Z, N);
+          updateCompareCards(bA, bZ, bN, newA, newZ, newN, true);
+          updateHUD({ particle: p.particle, changes: p.changes });
+          document.getElementById("hintText").innerHTML = "<strong>" + p.eq + "</strong><br>陽子2個+中性子2個＝⁴He（α粒子）が飛び出し、<strong>Zが92→90</strong>に変わった！";
+          decaying = false;
+        }, DECAY_DUR * 1000);
+      }
+
+      function playBetaDecay() {
+        if (decaying) return;
+        viewMode = "single";
+        setViewMode("single");
+        decaying = true;
+        const p = PRESETS.beta;
+        const bZ = Z, bN = N, bA = A;
+        const newZ = bZ + 1, newN = bN - 1, newA = bA;
+        Z = p.Z; N = p.N; A = p.A;
+        rebuildNucleus(Z, N);
+        updateCompareCards(bA, bZ, bN, newA, newZ, newN, false);
+        updateHUD({ particle: "準備中…", changes: p.changes });
+        showOverlay('<span class="hl">' + fmtNuclide(bA, bZ) + '</span><span class="arr">→</span><span class="hl">' + fmtNuclide(newA, newZ) + '</span> + <span class="hl">β⁻</span>', "中性子が陽子に変わる瞬間を見て！");
+
+        setTimeout(() => {
+          const neutrons = nucleonMeshes.filter((m) => m.userData.type === "n");
+          if (neutrons.length) {
+            const m = neutrons[0];
+            m.userData.type = "p";
+            m.material.color.setHex(0xf87171);
+            m.material.emissive.setHex(0xef4444);
+            m.material.emissiveIntensity = 3;
+            m.userData.flash = 1.2;
+            m.scale.setScalar(1.4);
+          }
+          emitBeta();
+          document.getElementById("decayMsg").textContent = p.msg;
+        }, 700);
+
+        setTimeout(() => {
+          hideOverlay();
+          Z = newZ; N = newN; A = newA;
+          rebuildNucleus(Z, N);
+          updateCompareCards(bA, bZ, bN, newA, newZ, newN, true);
+          updateHUD({ particle: p.particle, changes: p.changes });
+          document.getElementById("hintText").innerHTML = "<strong>" + p.eq + "</strong><br>中性子→陽子に変わり<strong>Zが6→7</strong>。炭素が窒素になった！";
+          decaying = false;
+        }, DECAY_DUR * 1000);
+      }
+
+      function setViewMode(mode) {
+        viewMode = mode;
+        document.querySelectorAll(".mode-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === mode));
+        document.getElementById("populationPanel").classList.toggle("show", mode === "population");
+        document.getElementById("bigCounter").style.display = mode === "population" ? "block" : "none";
+        if (mode === "population") {
+          halfLifeRunning = false;
+          document.getElementById("btnHalfLife").classList.remove("active");
+          updatePopGrid();
+        }
+        updateHUD();
+      }
+
+      function resetState() {
+        Z = PRESETS.alpha.Z; N = PRESETS.alpha.N; A = PRESETS.alpha.A;
+        N0 = +document.getElementById("slN0").value;
+        Ncur = N0;
+        halfLife = +document.getElementById("slHalfLife").value;
+        lambda = calcLambda();
+        simTime = 0;
+        halfLifeRunning = false;
+        decaying = false;
+        lastHalfMark = 0;
+        halfLifeFlashT = 0;
+        document.getElementById("btnHalfLife").classList.remove("active");
+        document.getElementById("halfLifeFlash").classList.remove("show");
+        hideOverlay();
+        rebuildNucleus(Z, N);
+        updateCompareCards(238, 92, 146, 234, 90, 144, false);
+        emitParticles.forEach((p) => {
+          worldGroup.remove(p);
+          p.traverse?.((c) => { c.geometry?.dispose(); c.material?.dispose(); });
+        });
+        emitParticles = [];
+        updatePopGrid();
+        updateHUD();
+      }
+
+      function drawDecayGraph() {
+        const dpr = Math.min(devicePixelRatio, 2);
+        const w = decayCanvas.clientWidth, h = decayCanvas.clientHeight;
+        if (w < 10) return;
+        decayCanvas.width = w * dpr;
+        decayCanvas.height = h * dpr;
+        dCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        dCtx.clearRect(0, 0, w, h);
+        const padL = 40, padR = 14, padT = 12, padB = 28;
+        const gw = w - padL - padR, gh = h - padT - padB;
+        const tMax = halfLife * 3;
+
+        dCtx.fillStyle = "rgba(30,41,59,0.5)";
+        dCtx.fillRect(padL, padT, gw, gh);
+
+        dCtx.setLineDash([5, 5]);
+        dCtx.strokeStyle = "rgba(74,222,128,0.5)";
+        dCtx.lineWidth = 1;
+        const halfY = padT + gh / 2;
+        dCtx.beginPath(); dCtx.moveTo(padL, halfY); dCtx.lineTo(padL + gw, halfY); dCtx.stroke();
+        dCtx.setLineDash([]);
+        dCtx.fillStyle = "#4ade80";
+        dCtx.font = "700 9px Inter, Noto Sans JP, sans-serif";
+        dCtx.textAlign = "right";
+        dCtx.fillText("半分 N₀/2", padL - 4, halfY + 3);
+
+        for (let k = 1; k <= 3; k++) {
+          const tx = padL + (k * halfLife / tMax) * gw;
+          dCtx.strokeStyle = "rgba(167,139,250,0.4)";
+          dCtx.setLineDash([3, 4]);
+          dCtx.beginPath(); dCtx.moveTo(tx, padT); dCtx.lineTo(tx, padT + gh); dCtx.stroke();
+          dCtx.setLineDash([]);
+          dCtx.fillStyle = "#a78bfa";
+          dCtx.textAlign = "center";
+          dCtx.fillText(k + "T½", tx, h - 6);
+        }
+
+        dCtx.beginPath();
+        dCtx.strokeStyle = "#c4b5fd";
+        dCtx.lineWidth = 2.5;
+        for (let px = 0; px <= gw; px++) {
+          const t = (px / gw) * tMax;
+          const y = padT + gh * (1 - calcNt(t) / N0);
+          if (px === 0) dCtx.moveTo(padL + px, y);
+          else dCtx.lineTo(padL + px, y);
+        }
+        dCtx.stroke();
+
+        const curT = Math.min(simTime, tMax);
+        const cx = padL + (curT / tMax) * gw;
+        const cy = padT + gh * (1 - calcNt(curT) / N0);
+        dCtx.fillStyle = "#fde047";
+        dCtx.beginPath(); dCtx.arc(cx, cy, 6, 0, 6.28); dCtx.fill();
+        dCtx.strokeStyle = "#fff"; dCtx.lineWidth = 2; dCtx.stroke();
+
+        dCtx.fillStyle = "#94a3b8";
+        dCtx.font = "600 9px Inter, sans-serif";
+        dCtx.textAlign = "right";
+        dCtx.fillText("N₀", padL - 4, padT + 10);
+        dCtx.fillText("0", padL - 4, padT + gh);
+        document.getElementById("graphTimeLabel").textContent = "t=" + simTime.toFixed(2) + " · 残り " + Math.round(Ncur) + "（" + Math.round(Ncur / N0 * 100) + "%）";
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 280);
+        camera = new THREE.PerspectiveCamera(45, rw / rh, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        wrap.insertBefore(renderer.domElement, wrap.firstChild);
+
+        scene.add(new THREE.AmbientLight(0x505070, 0.6));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(5, 7, 4);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xa78bfa, 0.8, 20);
+        rim.position.set(-3, 2, 5);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        nucleusGroup = new THREE.Group();
+        worldGroup.add(nucleusGroup);
+
+        const grid = new THREE.GridHelper(10, 20, 0x334155, 0x1e293b);
+        grid.position.y = -1.2;
+        worldGroup.add(grid);
+
+        rebuildNucleus(Z, N);
+
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = Math.max(6, Math.min(18, zoom + e.deltaY * 0.006));
+        }, { passive: false });
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-0.7, Math.min(0.7, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        new ResizeObserver(() => {
+          const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 280);
+          renderer.setSize(w, h);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          drawDecayGraph();
+        }).observe(wrap);
+      }
+
+      function bindControls() {
+        document.querySelectorAll(".mode-tab").forEach((b) => {
+          b.addEventListener("click", () => setViewMode(b.dataset.view));
+        });
+        document.getElementById("btnAlpha").addEventListener("click", playAlphaDecay);
+        document.getElementById("btnBeta").addEventListener("click", playBetaDecay);
+        document.getElementById("btnHalfLife").addEventListener("click", () => {
+          setViewMode("population");
+          halfLifeRunning = !halfLifeRunning;
+          document.getElementById("btnHalfLife").classList.toggle("active", halfLifeRunning);
+          if (halfLifeRunning) {
+            simTime = 0;
+            Ncur = N0;
+            lastHalfMark = 0;
+            Z = PRESETS.alpha.Z; N = PRESETS.alpha.N; A = PRESETS.alpha.A;
+            rebuildNucleus(Z, N);
+            document.getElementById("hintText").innerHTML = "紫の点が<strong>原子のイメージ</strong>。1個ずつランダムに崩壊して消えていく。時間が<strong>T½</strong>進むと<strong>ちょうど半分</strong>残る！";
+          }
+          updateHUD();
+          updatePopGrid();
+        });
+        document.getElementById("btnReset").addEventListener("click", () => {
+          zoom = INIT_ZOOM; rotX = INIT_ROT_X; rotY = INIT_ROT_Y;
+          resetState();
+          drawDecayGraph();
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").classList.toggle("active", !paused);
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("slHalfLife").addEventListener("input", (e) => {
+          halfLife = +e.target.value;
+          lambda = calcLambda();
+          document.getElementById("lblHalfLife").textContent = halfLife.toFixed(1);
+          drawDecayGraph();
+        });
+        document.getElementById("slN0").addEventListener("input", (e) => {
+          N0 = +e.target.value;
+          if (!halfLifeRunning) Ncur = N0;
+          document.getElementById("lblN0").textContent = String(N0);
+          updatePopGrid();
+          updateHUD();
+          drawDecayGraph();
+        });
+        document.getElementById("slTimeSpd").addEventListener("input", (e) => {
+          timeSpeed = +e.target.value;
+          document.getElementById("lblTimeSpd").textContent = timeSpeed.toFixed(1) + "×";
+        });
+        document.getElementById("slNucZoom").addEventListener("input", (e) => {
+          nucZoom = +e.target.value;
+          document.getElementById("lblNucZoom").textContent = nucZoom.toFixed(1) + "×";
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = paused ? 0 : Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+
+        if (!paused && halfLifeRunning) {
+          simTime += dt * timeSpeed;
+          const prevN = Ncur;
+          Ncur = calcNt(simTime);
+          updatePopGrid();
+          if (Math.floor(prevN / 50) > Math.floor(Ncur / 50)) flashPopDots(3);
+
+          const halfMark = Math.floor(simTime / halfLife);
+          if (halfMark > lastHalfMark) {
+            lastHalfMark = halfMark;
+            const el = document.getElementById("halfLifeFlash");
+            el.textContent = halfMark + "T½ — 残り " + Math.round(Ncur / N0 * 100) + "%！";
+            el.classList.add("show");
+            halfLifeFlashT = 2;
+          }
+          if (halfLifeFlashT > 0) {
+            halfLifeFlashT -= dt;
+            if (halfLifeFlashT <= 0) document.getElementById("halfLifeFlash").classList.remove("show");
+          }
+          if (Ncur < N0 * 0.02) {
+            halfLifeRunning = false;
+            document.getElementById("btnHalfLife").classList.remove("active");
+          }
+          updateHUD();
+        }
+
+        nucleonMeshes.forEach((m) => {
+          if (m.userData.detaching) return;
+          const bp = m.userData.basePos;
+          const ph = m.userData.phase + simTime * 0.5;
+          const w = 0.002;
+          m.position.set(bp.x + Math.sin(ph) * w, bp.y + Math.cos(ph * 1.1) * w, bp.z);
+          if (m.userData.flash > 0) {
+            m.userData.flash -= dt;
+            m.material.emissiveIntensity = 2 + m.userData.flash * 2;
+            m.scale.setScalar(1 + m.userData.flash * 0.3);
+          } else {
+            m.material.emissiveIntensity = m.userData.type === "p" ? 1.0 : 0.5;
+            m.scale.setScalar(1);
+          }
+        });
+
+        emitParticles = emitParticles.filter((p) => {
+          const d = p.userData;
+          d.life -= dt;
+          p.position.x += d.vx;
+          p.position.y += d.vy;
+          if (d.vz !== undefined) p.position.z += d.vz;
+          if (d.spin) p.rotation.y += dt * d.spin;
+          if (d.life <= 0) {
+            worldGroup.remove(p);
+            p.traverse?.((c) => { c.geometry?.dispose(); c.material?.dispose(); });
+            return false;
+          }
+          return true;
+        });
+
+        nucleusGroup.scale.setScalar(nucZoom);
+        if (!paused && !dragging && viewMode === "single") rotY += dt * 0.008;
+        const dist = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * dist,
+          Math.sin(rotX) * dist + 0.3,
+          Math.cos(rotY) * Math.cos(rotX) * dist
+        );
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+        drawDecayGraph();
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        buildPopGrid();
+        initThree();
+        bindControls();
+        resetState();
+        document.getElementById("bigCounter").style.display = "none";
+        drawDecayGraph();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>25章 電磁誘導 — 渦電流振り子 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1428 45%, #1a1030 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1100px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.45), rgba(251,191,36,0.45));
+      border: 1px solid rgba(167,139,250,0.45); font-size: 1.6rem;
+      box-shadow: 0 0 28px rgba(167,139,250,0.25);
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c4b5fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fde047; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.12), rgba(251,191,36,0.1));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud" "ctrl";
+    }
+    @media (min-width: 900px) {
+      .sim-grid { grid-template-columns: 1.15fr 0.85fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden; background: #111;
+      border: 1px solid rgba(167,139,250,0.32);
+      box-shadow: inset 0 0 40px rgba(167,139,250,0.05);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; font-weight: 600; color: #cbd5e1;
+    }
+    .color-chip {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(520px, 56dvh); min-height: 360px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6;
+      font-size: 0.9rem; text-align: center; pointer-events: none;
+    }
+    #simError.show { display: flex; }
+    #field3dWrap:active { cursor: grabbing; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); position: relative; z-index: 3; }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+      pointer-events: auto; position: relative; z-index: 2;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    .viz-foot button.active, .act-btn.active, .act-btn.is-active {
+      background: rgba(109,40,217,0.28); color: #ede9fe; border-color: rgba(167,139,250,0.6);
+    }
+    .hud-card {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.65rem; color: #94a3b8; }
+    .hud-card .num { font-size: 0.82rem; font-weight: 700; color: #fde68a; margin-top: 2px; line-height: 1.45; }
+    .hud-card.col-b .num { color: #93c5fd; }
+    .hud-card.col-v .num { color: #fdba74; }
+    .hud-card.col-e .num { color: #fde047; }
+    .hud-card.col-f .num { color: #f87171; }
+    .hud-card.col-p .num { color: #c4b5fd; }
+    .hud-card.col-k .num { color: #a5f3fc; }
+    .hud-card.col-b { border-color: rgba(96,165,250,0.35); }
+    .hud-card.col-v { border-color: rgba(251,146,60,0.35); }
+    .hud-card.col-e { border-color: rgba(251,191,36,0.35); }
+    .hud-card.col-f { border-color: rgba(248,113,113,0.35); }
+    .hud-card.col-p { border-color: rgba(167,139,250,0.35); }
+    .hud-card.col-k { border-color: rgba(34,211,238,0.35); }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .formula-box {
+      padding: 10px; border-radius: 10px; text-align: center; margin: 8px 0;
+      background: rgba(109,40,217,0.1); border: 1px solid rgba(167,139,250,0.28);
+      font-size: 0.74rem; font-weight: 700; color: #c4b5fd; line-height: 1.6;
+    }
+    .energy-panel {
+      margin-top: 8px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.2);
+    }
+    .energy-panel .lbl { font-size: 0.65rem; color: #94a3b8; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .energy-panel .lbl span { font-weight: 700; }
+    .energy-panel .lbl .kin { color: #a5f3fc; }
+    .energy-panel .lbl .diss { color: #ef4444; }
+    .energy-bar-wrap {
+      height: 12px; border-radius: 6px; background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(34,211,238,0.25); overflow: hidden; margin-bottom: 8px;
+    }
+    .energy-bar-fill {
+      height: 100%; width: 0%; border-radius: 5px;
+      background: linear-gradient(90deg, #22d3ee, #67e8f9);
+      box-shadow: 0 0 10px rgba(34,211,238,0.45);
+      transition: width 0.08s linear;
+    }
+    .heat-bar-wrap {
+      height: 10px; border-radius: 5px; background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(248,113,113,0.25); overflow: hidden;
+    }
+    .heat-bar-fill {
+      height: 100%; width: 0%; border-radius: 4px;
+      background: linear-gradient(90deg, #7f1d1d, #ef4444, #fca5a5);
+      box-shadow: 0 0 10px rgba(239,68,68,0.45);
+      transition: width 0.08s linear;
+    }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+    .slider-val { color: #a78bfa; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #8b5cf6; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .mode-row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .mode-btn {
+      flex: 1; min-height: 40px; padding: 8px; font-family: inherit;
+      font-size: 0.74rem; font-weight: 700; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.05); color: #cbd5e1;
+    }
+    .mode-btn.is-active {
+      background: rgba(109,40,217,0.35); color: #ede9fe; border-color: rgba(167,139,250,0.65);
+      box-shadow: 0 0 16px rgba(167,139,250,0.2);
+    }
+    .hint-box {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; color: #ede9fe;
+      background: linear-gradient(135deg, rgba(76,29,149,0.45), rgba(15,23,42,0.35));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .ctrl-grid { display: grid; gap: 10px; }
+    @media (min-width: 700px) { .ctrl-grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">🧲</div>
+      <p class="chapter-label">第25章 ⑥ — 電磁誘導</p>
+      <h2>渦電流振り子 — 3Dラボ</h2>
+      <p class="tagline">dΦ/dt → 渦電流 → 制動力 → エネルギー散逸</p>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-25">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>
+        <strong>磁石振り子</strong>と<strong style="color:#b45309">銅板</strong>の間で
+        磁束が変化すると<strong style="color:#fde047">渦電流</strong>が生じ、
+        <strong style="color:#f87171">制動力</strong>が働きます。
+        <strong>モード1</strong>：振り子が動き銅板は静止 → 振幅が減衰。
+        <strong>モード2</strong>：振り子は静止・銅板が動く → 銅板に抵抗力。
+        どちらも「<strong>相対運動＋磁束変化</strong>」が本質です。
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">dΦ/dt → 渦電流 I<sub>eddy</sub> → F<sub>brake</sub>（レンツの法則）</div>
+        <div class="formula-sub">運動エネルギー → 渦電流 → ジュール熱 P = I²R · 磁気ブレーキの原理</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">磁石振り子と銅板（3D奥行き）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#ef4444;color:#ef4444"></i>N極</span>
+              <span><i class="color-chip" style="background:#3b82f6;color:#3b82f6"></i>S極</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>磁場 B</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>渦電流</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>制動力</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子</span>
+              <span><i class="color-chip" style="background:#b45309;color:#b45309"></i>銅板</span>
+            </div>
+            <p class="viz-legend">モード①：銅板は振り子真下 · モード②：銅板水平移動 · ドラッグ回転</p>
+            <div id="field3dWrap"><div id="simError"></div></div>
+            <div class="viz-foot">
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnEddyRings" class="active">渦電流リング ON</button>
+              <button type="button" id="btnAutoPlate" class="active">銅板自動移動</button>
+              <button type="button" id="btnResetView">初期表示</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="formula-box" id="formulaLive">渦電流 · 制動力</div>
+          <div class="hud-grid">
+            <div class="hud-card col-p"><div class="lbl">渦電流の強さ</div><div class="num" id="hudEddy">0.00</div></div>
+            <div class="hud-card col-f"><div class="lbl">制動力 F<sub>brake</sub></div><div class="num" id="hudFbrake">0.00 N</div></div>
+            <div class="hud-card col-v"><div class="lbl">振り子速度 v</div><div class="num" id="hudVp">0.00 m/s</div></div>
+            <div class="hud-card col-v"><div class="lbl">銅板速度 v</div><div class="num" id="hudVplate">0.00 m/s</div></div>
+            <div class="hud-card"><div class="lbl">振り子振幅</div><div class="num" id="hudAmp">0.00 m</div></div>
+            <div class="hud-card col-b"><div class="lbl">dΦ/dt</div><div class="num" id="hudDPhi">0.00 Wb/s</div></div>
+            <div class="hud-card col-k"><div class="lbl">運動エネルギー</div><div class="num" id="hudEkin">0.00 J</div></div>
+            <div class="hud-card col-f"><div class="lbl">散逸エネルギー</div><div class="num" id="hudEdiss">0.00 J</div></div>
+          </div>
+          <div class="energy-panel">
+            <div class="lbl">運動エネルギー E<sub>kin</sub> <span class="kin" id="hudEkinBar">0.00 J</span></div>
+            <div class="energy-bar-wrap"><div class="energy-bar-fill" id="kinBar"></div></div>
+            <div class="lbl">累積散逸（熱） <span class="diss" id="hudEdissBar">0.00 J</span></div>
+            <div class="heat-bar-wrap"><div class="heat-bar-fill" id="dissBar"></div></div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <div class="mode-row">
+            <button type="button" class="mode-btn is-active" id="btnModePend">① 振り子を動かす</button>
+            <button type="button" class="mode-btn" id="btnModePlate">② 銅板を動かす</button>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="act-btn" id="btnFlipNS">N↑ S↓（反転）</button>
+            <button type="button" class="act-btn" id="btnReset">初期化</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row" id="rowAmp">
+              <label>振り子初期振幅 <span class="slider-val" id="valAmp">0.00 m</span></label>
+              <input type="range" id="slAmp" min="0" max="80" value="0" step="1">
+            </div>
+            <div class="ctrl-row" id="rowPlateV" style="opacity:0.45;pointer-events:none">
+              <label>銅板速度 v <span class="slider-val" id="valPlateV">1.5</span></label>
+              <input type="range" id="slPlateV" min="-50" max="50" value="15" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>導電率 σ <span class="slider-val" id="valSigma">1.0</span></label>
+              <input type="range" id="slSigma" min="1" max="100" value="50" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>磁石の強さ B₀ <span class="slider-val" id="valB0">2.0</span></label>
+              <input type="range" id="slB0" min="0" max="50" value="20" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">モード①：初期状態 θ=0 · 銅板中心 x=0（振り子真下）· 振幅スライダーで揺らす</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const COL = { B: 0x60a5fa, eddy: 0xfde047, e: 0x38bdf8, brake: 0xf87171, copper: 0xb45309 };
+      const PEND_LEN = 1.35;
+      const MAG_R = 0.14;
+      const PLATE_HALF = 0.03;
+      const MAG_REST_GAP = 0.08;
+      const PLATE_Y_PEND = 0;
+      const MAG_EQUIL_Y = PLATE_Y_PEND + PLATE_HALF + MAG_REST_GAP + MAG_R;
+      const PIVOT_Y = MAG_EQUIL_Y + PEND_LEN;
+      const PLATE_Y_PLATE = 0;
+      let plateY = PLATE_Y_PEND;
+      const PLATE_W = 2.8, PLATE_D = 2.0;
+      const G = 9.8;
+      const PEND_M = 0.35;
+      const PLATE_M = 2.5;
+      const N_E = 320;
+      const INIT_ROT_X = 0.42, INIT_ROT_Y = 0.55, INIT_ZOOM = 4.2;
+      const E_KIN_MAX = 8, E_DISS_MAX = 8;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+
+      let mode = "pendulum";
+      const target = { amp: 0, plateVx: 1.5, sigma: 1.0, B0: 2.0 };
+      const smooth = { amp: 0, plateVx: 1.5, sigma: 1.0, B0: 2.0 };
+
+      let theta = 0, omega = 0, plateX = 0, plateVx = 0, plateDir = 1;
+      let autoSpin = true, showEddyRings = true, autoPlateMove = true, magFlipped = false;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0, t = 0;
+      let dPhiDt = 0, eddy = 0, fBrake = 0, eKin = 0, eDiss = 0, pHeat = 0;
+      let magX = 0, magY = 0, magVx = 0, prox = 0;
+
+      let scene, camera, renderer, worldGroup, pendGroup, plateGroup, eddyGroup, bArrowGroup, gridHelper;
+      let stringLine, magnetGroup, plateMesh, electronMesh, pendBrakeArrow, plateBrakeArrow;
+      let eddyRings = [], eddyArrowGroup, eddyLight;
+      let particles = [];
+
+      function showSimError(msg) {
+        if (!errBox) return;
+        errBox.textContent = "3D初期化エラー: " + msg;
+        errBox.classList.add("show");
+      }
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function magnetWorldPos() {
+        if (mode === "pendulum") {
+          return { x: Math.sin(theta) * PEND_LEN, y: PIVOT_Y - Math.cos(theta) * PEND_LEN, z: 0 };
+        }
+        return { x: 0, y: PIVOT_Y - PEND_LEN, z: 0 };
+      }
+
+      function calcProximity(mx, my) {
+        const gap = my - (plateY + PLATE_HALF);
+        if (gap < 0.02 || gap > 0.45) return 0;
+        const vert = Math.exp(-gap * gap / 0.018);
+        const hx = mx - plateX;
+        const horiz = Math.exp(-hx * hx / 0.9);
+        return vert * horiz;
+      }
+
+      function applyPlateLayout() {
+        if (!plateGroup) return;
+        if (mode === "pendulum") {
+          plateY = PLATE_Y_PEND;
+          plateX = 0;
+          plateVx = 0;
+          if (pendGroup) pendGroup.rotation.z = 0;
+        } else {
+          plateY = PLATE_Y_PLATE;
+        }
+        plateGroup.position.set(mode === "pendulum" ? 0 : plateX, plateY, 0);
+        if (gridHelper) gridHelper.position.y = plateY - 0.08;
+      }
+
+      function poleSign() { return magFlipped ? 1 : -1; }
+
+      function applyMagnetPolarity() {
+        if (magnetGroup) magnetGroup.rotation.x = magFlipped ? Math.PI : 0;
+        buildBArrows();
+        const btn = document.getElementById("btnFlipNS");
+        if (btn) {
+          btn.textContent = magFlipped ? "S↑ N↓（反転）" : "N↑ S↓（反転）";
+          btn.classList.toggle("active", magFlipped);
+          btn.classList.toggle("is-active", magFlipped);
+        }
+      }
+
+      function calcPhysics() {
+        const mpos = magnetWorldPos();
+        magX = mpos.x; magY = mpos.y;
+
+        let vRel;
+        if (mode === "pendulum") {
+          magVx = Math.cos(theta) * PEND_LEN * omega;
+          vRel = magVx;
+        } else {
+          magVx = 0;
+          vRel = plateVx;
+        }
+
+        prox = calcProximity(mode === "pendulum" ? magX : 0, magY);
+        dPhiDt = poleSign() * smooth.B0 * smooth.sigma * vRel * prox;
+        eddy = clamp(Math.abs(dPhiDt) * 1.15, 0, 6);
+        fBrake = eddy * 0.35 * smooth.B0 * (vRel !== 0 ? -Math.sign(vRel) : 0);
+
+        if (mode === "pendulum") {
+          eKin = 0.5 * PEND_M * (PEND_LEN * omega) * (PEND_LEN * omega);
+        } else {
+          eKin = 0.5 * PLATE_M * plateVx * plateVx;
+        }
+        pHeat = eddy * eddy * 0.4 / Math.max(smooth.sigma, 0.1);
+      }
+
+      function spawnElectron() {
+        return {
+          x: (Math.random() - 0.5) * PLATE_W * 0.9,
+          z: (Math.random() - 0.5) * PLATE_D * 0.9,
+          ang: Math.random() * Math.PI * 2,
+          rad: 0.15 + Math.random() * 0.55,
+          phase: Math.random(),
+        };
+      }
+
+      function resetSim() {
+        theta = 0;
+        omega = 0;
+        if (mode === "pendulum") {
+          plateX = 0;
+          plateVx = 0;
+        } else {
+          plateX = -1.4;
+          plateVx = target.plateVx * plateDir;
+        }
+        plateDir = 1;
+        applyPlateLayout();
+        eDiss = 0;
+        particles.length = 0;
+        for (let i = 0; i < N_E; i++) particles.push(spawnElectron());
+      }
+
+      function makeArrow(dir, origin, len, color) {
+        const d = dir.clone().normalize();
+        const a = new THREE.ArrowHelper(d, origin.clone(), len, color, len * 0.28, len * 0.14);
+        a.line.material.transparent = true;
+        a.cone.material.transparent = true;
+        a.frustumCulled = false;
+        return a;
+      }
+
+      function buildMagnet() {
+        magnetGroup = new THREE.Group();
+        const nMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.5, roughness: 0.3, emissive: 0x7f1d1d, emissiveIntensity: 0.2 });
+        const sMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.5, roughness: 0.3, emissive: 0x1e3a8a, emissiveIntensity: 0.2 });
+        const nHalf = new THREE.Mesh(new THREE.CylinderGeometry(MAG_R, MAG_R, MAG_R * 0.9, 16), nMat);
+        nHalf.position.y = MAG_R * 0.45;
+        const sHalf = new THREE.Mesh(new THREE.CylinderGeometry(MAG_R, MAG_R, MAG_R * 0.9, 16), sMat);
+        sHalf.position.y = -MAG_R * 0.45;
+        magnetGroup.add(nHalf, sHalf);
+        return magnetGroup;
+      }
+
+      function buildBArrows() {
+        if (!bArrowGroup) return;
+        while (bArrowGroup.children.length) bArrowGroup.remove(bArrowGroup.children[0]);
+        // 銅板側の磁場：S極が下(N↑S↓)なら板から磁石へ向かう(+Y)、反転時はN極が下で板へ向かう(-Y)
+        const bDir = new THREE.Vector3(0, 1, 0);
+        const alen = 0.1 + smooth.B0 * 0.04;
+        const op = 0.35 + clamp(smooth.B0 / 5, 0, 0.5);
+        const oy = -MAG_R * 0.65;
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2;
+          const r = MAG_R * 1.5;
+          const ox = Math.cos(ang) * r;
+          const oz = Math.sin(ang) * r;
+          const arr = new THREE.ArrowHelper(bDir, new THREE.Vector3(ox, oy, oz), alen, COL.B, alen * 0.35, alen * 0.18);
+          arr.line.material.transparent = true;
+          arr.line.material.opacity = op;
+          arr.cone.material.transparent = true;
+          arr.cone.material.opacity = op;
+          bArrowGroup.add(arr);
+        }
+      }
+
+      function buildEddyRings() {
+        if (!eddyGroup) return;
+        while (eddyGroup.children.length) eddyGroup.remove(eddyGroup.children[0]);
+        eddyRings.length = 0;
+        for (let i = 0; i < 4; i++) {
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(0.38 + i * 0.2, 0.032 + i * 0.01, 14, 56),
+            new THREE.MeshBasicMaterial({
+              color: i < 2 ? COL.eddy : 0xfff7a8, transparent: true, opacity: 0,
+              depthWrite: false, blending: THREE.AdditiveBlending,
+            })
+          );
+          ring.rotation.x = Math.PI / 2;
+          eddyGroup.add(ring);
+          eddyRings.push(ring);
+        }
+        eddyLight = new THREE.PointLight(0xfde047, 0, 2.8, 2.2);
+        eddyLight.position.y = 0.12;
+        eddyGroup.add(eddyLight);
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 360);
+        camera = new THREE.PerspectiveCamera(55, w / h, 0.05, 80);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x505070, 0.72));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(4, 5, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xa78bfa, 0.5, 14);
+        rim.position.set(-2, 2, 4);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+
+        gridHelper = new THREE.GridHelper(8, 28, 0x334155, 0x1e293b);
+        gridHelper.position.y = plateY - 0.08;
+        worldGroup.add(gridHelper);
+
+        const pivot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 12, 12),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.2 })
+        );
+        pivot.position.set(0, PIVOT_Y, 0);
+        worldGroup.add(pivot);
+
+        pendGroup = new THREE.Group();
+        pendGroup.position.set(0, PIVOT_Y, 0);
+        worldGroup.add(pendGroup);
+
+        const strGeo = new THREE.BufferGeometry();
+        strGeo.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, -PEND_LEN, 0], 3));
+        stringLine = new THREE.Line(strGeo, new THREE.LineBasicMaterial({ color: 0x94a3b8, linewidth: 2 }));
+        pendGroup.add(stringLine);
+
+        magnetGroup = buildMagnet();
+        magnetGroup.position.set(0, -PEND_LEN, 0);
+        pendGroup.add(magnetGroup);
+
+        bArrowGroup = new THREE.Group();
+        magnetGroup.add(bArrowGroup);
+
+        pendBrakeArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.35, COL.brake);
+        magnetGroup.add(pendBrakeArrow);
+
+        plateGroup = new THREE.Group();
+        worldGroup.add(plateGroup);
+
+        plateBrakeArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0.2, 0), 0.35, COL.brake);
+        plateGroup.add(plateBrakeArrow);
+
+        plateMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(PLATE_W, 0.06, PLATE_D),
+          new THREE.MeshStandardMaterial({
+            color: COL.copper, metalness: 0.85, roughness: 0.22,
+            emissive: 0x5c2d0a, emissiveIntensity: 0.08,
+          })
+        );
+        plateGroup.add(plateMesh);
+
+        const plateEdge = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(PLATE_W, 0.06, PLATE_D)),
+          new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.4 })
+        );
+        plateGroup.add(plateEdge);
+
+        eddyGroup = new THREE.Group();
+        eddyGroup.position.y = 0.04;
+        plateGroup.add(eddyGroup);
+
+        eddyArrowGroup = new THREE.Group();
+        eddyGroup.add(eddyArrowGroup);
+
+        const eGeo = new THREE.SphereGeometry(0.012, 8, 8);
+        const eMat = new THREE.MeshStandardMaterial({
+          color: COL.e, emissive: COL.e, emissiveIntensity: 0.7,
+          metalness: 0.1, roughness: 0.3,
+        });
+        electronMesh = new THREE.InstancedMesh(eGeo, eMat, N_E);
+        plateGroup.add(electronMesh);
+
+        buildBArrows();
+        buildEddyRings();
+        applyMagnetPolarity();
+        resetSim();
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, 3.5, 9);
+        }, { passive: false });
+        window.addEventListener("resize", resizeRenderer);
+        resetView();
+      }
+
+      function resizeRenderer() {
+        if (!renderer || !camera || !wrap) return;
+        const rw = Math.max(wrap.clientWidth, 1);
+        const rh = Math.max(wrap.clientHeight, 360);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        camera.aspect = rw / rh;
+        camera.updateProjectionMatrix();
+      }
+
+      function resetView() {
+        rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        resizeRenderer();
+      }
+
+      function setMode(m) {
+        mode = m;
+        document.getElementById("btnModePend").classList.toggle("is-active", m === "pendulum");
+        document.getElementById("btnModePlate").classList.toggle("is-active", m === "plate");
+        const rowAmp = document.getElementById("rowAmp");
+        const rowPlateV = document.getElementById("rowPlateV");
+        if (m === "pendulum") {
+          rowAmp.style.opacity = "1"; rowAmp.style.pointerEvents = "auto";
+          rowPlateV.style.opacity = "0.45"; rowPlateV.style.pointerEvents = "none";
+          theta = 0;
+          omega = 0;
+          applyPlateLayout();
+        } else {
+          rowAmp.style.opacity = "0.45"; rowAmp.style.pointerEvents = "none";
+          rowPlateV.style.opacity = "1"; rowPlateV.style.pointerEvents = "auto";
+          theta = 0; omega = 0;
+          plateVx = target.plateVx * plateDir;
+          plateX = -1.4;
+          plateDir = 1;
+          autoPlateMove = true;
+          document.getElementById("btnAutoPlate").classList.add("active");
+          applyPlateLayout();
+        }
+        document.getElementById("btnAutoPlate").style.display = m === "plate" ? "inline-block" : "none";
+        document.getElementById("hintText").textContent = m === "pendulum"
+          ? "モード①：初期状態 θ=0 · 銅板中心 x=0（振り子真下）· 振幅スライダーで揺らす"
+          : "モード②：銅板が往復し続ける → 磁石下で渦電流が可視化 → わずかに減速";
+      }
+
+      function stepPhysics(dt) {
+        const k = 1 - Math.pow(0.001, dt / 0.35);
+        smooth.amp = lerp(smooth.amp, target.amp, k);
+        smooth.plateVx = lerp(smooth.plateVx, target.plateVx, k);
+        smooth.sigma = lerp(smooth.sigma, target.sigma, k);
+        smooth.B0 = lerp(smooth.B0, target.B0, k);
+
+        calcPhysics();
+
+        if (mode === "pendulum") {
+          const alpha = -(G / PEND_LEN) * Math.sin(theta);
+          const torque = fBrake * Math.cos(theta) / PEND_LEN;
+          const damp = 0.12 + eddy * 0.85;
+          omega += (alpha - damp * omega + torque) * dt;
+          theta += omega * dt;
+          plateX = 0;
+          plateY = PLATE_Y_PEND;
+        } else {
+          const goalV = autoPlateMove ? plateDir * Math.abs(smooth.plateVx) : target.plateVx;
+          const fDrive = autoPlateMove ? 5.5 * (goalV - plateVx) : 0;
+          const fNet = fDrive + fBrake * prox;
+          plateVx += fNet / PLATE_M * dt;
+          plateX += plateVx * dt;
+          if (plateX > 1.6) { plateX = 1.6; plateDir = -1; }
+          if (plateX < -1.6) { plateX = -1.6; plateDir = 1; }
+          if (autoPlateMove) {
+            const g = plateDir * Math.abs(smooth.plateVx);
+            if (Math.abs(plateVx) < Math.abs(g) * 0.35) plateVx = g * 0.35;
+          }
+        }
+
+        if (pHeat > 0.01) eDiss += pHeat * dt;
+        calcPhysics();
+
+        if (Math.abs(smooth.B0 - (stepPhysics.lastB0 || 0)) > 0.1) {
+          buildBArrows(); stepPhysics.lastB0 = smooth.B0;
+        }
+      }
+
+      function updateVisuals() {
+        pendGroup.rotation.z = theta;
+        if (mode === "pendulum") {
+          plateX = 0;
+          plateY = PLATE_Y_PEND;
+        }
+        plateGroup.position.set(plateX, plateY, 0);
+
+        eddyGroup.position.set(mode === "pendulum" ? magX - plateX : 0, 0.06, 0);
+
+        const glow = clamp(eddy / 0.85, 0, 1);
+        const visEddy = prox > 0.004 && eddy > 0.004;
+        const iSign = poleSign() * ((mode === "plate" ? plateVx : magVx) >= 0 ? -1 : 1);
+
+        if (showEddyRings) {
+          for (let i = 0; i < eddyRings.length; i++) {
+            const ring = eddyRings[i];
+            ring.visible = visEddy;
+            ring.material.opacity = visEddy ? (0.62 + glow * 0.38) * (0.8 + i * 0.1) : 0;
+            ring.scale.setScalar(0.95 + glow * (1.15 + i * 0.32));
+            ring.rotation.z = t * (2.8 + i * 0.55) * iSign;
+          }
+        }
+
+        if (eddyLight) {
+          eddyLight.intensity = visEddy ? 0.35 + glow * 2.8 : 0;
+          eddyLight.distance = 1.8 + glow * 1.4;
+          eddyLight.color.setHex(glow > 0.55 ? 0xfff176 : 0xfde047);
+        }
+
+        if (eddyArrowGroup) {
+          while (eddyArrowGroup.children.length) eddyArrowGroup.remove(eddyArrowGroup.children[0]);
+          if (showEddyRings && visEddy) {
+            const nArr = 14;
+            const aLen = 0.14 + glow * 0.28;
+            const op = 0.72 + glow * 0.28;
+            const flow = (t * (2.4 + eddy * 1.1)) % (Math.PI * 2);
+            for (let i = 0; i < nArr; i++) {
+              const ang = flow + (i / nArr) * Math.PI * 2;
+              const r = 0.28 + glow * 0.62;
+              const ox = Math.cos(ang) * r;
+              const oz = Math.sin(ang) * r;
+              const tan = new THREE.Vector3(-Math.sin(ang) * iSign, 0, Math.cos(ang) * iSign);
+              const arr = makeArrow(tan, new THREE.Vector3(ox, 0.03, oz), aLen, COL.eddy);
+              arr.line.material.opacity = op;
+              arr.cone.material.opacity = op;
+              arr.line.material.linewidth = 2;
+              eddyArrowGroup.add(arr);
+            }
+          }
+        }
+
+        plateMesh.material.emissiveIntensity = 0.08 + glow * 4.2;
+        plateMesh.material.emissive.setHex(glow > 0.04 ? (glow > 0.45 ? 0xffcc00 : 0xf97316) : 0x5c2d0a);
+
+        const dummy = new THREE.Object3D();
+        const cx = mode === "pendulum" ? magX - plateX : 0;
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          if (visEddy) {
+            p.ang += (2.0 + eddy * 2.4) * iSign * lastDt;
+            const swirl = 0.65 + glow * 1.15;
+            const px = cx + Math.cos(p.ang + p.phase) * p.rad * swirl;
+            const pz = Math.sin(p.ang + p.phase) * p.rad * swirl;
+            p.x = lerp(p.x, px, 0.28);
+            p.z = lerp(p.z, pz, 0.28);
+          } else {
+            p.x = lerp(p.x, p.x * 0.98, 0.05);
+            p.z = lerp(p.z, p.z * 0.98, 0.05);
+          }
+          dummy.position.set(p.x, 0.05, p.z);
+          dummy.scale.setScalar(1.1 + glow * 2.2);
+          dummy.updateMatrix();
+          electronMesh.setMatrixAt(i, dummy.matrix);
+        }
+        electronMesh.instanceMatrix.needsUpdate = true;
+        electronMesh.material.emissiveIntensity = 0.55 + glow * 2.0;
+
+        const fLen = clamp(Math.abs(fBrake) * 0.35 + 0.06, 0.06, 0.85);
+        const fDir = fBrake >= 0 ? 1 : -1;
+        pendBrakeArrow.setDirection(new THREE.Vector3(fDir, 0, 0));
+        pendBrakeArrow.setLength(fLen, fLen * 0.3, fLen * 0.15);
+        pendBrakeArrow.visible = mode === "pendulum" && Math.abs(fBrake) > 0.02;
+        plateBrakeArrow.setDirection(new THREE.Vector3(fDir, 0, 0));
+        plateBrakeArrow.setLength(fLen, fLen * 0.3, fLen * 0.15);
+        plateBrakeArrow.visible = mode === "plate" && Math.abs(fBrake) > 0.02;
+      }
+
+      let lastDt = 0.016;
+
+      function updateHUD() {
+        document.getElementById("valAmp").textContent = smooth.amp.toFixed(2) + " m";
+        document.getElementById("valPlateV").textContent = smooth.plateVx.toFixed(1);
+        document.getElementById("valSigma").textContent = smooth.sigma.toFixed(1);
+        document.getElementById("valB0").textContent = smooth.B0.toFixed(1);
+
+        document.getElementById("hudEddy").textContent = eddy.toFixed(3);
+        document.getElementById("hudFbrake").textContent = (fBrake >= 0 ? "+" : "") + fBrake.toFixed(3) + " N";
+        document.getElementById("hudVp").textContent = magVx.toFixed(3) + " m/s";
+        document.getElementById("hudVplate").textContent = plateVx.toFixed(3) + " m/s";
+        document.getElementById("hudAmp").textContent = (Math.abs(Math.sin(theta)) * PEND_LEN).toFixed(3) + " m";
+        document.getElementById("hudDPhi").textContent = (dPhiDt >= 0 ? "+" : "") + dPhiDt.toFixed(3) + " Wb/s";
+        document.getElementById("hudEkin").textContent = eKin.toFixed(3) + " J";
+        document.getElementById("hudEdiss").textContent = eDiss.toFixed(3) + " J";
+
+        document.getElementById("hudEkinBar").textContent = eKin.toFixed(2) + " J";
+        document.getElementById("hudEdissBar").textContent = eDiss.toFixed(2) + " J";
+        document.getElementById("kinBar").style.width = clamp(eKin / E_KIN_MAX * 100, 0, 100) + "%";
+        document.getElementById("dissBar").style.width = clamp(eDiss / E_DISS_MAX * 100, 0, 100) + "%";
+
+        document.getElementById("formulaLive").textContent =
+          `Ieddy=${eddy.toFixed(2)} · F=${fBrake.toFixed(2)}N · Pheat=${pHeat.toFixed(2)}W`;
+
+        let hint;
+        if (mode === "pendulum") {
+          if (prox < 0.05) hint = "振り子が銅板から離れている → 渦電流なし";
+          else if (eddy > 0.08) hint = "銅板上空で渦電流発生 → 制動力 → 振幅が減衰 · 熱に散逸";
+          else hint = "振り子を動かすと銅板近くで dΦ/dt → 渦電流";
+        } else {
+          if (prox < 0.02) hint = "銅板が往復中 · 磁石の下に来ると渦電流リングが光る";
+          else hint = "磁石下を通過中 → 黄色リング＋矢印で渦電流 · 銅板は動き続ける";
+        }
+        document.getElementById("hintText").textContent = hint;
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer || !worldGroup) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        lastDt = dt;
+        t += dt;
+
+        stepPhysics(dt);
+        updateVisuals();
+        updateHUD();
+
+        if (autoSpin && !dragging) rotY += dt * 0.08;
+
+        worldGroup.rotation.set(rotX, rotY, 0);
+        camera.position.set(0, MAG_EQUIL_Y * 0.35, zoom);
+        camera.lookAt(0, MAG_EQUIL_Y * 0.45, 0);
+        renderer.render(scene, camera);
+      }
+
+      document.getElementById("btnModePend").addEventListener("click", () => setMode("pendulum"));
+      document.getElementById("btnModePlate").addEventListener("click", () => setMode("plate"));
+      document.getElementById("slAmp").addEventListener("input", (e) => {
+        target.amp = +e.target.value * 0.01;
+        if (mode === "pendulum" && omega === 0 && Math.abs(theta) < 0.001) {
+          theta = target.amp / PEND_LEN;
+        }
+      });
+      document.getElementById("slPlateV").addEventListener("input", (e) => {
+        target.plateVx = +e.target.value * 0.1;
+        if (mode === "plate" && autoPlateMove) plateVx = target.plateVx * plateDir;
+      });
+      document.getElementById("slSigma").addEventListener("input", (e) => { target.sigma = +e.target.value * 0.02; });
+      document.getElementById("slB0").addEventListener("input", (e) => { target.B0 = +e.target.value * 0.1; });
+      document.getElementById("btnReset").addEventListener("click", () => {
+        target.amp = 0; target.plateVx = 1.5; target.sigma = 1.0; target.B0 = 2;
+        smooth.amp = 0; smooth.plateVx = 1.5; smooth.sigma = 1.0; smooth.B0 = 2;
+        document.getElementById("slAmp").value = 0;
+        document.getElementById("slPlateV").value = 15;
+        document.getElementById("slSigma").value = 50;
+        document.getElementById("slB0").value = 20;
+        resetSim();
+        setMode(mode);
+      });
+      function toggleMagnetPolarity() {
+        magFlipped = !magFlipped;
+        applyMagnetPolarity();
+      }
+
+      const btnFlipNS = document.getElementById("btnFlipNS");
+      if (btnFlipNS) btnFlipNS.addEventListener("click", toggleMagnetPolarity);
+      document.getElementById("btnSpin").addEventListener("click", function () {
+        autoSpin = !autoSpin; this.classList.toggle("active", autoSpin);
+      });
+      document.getElementById("btnEddyRings").addEventListener("click", function () {
+        showEddyRings = !showEddyRings; this.classList.toggle("active", showEddyRings);
+      });
+      document.getElementById("btnAutoPlate").addEventListener("click", function () {
+        autoPlateMove = !autoPlateMove;
+        this.classList.toggle("active", autoPlateMove);
+        if (autoPlateMove && mode === "plate") plateVx = target.plateVx * plateDir;
+      });
+      document.getElementById("btnResetView").addEventListener("click", resetView);
+
+      try {
+        initThree();
+        setMode("pendulum");
+        updateVisuals();
+        document.getElementById("btnAutoPlate").style.display = "none";
+        updateHUD();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        showSimError(err.message);
+      }
+    })();
+  </script>
+</body>
+</html>

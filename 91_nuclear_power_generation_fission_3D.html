@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 原子力発電 核分裂→熱→蒸気→発電 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #061018 45%, #0a1a28 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.35), rgba(56,189,248,0.35));
+      border: 1px solid rgba(34,211,238,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #67e8f9; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #22d3ee; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #cffafe; background: rgba(34,211,238,0.14);
+      border: 1px solid rgba(34,211,238,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(34, 211, 238, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #67e8f9; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(34,211,238,0.1));
+      border: 1px solid rgba(34,211,238,0.32);
+    }
+    .formula-main { font-size: 0.84rem; font-weight: 800; color: #ecfeff; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(34,211,238,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #ecfeff; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(420px, 46dvh); min-height: 320px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas {
+      position: absolute; top: 0; left: 0; z-index: 0;
+      display: block; width: 100% !important; height: 100% !important;
+    }
+    #zoneLabels {
+      position: absolute; top: 8px; left: 0; right: 0; z-index: 4; pointer-events: none;
+      display: flex; justify-content: space-around; padding: 0 8px;
+    }
+    #zoneLabels span {
+      font-size: 0.58rem; font-weight: 800; color: #64748b; padding: 4px 8px;
+      border-radius: 6px; background: rgba(2,6,23,0.7); border: 1px solid rgba(148,163,184,0.2);
+    }
+    #zoneLabels span.active { color: #67e8f9; border-color: rgba(34,211,238,0.5); }
+    #rxBanner {
+      position: absolute; top: 28px; left: 0; right: 0; z-index: 6; pointer-events: none;
+      display: none; padding: 8px 14px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.35) 85%, transparent 100%);
+      text-align: center;
+    }
+    #rxBanner.show { display: block; }
+    #rxBanner .eq { font-size: clamp(0.82rem, 2.8vw, 1.1rem); font-weight: 800; color: #fff; }
+    #rxBanner .eq .hl { color: #fde047; }
+    #rxBanner .eq .arr { color: #22d3ee; margin: 0 0.2em; }
+    #rxBanner .en { font-size: 0.88rem; font-weight: 800; color: #4ade80; margin-top: 3px; }
+    #animPhase {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 5; pointer-events: none; padding: 8px 16px; border-radius: 10px;
+      background: rgba(2,6,23,0.94); border: 1px solid rgba(34,211,238,0.55);
+      font-size: 0.76rem; font-weight: 800; color: #67e8f9; white-space: nowrap;
+    }
+    #powerMeter {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      z-index: 4; pointer-events: none; padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(74,222,128,0.5);
+      text-align: center; min-width: 96px;
+    }
+    #powerMeter .pm-n { font-size: 1.5rem; font-weight: 800; color: #4ade80; line-height: 1; }
+    #powerMeter .pm-l { font-size: 0.55rem; color: #94a3b8; font-weight: 700; margin-top: 4px; }
+    #massPanel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); background: #0A0A0A;
+    }
+    .mass-title { font-size: 0.72rem; font-weight: 800; color: #67e8f9; margin-bottom: 8px; }
+    .mass-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+    .mass-box { padding: 8px 12px; border-radius: 10px; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.3); }
+    .mass-box.defect { border-color: rgba(251,191,36,0.6); background: rgba(120,53,15,0.2); }
+    .mass-box.energy { border-color: rgba(74,222,128,0.6); background: rgba(20,83,45,0.2); }
+    .mass-box .ml { font-size: 0.58rem; color: #94a3b8; font-weight: 700; }
+    .mass-box .mv { font-size: 0.88rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .mass-box.energy .mv { color: #4ade80; font-size: 1rem; }
+    .mass-arrow { color: #22d3ee; font-size: 1rem; }
+    #heatGraph {
+      padding: 8px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); background: #0A0A0A;
+    }
+    #heatGraph canvas { display: block; width: 100%; height: 90px; border-radius: 8px; }
+    .graph-title { font-size: 0.68rem; font-weight: 800; color: #67e8f9; margin-bottom: 6px; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 8; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 12px; border-radius: 10px; background: rgba(2,6,23,0.96);
+      border: 1px solid rgba(34,211,238,0.7); color: #ecfeff;
+      font-size: 0.68rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+    }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 68px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.64rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(34,211,238,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(34,211,238,0.22); color: #ecfeff; border-color: rgba(34,211,238,0.6); font-weight: 800; }
+    .act-btn.active { background: rgba(74,222,128,0.2); color: #86efac; border-color: rgba(74,222,128,0.5); }
+    .act-btn.danger { background: rgba(248,113,113,0.18); color: #fca5a5; border-color: rgba(248,113,113,0.45); }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(34,211,238,0.2);
+      display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: min(820px, 88dvh);
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #67e8f9; }
+    .hud-section { font-size: 0.66rem; font-weight: 800; color: #22d3ee; margin: 4px 0 2px; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(34,211,238,0.45); background: rgba(8,47,73,0.25); }
+    .hud-card.energy { border-color: rgba(74,222,128,0.45); background: rgba(20,83,45,0.12); }
+    .hud-card.heat { border-color: rgba(248,113,113,0.45); background: rgba(127,29,29,0.12); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hud-card .val.big { font-size: 1rem; color: #fde68a; }
+    .hud-card.energy .val.big { color: #4ade80; }
+    .hud-card.heat .val.big { color: #f87171; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #22d3ee; }
+    .hint-box {
+      padding: 12px 14px; border-radius: 12px; font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.22);
+    }
+    .edu-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; line-height: 1.7; color: #cbd5e1; }
+    .edu-list li { margin-bottom: 6px; }
+    .flow-diagram {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px;
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.5);
+      border: 1px solid rgba(34,211,238,0.2); font-size: 0.72rem; font-weight: 700; color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    .flow-diagram .step { color: #67e8f9; }
+    .flow-diagram .arrow { color: #22d3ee; }
+    .guide-bar {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; justify-content: center;
+    }
+    .guide-step {
+      flex: 1; min-width: 100px; padding: 8px 10px; border-radius: 10px; text-align: center;
+      background: rgba(15,23,42,0.6); border: 1px solid rgba(148,163,184,0.25);
+      font-size: 0.68rem; font-weight: 700; color: #64748b; transition: all 0.35s;
+    }
+    .guide-step .gs-num { display: block; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
+    .guide-step.active { color: #ecfeff; border-color: rgba(34,211,238,0.7); background: rgba(8,47,73,0.5); box-shadow: 0 0 14px rgba(34,211,238,0.25); }
+    .guide-step.done { color: #86efac; border-color: rgba(74,222,128,0.5); background: rgba(20,83,45,0.2); }
+    .guide-callout {
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 10px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.15), rgba(74,222,128,0.1));
+      border: 2px solid rgba(34,211,238,0.5);
+      font-size: 0.82rem; font-weight: 700; color: #ecfeff; line-height: 1.55; text-align: center;
+      animation: calloutPulse 2s ease-in-out infinite;
+    }
+    @keyframes calloutPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(34,211,238,0.3); } 50% { box-shadow: 0 0 20px 4px rgba(34,211,238,0.2); } }
+    .guide-callout strong { color: #fde047; }
+    #field3dWrap { height: min(460px, 50dvh); min-height: 340px; }
+    #flowArrows {
+      position: absolute; inset: 0; z-index: 3; pointer-events: none;
+      display: flex; align-items: center; justify-content: center; gap: 0;
+    }
+    .flow-arrow-seg {
+      display: flex; align-items: center; gap: 2px; opacity: 0.25; transition: opacity 0.5s, transform 0.5s;
+    }
+    .flow-arrow-seg.lit { opacity: 1; transform: scale(1.05); }
+    .flow-arrow-seg .fa-box {
+      padding: 5px 8px; border-radius: 8px; font-size: 0.62rem; font-weight: 800;
+      background: rgba(2,6,23,0.85); border: 1px solid rgba(148,163,184,0.3); color: #94a3b8;
+      white-space: nowrap;
+    }
+    .flow-arrow-seg.lit .fa-box { color: #ecfeff; border-color: rgba(34,211,238,0.6); }
+    .flow-arrow-seg.lit.heat .fa-box { border-color: rgba(248,113,113,0.7); color: #fca5a5; }
+    .flow-arrow-seg.lit.steam .fa-box { border-color: rgba(56,189,248,0.7); color: #7dd3fc; }
+    .flow-arrow-seg.lit.power .fa-box { border-color: rgba(74,222,128,0.7); color: #86efac; }
+    .fa-chev { color: #22d3ee; font-size: 1rem; font-weight: 800; animation: chevBlink 1.2s ease-in-out infinite; }
+    .flow-arrow-seg.lit .fa-chev { color: #4ade80; }
+    @keyframes chevBlink { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+    #eventFlash {
+      position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%) scale(0.8);
+      z-index: 7; pointer-events: none; padding: 14px 28px; border-radius: 14px;
+      background: rgba(0,0,0,0.88); border: 2px solid rgba(74,222,128,0.7);
+      font-size: clamp(1.2rem, 4vw, 1.8rem); font-weight: 800; color: #4ade80;
+      opacity: 0; transition: opacity 0.25s, transform 0.25s;
+    }
+    #eventFlash.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    #eventFlash.heat { color: #f87171; border-color: rgba(248,113,113,0.7); }
+    #eventFlash.steam { color: #7dd3fc; border-color: rgba(56,189,248,0.7); }
+    #eventFlash.fission { color: #fde047; border-color: rgba(253,224,71,0.7); }
+    #heatBar {
+      position: absolute; left: 10px; bottom: 52px; z-index: 4; pointer-events: none;
+      width: 14px; height: 120px; border-radius: 7px;
+      background: rgba(15,23,42,0.9); border: 1px solid rgba(248,113,113,0.4); overflow: hidden;
+    }
+    #heatBarFill {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
+      background: linear-gradient(0deg, #f87171, #fde047, #ef4444);
+      transition: height 0.3s; border-radius: 0 0 6px 6px;
+    }
+    #heatBarLbl { position: absolute; left: 2px; top: -18px; font-size: 0.5rem; font-weight: 800; color: #f87171; writing-mode: vertical-rl; }
+    #bigFission {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-70%);
+      z-index: 4; pointer-events: none; padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(253,224,71,0.5); text-align: center;
+    }
+    #bigFission .bf-n { font-size: 1.8rem; font-weight: 800; color: #fde047; line-height: 1; }
+    #bigFission .bf-l { font-size: 0.55rem; color: #94a3b8; font-weight: 700; margin-top: 4px; }
+    #animPhase {
+      font-size: 0.82rem; padding: 10px 20px; max-width: 92%; white-space: normal; text-align: center;
+      border-width: 2px; box-shadow: 0 0 16px rgba(34,211,238,0.2);
+    }
+    #animPhase .phase-num { display: inline-block; background: #22d3ee; color: #0f172a; border-radius: 6px; padding: 2px 8px; margin-right: 6px; font-size: 0.75rem; }
+    .act-btn.pulse { animation: btnPulse 1.2s ease-in-out infinite; }
+    @keyframes btnPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,211,238,0.5); }
+      50% { box-shadow: 0 0 16px 4px rgba(34,211,238,0.4); transform: scale(1.03); }
+    }
+    .act-btn.guided { background: linear-gradient(135deg, rgba(34,211,238,0.35), rgba(74,222,128,0.25)); color: #fff; border-color: #4ade80; font-size: 0.72rem; min-width: 120px; }
+    #zoneLabels span { font-size: 0.65rem; padding: 5px 10px; }
+    #zoneLabels span.lit { color: #fde047; border-color: rgba(253,224,71,0.6); box-shadow: 0 0 10px rgba(253,224,71,0.3); }
+    #gearSpinBadge {
+      position: absolute; right: 118px; top: 50%; transform: translateY(-90%);
+      z-index: 4; pointer-events: none; padding: 6px 10px; border-radius: 8px;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(251,191,36,0.55);
+      font-size: 0.62rem; font-weight: 800; color: #fde047; opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #gearSpinBadge.show { opacity: 1; animation: gearBlink 0.8s ease-in-out infinite; }
+    @keyframes gearBlink { 0%,100% { color: #fde047; } 50% { color: #4ade80; } }
+    .power-analogy {
+      padding: 10px 12px; border-radius: 10px; margin-top: 2px;
+      background: linear-gradient(135deg, rgba(74,222,128,0.12), rgba(34,211,238,0.08));
+      border: 1px solid rgba(74,222,128,0.45);
+    }
+    .power-analogy .pa-main { font-size: 0.88rem; font-weight: 800; color: #86efac; line-height: 1.4; }
+    .power-analogy .pa-sub { font-size: 0.68rem; color: #94a3b8; margin-top: 5px; line-height: 1.5; }
+    .power-analogy .pa-scale { font-size: 0.62rem; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(148,163,184,0.2); line-height: 1.55; }
+    .power-analogy .pa-note {
+      font-size: 0.62rem; color: #fde68a; font-weight: 700; margin-bottom: 6px; padding: 6px 8px;
+      border-radius: 6px; background: rgba(120,53,15,0.25); border: 1px solid rgba(251,191,36,0.35);
+    }
+    .power-analogy .pa-row { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(148,163,184,0.15); }
+    .power-analogy .pa-row .pa-lbl { font-size: 0.58rem; color: #94a3b8; font-weight: 700; }
+    .power-analogy .pa-row .pa-val { font-size: 0.72rem; color: #e2e8f0; font-weight: 700; margin-top: 2px; line-height: 1.45; }
+    #powerAnalogyOverlay {
+      position: absolute; right: 10px; bottom: 52px; z-index: 4; pointer-events: none;
+      max-width: 140px; padding: 8px 10px; border-radius: 9px;
+      background: rgba(2,6,23,0.94); border: 1px solid rgba(74,222,128,0.45);
+      font-size: 0.6rem; font-weight: 700; color: #86efac; line-height: 1.45;
+    }
+    #powerAnalogyOverlay .pao-sub { color: #94a3b8; font-size: 0.55rem; margin-top: 3px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚛</div>
+      <p class="chapter-label">第28章 ⑨ — 原子力発電</p>
+      <h2>原子力発電 — 核分裂→熱→蒸気→タービン→発電 3D</h2>
+      <p class="tagline">²³⁵U分裂 · 連鎖反応 · 制御棒 · 冷却材 · 発電量</p>
+      <a id="back" href="00_folder_atom.html">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">²³⁵U + n → ⁹²Kr + ¹⁴¹Ba + 3n + <strong>E=Δmc²</strong> → 熱 → 蒸気 → タービン → <strong>電力</strong></div>
+        <div class="formula-sub">原子力発電は「巨大な熱源」— 制御棒と冷却材で安全に運転</div>
+      </div>
+
+      <div class="flow-diagram">
+        <span class="step">核分裂</span><span class="arrow">→</span>
+        <span class="step">熱</span><span class="arrow">→</span>
+        <span class="step">蒸気</span><span class="arrow">→</span>
+        <span class="step">タービン</span><span class="arrow">→</span>
+        <span class="step">発電機</span><span class="arrow">→</span>
+        <span class="step" style="color:#4ade80">電力</span>
+      </div>
+
+      <div class="guide-bar" id="guideBar">
+        <div class="guide-step active" data-step="1"><span class="gs-num">①</span>核分裂</div>
+        <div class="guide-step" data-step="2"><span class="gs-num">②</span>連鎖反応</div>
+        <div class="guide-step" data-step="3"><span class="gs-num">③</span>熱・蒸気</div>
+        <div class="guide-step" data-step="4"><span class="gs-num">④</span>タービン</div>
+        <div class="guide-step" data-step="5"><span class="gs-num">⑤</span>発電</div>
+      </div>
+      <div class="guide-callout" id="guideCallout">
+        👇 <strong>「はじめから体験する」</strong> を押すと、原子力発電の流れを順番に見られます
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">原子炉 · 連鎖反応 · 蒸気タービン発電</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>陽子</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>中性子</span>
+              <span><i class="color-chip" style="background:#22d3ee;color:#22d3ee"></i>冷却水</span>
+              <span><i class="color-chip" style="background:#64748b;color:#64748b"></i>制御棒</span>
+              <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>歯車</span>
+              <span><i class="color-chip" style="background:#4ade80;color:#4ade80"></i>発電</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">原子力発電\n待機中</div>
+              <div id="zoneLabels">
+                <span id="zoneReactor">①原子炉</span>
+                <span id="zoneCore">②炉心</span>
+                <span id="zoneTurbine">③タービン</span>
+              </div>
+              <div id="flowArrows">
+                <div class="flow-arrow-seg" id="faSeg1"><span class="fa-box">核分裂</span><span class="fa-chev">›</span></div>
+                <div class="flow-arrow-seg heat" id="faSeg2"><span class="fa-box">熱</span><span class="fa-chev">›</span></div>
+                <div class="flow-arrow-seg steam" id="faSeg3"><span class="fa-box">蒸気</span><span class="fa-chev">›</span></div>
+                <div class="flow-arrow-seg power" id="faSeg4"><span class="fa-box">発電</span></div>
+              </div>
+              <div id="heatBar"><span id="heatBarLbl">熱</span><div id="heatBarFill"></div></div>
+              <div id="bigFission">
+                <div class="bf-n" id="bfCount">0</div>
+                <div class="bf-l">分裂回数</div>
+              </div>
+              <div id="eventFlash"></div>
+              <div id="powerMeter">
+                <div id="gearSpinBadge">⚙ 歯車回転中</div>
+                <div class="pm-n" id="overlayMW">0.0</div>
+                <div class="pm-l">発電量 MW</div>
+                <div class="pm-n" id="overlayRPM" style="font-size:1rem;margin-top:6px;color:#67e8f9">0</div>
+                <div class="pm-l">RPM</div>
+              </div>
+              <div id="powerAnalogyOverlay">
+                <div id="paoMain">🔌 発電待ち</div>
+                <div class="pao-sub" id="paoSub">タービン起動で例えが表示されます</div>
+              </div>
+              <div id="rxBanner">
+                <div class="eq" id="rxEq"></div>
+                <div class="en" id="rxEn"></div>
+              </div>
+              <div id="animPhase"><span class="phase-num">START</span>「はじめから体験する」で原子力発電の流れを見よう</div>
+            </div>
+            <div id="massPanel">
+              <div class="mass-title">E = mc² — 1回の分裂あたりの質量→エネルギー</div>
+              <div class="mass-flow">
+                <div class="mass-box"><div class="ml">m<sub>初期</sub></div><div class="mv" id="mInit">— u</div></div>
+                <span class="mass-arrow">→</span>
+                <div class="mass-box"><div class="ml">m<sub>最終</sub></div><div class="mv" id="mFinal">— u</div></div>
+                <span class="mass-arrow">Δm=</span>
+                <div class="mass-box defect"><div class="ml">質量欠損</div><div class="mv" id="mDefect">— u</div></div>
+                <span class="mass-arrow">E=</span>
+                <div class="mass-box energy"><div class="ml">Δm·c²</div><div class="mv" id="mEnergy">— MeV</div></div>
+                <div class="mass-box energy"><div class="ml">≈ J</div><div class="mv" id="mEnergyJ">— J</div></div>
+              </div>
+            </div>
+            <div id="heatGraph">
+              <div class="graph-title">発電量グラフ（時間 → MW）— 核分裂数と連動</div>
+              <canvas id="powerCanvas"></canvas>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn guided pulse" id="btnGuided">▶ はじめから体験する</button>
+              <button type="button" class="act-btn primary" id="btnFission">核分裂開始</button>
+              <button type="button" class="act-btn primary" id="btnChain">連鎖反応 ON/OFF</button>
+              <button type="button" class="act-btn danger" id="btnRodIn">制御棒を挿入</button>
+              <button type="button" class="act-btn" id="btnRodOut">制御棒を引き抜く</button>
+              <button type="button" class="act-btn" id="btnCoolUp">冷却材 UP</button>
+              <button type="button" class="act-btn" id="btnCoolDn">冷却材 DOWN</button>
+              <button type="button" class="act-btn" id="btnTurbine">タービン起動</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnPause" class="active">一時停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">原子力発電 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">運転状態</div>
+              <div class="val big" id="hudMode">待機中</div>
+            </div>
+            <p class="hud-section">核分裂</p>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">核分裂数</div><div class="val big" id="hudFissions">0</div></div>
+              <div class="hud-card"><div class="lbl">中性子数</div><div class="val" id="hudNeutrons">0</div></div>
+              <div class="hud-card"><div class="lbl">燃料残量</div><div class="val" id="hudFuel">100%</div></div>
+              <div class="hud-card"><div class="lbl">反応度</div><div class="val" id="hudReactivity">0%</div></div>
+            </div>
+            <p class="hud-section">質量・エネルギー</p>
+            <div class="hud-card highlight"><div class="lbl">質量欠損 Δm</div><div class="val" id="hudDm">—</div></div>
+            <div class="hud-card energy"><div class="lbl">E = Δmc² (MeV)</div><div class="val big" id="hudEMeV">—</div></div>
+            <div class="hud-card energy"><div class="lbl">累積エネルギー (J)</div><div class="val" id="hudEJ">0</div></div>
+            <p class="hud-section">制御・冷却</p>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">制御棒挿入率</div><div class="val" id="hudRod">0%</div></div>
+              <div class="hud-card"><div class="lbl">中性子吸収</div><div class="val" id="hudAbsorb">0%</div></div>
+            </div>
+            <p class="hud-section">熱・蒸気・発電</p>
+              <div class="hud-card"><div class="lbl">冷却材流量</div><div class="val big" id="hudCoolant">50%</div></div>
+              <div class="hud-card heat"><div class="lbl">水温</div><div class="val big" id="hudTemp">25 °C</div></div>
+            <div class="hud-card heat"><div class="lbl">蒸気圧</div><div class="val" id="hudPressure">0.1 MPa</div></div>
+            <div class="hud-card"><div class="lbl">タービン回転数</div><div class="val big" id="hudRPM">0 RPM</div></div>
+            <div class="hud-card energy"><div class="lbl">瞬時出力（連続運転のイメージ）</div><div class="val big" id="hudMW">0.0 MW</div></div>
+            <div class="power-analogy" id="powerAnalogyBox">
+              <div class="pa-note">⚠ MWは「1回きり」ではなく、ずっと発電し続けたときの出力（速度計のようなもの）です</div>
+              <div class="pa-row">
+                <div class="pa-lbl">① 1回の分裂だけ（現実の物理）</div>
+                <div class="pa-val" id="paOneFission">約200 MeV → 電球を一瞬も点けられないほど微小</div>
+              </div>
+              <div class="pa-row">
+                <div class="pa-lbl">② 分裂エネルギー合計（物理計算）</div>
+                <div class="pa-val" id="paRealTotal">0 回分裂 → ほぼ 0 kWh</div>
+              </div>
+              <div class="pa-row">
+                <div class="pa-lbl">③ 連続運転の出力（シミュ・例え）</div>
+                <div class="pa-main" id="paMain">🔌 まだほとんど発電していない</div>
+                <div class="pa-sub" id="paSub">タービン起動＋連鎖反応で上がります（あくまでイメージ拡大）</div>
+              </div>
+              <div class="pa-row">
+                <div class="pa-lbl">④ この体験の発電累積（シミュ）</div>
+                <div class="pa-val" id="paSession">0 kWh（まだ数秒分の電気にも満たない）</div>
+              </div>
+              <div class="pa-scale" id="paScale">現実：原発1基800MWは毎秒約10²⁰回の分裂を連続して維持</div>
+            </div>
+            <p class="hud-section">コントロール</p>
+            <div class="slider-row">
+              <label>制御棒挿入率 <span id="lblRod">0%</span></label>
+              <input type="range" id="slRod" min="0" max="100" step="1" value="0">
+            </div>
+            <div class="slider-row">
+              <label>冷却材流量 <span id="lblCool">50%</span></label>
+              <input type="range" id="slCool" min="10" max="100" step="5" value="50">
+            </div>
+            <div class="slider-row">
+              <label>燃料濃度 <span id="lblFuel">3.0%</span></label>
+              <input type="range" id="slFuel" min="1" max="5" step="0.1" value="3">
+            </div>
+            <div class="slider-row">
+              <label>連鎖反応速度 <span id="lblChain">1.0×</span></label>
+              <input type="range" id="slChain" min="0.3" max="3" step="0.1" value="1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>使い方（まずここから！）</h3>
+      <div class="hint-box" id="hintText">
+        <strong>▶ はじめから体験する</strong> を押すだけで、①核分裂→②連鎖反応→③熱・蒸気→④タービン→⑤発電 を自動で見られます。<br><br>
+        <strong>画面上の見方：</strong><br>
+        · 中央の<strong>炉心</strong>で核分裂（光の爆発＋中性子が飛ぶ）<br>
+        · 左の<strong>原子炉</strong>の水が赤く光る＝熱が伝わっている<br>
+        · 左の<strong>熱バー</strong>が上昇＝分裂が続いている<br>
+        · 上の<strong>流れ矢印</strong>が光る＝今どの段階か<br>
+        · 右の<strong>タービン</strong>が回転＋発電量MWが上昇＝電力に変換<br>
+        · <strong>「どれくらいの電気？」</strong>欄で世帯数・電球数・原発規模の例えを確認<br><br>
+        体験後は <strong>制御棒を挿入</strong> で発電量が下がるのを試してみよう。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>原子力発電の本質は<strong>核分裂の熱</strong>を取り出すこと（化学反応ではない）</li>
+        <li><strong>制御棒</strong>（B, Cd）は中性子を吸収 → 連鎖反応を抑制</li>
+        <li><strong>冷却材</strong>（水）が熱を運び、炉心を冷やす（過熱防止）</li>
+        <li><strong>1回の分裂だけ</strong>では電気はほぼゼロ — 天文学的な回数の<strong>連続分裂</strong>が必要</li>
+        <li>表示の MW は<strong>瞬時出力</strong>（速度計）。1回きりのエネルギー量ではない</li>
+        <li>1 MW = 1000 kW ≒ 一般家庭<strong>約2000世帯</strong>が同時に使う電力の目安（連続時）</li>
+        <li>実際の原子力発電所1基は<strong>約800〜1000 MW</strong>を何年も維持</li>
+        <li>発電量は核分裂数・反応度・タービン運転に連動する</li>
+        <li>安全運転には制御棒と冷却材の<strong>両方</strong>が不可欠</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const MP = 1.007276, MN = 1.008665, MEV_PER_U = 931.494, J_PER_MEV = 1.60218e-13;
+      const FISSION = {
+        eqHtml: '<span class="hl">²³⁵U</span> + n <span class="arr">→</span> <span class="hl">⁹²Kr</span> + <span class="hl">¹⁴¹Ba</span> + 3n + E',
+        reactants: [235.043930, 1.008665],
+        products: [91.926156, 140.914411, 1.008665, 1.008665, 1.008665],
+        ePerFission: 200.8,
+      };
+      const MAX_VIS = 18;
+      const FUEL_POSITIONS = [
+        [-0.35, -0.6, 0], [0, -0.6, 0], [0.35, -0.6, 0],
+        [-0.35, 0, 0], [0, 0, 0], [0.35, 0, 0],
+        [-0.35, 0.6, 0], [0, 0.6, 0], [0.35, 0.6, 0],
+      ];
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const powerCanvas = document.getElementById("powerCanvas");
+      const pCtx = powerCanvas.getContext("2d");
+
+      let paused = false, chainOn = false, turbineOn = false, simRunning = false;
+      let guidedMode = false, guideStep = 0, guideTimers = [];
+      let rotX = 0.2, rotY = 0.45, zoom = 14, dragging = false, lx = 0, ly = 0;
+      let targetRotX = 0.2, targetRotY = 0.45, targetZoom = 14;
+      let simTime = 0, fissionCount = 0, totalJ = 0, fuelRemain = 100;
+      let rodInsert = 0, rodTarget = 0, coolantFlow = 0.5, fuelEnrich = 3, chainSpd = 1;
+      let waterTemp = 25, steamPressure = 0.1, turbineRPM = 0, powerMW = 0, displayMW = 0;
+      let reactivity = 0, neutronsAbsorbed = 0, chainTimer = 0, heatLevel = 0;
+
+      let fuelCells = [], particles = [], bursts = [], steamParts = [], heatWaves = [], coolantParticles = [];
+      let reactorGroup, coreGroup, turbineGroup, controlRods = [], coolantMesh, reactorHeatLight;
+      let turbineBlades, generatorMesh, genGlow, steamPipe, turbineShaft;
+      let turbineMainGear, generatorPinionGear, generatorGearGroup;
+      let turbineSpinAngle = 0, displayCoolant = 50, sessionKWh = 0;
+      const GEAR_RATIO = 14 / 8;
+      let scene, camera, renderer, worldGroup;
+
+      const powerHistory = [];
+      const MAX_HIST = 180;
+
+      function fmtNum(v, d) { return Number.isFinite(v) ? v.toFixed(d) : "—"; }
+      function fmtSci(v) {
+        if (!Number.isFinite(v)) return "—";
+        if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(2) + " M";
+        if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(2) + " k";
+        return v.toExponential(2);
+      }
+      function calcFission() {
+        const mInit = FISSION.reactants.reduce((a, b) => a + b, 0);
+        const mFinal = FISSION.products.reduce((a, b) => a + b, 0);
+        const dm = mInit - mFinal;
+        const eMeV = dm * MEV_PER_U;
+        const eJ = eMeV * J_PER_MEV;
+        return { mInit, mFinal, dm, eMeV, eJ };
+      }
+
+      function setPhase(num, t) {
+        document.getElementById("animPhase").innerHTML = '<span class="phase-num">' + num + '</span>' + t;
+      }
+      function flashEvent(text, type) {
+        const el = document.getElementById("eventFlash");
+        el.textContent = text;
+        el.className = "show" + (type ? " " + type : "");
+        clearTimeout(flashEvent._t);
+        flashEvent._t = setTimeout(() => { el.className = ""; }, 1400);
+      }
+      function setGuideStep(n, msg) {
+        guideStep = n;
+        document.querySelectorAll(".guide-step").forEach((s) => {
+          const sn = +s.dataset.step;
+          s.classList.toggle("active", sn === n);
+          s.classList.toggle("done", sn < n);
+        });
+        ["faSeg1","faSeg2","faSeg3","faSeg4"].forEach((id, i) => {
+          document.getElementById(id).classList.toggle("lit", i < n);
+        });
+        ["zoneReactor","zoneCore","zoneTurbine"].forEach((id, i) => {
+          const lit = (n === 1 && i <= 1) || (n === 2 && i <= 1) || (n === 3 && i === 0) || (n >= 4 && i === 2) || (n === 3 && i === 1);
+          document.getElementById(id).classList.toggle("lit", lit || (n >= 5 && i === 2));
+        });
+        if (msg) document.getElementById("guideCallout").innerHTML = msg;
+      }
+      function pulseBtn(id) {
+        document.querySelectorAll(".act-btn.pulse").forEach((b) => b.classList.remove("pulse"));
+        if (!id) return;
+        const b = document.getElementById(id);
+        if (b) b.classList.add("pulse");
+      }
+      function focusCamera(zone, zoomVal) {
+        if (dragging) return;
+        if (zone === "reactor") { targetRotY = 0.85; targetRotX = 0.15; targetZoom = zoomVal || 11; }
+        else if (zone === "core") { targetRotY = 0.45; targetRotX = 0.2; targetZoom = zoomVal || 10; }
+        else if (zone === "turbine") { targetRotY = -0.35; targetRotX = 0.15; targetZoom = zoomVal || 11; }
+        else { targetRotY = 0.45; targetRotX = 0.2; targetZoom = zoomVal || 14; }
+      }
+      function showBanner(en) {
+        document.getElementById("rxEq").innerHTML = FISSION.eqHtml;
+        document.getElementById("rxEn").textContent = "放出 E ≈ " + fmtNum(en, 1) + " MeV (" + fmtSci(en * J_PER_MEV) + " J)";
+        document.getElementById("rxBanner").classList.add("show");
+      }
+      function hideBanner() { document.getElementById("rxBanner").classList.remove("show"); }
+
+      function updateMassUI(d) {
+        document.getElementById("mInit").textContent = fmtNum(d.mInit, 6) + " u";
+        document.getElementById("mFinal").textContent = fmtNum(d.mFinal, 6) + " u";
+        document.getElementById("mDefect").textContent = fmtNum(d.dm, 6) + " u";
+        document.getElementById("mEnergy").textContent = fmtNum(d.eMeV, 1) + " MeV";
+        document.getElementById("mEnergyJ").textContent = fmtSci(d.eJ) + " J";
+        document.getElementById("hudDm").textContent = fmtNum(d.dm, 6) + " u";
+        document.getElementById("hudEMeV").textContent = fmtNum(d.eMeV, 1) + " MeV";
+      }
+
+      const HOME_AVG_MW = 0.0005;
+      const BULB60_MW = 0.00006;
+      const REACTOR_REF_MW = 800;
+      const HOME_DAILY_KWH = 10;
+
+      const FISSION_KWH = (200.8 * J_PER_MEV) / 3.6e6;
+      const BULB60_KW = 0.06;
+
+      function fmtKWh(kwh) {
+        if (!Number.isFinite(kwh) || kwh < 1e-12) return "ほぼ 0 kWh";
+        if (kwh < 0.000001) return kwh.toExponential(1) + " kWh";
+        if (kwh < 0.01) return fmtNum(kwh, 6) + " kWh";
+        if (kwh < 1) return fmtNum(kwh, 4) + " kWh";
+        return fmtNum(kwh, 2) + " kWh";
+      }
+
+      function getOneFissionText() {
+        const j = 200.8 * J_PER_MEV;
+        const bulbSec = j / 60;
+        return "約200 MeV（" + fmtSci(j) + " J）→ 60W電球なら " + bulbSec.toExponential(1) + " 秒分にも満たない";
+      }
+
+      function getRealTotalText() {
+        const kwh = totalJ / 3.6e6;
+        const bulbHours = (kwh * 1000) / BULB60_KW;
+        if (fissionCount === 0) return "0 回分裂 → ほぼ 0 kWh";
+        let t = fissionCount + " 回分裂の合計 → " + fmtKWh(kwh);
+        if (kwh < 0.001) t += "（現実ではまだごく微量）";
+        else if (bulbHours < 1) t += " ≒ 電球" + fmtNum(bulbHours * 3600, 1) + "秒分";
+        else t += " ≒ 電球" + fmtNum(bulbHours, 2) + "時間分";
+        return t;
+      }
+
+      function getSessionText() {
+        const kwh = sessionKWh;
+        const homesSec = (kwh / HOME_DAILY_KWH) * 86400;
+        let t = fmtKWh(kwh) + "（この体験でタービンが出した電力の積み上げ）";
+        if (kwh < 0.0001) t += " — まだ数秒の電気にも満たない";
+        else if (kwh < 0.01) t += " — 家庭が数分使う程度";
+        else if (kwh < 1) t += " — 家庭が約" + Math.round(kwh / HOME_DAILY_KWH * 100) / 100 + "日分に相当";
+        return t;
+      }
+
+      function getPowerAnalogy(mw) {
+        if (!Number.isFinite(mw) || mw < 0.00005 || !turbineOn) {
+          return {
+            main: "🔌 タービン停止中（出力ゼロ）",
+            sub: "連続運転のイメージはタービン起動後に表示",
+            scale: "現実：原発1基800MWは毎秒約10²⁰回の分裂を連続して維持",
+          };
+        }
+        const kW = mw * 1000;
+        const homes = mw / HOME_AVG_MW;
+        const bulbs = mw / BULB60_MW;
+        const pctReactor = (mw / REACTOR_REF_MW) * 100;
+        const kWhPerHour = mw * 1000;
+        const homesDay = kWhPerHour / HOME_DAILY_KWH;
+
+        if (mw < 0.008) {
+          return {
+            main: "💡 電球" + Math.max(1, Math.round(bulbs)) + "個分（" + fmtNum(kW, 1) + " kW）",
+            sub: "※シミュ上の拡大表示。分裂" + fissionCount + "回だけではここまでにはならない",
+            scale: "この出力を1時間続けても " + fmtKWh(kWhPerHour) + "（シミュ累積は④を参照）",
+          };
+        }
+        if (mw < 0.5) {
+          return {
+            main: "🏠 約" + Math.max(1, Math.round(homes)) + "世帯分（" + fmtNum(kW, 0) + " kW）",
+            sub: "※連続運転のイメージ。原発1基(800MW)の" + fmtNum(pctReactor, 2) + "%",
+            scale: "1時間続けたら ≒ " + Math.max(1, Math.round(homesDay)) + "世帯の1日分（10kWh/日）",
+          };
+        }
+        if (mw < 30) {
+          return {
+            main: "🏘️ 約" + Math.round(homes).toLocaleString() + "世帯分（" + fmtNum(mw, 1) + " MW）",
+            sub: "※連続運転のイメージ。原発1基の " + fmtNum(pctReactor, 1) + "%",
+            scale: "1時間で約" + Math.round(homesDay).toLocaleString() + "世帯の1日分",
+          };
+        }
+        if (mw < 150) {
+          return {
+            main: "🏙️ 小〜中規模都市の電力（" + fmtNum(mw, 0) + " MW）",
+            sub: "※シミュ拡大。原発1基の約" + Math.round(pctReactor) + "%",
+            scale: "1時間で約" + Math.round(homesDay / 10000) + "万世帯の1日分",
+          };
+        }
+        return {
+          main: "⚡ 実原発に近い出力イメージ（" + fmtNum(mw, 0) + " MW）",
+          sub: "※教育用スケール。実際の800MW原発は毎秒天文学的な回数の分裂が必要",
+          scale: "1時間で約" + Math.round(homesDay / 10000) + "万世帯の1日分",
+        };
+      }
+
+      function updatePowerAnalogy() {
+        const a = getPowerAnalogy(displayMW);
+        document.getElementById("paOneFission").textContent = getOneFissionText();
+        document.getElementById("paRealTotal").textContent = getRealTotalText();
+        document.getElementById("paSession").textContent = getSessionText();
+        document.getElementById("paMain").textContent = a.main;
+        document.getElementById("paSub").textContent = a.sub;
+        document.getElementById("paScale").textContent = a.scale;
+        document.getElementById("paoMain").textContent = a.main;
+        document.getElementById("paoSub").textContent = fissionCount + "回分裂 · 累積" + fmtKWh(sessionKWh);
+      }
+
+      function calcReactivity() {
+        const rodFactor = 1 - rodInsert * 0.009;
+        const enrichFactor = fuelEnrich / 3;
+        const fuelFactor = fuelRemain / 100;
+        return Math.max(0, Math.min(1, rodFactor * enrichFactor * fuelFactor));
+      }
+
+      function updateHUD() {
+        const d = calcFission();
+        reactivity = calcReactivity();
+        document.getElementById("hudFissions").textContent = String(fissionCount);
+        document.getElementById("hudNeutrons").textContent = String(particles.filter((p) => p.alive).length);
+        document.getElementById("hudFuel").textContent = fmtNum(fuelRemain, 1) + "%";
+        document.getElementById("hudReactivity").textContent = fmtNum(reactivity * 100, 0) + "%";
+        document.getElementById("hudRod").textContent = fmtNum(rodInsert, 0) + "%";
+        document.getElementById("hudAbsorb").textContent = fmtNum(neutronsAbsorbed, 0) + "%";
+        document.getElementById("hudTemp").textContent = fmtNum(waterTemp, 1) + " °C";
+        document.getElementById("hudCoolant").textContent = Math.round(displayCoolant) + "%";
+        document.getElementById("hudPressure").textContent = fmtNum(steamPressure, 2) + " MPa";
+        document.getElementById("hudRPM").textContent = Math.round(turbineRPM) + " RPM";
+        document.getElementById("hudMW").textContent = fmtNum(displayMW, 2) + " MW";
+        document.getElementById("hudEJ").textContent = fmtSci(totalJ) + " J";
+        document.getElementById("overlayMW").textContent = fmtNum(displayMW, 1);
+        document.getElementById("overlayRPM").textContent = String(Math.round(turbineRPM));
+        document.getElementById("bfCount").textContent = String(fissionCount);
+        document.getElementById("heatBarFill").style.height = Math.min(100, heatLevel) + "%";
+        document.getElementById("gearSpinBadge").classList.toggle("show", turbineOn && turbineRPM > 30);
+        document.getElementById("modeBadge").textContent = (chainOn ? "連鎖反応中" : simRunning ? "運転中" : guidedMode ? "体験モード" : "待機中") + "\n" + fmtNum(displayMW, 1) + " MW";
+        updatePowerAnalogy();
+      }
+
+      function drawPowerGraph() {
+        const dpr = Math.min(devicePixelRatio, 2);
+        const w = powerCanvas.clientWidth, h = powerCanvas.clientHeight;
+        if (w < 10) return;
+        powerCanvas.width = w * dpr; powerCanvas.height = h * dpr;
+        pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        pCtx.clearRect(0, 0, w, h);
+        pCtx.fillStyle = "rgba(15,23,42,0.6)";
+        pCtx.fillRect(0, 0, w, h);
+        const pad = 28, gw = w - pad - 8, gh = h - 16;
+        const maxMW = Math.max(10, ...powerHistory.map((p) => p.mw), displayMW * 1.2);
+        pCtx.strokeStyle = "rgba(148,163,184,0.2)";
+        pCtx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+          const y = 8 + (gh * i) / 4;
+          pCtx.beginPath(); pCtx.moveTo(pad, y); pCtx.lineTo(w - 8, y); pCtx.stroke();
+          pCtx.fillStyle = "#64748b"; pCtx.font = "7px Inter,sans-serif";
+          pCtx.fillText(fmtNum(maxMW * (1 - i / 4), 0), 2, y + 3);
+        }
+        if (powerHistory.length < 2) return;
+        const grad = pCtx.createLinearGradient(0, 0, w, 0);
+        grad.addColorStop(0, "#f87171");
+        grad.addColorStop(0.5, "#22d3ee");
+        grad.addColorStop(1, "#4ade80");
+        pCtx.strokeStyle = grad;
+        pCtx.lineWidth = 2;
+        pCtx.beginPath();
+        powerHistory.forEach((p, i) => {
+          const x = pad + (i / (MAX_HIST - 1)) * gw;
+          const y = 8 + gh - (p.mw / maxMW) * gh;
+          if (i === 0) pCtx.moveTo(x, y); else pCtx.lineTo(x, y);
+        });
+        pCtx.stroke();
+        pCtx.fillStyle = "#4ade80";
+        pCtx.font = "700 8px Inter,sans-serif";
+        pCtx.fillText("MW", w - 24, 12);
+      }
+
+      function fibPos(i, total, r) {
+        const phi = Math.acos(1 - 2 * (i + 0.5) / total);
+        const th = Math.PI * (1 + Math.sqrt(5)) * i;
+        return { x: r * Math.sin(phi) * Math.cos(th), y: r * Math.sin(phi) * Math.sin(th), z: r * Math.cos(phi) };
+      }
+
+      function makeNucleus(z, n, scale) {
+        const grp = new THREE.Group();
+        const total = z + n;
+        const vis = Math.min(total, MAX_VIS);
+        const visZ = Math.max(1, Math.round(z * vis / total));
+        const visN = vis - visZ;
+        const r = 0.18 + Math.cbrt(vis) * 0.04;
+        for (let i = 0; i < visZ; i++) {
+          const pos = fibPos(i, vis, r);
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 12, 12),
+            new THREE.MeshPhysicalMaterial({ color: 0xf87171, emissive: 0xef4444, emissiveIntensity: 0.9, metalness: 0.3, roughness: 0.3 })
+          );
+          m.position.set(pos.x, pos.y, pos.z);
+          m.userData = { phase: Math.random() * 6.28, basePos: { ...pos } };
+          grp.add(m);
+        }
+        for (let i = 0; i < visN; i++) {
+          const pos = fibPos(visZ + i, vis, r);
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 12, 12),
+            new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, emissive: 0x64748b, emissiveIntensity: 0.4, metalness: 0.3, roughness: 0.3 })
+          );
+          m.position.set(pos.x, pos.y, pos.z);
+          m.userData = { phase: Math.random() * 6.28, basePos: { ...pos } };
+          grp.add(m);
+        }
+        grp.scale.setScalar(scale);
+        return grp;
+      }
+
+      function addBurst(x, y, z, intensity) {
+        for (let ring = 0; ring < 3; ring++) {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.15 + ring * 0.15 + intensity * 0.35, 16, 16),
+            new THREE.MeshBasicMaterial({ color: ring === 0 ? 0xfde047 : ring === 1 ? 0x4ade80 : 0x22d3ee, transparent: true, opacity: 0.9 - ring * 0.2 })
+          );
+          m.position.set(x, y, z);
+          worldGroup.add(m);
+          bursts.push({ mesh: m, life: 1.6 - ring * 0.2, max: 1.6 - ring * 0.2, intensity: intensity * (1.2 - ring * 0.2) });
+        }
+        const pl = new THREE.PointLight(0xfde047, intensity * 8, 16);
+        pl.position.set(x, y, z);
+        worldGroup.add(pl);
+        bursts.push({ mesh: pl, life: 1.2, max: 1.2, intensity, isLight: true });
+      }
+
+      function addHeatWave(x, y, z) {
+        const m = new THREE.Mesh(
+          new THREE.RingGeometry(0.1, 0.5, 24),
+          new THREE.MeshBasicMaterial({ color: 0xf87171, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+        );
+        m.position.set(x, y, z);
+        m.rotation.x = -Math.PI / 2;
+        worldGroup.add(m);
+        heatWaves.push({ mesh: m, life: 1.5, max: 1.5 });
+        if (reactorHeatLight) reactorHeatLight.intensity = Math.min(6, reactorHeatLight.intensity + 1.5);
+      }
+
+      function spawnNeutron(x, y, z, vx, vy, vz, big) {
+        const sz = big ? 0.12 : 0.09;
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(sz, 12, 12),
+          new THREE.MeshPhysicalMaterial({ color: 0xe2e8f0, emissive: 0x94a3b8, emissiveIntensity: 2.2 })
+        );
+        m.position.set(x, y, z);
+        worldGroup.add(m);
+        const trail = big ? new THREE.PointLight(0xbae6fd, 1.5, 4) : null;
+        if (trail) { trail.position.copy(m.position); worldGroup.add(trail); }
+        particles.push({ mesh: m, trail, vx, vy, vz, life: 4, alive: true, big: !!big });
+      }
+
+      function spawnSteamAlongPipe() {
+        for (let i = 0; i < 6; i++) {
+          const t = Math.random();
+          const x = -4.2 + t * 8.4;
+          const y = 0.6 + Math.random() * 0.8;
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.05 + Math.random() * 0.04, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.75 })
+          );
+          m.position.set(x, y, (Math.random() - 0.5) * 0.2);
+          worldGroup.add(m);
+          steamParts.push({ mesh: m, vx: 0.035 + Math.random() * 0.02, vy: 0.02 + Math.random() * 0.015, vz: 0, life: 2.5 });
+        }
+      }
+
+      function spawnSteam(x, y, z) {
+        for (let i = 0; i < 3; i++) {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.05 + Math.random() * 0.04, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.7 })
+          );
+          m.position.set(x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.2);
+          worldGroup.add(m);
+          steamParts.push({ mesh: m, vx: 0.02 + Math.random() * 0.02, vy: 0.05 + Math.random() * 0.04, vz: (Math.random() - 0.5) * 0.02, life: 2.5 });
+        }
+      }
+
+      function buildReactor() {
+        reactorGroup = new THREE.Group();
+        reactorGroup.position.set(-4.2, 0, 0);
+
+        const vessel = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.1, 1.1, 2.6, 24, 1, true),
+          new THREE.MeshPhysicalMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.15, metalness: 0.5, roughness: 0.2, side: THREE.DoubleSide })
+        );
+        reactorGroup.add(vessel);
+
+        coolantMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.0, 1.0, 2.4, 24),
+          new THREE.MeshPhysicalMaterial({ color: 0x0c4a6e, transparent: true, opacity: 0.35, emissive: 0x0369a1, emissiveIntensity: 0.1 })
+        );
+        reactorGroup.add(coolantMesh);
+
+        reactorHeatLight = new THREE.PointLight(0xf87171, 0, 8);
+        reactorHeatLight.position.set(0, 0, 0);
+        reactorGroup.add(reactorHeatLight);
+
+        const fuelRodMat = new THREE.MeshPhysicalMaterial({ color: 0xfde047, emissive: 0xfbbf24, emissiveIntensity: 0.5, metalness: 0.6, roughness: 0.3 });
+        for (let i = -2; i <= 2; i++) {
+          const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.2, 8), fuelRodMat);
+          rod.position.set(i * 0.22, 0, 0);
+          reactorGroup.add(rod);
+        }
+
+        controlRods = [];
+        for (let i = -1; i <= 1; i++) {
+          const cr = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.08, 1.8, 8),
+            new THREE.MeshPhysicalMaterial({ color: 0x475569, emissive: 0x334155, emissiveIntensity: 0.2, metalness: 0.7, roughness: 0.4 })
+          );
+          cr.position.set(i * 0.35, 1.6, 0.3);
+          cr.userData = { baseY: 1.6, index: i };
+          reactorGroup.add(cr);
+          controlRods.push(cr);
+        }
+
+        const lbl = new THREE.Mesh(
+          new THREE.BoxGeometry(0.01, 0.01, 0.01),
+          new THREE.MeshBasicMaterial({ visible: false })
+        );
+        reactorGroup.add(lbl);
+        worldGroup.add(reactorGroup);
+      }
+
+      function makeGear(outerR, innerR, teeth, width, bodyColor, toothColor) {
+        const grp = new THREE.Group();
+        const bodyMat = new THREE.MeshPhysicalMaterial({
+          color: bodyColor, emissive: bodyColor, emissiveIntensity: 0.25,
+          metalness: 0.88, roughness: 0.22,
+        });
+        const toothMat = new THREE.MeshPhysicalMaterial({
+          color: toothColor, emissive: toothColor, emissiveIntensity: 0.55,
+          metalness: 0.92, roughness: 0.18,
+        });
+        const disc = new THREE.Mesh(
+          new THREE.CylinderGeometry(outerR * 0.78, outerR * 0.78, width, teeth),
+          bodyMat
+        );
+        disc.rotation.z = Math.PI / 2;
+        grp.add(disc);
+        for (let i = 0; i < teeth; i++) {
+          const ang = (i / teeth) * Math.PI * 2;
+          const tooth = new THREE.Mesh(
+            new THREE.BoxGeometry(width * 0.92, outerR * 0.2, outerR * 0.13),
+            toothMat
+          );
+          tooth.position.set(0, Math.cos(ang) * outerR, Math.sin(ang) * outerR);
+          tooth.rotation.x = ang;
+          grp.add(tooth);
+        }
+        const hub = new THREE.Mesh(
+          new THREE.CylinderGeometry(innerR, innerR, width * 1.08, 14),
+          bodyMat
+        );
+        hub.rotation.z = Math.PI / 2;
+        grp.add(hub);
+        const axle = new THREE.Mesh(
+          new THREE.CylinderGeometry(innerR * 0.35, innerR * 0.35, width * 2.2, 8),
+          new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, metalness: 0.95, roughness: 0.15 })
+        );
+        axle.rotation.z = Math.PI / 2;
+        grp.add(axle);
+        return grp;
+      }
+
+      function buildTurbine() {
+        turbineGroup = new THREE.Group();
+        turbineGroup.position.set(4.2, 0, 0);
+
+        const housing = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.95, 0.95, 0.5, 24),
+          new THREE.MeshPhysicalMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.35 })
+        );
+        housing.rotation.z = Math.PI / 2;
+        turbineGroup.add(housing);
+
+        turbineShaft = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.06, 2.4, 10),
+          new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 })
+        );
+        turbineShaft.rotation.z = Math.PI / 2;
+        turbineGroup.add(turbineShaft);
+
+        turbineBlades = new THREE.Group();
+        const bladeMat = new THREE.MeshPhysicalMaterial({ color: 0xcbd5e1, emissive: 0x64748b, emissiveIntensity: 0.3, metalness: 0.85, roughness: 0.2 });
+        for (let i = 0; i < 12; i++) {
+          const ang = (i / 12) * Math.PI * 2;
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.65, 0.22), bladeMat);
+          blade.position.set(0, Math.cos(ang) * 0.42, Math.sin(ang) * 0.42);
+          blade.rotation.x = ang;
+          turbineBlades.add(blade);
+        }
+        turbineMainGear = makeGear(0.58, 0.14, 14, 0.14, 0x475569, 0xfbbf24);
+        turbineMainGear.position.set(0, 0, 0.62);
+        turbineBlades.add(turbineMainGear);
+        turbineGroup.add(turbineBlades);
+
+        generatorGearGroup = new THREE.Group();
+        generatorGearGroup.position.set(0.82, 0, 0.62);
+        generatorPinionGear = makeGear(0.34, 0.09, 8, 0.12, 0x334155, 0xfde047);
+        generatorGearGroup.add(generatorPinionGear);
+
+        generatorMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.42, 0.42, 0.55, 20),
+          new THREE.MeshPhysicalMaterial({ color: 0x334155, emissive: 0x166534, emissiveIntensity: 0, metalness: 0.6, roughness: 0.3 })
+        );
+        generatorMesh.rotation.z = Math.PI / 2;
+        generatorGearGroup.add(generatorMesh);
+
+        const genMark = makeGear(0.28, 0.07, 8, 0.08, 0x1e293b, 0x4ade80);
+        genMark.position.set(0.55, 0, 0);
+        generatorGearGroup.add(genMark);
+
+        turbineGroup.add(generatorGearGroup);
+
+        genGlow = new THREE.PointLight(0x4ade80, 0, 8);
+        genGlow.position.set(1.35, 0, 0.62);
+        turbineGroup.add(genGlow);
+
+        const gearLabel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.01, 0.01, 0.01),
+          new THREE.MeshBasicMaterial({ visible: false })
+        );
+        gearLabel.position.set(0.4, 0.75, 0.62);
+        turbineGroup.add(gearLabel);
+
+        steamPipe = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.14, 0.14, 8.5, 10),
+          new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, emissive: 0x0ea5e9, emissiveIntensity: 0.2 })
+        );
+        steamPipe.rotation.z = Math.PI / 2;
+        steamPipe.position.set(-0.1, 0.9, 0);
+        worldGroup.add(steamPipe);
+
+        const pipe = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.12, 3.5, 8),
+          new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 })
+        );
+        pipe.rotation.z = Math.PI / 2;
+        pipe.position.set(-1.8, 0.8, 0);
+        turbineGroup.add(pipe);
+
+        worldGroup.add(turbineGroup);
+      }
+
+      function spawnCoolantParticle(upward) {
+        if (!reactorGroup) return;
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.05, 8, 8),
+          new THREE.MeshBasicMaterial({ color: upward ? 0x38bdf8 : 0x0ea5e9, transparent: true, opacity: 0.8 })
+        );
+        m.position.set((Math.random() - 0.5) * 0.6, -0.8 + Math.random() * 0.4, (Math.random() - 0.5) * 0.4);
+        reactorGroup.add(m);
+        coolantParticles.push({
+          mesh: m,
+          vy: upward ? 0.06 + Math.random() * 0.04 : -0.03 - Math.random() * 0.02,
+          life: 1.8,
+        });
+      }
+
+      function setCoolantFlow(pct, quiet) {
+        coolantFlow = Math.max(0.1, Math.min(1, pct / 100));
+        displayCoolant = pct;
+        document.getElementById("slCool").value = Math.round(pct);
+        document.getElementById("lblCool").textContent = Math.round(pct) + "%";
+        if (coolantMesh?.material) {
+          const b = coolantFlow;
+          coolantMesh.material.color.setRGB(0.05 + b * 0.05, 0.2 + b * 0.3, 0.4 + b * 0.4);
+        }
+        if (!quiet) {
+          for (let i = 0; i < 8; i++) spawnCoolantParticle(coolantFlow >= 0.5);
+          flashEvent(coolantFlow >= 0.5 ? "冷却↑" : "冷却↓", "steam");
+          setPhase("COOL", "冷却材流量 " + Math.round(pct) + "% — " + (coolantFlow >= 0.5 ? "水温が下がりやすい" : "水温が上がりやすい"));
+          focusCamera("reactor", 10);
+        }
+      }
+
+      function buildCore() {
+        coreGroup = new THREE.Group();
+        coreGroup.position.set(0, 0, 0);
+        FUEL_POSITIONS.forEach((pos, i) => {
+          const g = makeNucleus(92, 143, 0.45);
+          g.position.set(pos[0], pos[1], pos[2]);
+          coreGroup.add(g);
+          fuelCells.push({ id: i, group: g, pos: [...pos], alive: true });
+        });
+        worldGroup.add(coreGroup);
+      }
+
+      function clearCore() {
+        fuelCells.forEach((c) => {
+          coreGroup.remove(c.group);
+          c.group.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+        });
+        fuelCells = [];
+        particles.forEach((p) => { worldGroup.remove(p.mesh); p.mesh.geometry?.dispose(); p.mesh.material?.dispose(); });
+        particles = [];
+        bursts.forEach((b) => { worldGroup.remove(b.mesh); b.mesh.geometry?.dispose(); b.mesh.material?.dispose(); });
+        bursts = [];
+        steamParts.forEach((s) => { worldGroup.remove(s.mesh); s.mesh.geometry?.dispose(); s.mesh.material?.dispose(); });
+        steamParts = [];
+        heatWaves.forEach((h) => { worldGroup.remove(h.mesh); h.mesh.geometry?.dispose(); h.mesh.material?.dispose(); });
+        heatWaves = [];
+        coolantParticles.forEach((c) => { reactorGroup?.remove(c.mesh); c.mesh.geometry?.dispose(); c.mesh.material?.dispose(); });
+        coolantParticles = [];
+      }
+
+      function rebuildCore() {
+        clearCore();
+        buildCore();
+      }
+
+      function fissionCell(cell, big) {
+        if (!cell.alive || cell.fissioning) return;
+        cell.fissioning = true;
+        if (cell.group) {
+          cell.group.children.forEach((m) => {
+            if (m.userData?.basePos) {
+              const bp = m.userData.basePos;
+              m.position.set(bp.x * 1.3, bp.y * 1.3, bp.z * 1.3);
+            }
+          });
+        }
+        setTimeout(() => { doFission(cell, big); }, big ? 400 : 150);
+      }
+
+      function doFission(cell, big) {
+        if (!cell.alive) return;
+        cell.alive = false;
+        const [x, y, z] = cell.pos;
+        addBurst(x, y, z, big ? 2.2 : 1.5);
+        addHeatWave(-4.2, 0, 0);
+        addHeatWave(x, y, z);
+
+        coreGroup.remove(cell.group);
+        cell.group.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+
+        const g1 = makeNucleus(36, 56, 0.32);
+        g1.position.set(x - 0.4, y + 0.1, z);
+        g1.userData.drift = { x: -0.02 };
+        const g2 = makeNucleus(56, 85, 0.36);
+        g2.position.set(x + 0.4, y - 0.1, z);
+        g2.userData.drift = { x: 0.02 };
+        coreGroup.add(g1); coreGroup.add(g2);
+        cell.fragments = [g1, g2];
+
+        const d = calcFission();
+        fissionCount++;
+        totalJ += d.eJ;
+        fuelRemain = Math.max(0, fuelRemain - 0.08);
+        heatLevel = Math.min(100, heatLevel + 8);
+
+        for (let i = 0; i < 3; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const sp = 0.07 + Math.random() * 0.06;
+          spawnNeutron(x, y, z, Math.cos(ang) * sp, (Math.random() - 0.5) * 0.04, Math.sin(ang) * sp, big);
+        }
+        spawnSteam(-4.2, 0.8, 0);
+        if (fissionCount > 1 || chainOn) spawnSteamAlongPipe();
+        if (big || fissionCount <= 3) flashEvent("分裂！", "fission");
+        updateMassUI(d);
+      }
+
+      function tryNeutronHit(n) {
+        if (!n.alive) return;
+        const absorbChance = rodInsert * 0.01 + (1 - coolantFlow) * 0.004;
+        if (Math.random() < absorbChance) {
+          n.alive = false;
+          n.mesh.visible = false;
+          if (n.trail) { worldGroup.remove(n.trail); n.trail = null; }
+          neutronsAbsorbed = Math.min(100, neutronsAbsorbed + 1);
+          controlRods.forEach((cr) => {
+            cr.material.emissive.setHex(0x60a5fa);
+            cr.material.emissiveIntensity = 1.2;
+            setTimeout(() => { cr.material.emissive.setHex(0x334155); cr.material.emissiveIntensity = 0.2; }, 300);
+          });
+          return;
+        }
+        for (const cell of fuelCells) {
+          if (!cell.alive) continue;
+          const dx = n.mesh.position.x - cell.pos[0];
+          const dy = n.mesh.position.y - cell.pos[1];
+          const dz = n.mesh.position.z - cell.pos[2];
+          if (dx * dx + dy * dy + dz * dz < 0.8) {
+            if (Math.random() < reactivity) {
+              n.alive = false;
+              n.mesh.visible = false;
+              if (n.trail) { worldGroup.remove(n.trail); n.trail = null; }
+              fissionCell(cell, n.big);
+            }
+            return;
+          }
+        }
+      }
+
+      function updateThermal(dt) {
+        const heatRate = fissionCount * 0.025 * reactivity * chainSpd;
+        const coolFactor = coolantFlow;
+        const coolingPower = coolFactor * 1.8;
+        waterTemp += (heatRate * 10 - (waterTemp - 25) * coolingPower) * dt;
+        waterTemp = Math.max(25, Math.min(350, waterTemp));
+        steamPressure = 0.1 + Math.max(0, (waterTemp - 80) * 0.012);
+        heatLevel += (heatRate * 3 - heatLevel * 0.45 * coolFactor) * dt;
+        heatLevel = Math.max(0, Math.min(100, heatLevel));
+        displayCoolant += (coolantFlow * 100 - displayCoolant) * Math.min(1, dt * 4);
+        if (coolantMesh?.material) {
+          const t = heatLevel / 100;
+          const cool = coolantFlow;
+          coolantMesh.material.emissive.setRGB(
+            0.02 + t * (1 - cool * 0.5) * 0.9,
+            0.08 + t * 0.1 + cool * 0.2,
+            0.15 + t * 0.05 + cool * 0.5
+          );
+          coolantMesh.material.emissiveIntensity = 0.15 + t * 2.2;
+          coolantMesh.material.opacity = 0.35 + t * 0.2 + cool * 0.1;
+        }
+        if (reactorHeatLight) reactorHeatLight.intensity = Math.max(0, reactorHeatLight.intensity - dt * 2) + heatLevel * 0.03;
+        if (steamPipe?.material) {
+          const sp = steamPressure / 3;
+          steamPipe.material.emissiveIntensity = 0.2 + sp * 1.5;
+          steamPipe.material.opacity = 0.35 + sp * 0.4;
+        }
+        if (turbineOn) {
+          const steamDrive = steamPressure * 180 + heatLevel * 6 + fissionCount * 0.5;
+          const targetRPM = Math.max(80, steamDrive * Math.max(0.4, reactivity));
+          turbineRPM += (targetRPM - turbineRPM) * Math.min(1, dt * 3);
+          powerMW = (turbineRPM / 2000) * steamPressure * 18 * Math.max(0.4, reactivity);
+        } else {
+          turbineRPM *= Math.max(0, 1 - dt * 1.2);
+          powerMW *= Math.max(0, 1 - dt * 0.5);
+        }
+        displayMW += (powerMW - displayMW) * Math.min(1, dt * 3);
+        if (turbineOn && displayMW > 0) sessionKWh += displayMW * dt / 3.6;
+        if (genGlow) genGlow.intensity = displayMW * 0.3 + (turbineOn ? 0.5 : 0);
+        if (generatorMesh?.material) {
+          generatorMesh.material.emissive = new THREE.Color(0x166534);
+          generatorMesh.material.emissiveIntensity = displayMW * 0.15 + (turbineRPM > 50 ? 0.25 : 0);
+        }
+        if (turbineMainGear) {
+          turbineMainGear.children.forEach((c) => {
+            if (c.material?.emissiveIntensity != null && c.material.color?.getHex?.() === 0xfbbf24) {
+              c.material.emissiveIntensity = 0.55 + (turbineRPM / 500);
+            }
+          });
+        }
+        if (heatLevel > 20 && (chainOn || simRunning) && Math.random() < dt * 3) spawnSteamAlongPipe();
+        if (coolantFlow > 0.3 && (chainOn || simRunning || heatLevel > 10) && Math.random() < dt * coolantFlow * 5) spawnCoolantParticle(true);
+      }
+
+      function updateControlRods(dt) {
+        rodInsert += (rodTarget - rodInsert) * Math.min(1, dt / 0.4);
+        controlRods.forEach((cr) => {
+          const insert = rodInsert / 100;
+          cr.position.y = cr.userData.baseY - insert * 2.2;
+        });
+        document.getElementById("slRod").value = Math.round(rodInsert);
+        document.getElementById("lblRod").textContent = Math.round(rodInsert) + "%";
+      }
+
+      function startFission(fromGuide) {
+        if (fuelCells.length === 0) rebuildCore();
+        simRunning = true;
+        const d = calcFission();
+        updateMassUI(d);
+        showBanner(d.eMeV);
+        document.getElementById("hudMode").textContent = "核分裂";
+        setGuideStep(1, "① <strong>核分裂</strong> — 中性子が²³⁵Uに当たり、エネルギーが放出されます");
+        focusCamera("core", 9);
+        setPhase("①", "中性子が ²³⁵U に接近中…");
+        pulseBtn(fromGuide ? null : "btnChain");
+        spawnNeutron(-2.2, 0.15, 0.3, 0.14, 0, 0.04, true);
+        setTimeout(() => {
+          setPhase("②", "²³⁵U が分裂！ Kr + Ba + 3n + 約200MeV");
+          const alive = fuelCells.find((c) => c.alive);
+          if (alive) fissionCell(alive, true);
+        }, 900);
+        setTimeout(() => {
+          setPhase("③", "質量が減り（Δm）→ エネルギーに変換！ 次は「連鎖反応」");
+          flashEvent("E=Δmc²", "fission");
+          if (!fromGuide) hideBanner();
+        }, 2500);
+      }
+
+      function toggleChain(fromGuide) {
+        chainOn = !chainOn;
+        document.getElementById("btnChain").classList.toggle("active", chainOn);
+        simRunning = chainOn;
+        document.getElementById("hudMode").textContent = chainOn ? "連鎖反応 ON" : "連鎖反応 OFF";
+        if (chainOn) {
+          showBanner(calcFission().eMeV);
+          setGuideStep(2, "② <strong>連鎖反応</strong> — 放出された中性子が次の核を分裂させ、熱が急増します");
+          focusCamera("core", 9);
+          setPhase("②", "連鎖反応！ 中性子が次々と核を分裂させる");
+          flashEvent("連鎖反応！", "fission");
+          if (fuelCells.filter((c) => c.alive).length < 3) rebuildCore();
+          const alive = fuelCells.find((c) => c.alive);
+          if (alive) {
+            spawnNeutron(-1.8, 0, 0, 0.12, 0.02, 0, true);
+            fissionCell(alive, true);
+          }
+          pulseBtn(fromGuide ? "btnTurbine" : "btnRodIn");
+        } else {
+          hideBanner();
+          setPhase("STOP", "連鎖反応を停止しました");
+        }
+      }
+
+      function startGuidedTour() {
+        guideTimers.forEach(clearTimeout);
+        guideTimers = [];
+        resetAll();
+        guidedMode = true;
+        paused = false;
+        document.getElementById("btnPause").classList.add("active");
+        document.getElementById("btnPause").textContent = "一時停止";
+        document.getElementById("btnGuided").classList.remove("pulse");
+        setGuideStep(1, "体験モード開始 — ① 核分裂から順番に見ていきます");
+        focusCamera("core", 9);
+        startFission(true);
+
+        guideTimers.push(setTimeout(() => {
+          if (!chainOn) toggleChain(true);
+          setGuideStep(2, "② 連鎖反応中 — 分裂が連続し、左の<strong>熱バー</strong>が上昇");
+          flashEvent("熱↑", "heat");
+        }, 3500));
+
+        guideTimers.push(setTimeout(() => {
+          setGuideStep(3, "③ <strong>熱→蒸気</strong> — 冷却水が赤く光り、蒸気がタービンへ流れます");
+          focusCamera("reactor", 10);
+          setPhase("③", "燃料棒の熱で水が沸騰 → 蒸気がパイプを流れる");
+          flashEvent("蒸気↑", "steam");
+          for (let i = 0; i < 3; i++) spawnSteamAlongPipe();
+        }, 7000));
+
+        guideTimers.push(setTimeout(() => {
+          turbineOn = true;
+          document.getElementById("btnTurbine").classList.add("active");
+          setGuideStep(4, "④ <strong>タービン起動</strong> — 蒸気がタービンを回転させます");
+          focusCamera("turbine", 10);
+          setPhase("④", "タービンが回転中… 発電機につながる");
+          flashEvent("タービン回転！", "steam");
+        }, 10000));
+
+        guideTimers.push(setTimeout(() => {
+          setGuideStep(5, "⑤ <strong>発電！</strong> — 右の発電量(MW)が上昇。制御棒で出力を調整できます");
+          focusCamera("turbine", 9);
+          setPhase("⑤", "発電中！ 制御棒を入れると出力が下がる → 試してみよう");
+          flashEvent("発電！", "power");
+          pulseBtn("btnRodIn");
+        }, 13000));
+
+        guideTimers.push(setTimeout(() => {
+          guidedMode = false;
+          setGuideStep(5, "✅ 体験完了！ 各ボタンで自由に操作できます。制御棒・冷却材も試してみよう");
+          setPhase("OK", "体験完了 — 自由に操作してみよう");
+          focusCamera("all", 14);
+          hideBanner();
+        }, 18000));
+      }
+
+      function resetAll() {
+        guideTimers.forEach(clearTimeout);
+        guideTimers = [];
+        guidedMode = false;
+        chainOn = false;
+        simRunning = false;
+        turbineOn = false;
+        fissionCount = 0;
+        totalJ = 0;
+        fuelRemain = 100;
+        rodInsert = 0;
+        rodTarget = 0;
+        neutronsAbsorbed = 0;
+        waterTemp = 25;
+        steamPressure = 0.1;
+        turbineRPM = 0;
+        turbineSpinAngle = 0;
+        displayCoolant = 50;
+        powerMW = 0;
+        displayMW = 0;
+        sessionKWh = 0;
+        chainTimer = 0;
+        heatLevel = 0;
+        powerHistory.length = 0;
+        hideBanner();
+        errBox.classList.remove("show");
+        document.getElementById("btnChain").classList.remove("active");
+        document.getElementById("btnTurbine").classList.remove("active");
+        document.querySelectorAll(".act-btn.pulse").forEach((b) => b.classList.remove("pulse"));
+        document.getElementById("hudMode").textContent = "待機中";
+        if (reactorHeatLight) reactorHeatLight.intensity = 0;
+        rebuildCore();
+        const d = calcFission();
+        document.getElementById("mInit").textContent = "— u";
+        document.getElementById("mFinal").textContent = "— u";
+        document.getElementById("mDefect").textContent = "— u";
+        document.getElementById("mEnergy").textContent = "— MeV";
+        document.getElementById("mEnergyJ").textContent = "— J";
+        setGuideStep(0, "👇 <strong>「はじめから体験する」</strong> を押すと、原子力発電の流れを順番に見られます");
+        document.querySelectorAll(".guide-step").forEach((s) => { s.classList.remove("active", "done"); });
+        document.getElementById("guideBar").querySelector('[data-step="1"]').classList.add("active");
+        ["faSeg1","faSeg2","faSeg3","faSeg4"].forEach((id) => document.getElementById(id).classList.remove("lit"));
+        pulseBtn("btnGuided");
+        updateHUD();
+        setPhase("START", "「はじめから体験する」で原子力発電の流れを見よう");
+        drawPowerGraph();
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 300);
+        camera = new THREE.PerspectiveCamera(42, rw / rh, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        wrap.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0x404060, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(5, 8, 4);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x22d3ee, 0.5, 22);
+        rim.position.set(-2, 3, 6);
+        scene.add(rim);
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        const grid = new THREE.GridHelper(12, 24, 0x1e3a5f, 0x0f172a);
+        grid.position.y = -1.5;
+        worldGroup.add(grid);
+
+        buildReactor();
+        buildCore();
+        buildTurbine();
+
+        wrap.addEventListener("wheel", (e) => { e.preventDefault(); zoom = Math.max(9, Math.min(20, zoom + e.deltaY * 0.006)); }, { passive: false });
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008; rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-0.6, Math.min(0.6, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        new ResizeObserver(() => {
+          const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 300);
+          renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+          drawPowerGraph();
+        }).observe(wrap);
+      }
+
+      function bindControls() {
+        document.getElementById("btnGuided").addEventListener("click", startGuidedTour);
+        document.getElementById("btnFission").addEventListener("click", () => startFission(false));
+        document.getElementById("btnChain").addEventListener("click", () => toggleChain(false));
+        document.getElementById("btnRodIn").addEventListener("click", () => {
+          rodTarget = Math.min(100, rodTarget + 25);
+          setPhase("CTRL", "制御棒を挿入 — 中性子を吸収 → 反応度↓ 発電量↓");
+          flashEvent("制御棒↓", "heat");
+          focusCamera("reactor", 10);
+        });
+        document.getElementById("btnRodOut").addEventListener("click", () => {
+          rodTarget = Math.max(0, rodTarget - 25);
+          setPhase("CTRL", "制御棒を引き抜く — 反応度↑ 発電量↑");
+          focusCamera("reactor", 10);
+        });
+        document.getElementById("btnCoolUp").addEventListener("click", () => {
+          setCoolantFlow(Math.min(100, Math.round(coolantFlow * 100) + 15));
+          document.getElementById("btnCoolUp").classList.add("active");
+          setTimeout(() => document.getElementById("btnCoolUp").classList.remove("active"), 400);
+        });
+        document.getElementById("btnCoolDn").addEventListener("click", () => {
+          setCoolantFlow(Math.max(10, Math.round(coolantFlow * 100) - 15));
+          document.getElementById("btnCoolDn").classList.add("active");
+          setTimeout(() => document.getElementById("btnCoolDn").classList.remove("active"), 400);
+        });
+        document.getElementById("btnTurbine").addEventListener("click", () => {
+          turbineOn = !turbineOn;
+          document.getElementById("btnTurbine").classList.toggle("active", turbineOn);
+          setPhase(turbineOn ? "④" : "STOP", turbineOn ? "タービン起動 — 蒸気で発電開始！" : "タービン停止");
+          if (turbineOn) { flashEvent("発電開始！", "power"); focusCamera("turbine", 10); setGuideStep(4, "④ タービンが回転 → 発電量が上昇"); }
+        });
+        document.getElementById("btnReset").addEventListener("click", () => { zoom = 14; rotX = 0.2; rotY = 0.45; resetAll(); });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").classList.toggle("active", !paused);
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("slRod").addEventListener("input", (e) => { rodTarget = +e.target.value; });
+        document.getElementById("slCool").addEventListener("input", (e) => { setCoolantFlow(+e.target.value, true); });
+        document.getElementById("slFuel").addEventListener("input", (e) => {
+          fuelEnrich = +e.target.value;
+          document.getElementById("lblFuel").textContent = fuelEnrich.toFixed(1) + "%";
+        });
+        document.getElementById("slChain").addEventListener("input", (e) => {
+          chainSpd = +e.target.value;
+          document.getElementById("lblChain").textContent = chainSpd.toFixed(1) + "×";
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = paused ? 0 : Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        simTime += dt;
+
+        updateControlRods(dt);
+        updateThermal(dt);
+
+        if (chainOn && !paused) {
+          chainTimer += dt * chainSpd;
+          if (chainTimer > 0.35 / Math.max(0.2, reactivity)) {
+            chainTimer = 0;
+            const alive = fuelCells.filter((c) => c.alive);
+            if (alive.length > 0 && Math.random() < reactivity * 0.6) {
+              const cell = alive[Math.floor(Math.random() * alive.length)];
+              fissionCell(cell);
+            }
+          }
+        }
+
+        fuelCells.forEach((c) => {
+          if (c.fragments) c.fragments.forEach((f) => {
+            if (f.userData?.drift) f.position.x += f.userData.drift.x * dt * 40;
+          });
+          if (c.alive && c.group) {
+            c.group.rotation.y += dt * 0.25;
+            c.group.children.forEach((m) => {
+              if (!m.userData?.basePos) return;
+              const bp = m.userData.basePos;
+              const ph = m.userData.phase + simTime * 0.4;
+              m.position.set(bp.x + Math.sin(ph) * 0.002, bp.y + Math.cos(ph) * 0.002, bp.z);
+            });
+          }
+        });
+
+        particles = particles.filter((p) => {
+          if (!p.alive) return false;
+          p.life -= dt;
+          p.mesh.position.x += p.vx;
+          p.mesh.position.y += p.vy;
+          p.mesh.position.z += p.vz;
+          if (p.trail) p.trail.position.copy(p.mesh.position);
+          if (chainOn || simRunning) tryNeutronHit(p);
+          if (p.life <= 0 || !p.alive) {
+            worldGroup.remove(p.mesh);
+            p.mesh.geometry.dispose();
+            p.mesh.material.dispose();
+            if (p.trail) worldGroup.remove(p.trail);
+            return false;
+          }
+          return true;
+        });
+
+        bursts = bursts.filter((b) => {
+          b.life -= dt;
+          if (b.isLight) b.mesh.intensity = (b.life / b.max) * (b.intensity || 1) * 6;
+          else { b.mesh.material.opacity = (b.life / b.max) * 0.9; b.mesh.scale.setScalar(1 + (1 - b.life / b.max) * 4 * b.intensity); }
+          if (b.life <= 0) { worldGroup.remove(b.mesh); b.mesh.geometry?.dispose(); b.mesh.material?.dispose(); return false; }
+          return true;
+        });
+
+        heatWaves = heatWaves.filter((h) => {
+          h.life -= dt;
+          const s = 1 + (1 - h.life / h.max) * 3;
+          h.mesh.scale.set(s, s, s);
+          h.mesh.material.opacity = (h.life / h.max) * 0.6;
+          if (h.life <= 0) { worldGroup.remove(h.mesh); h.mesh.geometry.dispose(); h.mesh.material.dispose(); return false; }
+          return true;
+        });
+
+        steamParts = steamParts.filter((s) => {
+          s.life -= dt;
+          s.mesh.position.x += s.vx;
+          s.mesh.position.y += s.vy;
+          s.mesh.position.z += s.vz;
+          s.mesh.material.opacity = (s.life / 2) * 0.6;
+          if (s.life <= 0) { worldGroup.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose(); return false; }
+          return true;
+        });
+
+        coolantParticles = coolantParticles.filter((c) => {
+          c.life -= dt;
+          c.mesh.position.y += c.vy;
+          c.mesh.material.opacity = (c.life / 1.8) * 0.8;
+          if (c.life <= 0) {
+            reactorGroup?.remove(c.mesh);
+            c.mesh.geometry.dispose();
+            c.mesh.material.dispose();
+            return false;
+          }
+          return true;
+        });
+
+        const spinRPM = turbineOn ? Math.max(turbineRPM, 150) : turbineRPM;
+        if (spinRPM > 1) {
+          turbineSpinAngle += dt * spinRPM * (Math.PI / 30);
+          if (turbineBlades) turbineBlades.rotation.x = turbineSpinAngle;
+          if (generatorGearGroup) generatorGearGroup.rotation.x = -turbineSpinAngle * GEAR_RATIO;
+        }
+
+        if (!dragging) {
+          rotY += (targetRotY - rotY) * Math.min(1, dt * 2);
+          rotX += (targetRotX - rotX) * Math.min(1, dt * 2);
+          zoom += (targetZoom - zoom) * Math.min(1, dt * 2);
+          if (!paused && !guidedMode) rotY += dt * 0.004;
+        }
+        const dist = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * dist, Math.sin(rotX) * dist + 0.5, Math.cos(rotY) * Math.cos(rotX) * dist);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+
+        powerHistory.push({ t: simTime, mw: displayMW, fissions: fissionCount });
+        if (powerHistory.length > MAX_HIST) powerHistory.shift();
+        updateHUD();
+        drawPowerGraph();
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        resetAll();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

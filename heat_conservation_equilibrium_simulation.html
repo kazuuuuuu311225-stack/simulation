@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="../assets/css/heat-equilibrium-inquiry.css?v=20260626a" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -394,14 +395,21 @@
       <div class="hero-icon" aria-hidden="true">⚖️</div>
       <h2>熱量保存と熱平衡</h2>
       <p class="chapter-label">12章 熱と比熱 · Q_loss = Q_gain · 接触による温度変化</p>
-      <a id="back" href="index.html">← メニューに戻る</a>
+      <a id="back" href="00_folder_thermo.html#chapter-12">← ホームへ戻る</a>
     </header>
+
+    <nav class="tab-bar" aria-label="表示モード">
+      <button type="button" class="tab-btn active" data-tab="simulation">シミュレーション</button>
+      <button type="button" class="tab-btn inquiry-tab" data-tab="inquiry">探究モード <span class="tab-badge">NEW</span></button>
+    </nav>
+
+    <div id="tabSimulation" class="tab-panel active">
 
     <div class="main-grid">
       <div class="col">
         <section class="panel" aria-label="粒子運動">
           <h3>物体 A · B の粒子運動</h3>
-          <div class="canvas-wrap">
+          <div class="canvas-wrap" id="simCanvasWrap">
             <canvas id="simCanvas" aria-label="2物体の粒子運動"></canvas>
             <div class="canvas-hud">
               <div class="hud-box a" id="hudA">A: — ℃</div>
@@ -512,7 +520,189 @@
         <li>温度変化は比熱と質量によって決まる。</li>
       </ul>
     </section>
+
+    </div><!-- /tabSimulation -->
+
+    <div id="tabInquiry" class="tab-panel">
+      <div class="inquiry-progress-wrap" id="inquiryProgress">
+        <div class="inquiry-progress-head">
+          <span>🔬 探究進行度</span>
+          <div class="inquiry-progress-actions">
+            <div class="inq-companion-mode-bar" id="inqCompanionModeBar" aria-label="伴走AIモード">
+              <span class="inq-companion-mode-title">🤝 伴走AI</span>
+              <button type="button" class="inq-companion-mode-btn active" data-mode="gentle">やさしめ</button>
+              <button type="button" class="inq-companion-mode-btn" data-mode="expert">専門的</button>
+            </div>
+            <button type="button" class="inquiry-reset-btn" id="inqResetBtn" title="問い・仮説・実験記録などをすべて消して最初からやり直す">↺ リセット</button>
+            <strong class="inquiry-progress-pct">0%</strong>
+          </div>
+        </div>
+        <div class="inquiry-progress-track">
+          <div class="inquiry-progress-fill"></div>
+        </div>
+        <div class="inquiry-step-dots"></div>
+      </div>
+
+      <div class="inquiry-layout">
+        <div class="inquiry-left inquiry-sim-compact">
+          <div class="inquiry-mission-banner hidden" id="inquiryMissionBanner" aria-live="polite">
+            <div class="inquiry-mission-banner-head">📋 探究ミッション</div>
+            <p class="inquiry-mission-banner-row" id="inquiryBannerMission"></p>
+            <p class="inquiry-mission-banner-row" id="inquiryBannerHyp"></p>
+            <p class="inquiry-mission-banner-row" id="inquiryBannerPlan"></p>
+          </div>
+
+          <div class="inquiry-sim-stage" id="inquirySimStage">
+            <section class="panel inquiry-sim-view" aria-label="探究シミュレーション">
+              <div class="inquiry-sim-view-head">
+                <h3>🔬 実験ビュー — 2物体の熱接触</h3>
+                <button type="button" class="inq-focus-sim-btn" id="inqFocusSimBtn" title="シミュレーションを画面上部に表示">⤒ シミュレーションを見る</button>
+              </div>
+              <div id="inquiryCanvasSlot"></div>
+            </section>
+
+            <div class="inq-action-bar panel" aria-label="測定操作">
+              <div class="inq-measure-actions">
+                <button type="button" class="inq-measure-btn" id="inqMeasureBtn">📏 接触測定</button>
+                <button type="button" class="inq-exp-reset-btn" id="inqExpResetBtn">↺ 実験リセット</button>
+              </div>
+              <p class="inq-measure-status" id="inqMeasureStatus">条件を整えてから接触測定ボタンを押してください</p>
+            </div>
+          </div>
+
+          <section class="panel inquiry-controls-panel" aria-label="探究用操作" id="inqExperimentControls">
+            <div class="inquiry-controls-head">
+              <h3>条件設定 <span id="inqPlanBadge" style="font-size:0.68rem;color:#fdba74;font-weight:600"></span></h3>
+              <p class="inq-section-label">初期条件（測定前にいつでも設定できます）</p>
+            </div>
+            <div class="inq-controls-scroll">
+              <details class="inq-var-panel is-enabled" id="inqVarMaterialPair" open>
+                <summary class="inq-var-label">🧪 物質の組 (A/B)</summary>
+                <div class="inq-var-body">
+                  <p class="inq-plan-hint" style="margin:0;font-size:0.78rem;color:#94a3b8">A（左・橙）と B（右・青）の物質をそれぞれ選びます。</p>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarMatA" open>
+                <summary class="inq-var-label">🔶 物体 A の物質</summary>
+                <div class="inq-var-body">
+                  <div class="inq-material-grid" id="inqMatRowA">
+                    <button type="button" class="inq-material-btn active" data-obj="a" data-material="water">水</button>
+                    <button type="button" class="inq-material-btn" data-obj="a" data-material="iron">鉄</button>
+                    <button type="button" class="inq-material-btn" data-obj="a" data-material="aluminum">アルミ</button>
+                    <button type="button" class="inq-material-btn" data-obj="a" data-material="air">空気</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarMatB" open>
+                <summary class="inq-var-label">🔷 物体 B の物質</summary>
+                <div class="inq-var-body">
+                  <div class="inq-material-grid" id="inqMatRowB">
+                    <button type="button" class="inq-material-btn" data-obj="b" data-material="water">水</button>
+                    <button type="button" class="inq-material-btn active" data-obj="b" data-material="iron">鉄</button>
+                    <button type="button" class="inq-material-btn" data-obj="b" data-material="aluminum">アルミ</button>
+                    <button type="button" class="inq-material-btn" data-obj="b" data-material="air">空気</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarMassA">
+                <summary class="inq-var-label">⚖ 質量 m<sub>A</sub></summary>
+                <div class="inq-var-body">
+                  <label>
+                    <input id="inqMassASlider" type="range" min="100" max="2000" step="50" value="500">
+                    <span class="slider-val"><span id="inqMassAValue">500</span> g</span>
+                  </label>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarMassB">
+                <summary class="inq-var-label">⚖ 質量 m<sub>B</sub></summary>
+                <div class="inq-var-body">
+                  <label>
+                    <input id="inqMassBSlider" type="range" min="100" max="2000" step="50" value="500">
+                    <span class="slider-val"><span id="inqMassBValue">500</span> g</span>
+                  </label>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarTempA">
+                <summary class="inq-var-label">🌡 初期温度 T<sub>A</sub></summary>
+                <div class="inq-var-body">
+                  <label>
+                    <input id="inqTempASlider" type="range" min="-20" max="120" step="1" value="80">
+                    <span class="slider-val"><span id="inqTempAValue">80</span> ℃</span>
+                  </label>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarTempB">
+                <summary class="inq-var-label">🌡 初期温度 T<sub>B</sub></summary>
+                <div class="inq-var-body">
+                  <label>
+                    <input id="inqTempBSlider" type="range" min="-20" max="120" step="1" value="20">
+                    <span class="slider-val"><span id="inqTempBValue">20</span> ℃</span>
+                  </label>
+                </div>
+              </details>
+
+              <p class="inq-plan-hint" id="inqPlanHint">③の実験計画で「操作変数」として記録・分析する項目が決まります。</p>
+            </div>
+          </section>
+        </div>
+
+        <div class="inquiry-note" id="inquiryNote" aria-label="探究ノート"></div>
+      </div>
+    </div>
+
+    <div class="inquiry-welcome hidden" id="inquiryWelcome">
+      <div class="welcome-card">
+        <div class="welcome-icon">🔬</div>
+        <h3>研究者モードへようこそ</h3>
+        <p>ミッション（問い）を選び、仮説と実験計画を立て、2物体の接触で Q_loss = Q_gain と平衡温度 Teq を確かめる — 熱量保存と熱平衡の探究学習を体験しよう。</p>
+        <button type="button" class="welcome-start">探究をはじめる →</button>
+      </div>
+    </div>
+
+    <div class="inquiry-summary-screen hidden" id="inquirySummaryScreen" aria-hidden="true">
+      <div class="summary-screen-card">
+        <div class="summary-screen-icon">🎉</div>
+        <h3>探究完了！</h3>
+        <p class="summary-screen-lead">問い → 仮説 → 実験 → データ → グラフ → 考察。熱量保存と熱平衡の探究を完了しました。</p>
+        <ul class="summary-screen-checklist" id="summaryScreenChecklist"></ul>
+        <div class="summary-screen-rate" id="summaryScreenRate">100%</div>
+        <div class="summary-screen-actions">
+          <button type="button" class="summary-screen-report-btn" id="summaryScreenReportBtn">📄 実験レポートを見る</button>
+          <button type="button" class="summary-screen-close">まとめカードを見る →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="inquiry-report-screen hidden" id="inquiryReportScreen" aria-hidden="true">
+      <div class="report-screen-toolbar">
+        <h2>📄 探究実験レポート <span class="report-format-badge">A4 縦</span></h2>
+        <button type="button" class="report-toolbar-btn report-download-btn" id="reportDownloadPdfBtn">⬇ A4 PDFでダウンロード</button>
+        <button type="button" class="report-toolbar-btn report-close-btn" id="reportCloseBtn">閉じる</button>
+      </div>
+      <div class="report-screen-scroll">
+        <div class="report-a4-preview-wrap">
+          <article id="inquiryReportDocument" class="inquiry-report-document" aria-label="探究実験レポート本文"></article>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/missions.js?v=20260626d"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/storage.js?v=20260626a"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/companion.js?v=20260626a"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/progress.js?v=20260626a"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/steps.js?v=20260626d"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/report.js?v=20260626a"></script>
+  <script src="../assets/js/heat-equilibrium-inquiry/InquiryMode.js?v=20260626a"></script>
 
   <script>
     (function () {
@@ -562,6 +752,8 @@
       let tempChart = null;
       let controlsLocked = false;
       let lastFrameTime = null;
+      const stateListeners = [];
+      const equilibriumListeners = [];
 
       function fmt(n, d) {
         return Number(n).toFixed(d);
@@ -601,6 +793,37 @@
         const num = state.mA * cA() * state.TA + state.mB * cB() * state.TB;
         const den = state.mA * cA() + state.mB * cB();
         return den > 0 ? num / den : state.TA;
+      }
+
+      function getPublicState() {
+        return {
+          matA: state.matA,
+          matB: state.matB,
+          massA: state.mA,
+          massB: state.mB,
+          tempA: state.TA,
+          tempB: state.TB,
+          Q_loss: state.Q_loss,
+          Q_gain: state.Q_gain,
+          contacting: state.contacting,
+          equilibrium: state.equilibrium,
+          simTime: state.simTime,
+          teqTheoretical: theoreticalTeq(),
+        };
+      }
+
+      function notifyStateListeners() {
+        const s = getPublicState();
+        stateListeners.forEach((fn) => {
+          try { fn(s); } catch (e) { console.warn(e); }
+        });
+      }
+
+      function notifyEquilibriumListeners() {
+        const s = getPublicState();
+        equilibriumListeners.forEach((fn) => {
+          try { fn(s); } catch (e) { console.warn(e); }
+        });
       }
 
       // 温度に応じて粒子速度を変更: v = k_v * sqrt(T_K)
@@ -993,6 +1216,7 @@
           state.TB = state.TA;
           state.equilibrium = true;
           pushChartPoint(true);
+          notifyEquilibriumListeners();
           return;
         }
 
@@ -1011,6 +1235,7 @@
           state.TB = state.TA;
           state.equilibrium = true;
           pushChartPoint(true);
+          notifyEquilibriumListeners();
         }
       }
 
@@ -1140,6 +1365,7 @@
         } else {
           statusMsg.textContent = "物体 A と B を設定し「接触開始」で熱の移動を開始します。";
         }
+        notifyStateListeners();
       }
 
       function startContact() {
@@ -1158,6 +1384,7 @@
           state.TA = teq;
           state.TB = teq;
           pushChartPoint(true);
+          notifyEquilibriumListeners();
         }
         updateUI();
       }
@@ -1223,21 +1450,198 @@
       contactBtn.addEventListener("click", startContact);
       resetBtn.addEventListener("click", resetSim);
 
+      function syncMatButtons(obj, matKey) {
+        document.querySelectorAll('.mat-btn[data-obj="' + obj + '"]').forEach((b) => {
+          b.classList.toggle("active", b.dataset.mat === matKey);
+        });
+        document.querySelectorAll('.inq-material-btn[data-obj="' + obj + '"]').forEach((b) => {
+          b.classList.toggle("active", b.dataset.material === matKey);
+        });
+      }
+
+      function applyMatA(matKey) {
+        if (controlsLocked) return;
+        state.matA = matKey;
+        syncMatButtons("a", matKey);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      function applyMatB(matKey) {
+        if (controlsLocked) return;
+        state.matB = matKey;
+        syncMatButtons("b", matKey);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      function applyMassA(v) {
+        if (controlsLocked) return;
+        state.mA = Number(v);
+        const el = document.getElementById("massASlider");
+        const inq = document.getElementById("inqMassASlider");
+        if (el) el.value = state.mA;
+        if (inq) inq.value = state.mA;
+        document.getElementById("massAVal").textContent = state.mA + " g";
+        document.getElementById("inqMassAValue").textContent = String(state.mA);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      function applyMassB(v) {
+        if (controlsLocked) return;
+        state.mB = Number(v);
+        const el = document.getElementById("massBSlider");
+        const inq = document.getElementById("inqMassBSlider");
+        if (el) el.value = state.mB;
+        if (inq) inq.value = state.mB;
+        document.getElementById("massBVal").textContent = state.mB + " g";
+        document.getElementById("inqMassBValue").textContent = String(state.mB);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      function applyTempA(v) {
+        if (controlsLocked) return;
+        state.TA = Number(v);
+        const el = document.getElementById("tempASlider");
+        const inq = document.getElementById("inqTempASlider");
+        if (el) el.value = state.TA;
+        if (inq) inq.value = state.TA;
+        document.getElementById("tempAVal").textContent = state.TA + " ℃";
+        document.getElementById("inqTempAValue").textContent = String(state.TA);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      function applyTempB(v) {
+        if (controlsLocked) return;
+        state.TB = Number(v);
+        const el = document.getElementById("tempBSlider");
+        const inq = document.getElementById("inqTempBSlider");
+        if (el) el.value = state.TB;
+        if (inq) inq.value = state.TB;
+        document.getElementById("tempBVal").textContent = state.TB + " ℃";
+        document.getElementById("inqTempBValue").textContent = String(state.TB);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      window.HeatEquilibriumSim = {
+        getState: getPublicState,
+        setMatA: applyMatA,
+        setMatB: applyMatB,
+        setMassA: applyMassA,
+        setMassB: applyMassB,
+        setTempA: applyTempA,
+        setTempB: applyTempB,
+        startContact,
+        reset: resetSim,
+        isContacting: () => !!state.contacting,
+        isEquilibrium: () => !!state.equilibrium,
+        getChartData() {
+          if (!tempChart) return { seriesA: [], seriesB: [] };
+          return {
+            seriesA: (tempChart.data.datasets[0].data || []).map((p) => ({ x: p.x, y: p.y })),
+            seriesB: (tempChart.data.datasets[1].data || []).map((p) => ({ x: p.x, y: p.y })),
+          };
+        },
+        onStateUpdate(fn) { if (typeof fn === "function") stateListeners.push(fn); },
+        onEquilibrium(fn) { if (typeof fn === "function") equilibriumListeners.push(fn); },
+      };
+
+      const tabBtns = document.querySelectorAll(".tab-btn");
+      const tabSim = document.getElementById("tabSimulation");
+      const tabInq = document.getElementById("tabInquiry");
+      const simCanvasWrap = document.getElementById("simCanvasWrap");
+      const inquiryCanvasSlot = document.getElementById("inquiryCanvasSlot");
+      let inquiryMode = null;
+      let activeTab = "simulation";
+
+      function mountCanvasForTab(tab) {
+        if (!simCanvasWrap) return;
+        const particleSection = document.querySelector("#tabSimulation section.panel[aria-label='粒子運動']");
+        if (tab === "inquiry" && inquiryCanvasSlot) {
+          inquiryCanvasSlot.appendChild(simCanvasWrap);
+        } else if (particleSection) {
+          const h3 = particleSection.querySelector("h3");
+          if (h3 && h3.nextElementSibling !== simCanvasWrap) {
+            h3.insertAdjacentElement("afterend", simCanvasWrap);
+          }
+        }
+        resizeCanvas();
+        requestAnimationFrame(() => {
+          resizeCanvas();
+          initParticles();
+        });
+      }
+
+      function syncInquiryControls() {
+        const s = getPublicState();
+        syncMatButtons("a", s.matA);
+        syncMatButtons("b", s.matB);
+        applyMassA(s.massA);
+        applyMassB(s.massB);
+        applyTempA(s.tempA);
+        applyTempB(s.tempB);
+      }
+
+      tabBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const tab = btn.dataset.tab;
+          if (tab === activeTab) return;
+          activeTab = tab;
+          tabBtns.forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+          tabSim.classList.toggle("active", tab === "simulation");
+          tabInq.classList.toggle("active", tab === "inquiry");
+          mountCanvasForTab(tab);
+          if (tab === "inquiry") {
+            syncInquiryControls();
+            inquiryMode?.activate();
+          } else {
+            inquiryMode?.deactivate();
+          }
+          requestAnimationFrame(() => resizeCanvas());
+        });
+      });
+
+      document.querySelectorAll(".inq-material-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (btn.disabled || controlsLocked) return;
+          const mat = btn.dataset.material;
+          if (btn.dataset.obj === "a") window.HeatEquilibriumSim.setMatA(mat);
+          else window.HeatEquilibriumSim.setMatB(mat);
+        });
+      });
+
+      ["inqMassASlider", "inqMassBSlider", "inqTempASlider", "inqTempBSlider"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("input", () => {
+          if (controlsLocked) return;
+          if (id === "inqMassASlider") window.HeatEquilibriumSim.setMassA(el.value);
+          else if (id === "inqMassBSlider") window.HeatEquilibriumSim.setMassB(el.value);
+          else if (id === "inqTempASlider") window.HeatEquilibriumSim.setTempA(el.value);
+          else window.HeatEquilibriumSim.setTempB(el.value);
+        });
+      });
+
       window.addEventListener("resize", () => {
         resizeCanvas();
         initParticles();
       });
 
       function boot() {
-        // 初期：A=水80℃（液体）、B=鉄20℃（金属固体）
         state.matA = "water";
         state.matB = "iron";
-        document.querySelectorAll('.mat-btn[data-obj="a"]').forEach((b) => {
-          b.classList.toggle("active", b.dataset.mat === "water");
-        });
-        document.querySelectorAll('.mat-btn[data-obj="b"]').forEach((b) => {
-          b.classList.toggle("active", b.dataset.mat === "iron");
-        });
+        syncMatButtons("a", "water");
+        syncMatButtons("b", "iron");
         readControls();
         resizeCanvas();
         buildChart();
@@ -1245,6 +1649,17 @@
         resetChart();
         updateUI();
         requestAnimationFrame(tick);
+
+        inquiryMode = new InquiryMode({
+          noteEl: document.getElementById("inquiryNote"),
+          progressEl: document.getElementById("inquiryProgress"),
+          welcomeEl: document.getElementById("inquiryWelcome"),
+          summaryScreenEl: document.getElementById("inquirySummaryScreen"),
+          reportScreenEl: document.getElementById("inquiryReportScreen"),
+          reportDocEl: document.getElementById("inquiryReportDocument"),
+        });
+
+        document.getElementById("inqResetBtn")?.addEventListener("click", () => inquiryMode.resetProgress());
       }
 
       if (document.readyState === "loading") {

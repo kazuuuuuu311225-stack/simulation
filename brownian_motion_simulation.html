@@ -6,7 +6,8 @@
   <title>ブラウン運動 · 熱運動 — 12章 熱と比熱</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/brownian-inquiry.css?v=20260626b">
   <style>
     * { box-sizing: border-box; }
 
@@ -409,8 +410,15 @@
       <div class="hero-icon" aria-hidden="true">🌡</div>
       <h2>ブラウン運動 · 熱運動</h2>
       <p class="chapter-label">12章　熱と比熱 — 分子の熱運動とブラウン運動</p>
-      <a id="back" href="index.html">← ホームへ戻る</a>
+      <a id="back" href="00_folder_thermo.html#chapter-12">← ホームへ戻る</a>
     </header>
+
+    <nav class="tab-bar" aria-label="表示モード">
+      <button type="button" class="tab-btn active" data-tab="simulation">シミュレーション</button>
+      <button type="button" class="tab-btn inquiry-tab" data-tab="inquiry">探究モード <span class="tab-badge">NEW</span></button>
+    </nav>
+
+    <div id="tabSimulation" class="tab-panel active">
 
     <section class="panel" aria-label="ライブデータ">
       <h3>ライブデータ</h3>
@@ -505,9 +513,14 @@
           <p class="viz-label">分子（100個）と観察対象（大粒子1個）</p>
         </div>
         <p class="viz-legend">小粒子＝液体・気体の分子　／　大粒子＝花粉・コロイド粒子など（顕微鏡で見えるサイズ）</p>
-        <div class="canvas-wrap">
+        <div class="canvas-wrap" id="simCanvasWrap">
           <canvas id="simCanvas" aria-label="熱運動シミュレーション"></canvas>
           <div class="canvas-hud" id="canvasHud">T = <strong>300 K</strong><br>⟨v⟩ = <strong>—</strong></div>
+          <div class="observe-overlay" id="observeOverlay" aria-hidden="true">
+            <div class="observe-ring"><span class="observe-count">30</span></div>
+            <p class="observe-text">まず30秒間、じっくり観察しよう<br><small style="font-weight:500;color:#94a3b8">分子が大粒子を押す様子に注目</small></p>
+            <button type="button" class="observe-skip">観察完了（スキップ）</button>
+          </div>
         </div>
       </section>
     </div>
@@ -519,7 +532,165 @@
         <span><i class="dot trail"></i>大粒子の軌跡</span>
       </div>
     </section>
+
+    </div><!-- /tabSimulation -->
+
+    <div id="tabInquiry" class="tab-panel">
+      <div class="inquiry-progress-wrap" id="inquiryProgress">
+        <div class="inquiry-progress-head">
+          <span>🔬 探究進行度</span>
+          <div class="inquiry-progress-actions">
+            <div class="inq-companion-mode-bar" id="inqCompanionModeBar" aria-label="伴走AIモード">
+              <span class="inq-companion-mode-title">🤝 伴走AI</span>
+              <button type="button" class="inq-companion-mode-btn active" data-mode="gentle">やさしめ</button>
+              <button type="button" class="inq-companion-mode-btn" data-mode="expert">専門的</button>
+            </div>
+            <button type="button" class="inquiry-reset-btn" id="inqResetBtn" title="問い・仮説・実験記録などをすべて消して最初からやり直す">↺ リセット</button>
+            <strong class="inquiry-progress-pct">0%</strong>
+          </div>
+        </div>
+        <div class="inquiry-progress-track">
+          <div class="inquiry-progress-fill"></div>
+        </div>
+        <div class="inquiry-step-dots"></div>
+      </div>
+
+      <div class="inquiry-layout">
+        <div class="inquiry-left inquiry-sim-compact">
+          <div class="inquiry-mission-banner hidden" id="inquiryMissionBanner" aria-live="polite">
+            <div class="inquiry-mission-banner-head">📋 探究ミッション</div>
+            <p class="inquiry-mission-banner-row" id="inquiryBannerMission"></p>
+            <p class="inquiry-mission-banner-row" id="inquiryBannerHyp"></p>
+            <p class="inquiry-mission-banner-row" id="inquiryBannerPlan"></p>
+          </div>
+
+          <div class="inquiry-sim-stage" id="inquirySimStage">
+            <section class="panel inquiry-sim-view" aria-label="探究シミュレーション">
+              <div class="inquiry-sim-view-head">
+                <h3>🔬 実験ビュー — ブラウン運動</h3>
+                <button type="button" class="inq-focus-sim-btn" id="inqFocusSimBtn" title="シミュレーションを画面上部に表示">⤒ シミュレーションを見る</button>
+              </div>
+              <div id="inquiryCanvasSlot"></div>
+            </section>
+
+            <div class="inq-action-bar panel" aria-label="測定操作">
+              <div class="inq-measure-actions">
+                <button type="button" class="inq-measure-btn" id="inqMeasureBtn">📏 測定をする</button>
+                <button type="button" class="inq-exp-reset-btn" id="inqExpResetBtn">↺ 実験リセット</button>
+              </div>
+              <p class="inq-measure-status" id="inqMeasureStatus">条件を整えてから測定ボタンを押してください</p>
+            </div>
+          </div>
+
+          <section class="panel inquiry-controls-panel" aria-label="探究用操作" id="inqExperimentControls">
+            <div class="inquiry-controls-head">
+              <h3>条件設定 <span id="inqPlanBadge" style="font-size:0.68rem;color:#c4b5fd;font-weight:600"></span></h3>
+              <p class="inq-section-label">初期条件（測定前にいつでも設定できます）</p>
+            </div>
+            <div class="inq-controls-scroll">
+              <details class="inq-var-panel is-enabled" id="inqVarTemp" open>
+                <summary class="inq-var-label">🌡 温度 T</summary>
+                <div class="inq-var-body">
+                  <label>
+                    <input id="inqTempSlider" type="range" min="100" max="600" step="10" value="300">
+                    <span class="slider-val"><span id="inqTempValue">300</span> K</span>
+                  </label>
+                  <div class="inq-temp-presets" id="inqTempPresets">
+                    <button type="button" class="inq-temp-preset" data-temp="300">300 K</button>
+                    <button type="button" class="inq-temp-preset" data-temp="400">400 K</button>
+                    <button type="button" class="inq-temp-preset" data-temp="500">500 K</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarSize">
+                <summary class="inq-var-label">🔵 大粒子のサイズ</summary>
+                <div class="inq-var-body">
+                  <label>
+                    半径 (px)
+                    <input id="inqSizeSlider" type="range" min="10" max="32" step="1" value="18">
+                    <span class="slider-val"><span id="inqSizeValue">18</span> px</span>
+                  </label>
+                  <div class="inq-temp-presets">
+                    <button type="button" class="inq-size-preset" data-size="14">小 14</button>
+                    <button type="button" class="inq-size-preset" data-size="18">中 18</button>
+                    <button type="button" class="inq-size-preset" data-size="26">大 26</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="inq-var-panel is-enabled" id="inqVarCount">
+                <summary class="inq-var-label">✨ 分子数 N</summary>
+                <div class="inq-var-body">
+                  <label>
+                    個数
+                    <input id="inqCountSlider" type="range" min="30" max="200" step="10" value="100">
+                    <span class="slider-val"><span id="inqCountValue">100</span> 個</span>
+                  </label>
+                  <div class="inq-temp-presets">
+                    <button type="button" class="inq-count-preset" data-count="50">50</button>
+                    <button type="button" class="inq-count-preset" data-count="100">100</button>
+                    <button type="button" class="inq-count-preset" data-count="150">150</button>
+                  </div>
+                </div>
+              </details>
+
+              <p class="inq-plan-hint" id="inqPlanHint">③の実験計画で「操作変数」として記録・分析する項目が決まります。</p>
+            </div>
+          </section>
+        </div>
+
+        <div class="inquiry-note" id="inquiryNote" aria-label="探究ノート"></div>
+      </div>
+    </div>
+
+    <div class="inquiry-welcome hidden" id="inquiryWelcome">
+      <div class="welcome-card">
+        <div class="welcome-icon">🔬</div>
+        <h3>研究者モードへようこそ</h3>
+        <p>ミッション（問い）を選び、仮説と実験計画を立て、シミュレーションで分子の熱運動とブラウン運動を確かめる — 高校物理の探究学習を体験しよう。</p>
+        <button type="button" class="welcome-start">探究をはじめる →</button>
+      </div>
+    </div>
+
+    <div class="inquiry-summary-screen hidden" id="inquirySummaryScreen" aria-hidden="true">
+      <div class="summary-screen-card">
+        <div class="summary-screen-icon">🎉</div>
+        <h3>探究完了！</h3>
+        <p class="summary-screen-lead">問い → 仮説 → 実験 → データ → グラフ → 考察。研究者としての一連の流れを体験しました。</p>
+        <ul class="summary-screen-checklist" id="summaryScreenChecklist"></ul>
+        <div class="summary-screen-rate" id="summaryScreenRate">100%</div>
+        <div class="summary-screen-actions">
+          <button type="button" class="summary-screen-report-btn" id="summaryScreenReportBtn">📄 実験レポートを見る</button>
+          <button type="button" class="summary-screen-close">まとめカードを見る →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="inquiry-report-screen hidden" id="inquiryReportScreen" aria-hidden="true">
+      <div class="report-screen-toolbar">
+        <h2>📄 探究実験レポート <span class="report-format-badge">A4 縦</span></h2>
+        <button type="button" class="report-toolbar-btn report-download-btn" id="reportDownloadPdfBtn">⬇ A4 PDFでダウンロード</button>
+        <button type="button" class="report-toolbar-btn report-close-btn" id="reportCloseBtn">閉じる</button>
+      </div>
+      <div class="report-screen-scroll">
+        <div class="report-a4-preview-wrap">
+          <article id="inquiryReportDocument" class="inquiry-report-document" aria-label="探究実験レポート本文"></article>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="../assets/js/brownian-inquiry/storage.js?v=20260626b"></script>
+  <script src="../assets/js/brownian-inquiry/missions.js?v=20260626b"></script>
+  <script src="../assets/js/brownian-inquiry/companion.js?v=20260626b"></script>
+  <script src="../assets/js/brownian-inquiry/progress.js?v=20260626b"></script>
+  <script src="../assets/js/brownian-inquiry/steps.js?v=20260626b"></script>
+  <script src="../assets/js/brownian-inquiry/report.js?v=20260626b"></script>
+  <script src="../assets/js/brownian-inquiry/InquiryMode.js?v=20260626b"></script>
 
   <script>
     (function () {
@@ -536,14 +707,15 @@
       const commentBox = document.getElementById("commentBox");
       const canvasHud = document.getElementById("canvasHud");
 
-      const SMALL_COUNT = 100;
+      const SMALL_RADIUS = 3;
       const SPEED_FACTOR = 0.045;
       const FPS_EST = 60;
-      const LARGE_RADIUS = 18;
-      const SMALL_RADIUS = 3;
       const KICK_SCALE = 0.018;
       const LARGE_DAMPING = 0.992;
       const TRAIL_MAX = 180;
+
+      let particleCount = 100;
+      let largeRadius = 18;
 
       let width = 0;
       let height = 0;
@@ -560,6 +732,7 @@
       let kicksPerSec = 0;
       let lastStatTime = performance.now();
       let frameCount = 0;
+      const stateListeners = [];
 
       const statEls = {
         T: document.getElementById("statT"),
@@ -665,7 +838,7 @@
         constructor(x, y) {
           this.x = x;
           this.y = y;
-          this.radius = LARGE_RADIUS;
+          this.radius = largeRadius;
           this.vx = 0;
           this.vy = 0;
         }
@@ -790,7 +963,7 @@
 
       function initSimulation() {
         smallParticles = [];
-        for (let i = 0; i < SMALL_COUNT; i += 1) {
+        for (let i = 0; i < particleCount; i += 1) {
           smallParticles.push(createSmallParticle());
         }
         largeParticle = new LargeParticle(width * 0.5, height * 0.5);
@@ -840,7 +1013,7 @@
         statEls.Vlarge.textContent = `${fmt(vLargeSec, 1)} px/s`;
         statEls.Disp.textContent = `${fmt(disp, 1)} px`;
         statEls.Kicks.textContent = String(kicksPerSec);
-        statEls.N.textContent = String(SMALL_COUNT);
+        statEls.N.textContent = String(particleCount);
 
         statEls.cV.textContent = fmt(speedAtTemperature(temperature), 2);
         statEls.cT.textContent = String(temperature);
@@ -850,6 +1023,31 @@
         statEls.cRatio.textContent = vLargeSec > 0.5 ? fmt(vAvgSec / vLargeSec, 1) : "—";
 
         canvasHud.innerHTML = `T = <strong>${temperature} K</strong><br>⟨v⟩ = <strong>${fmt(vAvgSec, 0)} px/s</strong>`;
+
+        const inqT = document.getElementById("inqStatT");
+        const inqV = document.getElementById("inqStatV");
+        const inqSize = document.getElementById("inqStatSize");
+        const inqN = document.getElementById("inqStatN");
+        if (inqT) inqT.textContent = `${temperature} K`;
+        if (inqV) inqV.textContent = `${fmt(vAvgSec, 1)} px/s`;
+        if (inqSize) inqSize.textContent = `${largeRadius} px`;
+        if (inqN) inqN.textContent = String(particleCount);
+
+        notifyStateListeners({
+          temperature,
+          avgSpeedPxS: vAvgSec,
+          largeSpeedPxS: vLargeSec,
+          displacement: disp,
+          kicksPerSec,
+          particleCount,
+          largeRadius,
+        });
+      }
+
+      function notifyStateListeners(payload) {
+        stateListeners.forEach((fn) => {
+          try { fn(payload); } catch { /* */ }
+        });
       }
 
       function drawBackground() {
@@ -941,7 +1139,44 @@
         document.querySelectorAll(".temp-preset").forEach((btn) => {
           btn.classList.toggle("active", Number(btn.dataset.temp) === temperature);
         });
+        syncInquirySliders();
         updateComment();
+        updateStats(performance.now());
+      }
+
+      function syncInquirySliders() {
+        const sl = document.getElementById("inqTempSlider");
+        const val = document.getElementById("inqTempValue");
+        if (sl) sl.value = String(temperature);
+        if (val) val.textContent = String(temperature);
+        const slSize = document.getElementById("inqSizeSlider");
+        const valSize = document.getElementById("inqSizeValue");
+        if (slSize) slSize.value = String(largeRadius);
+        if (valSize) valSize.textContent = String(largeRadius);
+        const slCount = document.getElementById("inqCountSlider");
+        const valCount = document.getElementById("inqCountValue");
+        if (slCount) slCount.value = String(particleCount);
+        if (valCount) valCount.textContent = String(particleCount);
+      }
+
+      function setParticleCount(n) {
+        const next = clamp(Math.round(n), 30, 200);
+        if (next === particleCount && smallParticles.length === particleCount) return;
+        particleCount = next;
+        while (smallParticles.length < particleCount) {
+          smallParticles.push(createSmallParticle());
+        }
+        if (smallParticles.length > particleCount) {
+          smallParticles.length = particleCount;
+        }
+        syncInquirySliders();
+        updateStats(performance.now());
+      }
+
+      function setLargeRadius(r) {
+        largeRadius = clamp(Math.round(r), 10, 32);
+        if (largeParticle) largeParticle.radius = largeRadius;
+        syncInquirySliders();
         updateStats(performance.now());
       }
 
@@ -971,6 +1206,101 @@
 
       resetBtn.addEventListener("click", resetSimulation);
 
+      window.BrownianSim = {
+        refreshStats() { updateStats(performance.now()); },
+        getState() {
+          const vAvg = averageSmallSpeed() * FPS_EST;
+          const vLarge = largeParticle ? largeParticle.speed() * FPS_EST : 0;
+          return {
+            temperature,
+            avgSpeedPxS: vAvg,
+            largeSpeedPxS: vLarge,
+            particleCount,
+            largeRadius,
+          };
+        },
+        setTemperature(T) { setTemperature(T); },
+        setParticleCount(n) { setParticleCount(n); },
+        setLargeRadius(r) { setLargeRadius(r); },
+        onStateUpdate(fn) { stateListeners.push(fn); },
+      };
+
+      /* ── タブ切替 ── */
+      const tabBtns = document.querySelectorAll(".tab-btn");
+      const tabSim = document.getElementById("tabSimulation");
+      const tabInq = document.getElementById("tabInquiry");
+      const simCanvasWrap = document.getElementById("simCanvasWrap");
+      const simCanvasHost = document.querySelector("#tabSimulation .viz-block .canvas-wrap")?.parentElement;
+      const inquiryCanvasSlot = document.getElementById("inquiryCanvasSlot");
+      let inquiryMode = null;
+      let activeTab = "simulation";
+
+      function mountCanvasForTab(tab) {
+        if (!simCanvasWrap) return;
+        const simViz = document.querySelector("#tabSimulation .viz-block");
+        if (tab === "inquiry") {
+          inquiryCanvasSlot.appendChild(simCanvasWrap);
+        } else if (simViz) {
+          simViz.appendChild(simCanvasWrap);
+        }
+        resizeCanvas();
+        requestAnimationFrame(() => {
+          resizeCanvas();
+          if (!largeParticle || smallParticles.length === 0) {
+            initSimulation();
+            setTemperature(temperature);
+          }
+          drawSimulation();
+          updateStats(performance.now());
+        });
+      }
+
+      tabBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const tab = btn.dataset.tab;
+          if (tab === activeTab) return;
+          activeTab = tab;
+          tabBtns.forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+          tabSim.classList.toggle("active", tab === "simulation");
+          tabInq.classList.toggle("active", tab === "inquiry");
+          mountCanvasForTab(tab);
+          if (tab === "inquiry") {
+            syncInquirySliders();
+            inquiryMode?.activate();
+          } else {
+            inquiryMode?.deactivate();
+          }
+          requestAnimationFrame(() => resizeCanvas());
+        });
+      });
+
+      const inqTempSlider = document.getElementById("inqTempSlider");
+      if (inqTempSlider) {
+        inqTempSlider.addEventListener("input", () => setTemperature(Number(inqTempSlider.value)));
+      }
+      document.querySelectorAll(".inq-temp-preset").forEach((btn) => {
+        btn.addEventListener("click", () => setTemperature(Number(btn.dataset.temp)));
+      });
+      const inqSizeSlider = document.getElementById("inqSizeSlider");
+      if (inqSizeSlider) {
+        inqSizeSlider.addEventListener("input", () => setLargeRadius(Number(inqSizeSlider.value)));
+      }
+      document.querySelectorAll(".inq-size-preset").forEach((btn) => {
+        btn.addEventListener("click", () => setLargeRadius(Number(btn.dataset.size)));
+      });
+      const inqCountSlider = document.getElementById("inqCountSlider");
+      if (inqCountSlider) {
+        inqCountSlider.addEventListener("input", () => setParticleCount(Number(inqCountSlider.value)));
+      }
+      document.querySelectorAll(".inq-count-preset").forEach((btn) => {
+        btn.addEventListener("click", () => setParticleCount(Number(btn.dataset.count)));
+      });
+
+      tempSlider.addEventListener("input", () => {
+        setTemperature(Number(tempSlider.value));
+        syncInquirySliders();
+      });
+
       window.addEventListener("resize", () => {
         resizeCanvas();
         resetSimulation();
@@ -983,6 +1313,23 @@
         drawSimulation();
         updateStats(performance.now());
         requestAnimationFrame(tick);
+
+        inquiryMode = new InquiryMode({
+          noteEl: document.getElementById("inquiryNote"),
+          progressEl: document.getElementById("inquiryProgress"),
+          welcomeEl: document.getElementById("inquiryWelcome"),
+          observeOverlayEl: document.getElementById("observeOverlay"),
+          controlsEl: document.getElementById("inqExperimentControls"),
+          summaryScreenEl: document.getElementById("inquirySummaryScreen"),
+          reportScreenEl: document.getElementById("inquiryReportScreen"),
+          reportDocEl: document.getElementById("inquiryReportDocument"),
+        });
+
+        document.getElementById("inqResetBtn")?.addEventListener("click", () => inquiryMode.resetProgress());
+
+        if (!InquiryStorage.load().welcomeSeen) {
+          /* welcome shown on first inquiry tab visit */
+        }
       }
 
       if (document.readyState === "loading") {

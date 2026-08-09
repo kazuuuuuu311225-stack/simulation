@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 核エネルギー・核分裂・質量欠損 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #1a0a08 45%, #2a1008 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,146,60,0.35), rgba(248,113,113,0.35));
+      border: 1px solid rgba(251,146,60,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fdba74; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fb923c; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ffedd5; background: rgba(251,146,60,0.14);
+      border: 1px solid rgba(251,146,60,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251, 146, 60, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fdba74; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(251,146,60,0.1));
+      border: 1px solid rgba(251,146,60,0.32);
+    }
+    .formula-main { font-size: 0.84rem; font-weight: 800; color: #ffedd5; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(251,146,60,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #ffedd5; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(400px, 44dvh); min-height: 300px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas {
+      position: absolute; top: 0; left: 0; z-index: 0;
+      display: block; width: 100% !important; height: 100% !important;
+    }
+    #bindGraph {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 118px; height: 210px; z-index: 4; pointer-events: none;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(251,146,60,0.45);
+      border-radius: 10px; padding: 6px 4px;
+      transition: box-shadow 0.3s;
+    }
+    #bindGraph.hl { box-shadow: 0 0 16px rgba(251,146,60,0.5); }
+    #bindGraph canvas { display: block; width: 100%; height: 100%; }
+    .bind-label { position: absolute; right: 10px; top: calc(50% - 118px); font-size: 0.58rem; font-weight: 800; color: #fdba74; z-index: 5; pointer-events: none; }
+    #rxBanner {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 6; pointer-events: none;
+      display: none; padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 85%, transparent 100%);
+      text-align: center;
+    }
+    #rxBanner.show { display: block; }
+    #rxBanner .eq { font-size: clamp(0.9rem, 3vw, 1.2rem); font-weight: 800; color: #fff; }
+    #rxBanner .eq .hl { color: #fde047; }
+    #rxBanner .eq .arr { color: #fb923c; margin: 0 0.2em; }
+    #rxBanner .en { font-size: 0.95rem; font-weight: 800; color: #4ade80; margin-top: 4px; }
+    #animPhase {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 5; pointer-events: none; padding: 8px 16px; border-radius: 10px;
+      background: rgba(2,6,23,0.94); border: 1px solid rgba(74,222,128,0.55);
+      font-size: 0.76rem; font-weight: 800; color: #86efac; white-space: nowrap;
+    }
+    #chainCounter {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      z-index: 4; pointer-events: none; padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.92); border: 1px solid rgba(248,113,113,0.5);
+      text-align: center; min-width: 90px;
+    }
+    #chainCounter .cc-n { font-size: 1.6rem; font-weight: 800; color: #f87171; line-height: 1; }
+    #chainCounter .cc-l { font-size: 0.55rem; color: #94a3b8; font-weight: 700; margin-top: 4px; }
+    #massPanel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); background: #0A0A0A;
+      transition: box-shadow 0.3s;
+    }
+    #massPanel.hl { box-shadow: inset 0 0 20px rgba(251,191,36,0.15); }
+    .mass-title { font-size: 0.72rem; font-weight: 800; color: #fdba74; margin-bottom: 8px; }
+    .mass-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+    .mass-box { padding: 8px 12px; border-radius: 10px; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.3); }
+    .mass-box.defect { border-color: rgba(251,191,36,0.6); background: rgba(120,53,15,0.2); }
+    .mass-box.energy { border-color: rgba(74,222,128,0.6); background: rgba(20,83,45,0.2); }
+    .mass-box .ml { font-size: 0.58rem; color: #94a3b8; font-weight: 700; }
+    .mass-box .mv { font-size: 0.88rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .mass-box.energy .mv { color: #4ade80; font-size: 1rem; }
+    .mass-arrow { color: #fb923c; font-size: 1rem; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 8; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.68rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(251,146,60,0.7); color: #ffedd5; }
+    .status-badge { top: 12px; right: 136px; border: 1px solid rgba(74,222,128,0.55); color: #bbf7d0; max-width: 200px; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 68px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.64rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(251,146,60,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(251,146,60,0.28); color: #ffedd5; border-color: rgba(251,146,60,0.6); font-weight: 800; }
+    .act-btn.active { background: rgba(74,222,128,0.2); color: #86efac; border-color: rgba(74,222,128,0.5); }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,146,60,0.2);
+      display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: min(800px, 85dvh);
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fdba74; }
+    .hud-section { font-size: 0.66rem; font-weight: 800; color: #fb923c; margin: 4px 0 2px; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(251,146,60,0.45); background: rgba(120,53,15,0.15); }
+    .hud-card.energy { border-color: rgba(74,222,128,0.45); background: rgba(20,83,45,0.12); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hud-card .val.big { font-size: 1rem; color: #fde68a; }
+    .hud-card.energy .val.big { color: #4ade80; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #fb923c; }
+    .hint-box {
+      padding: 12px 14px; border-radius: 12px; font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.22);
+    }
+    .edu-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; line-height: 1.7; color: #cbd5e1; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">☢</div>
+      <p class="chapter-label">第28章 ⑧ — 核エネルギー・核分裂</p>
+      <h2>核分裂 — 質量欠損・結合エネルギー・連鎖反応 3D</h2>
+      <p class="tagline">²³⁵U+n → Kr+Ba+3n+E · E=Δmc² · 連鎖反応</p>
+      <a id="back" href="00_folder_atom.html">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">²³⁵U + n → ⁹²Kr + ¹⁴¹Ba + 3n + <strong>E=Δmc²</strong>（約200 MeV）</div>
+        <div class="formula-sub">質量欠損 → エネルギー · ⁵⁶Fe が最安定 · 連鎖反応は中性子で増幅</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">核分裂 · 連鎖反応 · 核融合比較</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>陽子</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>中性子</span>
+              <span><i class="color-chip" style="background:#4ade80;color:#4ade80"></i>放出E</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>²³⁵U</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">核分裂ラボ\nE = mc²</div>
+              <div class="status-badge" id="statusBadge">「核分裂 U-235」から始めよう</div>
+              <div class="bind-label">比結合E</div>
+              <div id="bindGraph"><canvas id="bindCanvas"></canvas></div>
+              <div id="chainCounter">
+                <div class="cc-n" id="ccFissions">0</div>
+                <div class="cc-l">分裂回数</div>
+                <div class="cc-n" id="ccNeutrons" style="font-size:1.1rem;margin-top:6px">0</div>
+                <div class="cc-l">飛行中のn</div>
+              </div>
+              <div id="rxBanner">
+                <div class="eq" id="rxEq"></div>
+                <div class="en" id="rxEn"></div>
+              </div>
+              <div id="animPhase">²³⁵U 原子核 — 中性子を当てて分裂させよう</div>
+            </div>
+            <div id="massPanel">
+              <div class="mass-title">E = mc² — 質量がエネルギーに変わる</div>
+              <div class="mass-flow">
+                <div class="mass-box"><div class="ml">m<sub>初期</sub></div><div class="mv" id="mInit">— u</div></div>
+                <span class="mass-arrow">→</span>
+                <div class="mass-box"><div class="ml">m<sub>最終</sub></div><div class="mv" id="mFinal">— u</div></div>
+                <span class="mass-arrow">Δm=</span>
+                <div class="mass-box defect"><div class="ml">質量欠損</div><div class="mv" id="mDefect">— u</div></div>
+                <span class="mass-arrow">E=</span>
+                <div class="mass-box energy"><div class="ml">Δm·c²</div><div class="mv" id="mEnergy">— MeV</div></div>
+              </div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="btnFission">核分裂 U-235</button>
+              <button type="button" class="act-btn primary" id="btnFusion">核融合 D+T</button>
+              <button type="button" class="act-btn" id="btnChain">連鎖反応開始</button>
+              <button type="button" class="act-btn" id="btnMass">質量欠損を強調</button>
+              <button type="button" class="act-btn" id="btnBind">結合Eを強調</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnPause" class="active">一時停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">核エネルギー HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">モード</div>
+              <div class="val big" id="hudMode">待機中</div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">Z</div><div class="val" id="hudZ">92</div></div>
+              <div class="hud-card"><div class="lbl">N</div><div class="val" id="hudN">143</div></div>
+              <div class="hud-card"><div class="lbl">A</div><div class="val" id="hudA">235</div></div>
+              <div class="hud-card"><div class="lbl">放出中性子</div><div class="val" id="hudNeutrons">3</div></div>
+            </div>
+            <p class="hud-section">質量 (u)</p>
+            <div class="hud-card"><div class="lbl">核子合計 Σm</div><div class="val" id="hudSumM">—</div></div>
+            <div class="hud-card"><div class="lbl">原子核質量 m</div><div class="val" id="hudNucM">—</div></div>
+            <div class="hud-card highlight"><div class="lbl">質量欠損 Δm</div><div class="val big" id="hudDm">—</div></div>
+            <p class="hud-section">エネルギー (MeV)</p>
+            <div class="hud-card energy"><div class="lbl">結合エネルギー</div><div class="val big" id="hudBind">—</div></div>
+            <div class="hud-card energy"><div class="lbl">放出 E=Δmc²</div><div class="val big" id="hudRelease">0</div></div>
+            <div class="hud-card energy"><div class="lbl">累積放出エネルギー</div><div class="val big" id="hudTotalE">0</div></div>
+            <p class="hud-section">コントロール</p>
+            <div class="slider-row">
+              <label>原子核の拡大 <span id="lblZoom">2.0×</span></label>
+              <input type="range" id="slZoom" min="1" max="3.5" step="0.1" value="2">
+            </div>
+            <div class="slider-row">
+              <label>表示速度 <span id="lblSpd">1.0×</span></label>
+              <input type="range" id="slSpd" min="0.4" max="2.5" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+              <label>中性子の減速率 <span id="lblAbsorb">20%</span></label>
+              <input type="range" id="slAbsorb" min="0" max="80" step="5" value="20">
+            </div>
+            <div class="slider-row">
+              <label>棒グラフスケール <span id="lblScale">1.0×</span></label>
+              <input type="range" id="slScale" min="0.6" max="1.5" step="0.1" value="1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>比較のポイント</h3>
+      <div class="hint-box" id="hintText">
+        <strong>核分裂</strong>（重い核²³⁵U）：中性子1個で分裂 → 約<strong>200 MeV</strong>放出。原子力発電の原理。<br>
+        <strong>連鎖反応</strong>：放出された中性子が次の²³⁵Uを分裂 → エネルギーが増幅（制御が重要！）。<br>
+        <strong>核融合</strong>（軽い核²H+³H）：合体 → 約<strong>17.6 MeV</strong>（太陽のエネルギー源）。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>分裂前後で<strong>質量が減る</strong>（Δm）→ その分が<strong>エネルギー</strong>に</li>
+        <li>¹個の²³⁵U分裂 ≈ 200 MeV ≈ 化石燃料1トン分のエネルギーに相当（イメージ）</li>
+        <li>連鎖反応は<strong>中性子を吸収する棒</strong>で制御（減速率スライダーで体感）</li>
+        <li>⁵⁶Fe は比結合エネルギー最大 → 最も安定</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const MP = 1.007276, MN = 1.008665, MEV_PER_U = 931.494;
+      const ELEMENTS = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu"];
+
+      const NUCLIDES = {
+        H2:  { key:"H2",  Z:1,  N:1,  A:2,   mass:2.014102,  beA:1.112 },
+        H3:  { key:"H3",  Z:1,  N:2,  A:3,   mass:3.016049,  beA:2.827 },
+        He4: { key:"He4", Z:2,  N:2,  A:4,   mass:4.002603,  beA:7.074 },
+        Fe56:{ key:"Fe56",Z:26, N:30, A:56,  mass:55.934942, beA:8.790 },
+        Kr92:{ key:"Kr92",Z:36, N:56, A:92,  mass:91.926156, beA:8.570 },
+        Ba141:{key:"Ba141",Z:56,N:85,A:141, mass:140.914411,beA:8.330 },
+        U235:{ key:"U235",Z:92, N:143,A:235, mass:235.043930,beA:7.590 },
+        n:   { key:"n",   Z:0,  N:1,  A:1,   mass:1.008665,  beA:0 },
+      };
+
+      const FISSION = {
+        name: "核分裂", eq: "²³⁵U + n → ⁹²Kr + ¹⁴¹Ba + 3n + E",
+        eqHtml: '<span class="hl">²³⁵U</span> + n <span class="arr">→</span> <span class="hl">⁹²Kr</span> + <span class="hl">¹⁴¹Ba</span> + 3n + E',
+        reactants: ["U235","n"], products: ["Kr92","Ba141","n","n","n"],
+        ePerFission: 200.8, highlight: "U235",
+      };
+      const FUSION = {
+        name: "核融合", eq: "²H + ³H → ⁴He + n + E",
+        eqHtml: '<span class="hl">²H</span> + <span class="hl">³H</span> <span class="arr">→</span> <span class="hl">⁴He</span> + n + E',
+        reactants: ["H2","H3"], products: ["He4","n"],
+        ePerFission: 17.6, highlight: "He4",
+      };
+      const BIND_CHART = ["H2","H3","He4","Fe56","U235","Ba141","Kr92"];
+
+      const MAX_VIS = 22;
+      const CHAIN_POSITIONS = [
+        [0,0,0], [-1.8,0,0.5], [1.8,0,-0.5], [0,0,1.8], [0,0,-1.8],
+        [-1.8,0,-1.8], [1.8,0,1.8], [-1.8,0,1.8], [1.8,0,-1.8],
+      ];
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const bindCanvas = document.getElementById("bindCanvas");
+      const bCtx = bindCanvas.getContext("2d");
+
+      let nucZoom = 2, animSpd = 1, graphScale = 1, absorbRate = 0.2;
+      let paused = false, animating = false, chainRunning = false;
+      let rotX = 0.25, rotY = 0.55, zoom = 11;
+      let dragging = false, lx = 0, ly = 0;
+      let simTime = 0, totalE = 0, displayE = 0, targetE = 0;
+      let highlightKey = "U235", fissionCount = 0;
+      let fuelCells = [], particles = [], bursts = [];
+
+      let scene, camera, renderer, worldGroup;
+
+      function sym(z) { return ELEMENTS[z] || "?"; }
+      function fmtNum(v, d) { return Number.isFinite(v) ? v.toFixed(d) : "—"; }
+      function sumMass(keys) { return keys.reduce((s, k) => s + (NUCLIDES[k]?.mass || 0), 0); }
+      function calcRx(rx) {
+        const mInit = sumMass(rx.reactants);
+        const mFinal = sumMass(rx.products);
+        const dm = mInit - mFinal;
+        const eRelease = Number.isFinite(dm) ? dm * MEV_PER_U : rx.ePerFission;
+        const main = NUCLIDES[rx.highlight];
+        const dmBind = main ? (main.Z * MP + main.N * MN - main.mass) : 0;
+        return { mInit, mFinal, dm, eRelease, dmBind, bindE: dmBind * MEV_PER_U, main };
+      }
+
+      function setPhase(t) {
+        document.getElementById("animPhase").textContent = t;
+        document.getElementById("statusBadge").textContent = t;
+      }
+      function showBanner(eq, en) {
+        document.getElementById("rxEq").innerHTML = eq;
+        document.getElementById("rxEn").textContent = "放出 E ≈ " + fmtNum(en, 1) + " MeV";
+        document.getElementById("rxBanner").classList.add("show");
+      }
+      function hideBanner() { document.getElementById("rxBanner").classList.remove("show"); }
+
+      function updateMassUI(d) {
+        document.getElementById("mInit").textContent = fmtNum(d.mInit, 6) + " u";
+        document.getElementById("mFinal").textContent = fmtNum(d.mFinal, 6) + " u";
+        document.getElementById("mDefect").textContent = fmtNum(d.dm, 6) + " u";
+        document.getElementById("mEnergy").textContent = fmtNum(d.eRelease, 1) + " MeV";
+      }
+
+      function updateHUD(mode, d, neutrons) {
+        document.getElementById("hudMode").textContent = mode;
+        if (d?.main) {
+          document.getElementById("hudZ").textContent = String(d.main.Z);
+          document.getElementById("hudN").textContent = String(d.main.N);
+          document.getElementById("hudA").textContent = String(d.main.A);
+          document.getElementById("hudSumM").textContent = fmtNum(d.main.Z * MP + d.main.N * MN, 6) + " u";
+          document.getElementById("hudNucM").textContent = fmtNum(d.main.mass, 6) + " u";
+          document.getElementById("hudDm").textContent = fmtNum(d.dmBind, 6) + " u";
+          document.getElementById("hudBind").textContent = fmtNum(d.bindE, 1) + " MeV";
+        }
+        if (neutrons != null) document.getElementById("hudNeutrons").textContent = String(neutrons);
+        document.getElementById("hudRelease").textContent = fmtNum(displayE, 1);
+        document.getElementById("hudTotalE").textContent = fmtNum(totalE, 1) + " MeV";
+        document.getElementById("ccFissions").textContent = String(fissionCount);
+        document.getElementById("ccNeutrons").textContent = String(particles.filter((p) => p.type === "n" && p.alive).length);
+        document.getElementById("modeBadge").textContent = mode + "\n累積 " + fmtNum(totalE, 0) + " MeV";
+      }
+
+      function drawBindGraph() {
+        const dpr = Math.min(devicePixelRatio, 2);
+        const w = bindCanvas.clientWidth, h = bindCanvas.clientHeight;
+        if (w < 10) return;
+        bindCanvas.width = w * dpr; bindCanvas.height = h * dpr;
+        bCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        bCtx.clearRect(0, 0, w, h);
+        const pad = 4, barW = (w - pad * 2) / BIND_CHART.length - 2;
+        const maxBE = 9 * graphScale;
+        BIND_CHART.forEach((k, i) => {
+          const n = NUCLIDES[k];
+          if (!n) return;
+          const bh = (n.beA / maxBE) * (h - 28);
+          const x = pad + i * (barW + 2);
+          const isHL = k === highlightKey;
+          const isFe = k === "Fe56";
+          bCtx.fillStyle = isFe ? "rgba(251,191,36,0.3)" : "rgba(30,41,59,0.5)";
+          bCtx.fillRect(x, 4, barW, h - 24);
+          const grad = bCtx.createLinearGradient(0, h - 20, 0, h - 20 - bh);
+          grad.addColorStop(0, isHL ? "#4ade80" : isFe ? "#fbbf24" : "#fb923c");
+          grad.addColorStop(1, isHL ? "#22d3ee" : isFe ? "#f59e0b" : "#ea580c");
+          bCtx.fillStyle = grad;
+          bCtx.fillRect(x, h - 20 - bh, barW, bh);
+          if (isHL || isFe) { bCtx.strokeStyle = isFe ? "#fde047" : "#4ade80"; bCtx.lineWidth = isHL ? 2 : 1; bCtx.strokeRect(x, h - 20 - bh, barW, bh); }
+          bCtx.fillStyle = isHL ? "#ffedd5" : "#64748b";
+          bCtx.font = (isHL ? "700 " : "") + "7px Inter,sans-serif";
+          bCtx.textAlign = "center";
+          bCtx.fillText(k === "Fe56" ? "Fe" : k.replace(/\d+/,""), x + barW / 2, h - 6);
+        });
+        bCtx.fillStyle = "#64748b"; bCtx.font = "600 7px Inter,sans-serif";
+        bCtx.fillText("Fe最大", 2, 10);
+      }
+
+      function fibPos(i, total, r) {
+        const phi = Math.acos(1 - 2 * (i + 0.5) / total);
+        const th = Math.PI * (1 + Math.sqrt(5)) * i;
+        return { x: r * Math.sin(phi) * Math.cos(th), y: r * Math.sin(phi) * Math.sin(th), z: r * Math.cos(phi) };
+      }
+
+      function makeNucleus(z, n, scale) {
+        const grp = new THREE.Group();
+        const total = z + n;
+        const vis = Math.min(total, MAX_VIS);
+        const visZ = Math.max(1, Math.round(z * vis / total));
+        const visN = vis - visZ;
+        const r = 0.22 + Math.cbrt(vis) * 0.05;
+        for (let i = 0; i < visZ; i++) {
+          const pos = fibPos(i, vis, r);
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.07, 14, 14),
+            new THREE.MeshPhysicalMaterial({ color: 0xf87171, emissive: 0xef4444, emissiveIntensity: 1.0, metalness: 0.3, roughness: 0.25 })
+          );
+          m.position.set(pos.x, pos.y, pos.z);
+          m.userData = { type: "p", phase: Math.random() * 6.28, basePos: { ...pos } };
+          grp.add(m);
+        }
+        for (let i = 0; i < visN; i++) {
+          const pos = fibPos(visZ + i, vis, r);
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.07, 14, 14),
+            new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, emissive: 0x64748b, emissiveIntensity: 0.5, metalness: 0.3, roughness: 0.25 })
+          );
+          m.position.set(pos.x, pos.y, pos.z);
+          m.userData = { type: "n", phase: Math.random() * 6.28, basePos: { ...pos } };
+          grp.add(m);
+        }
+        grp.scale.setScalar(scale);
+        return grp;
+      }
+
+      function addBurst(x, y, z, intensity) {
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.25 + intensity * 0.4, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.85 })
+        );
+        m.position.set(x, y, z);
+        worldGroup.add(m);
+        bursts.push({ mesh: m, life: 1.4, max: 1.4, intensity });
+        const pl = new THREE.PointLight(0x4ade80, intensity * 5, 14);
+        pl.position.set(x, y, z);
+        worldGroup.add(pl);
+        bursts.push({ mesh: pl, life: 1, max: 1, intensity, isLight: true });
+      }
+
+      function spawnNeutron(x, y, z, vx, vy, vz) {
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09, 12, 12),
+          new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, emissive: 0x64748b, emissiveIntensity: 1.5 })
+        );
+        m.position.set(x, y, z);
+        worldGroup.add(m);
+        particles.push({ mesh: m, type: "n", vx, vy, vz, life: 4, alive: true });
+      }
+
+      function clearScene() {
+        fuelCells.forEach((c) => { worldGroup.remove(c.group); c.group.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }); });
+        fuelCells = [];
+        particles.forEach((p) => { worldGroup.remove(p.mesh); p.mesh.geometry?.dispose(); p.mesh.material?.dispose(); });
+        particles = [];
+        bursts.forEach((b) => { worldGroup.remove(b.mesh); b.mesh.geometry?.dispose(); b.mesh.material?.dispose(); });
+        bursts = [];
+      }
+
+      function buildFuelGrid() {
+        clearScene();
+        CHAIN_POSITIONS.forEach((pos, i) => {
+          const g = makeNucleus(92, 143, nucZoom * 0.55);
+          g.position.set(pos[0], pos[1], pos[2]);
+          worldGroup.add(g);
+          fuelCells.push({ id: i, group: g, pos: [...pos], alive: true, wobble: Math.random() * 6.28 });
+        });
+      }
+
+      function fissionCell(cell, eMeV) {
+        if (!cell.alive) return [];
+        cell.alive = false;
+        const [x, y, z] = cell.pos;
+        addBurst(x, y, z, 1.5);
+        worldGroup.remove(cell.group);
+        cell.group.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+
+        const g1 = makeNucleus(36, 56, nucZoom * 0.35);
+        g1.position.set(x - 0.5, y + 0.1, z);
+        g1.userData.drift = { x: -0.02, y: 0, z: 0 };
+        const g2 = makeNucleus(56, 85, nucZoom * 0.4);
+        g2.position.set(x + 0.5, y - 0.1, z);
+        g2.userData.drift = { x: 0.02, y: 0, z: 0 };
+        worldGroup.add(g1); worldGroup.add(g2);
+        cell.fragments = [g1, g2];
+
+        fissionCount++;
+        totalE += eMeV;
+        targetE = eMeV;
+        const newNeutrons = [];
+        for (let i = 0; i < 3; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const sp = 0.08 + Math.random() * 0.06;
+          spawnNeutron(x, y, z, Math.cos(ang) * sp, (Math.random() - 0.5) * 0.04, Math.sin(ang) * sp);
+          newNeutrons.push(particles[particles.length - 1]);
+        }
+        return newNeutrons;
+      }
+
+      function playSingleFission() {
+        if (animating) return;
+        animating = true;
+        chainRunning = false;
+        document.getElementById("btnChain").classList.remove("active");
+        highlightKey = "U235";
+        const d = calcRx(FISSION);
+        updateMassUI(d);
+        updateHUD("核分裂 U-235", d, 3);
+        showBanner(FISSION.eqHtml, d.eRelease);
+        document.getElementById("hintText").innerHTML = "<strong>" + FISSION.eq + "</strong><br>中性子が²³⁵Uに吸収され、Kr+Ba+3nに分裂。質量が<strong>" + fmtNum(d.dm, 5) + " u</strong>減り、<strong>" + fmtNum(d.eRelease, 1) + " MeV</strong>放出。";
+
+        clearScene();
+        const spd = 1 / animSpd;
+        const u = makeNucleus(92, 143, nucZoom);
+        worldGroup.add(u);
+        fuelCells.push({ id: 0, group: u, pos: [0, 0, 0], alive: true });
+
+        setPhase("① 中性子が ²³⁵U に接近");
+        setTimeout(() => {
+          setPhase("② ²³⁵U が振動・分裂！");
+          spawnNeutron(-2, 0.1, 0, 0.12, 0, 0);
+        }, 300 * spd);
+        setTimeout(() => {
+          setPhase("③ Kr + Ba + 3n + エネルギー放出");
+          fissionCell(fuelCells[0], d.eRelease);
+        }, 800 * spd);
+        setTimeout(() => {
+          hideBanner();
+          animating = false;
+          setPhase("完了 — Δm=" + fmtNum(d.dm, 5) + " u → E=" + fmtNum(d.eRelease, 1) + " MeV");
+        }, 2200 * spd);
+      }
+
+      function playFusion() {
+        if (animating) return;
+        animating = true;
+        chainRunning = false;
+        document.getElementById("btnChain").classList.remove("active");
+        highlightKey = "He4";
+        const d = calcRx(FUSION);
+        updateMassUI(d);
+        updateHUD("核融合 D+T", d, 1);
+        showBanner(FUSION.eqHtml, d.eRelease);
+        document.getElementById("hintText").innerHTML = "<strong>" + FUSION.eq + "</strong><br>軽い核が合体。太陽のエネルギー源。分裂は<strong>重い核</strong>、融合は<strong>軽い核</strong>で起こる。";
+
+        clearScene();
+        const spd = 1 / animSpd;
+        const g1 = makeNucleus(1, 1, nucZoom * 0.8);
+        g1.position.set(-1.3, 0, 0);
+        const g2 = makeNucleus(1, 2, nucZoom * 0.85);
+        g2.position.set(1.3, 0, 0);
+        worldGroup.add(g1); worldGroup.add(g2);
+
+        setPhase("① ²H と ³H が接近");
+        g1.userData.drift = { x: 0.02, y: 0, z: 0 };
+        g2.userData.drift = { x: -0.02, y: 0, z: 0 };
+        setTimeout(() => {
+          setPhase("② 合体！ ⁴He + n + エネルギー");
+          clearScene();
+          addBurst(0, 0, 0, 1.8);
+          const he = makeNucleus(2, 2, nucZoom);
+          worldGroup.add(he);
+          spawnNeutron(0.4, 0.1, 0, 0.1, 0.03, 0.05);
+          totalE += d.eRelease;
+          targetE = d.eRelease;
+        }, 900 * spd);
+        setTimeout(() => {
+          hideBanner();
+          animating = false;
+          setPhase("融合完了 — E≈" + fmtNum(d.eRelease, 1) + " MeV（分裂より軽い核）");
+        }, 2000 * spd);
+      }
+
+      function startChain() {
+        if (chainRunning) { chainRunning = false; document.getElementById("btnChain").classList.remove("active"); setPhase("連鎖反応を停止"); return; }
+        if (animating) return;
+        chainRunning = true;
+        animating = false;
+        document.getElementById("btnChain").classList.add("active");
+        highlightKey = "U235";
+        fissionCount = 0;
+        totalE = 0;
+        const d = calcRx(FISSION);
+        updateMassUI(d);
+        updateHUD("連鎖反応", d, 0);
+        showBanner(FISSION.eqHtml, d.eRelease);
+        document.getElementById("hintText").innerHTML = "放出された<strong>中性子</strong>が次の²³⁵Uを分裂させる。<strong>減速率</strong>を上げると連鎖が止まりやすい（制御棒の役割）。";
+        buildFuelGrid();
+        setPhase("連鎖反応 — 中央の²³⁵Uに中性子を照射");
+        setTimeout(() => {
+          spawnNeutron(-2.5, 0, 0, 0.14, 0, 0);
+          fissionCell(fuelCells[0], d.eRelease);
+        }, 400);
+      }
+
+      function resetAll() {
+        chainRunning = false;
+        animating = false;
+        fissionCount = 0;
+        totalE = 0;
+        displayE = 0;
+        targetE = 0;
+        highlightKey = "U235";
+        hideBanner();
+        errBox.classList.remove("show");
+        document.getElementById("btnChain").classList.remove("active");
+        document.getElementById("massPanel").classList.remove("hl");
+        document.getElementById("bindGraph").classList.remove("hl");
+        buildFuelGrid();
+        const d = calcRx(FISSION);
+        document.getElementById("mInit").textContent = "— u";
+        document.getElementById("mFinal").textContent = "— u";
+        document.getElementById("mDefect").textContent = "— u";
+        document.getElementById("mEnergy").textContent = "— MeV";
+        updateHUD("待機中", d, 0);
+        setPhase("²³⁵U 原子核 — 「核分裂 U-235」から始めよう");
+        drawBindGraph();
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 300);
+        camera = new THREE.PerspectiveCamera(45, rw / rh, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        wrap.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0x505070, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(5, 7, 4);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xfb923c, 0.6, 20);
+        rim.position.set(-3, 2, 5);
+        scene.add(rim);
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        const grid = new THREE.GridHelper(10, 20, 0x334155, 0x1e293b);
+        grid.position.y = -1.2;
+        worldGroup.add(grid);
+        wrap.addEventListener("wheel", (e) => { e.preventDefault(); zoom = Math.max(7, Math.min(18, zoom + e.deltaY * 0.006)); }, { passive: false });
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008; rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-0.7, Math.min(0.7, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        new ResizeObserver(() => {
+          const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 300);
+          renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+          drawBindGraph();
+        }).observe(wrap);
+      }
+
+      function bindControls() {
+        document.getElementById("btnFission").addEventListener("click", playSingleFission);
+        document.getElementById("btnFusion").addEventListener("click", playFusion);
+        document.getElementById("btnChain").addEventListener("click", startChain);
+        document.getElementById("btnMass").addEventListener("click", () => {
+          document.getElementById("massPanel").classList.toggle("hl");
+          const d = calcRx(FISSION);
+          updateMassUI(d);
+          setPhase("質量欠損 Δm = " + fmtNum(d.dm, 5) + " u → この分がエネルギーに！");
+        });
+        document.getElementById("btnBind").addEventListener("click", () => {
+          document.getElementById("bindGraph").classList.toggle("hl");
+          highlightKey = "Fe56";
+          drawBindGraph();
+          setPhase("⁵⁶Fe の比結合エネルギーが最大 → 最も安定な核");
+        });
+        document.getElementById("btnReset").addEventListener("click", () => { zoom = 11; rotX = 0.25; rotY = 0.55; resetAll(); });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").classList.toggle("active", !paused);
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("slZoom").addEventListener("input", (e) => { nucZoom = +e.target.value; document.getElementById("lblZoom").textContent = nucZoom.toFixed(1) + "×"; });
+        document.getElementById("slSpd").addEventListener("input", (e) => { animSpd = +e.target.value; document.getElementById("lblSpd").textContent = animSpd.toFixed(1) + "×"; });
+        document.getElementById("slAbsorb").addEventListener("input", (e) => { absorbRate = +e.target.value / 100; document.getElementById("lblAbsorb").textContent = e.target.value + "%"; });
+        document.getElementById("slScale").addEventListener("input", (e) => { graphScale = +e.target.value; document.getElementById("lblScale").textContent = graphScale.toFixed(1) + "×"; drawBindGraph(); });
+      }
+
+      function tryChainHit(n) {
+        if (!chainRunning || !n.alive) return;
+        for (const cell of fuelCells) {
+          if (!cell.alive) continue;
+          const dx = n.mesh.position.x - cell.pos[0];
+          const dy = n.mesh.position.y - cell.pos[1];
+          const dz = n.mesh.position.z - cell.pos[2];
+          if (dx * dx + dy * dy + dz * dz < 1.1) {
+            if (Math.random() < absorbRate) { n.alive = false; n.mesh.visible = false; return; }
+            n.alive = false;
+            n.mesh.visible = false;
+            const d = calcRx(FISSION);
+            fissionCell(cell, d.eRelease);
+            updateMassUI(d);
+            updateHUD("連鎖反応 (" + fissionCount + "回目)", d, particles.filter((p) => p.alive).length);
+            setPhase("連鎖！ 分裂 " + fissionCount + " 回目 · 累積 " + fmtNum(totalE, 0) + " MeV");
+            return;
+          }
+        }
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = paused ? 0 : Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        simTime += dt;
+        displayE += (targetE - displayE) * Math.min(1, dt * 4);
+
+        fuelCells.forEach((c) => {
+          if (c.group?.userData?.drift) {
+            c.group.position.x += c.group.userData.drift.x * dt * 60;
+          }
+          if (c.fragments) c.fragments.forEach((f) => {
+            if (f.userData?.drift) { f.position.x += f.userData.drift.x * dt * 60; }
+          });
+          if (c.alive && c.group) {
+            c.group.rotation.y += dt * 0.3;
+            c.group.children.forEach((m) => {
+              if (!m.userData?.basePos) return;
+              const bp = m.userData.basePos;
+              const ph = m.userData.phase + simTime * 0.5;
+              m.position.set(bp.x + Math.sin(ph) * 0.002, bp.y + Math.cos(ph) * 0.002, bp.z);
+            });
+          }
+        });
+
+        particles = particles.filter((p) => {
+          if (!p.alive) return false;
+          p.life -= dt;
+          p.mesh.position.x += p.vx;
+          p.mesh.position.y += p.vy;
+          p.mesh.position.z += p.vz;
+          if (chainRunning) tryChainHit(p);
+          if (p.life <= 0 || !p.alive) {
+            worldGroup.remove(p.mesh);
+            p.mesh.geometry.dispose();
+            p.mesh.material.dispose();
+            return false;
+          }
+          return true;
+        });
+
+        bursts = bursts.filter((b) => {
+          b.life -= dt;
+          if (b.isLight) b.mesh.intensity = (b.life / b.max) * (b.intensity || 1) * 5;
+          else { b.mesh.material.opacity = (b.life / b.max) * 0.85; b.mesh.scale.setScalar(1 + (1 - b.life / b.max) * 4 * b.intensity); }
+          if (b.life <= 0) { worldGroup.remove(b.mesh); b.mesh.geometry?.dispose(); b.mesh.material?.dispose(); return false; }
+          return true;
+        });
+
+        if (chainRunning && fuelCells.every((c) => !c.alive)) {
+          chainRunning = false;
+          document.getElementById("btnChain").classList.remove("active");
+          setPhase("連鎖終了 — 全²³⁵Uが分裂 · 累積 " + fmtNum(totalE, 0) + " MeV");
+        }
+
+        if (!paused && !dragging) rotY += dt * 0.007;
+        const dist = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * dist, Math.sin(rotX) * dist + 0.3, Math.cos(rotY) * Math.cos(rotX) * dist);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+        if (chainRunning) updateHUD("連鎖反応", calcRx(FISSION), particles.filter((p) => p.alive).length);
+        drawBindGraph();
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        resetAll();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

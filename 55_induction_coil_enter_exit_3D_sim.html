@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>25章 電磁誘導 — コイル出入り 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 45%, #0c1a3a 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1100px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.45), rgba(167,139,250,0.45));
+      border: 1px solid rgba(96,165,250,0.45); font-size: 1.6rem;
+      box-shadow: 0 0 28px rgba(56,189,248,0.25);
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #bae6fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(96, 165, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #93c5fd; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(167,139,250,0.1));
+      border: 1px solid rgba(96,165,250,0.35);
+    }
+    .formula-main { font-size: 1.1rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud" "ctrl";
+    }
+    @media (min-width: 900px) {
+      .sim-grid { grid-template-columns: 1.15fr 0.85fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden; background: #111;
+      border: 1px solid rgba(96,165,250,0.32);
+      box-shadow: inset 0 0 40px rgba(56,189,248,0.06);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; font-weight: 600; color: #cbd5e1;
+    }
+    .color-chip {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(520px, 56dvh); min-height: 360px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6;
+      font-size: 0.9rem; text-align: center; pointer-events: none;
+    }
+    #simError.show { display: flex; }
+    #field3dWrap:active { cursor: grabbing; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(96,165,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.is-active {
+      background: rgba(37,99,235,0.28); color: #dbeafe; border-color: rgba(96,165,250,0.6);
+    }
+    .hud-card {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.65rem; color: #94a3b8; }
+    .hud-card .num { font-size: 0.82rem; font-weight: 700; color: #fde68a; margin-top: 2px; line-height: 1.45; }
+    .hud-card.col-b .num { color: #93c5fd; }
+    .hud-card.col-f .num { color: #a5f3fc; }
+    .hud-card.col-e .num { color: #fca5a5; }
+    .hud-card.col-i .num { color: #fde047; }
+    .hud-card.col-p .num { color: #c4b5fd; }
+    .hud-card.col-b { border-color: rgba(96,165,250,0.35); }
+    .hud-card.col-f { border-color: rgba(34,211,238,0.35); }
+    .hud-card.col-e { border-color: rgba(248,113,113,0.35); }
+    .hud-card.col-i { border-color: rgba(251,191,36,0.35); }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .formula-box {
+      padding: 10px; border-radius: 10px; text-align: center; margin: 8px 0;
+      background: rgba(37,99,235,0.1); border: 1px solid rgba(96,165,250,0.28);
+      font-size: 0.74rem; font-weight: 700; color: #93c5fd; line-height: 1.6;
+    }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+    .slider-val { color: #7dd3fc; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .hint-box {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; color: #e0f2fe;
+      background: linear-gradient(135deg, rgba(30,58,138,0.45), rgba(15,23,42,0.35));
+      border: 1px solid rgba(96,165,250,0.35);
+    }
+    .ctrl-grid { display: grid; gap: 10px; }
+    @media (min-width: 700px) { .ctrl-grid { grid-template-columns: repeat(2, 1fr); } }
+    .graph-panel {
+      margin-top: 8px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .graph-title {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 0.68rem; font-weight: 700; color: #94a3b8; margin-bottom: 6px;
+    }
+    .graph-title .val { font-size: 0.76rem; }
+    .graph-title .val.col-e { color: #fca5a5; }
+    .graph-title .val.col-i { color: #fde047; }
+    .graph-wrap {
+      position: relative; width: 100%; height: 88px;
+      border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(148,163,184,0.1);
+    }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 3px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⇄</div>
+      <p class="chapter-label">第25章 ② — 電磁誘導</p>
+      <h2>コイル出入り — 3Dラボ</h2>
+      <p class="tagline">一様磁場への出入り → Φ 変化 → 𝓔 → 誘導電流</p>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-25">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>半透明の<strong style="color:#60a5fa">一様磁場ボックス</strong>（B→x）に、
+        <strong style="color:#b45309">矩形コイル</strong>（yz平面）が出入りすると、
+        貫通する<strong>磁束 Φ</strong>が変化します。
+        <strong style="color:#fca5a5">誘導起電力 𝓔 = −dΦ/dt</strong>が生じ、
+        コイル内の<strong style="color:#38bdf8">電子</strong>が動き出して
+        <strong style="color:#fde047">誘導電流</strong>が流れます。
+        <strong>止まっているときは 𝓔≈0</strong>になること、
+        <strong>入るときと出るときで電流が反転</strong>することを確認しましょう。</p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">Φ = B₀·S<sub>overlap</sub>　　𝓔 = −dΦ/dt　　I<sub>ind</sub> = 𝓔/R</div>
+        <div class="formula-sub">磁場に入る→Φ増・𝓔&lt;0 · 出る→Φ減・𝓔&gt;0 · 静止→dΦ/dt≈0 · レンツの法則</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">磁場ボックスとコイルの出入り（3D奥行き）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>磁場 B（→x）</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>誘導起電力 𝓔</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>誘導電流 I</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子</span>
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>磁束 Φ</span>
+              <span><i class="color-chip" style="background:#b45309;color:#b45309"></i>銅コイル</span>
+            </div>
+            <p class="viz-legend">コイル左右・上下 · 磁場ボックス上下 · ドラッグ回転 · ホイールズーム</p>
+            <div id="field3dWrap"><div id="simError"></div></div>
+            <div class="viz-foot">
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnFluxPlane" class="active">磁束面 ON</button>
+              <button type="button" id="btnResetView">初期表示</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="formula-box" id="formulaLive">Φ · 𝓔 · I</div>
+          <div class="hud-grid">
+            <div class="hud-card col-f"><div class="lbl">磁束 Φ</div><div class="num" id="hudPhi">0.000 Wb</div></div>
+            <div class="hud-card col-f"><div class="lbl">dΦ/dt</div><div class="num" id="hudDPhi">0.000 Wb/s</div></div>
+            <div class="hud-card col-e"><div class="lbl">誘導起電力 𝓔</div><div class="num" id="hudE">0.00 V</div></div>
+            <div class="hud-card col-i"><div class="lbl">誘導電流 I<sub>ind</sub></div><div class="num" id="hudI">0.00 A</div></div>
+            <div class="hud-card col-b"><div class="lbl">磁場 B₀</div><div class="num" id="hudB">0.00 T</div></div>
+            <div class="hud-card"><div class="lbl">重なり面積 S</div><div class="num" id="hudS">0.000 m²</div></div>
+            <div class="hud-card col-p"><div class="lbl">電子速度 v<sub>e</sub></div><div class="num" id="hudVe">0.00</div></div>
+            <div class="hud-card"><div class="lbl">コイル位置 x</div><div class="num" id="hudX">0.00</div></div>
+            <div class="hud-card"><div class="lbl">コイル位置 y</div><div class="num" id="hudCoilY">0.00</div></div>
+            <div class="hud-card col-b"><div class="lbl">ボックス位置 y</div><div class="num" id="hudBoxY">0.00</div></div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>誘導起電力 𝓔 [V]</span><span class="val col-e" id="graphValE">0.00 V</span></div>
+            <div class="graph-wrap"><canvas id="graphE"></canvas></div>
+            <div class="graph-axis">時間 →（右が最新）</div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>誘導電流 I<sub>ind</sub> [A]</span><span class="val col-i" id="graphValI">0.00 A</span></div>
+            <div class="graph-wrap"><canvas id="graphI"></canvas></div>
+            <div class="graph-axis">出入りで符号反転（レンツの法則）</div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <div class="btn-row">
+            <button type="button" class="act-btn is-active" id="btnAutoMove">コイル左右 ON</button>
+            <button type="button" class="act-btn" id="btnAutoCoilY">コイル上下 ON</button>
+            <button type="button" class="act-btn" id="btnAutoBoxY">ボックス上下 ON</button>
+            <button type="button" class="act-btn" id="btnReset">初期化</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>コイル位置 x <span class="slider-val" id="valCoilX">−2.0</span></label>
+              <input type="range" id="slCoilX" min="-250" max="250" value="-125" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>コイル位置 y <span class="slider-val" id="valCoilY">0.00</span></label>
+              <input type="range" id="slCoilY" min="-120" max="120" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>磁場強度 B₀ <span class="slider-val" id="valB0">2.0 T</span></label>
+              <input type="range" id="slB0" min="0" max="50" value="20" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>コイル抵抗 R <span class="slider-val" id="valR">2.0 Ω</span></label>
+              <input type="range" id="slR" min="5" max="100" value="20" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>磁場ボックス y <span class="slider-val" id="valBoxY">0.00</span></label>
+              <input type="range" id="slBoxY" min="-120" max="120" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>移動速度 v <span class="slider-val" id="valV">0.80</span></label>
+              <input type="range" id="slV" min="5" max="150" value="40" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">コイル左右 ON で x 往復 · コイル上下 ON で y 往復 → 出入りで誘導電流が反転</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const COL = { B: 0x60a5fa, E: 0xf87171, I: 0xfde047, e: 0x38bdf8, flux: 0xa78bfa, coil: 0xb45309 };
+      const BOX = { lx: 3, ly: 2, lz: 2 };
+      const COIL = { hy: 0.5, hz: 0.4, dx: 0.55 };
+      const COIL_S = COIL.hy * 2 * COIL.hz * 2;
+      const N_PART = 400;
+      const INIT_ROT_X = 0.42, INIT_ROT_Y = 0.55, INIT_ZOOM = 5.2;
+      const BOX_XMIN = -BOX.lx / 2, BOX_XMAX = BOX.lx / 2;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+
+      const target = { coilX: -2, coilY: 0, boxY: 0, B0: 2, R: 2, speed: 0.8 };
+      const smooth = { coilX: -2, coilY: 0, boxY: 0, B0: 2, R: 2, speed: 0.8 };
+      let autoMove = true, autoCoilY = false, autoBoxY = false, autoSpin = true, showFluxPlane = true;
+      let moveDir = 1, coilYDir = 1, boxYDir = 1;
+      let suppressSlider = false;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0, t = 0;
+      let phiPrev = 0, dPhiDt = 0, emf = 0, iInd = 0, sOverlap = 0, veAvg = 0;
+
+      let scene, camera, renderer, worldGroup, coilGroup, boxGroup, fluxPlane;
+      let electronMesh, emfArrow, fieldBox, boxEdge, bGridGroup, currentArrowGroup;
+      let particles = [];
+      const HIST_LEN = 220;
+      const histE = [], histI = [];
+      let graphSampleAcc = 0;
+      const graphE = document.getElementById("graphE");
+      const graphI = document.getElementById("graphI");
+
+      function pushHistory() {
+        histE.push(emf);
+        histI.push(iInd);
+        if (histE.length > HIST_LEN) histE.shift();
+        if (histI.length > HIST_LEN) histI.shift();
+      }
+
+      function clearHistory() {
+        histE.length = 0;
+        histI.length = 0;
+        drawWaveGraph(graphE, [], "#f87171", "V");
+        drawWaveGraph(graphI, [], "#fde047", "A");
+      }
+
+      function drawWaveGraph(canvas, data, color, unit) {
+        if (!canvas) return;
+        const wrap = canvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 1);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        const ctx = canvas.getContext("2d");
+        const cw = canvas.width, ch = canvas.height;
+        ctx.clearRect(0, 0, cw, ch);
+
+        ctx.fillStyle = "rgba(8,12,28,0.6)";
+        ctx.fillRect(0, 0, cw, ch);
+
+        let maxAbs = 0.05;
+        for (let i = 0; i < data.length; i++) maxAbs = Math.max(maxAbs, Math.abs(data[i]));
+        const margin = { l: 36 * dpr, r: 8 * dpr, t: 8 * dpr, b: 14 * dpr };
+        const plotW = cw - margin.l - margin.r;
+        const plotH = ch - margin.t - margin.b;
+        const midY = margin.t + plotH * 0.5;
+
+        ctx.strokeStyle = "rgba(148,163,184,0.18)";
+        ctx.lineWidth = 1 * dpr;
+        for (let g = -2; g <= 2; g++) {
+          const y = midY - (g / 2) * (plotH * 0.45);
+          ctx.beginPath();
+          ctx.moveTo(margin.l, y);
+          ctx.lineTo(cw - margin.r, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.45)";
+        ctx.beginPath();
+        ctx.moveTo(margin.l, midY);
+        ctx.lineTo(cw - margin.r, midY);
+        ctx.stroke();
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = `${9 * dpr}px Inter, sans-serif`;
+        ctx.textAlign = "right";
+        ctx.fillText("+" + maxAbs.toFixed(2), margin.l - 4 * dpr, margin.t + 8 * dpr);
+        ctx.fillText("0", margin.l - 4 * dpr, midY + 3 * dpr);
+        ctx.fillText("−" + maxAbs.toFixed(2), margin.l - 4 * dpr, margin.t + plotH - 2 * dpr);
+        ctx.fillText(unit, margin.l - 4 * dpr, ch - 2 * dpr);
+
+        if (data.length < 2) return;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2 * dpr;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = margin.l + (i / (HIST_LEN - 1)) * plotW;
+          const y = midY - (data[i] / maxAbs) * (plotH * 0.45);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        const grad = ctx.createLinearGradient(0, margin.t, 0, margin.t + plotH);
+        if (color === "#f87171") {
+          grad.addColorStop(0, "rgba(248,113,113,0.2)");
+          grad.addColorStop(1, "rgba(248,113,113,0)");
+        } else {
+          grad.addColorStop(0, "rgba(253,224,71,0.18)");
+          grad.addColorStop(1, "rgba(253,224,71,0)");
+        }
+        ctx.lineTo(margin.l + ((data.length - 1) / (HIST_LEN - 1)) * plotW, midY);
+        ctx.lineTo(margin.l, midY);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      function updateGraphs() {
+        document.getElementById("graphValE").textContent = (emf >= 0 ? "+" : "") + emf.toFixed(3) + " V";
+        document.getElementById("graphValI").textContent = (iInd >= 0 ? "+" : "") + iInd.toFixed(3) + " A";
+        drawWaveGraph(graphE, histE, "#f87171", "V");
+        drawWaveGraph(graphI, histI, "#fde047", "A");
+      }
+
+      function showSimError(msg) {
+        if (!errBox) return;
+        errBox.textContent = "3D初期化エラー: " + msg;
+        errBox.classList.add("show");
+      }
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function overlapLen(aMin, aMax, bMin, bMax) {
+        return Math.max(0, Math.min(aMax, bMax) - Math.max(aMin, bMin));
+      }
+
+      function calcOverlapArea(coilX, coilY, boxY) {
+        const cXmin = coilX - COIL.dx / 2, cXmax = coilX + COIL.dx / 2;
+        const xFrac = overlapLen(cXmin, cXmax, BOX_XMIN, BOX_XMAX) / COIL.dx;
+
+        const cYmin = coilY - COIL.hy, cYmax = coilY + COIL.hy;
+        const bYmin = boxY - BOX.ly / 2, bYmax = boxY + BOX.ly / 2;
+        const yFrac = overlapLen(cYmin, cYmax, bYmin, bYmax) / (COIL.hy * 2);
+
+        const zFrac = overlapLen(-COIL.hz, COIL.hz, -BOX.lz / 2, BOX.lz / 2) / (COIL.hz * 2);
+
+        return COIL_S * xFrac * yFrac * zFrac;
+      }
+
+      function calcFlux(coilX, coilY, boxY, B0) {
+        sOverlap = calcOverlapArea(coilX, coilY, boxY);
+        return B0 * sOverlap;
+      }
+
+      const PERIM = 2 * (COIL.hy * 2 + COIL.hz * 2);
+
+      function rectPos(u, cx) {
+        let s = ((u % 1) + 1) % 1 * PERIM;
+        const hy = COIL.hy, hz = COIL.hz;
+        const segA = COIL.hz * 2, segB = COIL.hy * 2;
+        let y, z;
+        if (s < segA) {
+          z = -hz + (s / segA) * (hz * 2);
+          y = -hy;
+        } else if (s < segA + segB) {
+          s -= segA;
+          y = -hy + (s / segB) * (hy * 2);
+          z = hz;
+        } else if (s < segA * 2 + segB) {
+          s -= segA + segB;
+          z = hz - (s / segA) * (hz * 2);
+          y = hy;
+        } else {
+          s -= segA * 2 + segB;
+          y = hy - (s / segB) * (hy * 2);
+          z = -hz;
+        }
+        return { x: cx, y, z };
+      }
+
+      function rectTangent(u, iSign) {
+        let s = ((u % 1) + 1) % 1 * PERIM;
+        const segA = COIL.hz * 2, segB = COIL.hy * 2;
+        let ty = 0, tz = 0;
+        if (s < segA) { tz = 1; }
+        else if (s < segA + segB) { ty = 1; }
+        else if (s < segA * 2 + segB) { tz = -1; }
+        else { ty = -1; }
+        return new THREE.Vector3(0, ty * iSign, tz * iSign).normalize();
+      }
+
+      function spawnElectron() {
+        return { u: Math.random(), omega: 0 };
+      }
+
+      function resetElectrons() {
+        particles.length = 0;
+        for (let i = 0; i < N_PART; i++) particles.push(spawnElectron());
+      }
+
+      function makeArrow(dir, origin, len, color) {
+        const d = dir.clone().normalize();
+        const a = new THREE.ArrowHelper(d, origin.clone(), len, color, len * 0.28, len * 0.14);
+        a.line.material.transparent = true;
+        a.cone.material.transparent = true;
+        a.frustumCulled = false;
+        return a;
+      }
+
+      function buildBGrid() {
+        if (!bGridGroup) return;
+        while (bGridGroup.children.length) bGridGroup.remove(bGridGroup.children[0]);
+        const bDir = new THREE.Vector3(1, 0, 0);
+        const alen = 0.14 + smooth.B0 * 0.05;
+        const op = 0.4 + clamp(smooth.B0 / 5, 0, 0.55);
+        const nx = 4, ny = 3, nz = 3;
+        for (let ix = 0; ix < nx; ix++) {
+          for (let iy = 0; iy < ny; iy++) {
+            for (let iz = 0; iz < nz; iz++) {
+              const x = BOX_XMIN + 0.2 + (ix / (nx - 1)) * (BOX.lx - 0.4);
+              const y = -BOX.ly / 2 + 0.2 + (iy / (ny - 1)) * (BOX.ly - 0.4);
+              const z = -BOX.lz / 2 + 0.2 + (iz / (nz - 1)) * (BOX.lz - 0.4);
+              const arrow = new THREE.ArrowHelper(bDir, new THREE.Vector3(x, y, z), alen, COL.B, alen * 0.34, alen * 0.17);
+              arrow.line.material.transparent = true;
+              arrow.line.material.opacity = op;
+              arrow.cone.material.transparent = true;
+              arrow.cone.material.opacity = op;
+              arrow.frustumCulled = false;
+              bGridGroup.add(arrow);
+            }
+          }
+        }
+      }
+
+      function buildCoilWire() {
+        const hy = COIL.hy, hz = COIL.hz;
+        const pts = [
+          new THREE.Vector3(0, -hy, -hz), new THREE.Vector3(0, -hy, hz),
+          new THREE.Vector3(0, hy, hz), new THREE.Vector3(0, hy, -hz),
+          new THREE.Vector3(0, -hy, -hz),
+        ];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: COL.coil, linewidth: 2 }));
+        line.frustumCulled = false;
+        return line;
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 360);
+        camera = new THREE.PerspectiveCamera(55, w / h, 0.05, 80);
+        camera.position.set(0, 0.4, zoom);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x505070, 0.72));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(4, 5, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x38bdf8, 0.5, 14);
+        rim.position.set(-3, 2, 4);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        worldGroup.frustumCulled = false;
+        scene.add(worldGroup);
+
+        const grid = new THREE.GridHelper(8, 28, 0x334155, 0x1e293b);
+        grid.position.y = -1.2;
+        worldGroup.add(grid);
+
+        fieldBox = new THREE.Mesh(
+          new THREE.BoxGeometry(BOX.lx, BOX.ly, BOX.lz),
+          new THREE.MeshStandardMaterial({
+            color: 0x1d4ed8, transparent: true, opacity: 0.14,
+            metalness: 0.2, roughness: 0.5, depthWrite: false,
+          })
+        );
+        boxEdge = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(BOX.lx, BOX.ly, BOX.lz)),
+          new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.55 })
+        );
+        bGridGroup = new THREE.Group();
+        boxGroup = new THREE.Group();
+        boxGroup.frustumCulled = false;
+        boxGroup.add(fieldBox, boxEdge, bGridGroup);
+        worldGroup.add(boxGroup);
+
+        coilGroup = new THREE.Group();
+        coilGroup.frustumCulled = false;
+        worldGroup.add(coilGroup);
+
+        coilGroup.add(buildCoilWire());
+
+        fluxPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(COIL.hz * 2 * 0.92, COIL.hy * 2 * 0.92),
+          new THREE.MeshBasicMaterial({
+            color: COL.flux, transparent: true, opacity: 0.25,
+            side: THREE.DoubleSide, depthWrite: false,
+          })
+        );
+        fluxPlane.rotation.y = Math.PI / 2;
+        coilGroup.add(fluxPlane);
+
+        const eGeo = new THREE.SphereGeometry(0.013, 8, 8);
+        const eMat = new THREE.MeshStandardMaterial({
+          color: COL.e, emissive: COL.e, emissiveIntensity: 0.85,
+          metalness: 0.1, roughness: 0.25,
+        });
+        electronMesh = new THREE.InstancedMesh(eGeo, eMat, N_PART);
+        electronMesh.frustumCulled = false;
+        coilGroup.add(electronMesh);
+
+        currentArrowGroup = new THREE.Group();
+        coilGroup.add(currentArrowGroup);
+
+        emfArrow = makeArrow(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -COIL.hy - 0.25, 0), 0.3, COL.E);
+        coilGroup.add(emfArrow);
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -1.0, 1.0);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, 3, 9);
+        }, { passive: false });
+        window.addEventListener("resize", () => { resizeRenderer(); updateGraphs(); });
+
+        buildBGrid();
+        resetElectrons();
+        phiPrev = calcFlux(smooth.coilX, smooth.coilY, smooth.boxY, smooth.B0);
+        resetView();
+      }
+
+      function resizeRenderer() {
+        if (!renderer || !camera || !wrap) return;
+        const rw = Math.max(wrap.clientWidth, 1);
+        const rh = Math.max(wrap.clientHeight, 360);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        camera.aspect = rw / rh;
+        camera.updateProjectionMatrix();
+      }
+
+      function resetView() {
+        rotX = INIT_ROT_X;
+        rotY = INIT_ROT_Y;
+        zoom = INIT_ZOOM;
+        resizeRenderer();
+      }
+
+      function setSliderSilently(id, val) {
+        suppressSlider = true;
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+        suppressSlider = false;
+      }
+
+      function updatePhysics(dt) {
+        if (autoMove) {
+          target.coilX += moveDir * smooth.speed * dt;
+          if (target.coilX > 2.3) moveDir = -1;
+          if (target.coilX < -2.3) moveDir = 1;
+          setSliderSilently("slCoilX", Math.round(target.coilX / 0.016));
+          document.getElementById("valCoilX").textContent = target.coilX.toFixed(2);
+        }
+
+        if (autoCoilY) {
+          target.coilY += coilYDir * smooth.speed * 0.7 * dt;
+          if (target.coilY > 1.15) coilYDir = -1;
+          if (target.coilY < -1.15) coilYDir = 1;
+          setSliderSilently("slCoilY", Math.round(target.coilY / 0.01));
+          document.getElementById("valCoilY").textContent = target.coilY.toFixed(2);
+        }
+
+        if (autoBoxY) {
+          target.boxY += boxYDir * smooth.speed * 0.55 * dt;
+          if (target.boxY > 1.1) boxYDir = -1;
+          if (target.boxY < -1.1) boxYDir = 1;
+          setSliderSilently("slBoxY", Math.round(target.boxY / 0.01));
+          document.getElementById("valBoxY").textContent = target.boxY.toFixed(2);
+        }
+
+        const k = 1 - Math.pow(0.001, dt / 0.42);
+        smooth.coilX = lerp(smooth.coilX, target.coilX, k);
+        smooth.coilY = lerp(smooth.coilY, target.coilY, k);
+        smooth.boxY = lerp(smooth.boxY, target.boxY, k);
+        smooth.B0 = lerp(smooth.B0, target.B0, k);
+        smooth.R = lerp(smooth.R, target.R, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+
+        const phi = calcFlux(smooth.coilX, smooth.coilY, smooth.boxY, smooth.B0);
+        const dPhiRaw = (phi - phiPrev) / Math.max(dt, 0.001);
+        dPhiDt = lerp(dPhiDt, dPhiRaw, 1 - Math.pow(0.001, dt / 0.12));
+        phiPrev = phi;
+
+        emf = -dPhiDt;
+        iInd = smooth.R > 0.01 ? emf / smooth.R : 0;
+
+        coilGroup.position.set(smooth.coilX, smooth.coilY, 0);
+        if (boxGroup) boxGroup.position.y = smooth.boxY;
+
+        const omegaTarget = -iInd * 0.55;
+        let vSum = 0;
+        const dummy = new THREE.Object3D();
+        const glow = clamp(Math.abs(iInd) * 2.2, 0.06, 1.3);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.omega = lerp(p.omega, omegaTarget + (Math.random() - 0.5) * 0.03, 1 - Math.pow(0.03, dt));
+          p.u += p.omega * dt * 0.12;
+          const pos = rectPos(p.u, 0);
+          vSum += Math.abs(p.omega) * PERIM * 0.12;
+
+          dummy.position.set(pos.x, pos.y, pos.z);
+          dummy.scale.setScalar(0.8 + glow * 0.4);
+          dummy.updateMatrix();
+          electronMesh.setMatrixAt(i, dummy.matrix);
+        }
+        electronMesh.instanceMatrix.needsUpdate = true;
+        electronMesh.material.emissiveIntensity = 0.4 + glow * 0.85;
+        veAvg = particles.length ? vSum / particles.length : 0;
+
+        if (Math.abs(smooth.B0 - (animate.lastB0 || 0)) > 0.08) {
+          buildBGrid();
+          animate.lastB0 = smooth.B0;
+        }
+      }
+
+      function updateVisuals() {
+        const phi = calcFlux(smooth.coilX, smooth.coilY, smooth.boxY, smooth.B0);
+        const phiMax = smooth.B0 * COIL_S + 0.001;
+        const phiNorm = clamp(Math.abs(phi) / phiMax, 0, 1);
+
+        fluxPlane.visible = showFluxPlane;
+        fluxPlane.material.opacity = 0.06 + phiNorm * 0.42;
+        fluxPlane.scale.set(
+          clamp(sOverlap / COIL_S, 0.05, 1),
+          clamp(sOverlap / COIL_S, 0.05, 1),
+          1
+        );
+
+        const emfLen = clamp(Math.abs(emf) * 0.22 + 0.04, 0.04, 0.5);
+        const emfDir = emf >= 0 ? 1 : -1;
+        emfArrow.setDirection(new THREE.Vector3(0, emfDir, 0));
+        emfArrow.setLength(emfLen, emfLen * 0.3, emfLen * 0.15);
+        emfArrow.visible = Math.abs(emf) > 0.01;
+
+        while (currentArrowGroup.children.length) currentArrowGroup.remove(currentArrowGroup.children[0]);
+
+        if (Math.abs(iInd) > 0.005) {
+          const iSign = Math.sign(iInd) || 1;
+          const aLen = 0.08 + clamp(Math.abs(emf) * 0.18, 0, 0.2);
+          const op = 0.45 + clamp(Math.abs(iInd) * 2, 0, 0.5);
+          const nArr = 10;
+          for (let i = 0; i < nArr; i++) {
+            const u = i / nArr;
+            const pos = rectPos(u, 0);
+            const tan = rectTangent(u, iSign);
+            const arr = makeArrow(tan, new THREE.Vector3(pos.x, pos.y, pos.z), aLen, COL.I);
+            arr.line.material.opacity = op;
+            arr.cone.material.opacity = op;
+            currentArrowGroup.add(arr);
+          }
+        }
+      }
+
+      function updateHUD() {
+        const phi = calcFlux(smooth.coilX, smooth.coilY, smooth.boxY, smooth.B0);
+        document.getElementById("valCoilX").textContent = smooth.coilX.toFixed(2);
+        document.getElementById("valCoilY").textContent = smooth.coilY.toFixed(2);
+        document.getElementById("valBoxY").textContent = smooth.boxY.toFixed(2);
+        document.getElementById("valB0").textContent = smooth.B0.toFixed(1) + " T";
+        document.getElementById("valR").textContent = smooth.R.toFixed(1) + " Ω";
+        document.getElementById("valV").textContent = smooth.speed.toFixed(2);
+
+        document.getElementById("hudPhi").textContent = (phi >= 0 ? "+" : "") + phi.toFixed(4) + " Wb";
+        document.getElementById("hudDPhi").textContent = (dPhiDt >= 0 ? "+" : "") + dPhiDt.toFixed(4) + " Wb/s";
+        document.getElementById("hudE").textContent = (emf >= 0 ? "+" : "") + emf.toFixed(3) + " V";
+        document.getElementById("hudI").textContent = (iInd >= 0 ? "+" : "") + iInd.toFixed(3) + " A";
+        document.getElementById("hudB").textContent = "→x " + smooth.B0.toFixed(2) + " T";
+        document.getElementById("hudS").textContent = sOverlap.toFixed(4) + " m²";
+        document.getElementById("hudVe").textContent = veAvg.toFixed(3) + " m/s";
+        document.getElementById("hudX").textContent = smooth.coilX.toFixed(2) + " m";
+        document.getElementById("hudCoilY").textContent = (smooth.coilY >= 0 ? "+" : "") + smooth.coilY.toFixed(2) + " m";
+        document.getElementById("hudBoxY").textContent = (smooth.boxY >= 0 ? "+" : "") + smooth.boxY.toFixed(2) + " m";
+
+        document.getElementById("formulaLive").textContent =
+          `Φ=${phi.toFixed(3)} Wb　𝓔=${emf.toFixed(2)} V　I=${iInd.toFixed(2)} A`;
+
+        const cMin = smooth.coilX - COIL.dx / 2, cMax = smooth.coilX + COIL.dx / 2;
+        const xIn = cMin >= BOX_XMIN && cMax <= BOX_XMAX;
+        const yIn = overlapLen(smooth.coilY - COIL.hy, smooth.coilY + COIL.hy, smooth.boxY - BOX.ly / 2, smooth.boxY + BOX.ly / 2) >= (COIL.hy * 2) * 0.98;
+        const fullyIn = xIn && yIn && sOverlap >= COIL_S * 0.98;
+        const fullyOut = sOverlap < COIL_S * 0.02;
+        let hint;
+        if (fullyOut) {
+          hint = "コイルと磁場ボックスが重ならない → Φ≈0 · ボックス上下で重なり方も変化";
+        } else if (fullyIn && Math.abs(dPhiDt) < 0.003) {
+          hint = "コイルが磁場内・静止 → Φ一定 · dΦ/dt≈0 · 𝓔≈0";
+        } else if (!yIn && xIn) {
+          hint = "コイルまたはボックスが上下にずれ → 重なり面積 S が変化 → Φ と誘導電流が変わる";
+        } else if (dPhiDt > 0.003) {
+          hint = "Φ 増加中 → 𝓔<0 · 入る／ボックスが重なると電流発生";
+        } else if (dPhiDt < -0.003) {
+          hint = "Φ 減少中 → 𝓔>0 · 出る／ボックスが離れると電流反転";
+        } else {
+          hint = "コイル x 移動 or ボックス上下で Φ が変化 → 誘導電流";
+        }
+        document.getElementById("hintText").textContent = hint;
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer || !worldGroup) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        t += dt;
+
+        updatePhysics(dt);
+        updateVisuals();
+        updateHUD();
+
+        graphSampleAcc += dt;
+        if (graphSampleAcc >= 0.05) {
+          graphSampleAcc = 0;
+          pushHistory();
+          updateGraphs();
+        }
+
+        if (autoSpin && !dragging) rotY += dt * 0.1;
+
+        worldGroup.rotation.set(rotX, rotY, 0);
+        camera.position.set(0, 0.35, zoom);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      document.getElementById("slCoilX").addEventListener("input", (e) => {
+        if (suppressSlider) return;
+        autoMove = false;
+        document.getElementById("btnAutoMove").classList.remove("is-active");
+        target.coilX = +e.target.value * 0.016;
+      });
+      document.getElementById("slCoilY").addEventListener("input", (e) => {
+        if (suppressSlider) return;
+        autoCoilY = false;
+        document.getElementById("btnAutoCoilY").classList.remove("is-active");
+        target.coilY = +e.target.value * 0.01;
+      });
+      document.getElementById("slBoxY").addEventListener("input", (e) => {
+        if (suppressSlider) return;
+        autoBoxY = false;
+        document.getElementById("btnAutoBoxY").classList.remove("is-active");
+        target.boxY = +e.target.value * 0.01;
+      });
+      document.getElementById("slB0").addEventListener("input", (e) => {
+        target.B0 = +e.target.value * 0.1;
+      });
+      document.getElementById("slR").addEventListener("input", (e) => {
+        target.R = +e.target.value * 0.1;
+      });
+      document.getElementById("slV").addEventListener("input", (e) => {
+        target.speed = +e.target.value * 0.02;
+      });
+
+      document.getElementById("btnAutoMove").addEventListener("click", function () {
+        autoMove = !autoMove;
+        this.classList.toggle("is-active", autoMove);
+      });
+      document.getElementById("btnAutoCoilY").addEventListener("click", function () {
+        autoCoilY = !autoCoilY;
+        this.classList.toggle("is-active", autoCoilY);
+        if (autoCoilY) {
+          autoMove = false;
+          document.getElementById("btnAutoMove").classList.remove("is-active");
+          target.coilX = 0;
+          target.coilY = 0;
+          coilYDir = 1;
+          setSliderSilently("slCoilX", 0);
+          setSliderSilently("slCoilY", 0);
+          document.getElementById("valCoilX").textContent = "0.00";
+          document.getElementById("valCoilY").textContent = "0.00";
+        }
+      });
+      document.getElementById("btnAutoBoxY").addEventListener("click", function () {
+        autoBoxY = !autoBoxY;
+        this.classList.toggle("is-active", autoBoxY);
+      });
+      document.getElementById("btnReset").addEventListener("click", () => {
+        target.coilX = -2; target.coilY = 0; target.boxY = 0;
+        smooth.coilX = -2; smooth.coilY = 0; smooth.boxY = 0;
+        moveDir = 1; coilYDir = 1; boxYDir = 1;
+        dPhiDt = 0; emf = 0; iInd = 0;
+        document.getElementById("slCoilX").value = -125;
+        document.getElementById("slCoilY").value = 0;
+        document.getElementById("slBoxY").value = 0;
+        if (boxGroup) boxGroup.position.y = 0;
+        if (coilGroup) coilGroup.position.set(-2, 0, 0);
+        resetElectrons();
+        phiPrev = calcFlux(-2, 0, 0, smooth.B0);
+        clearHistory();
+      });
+      document.getElementById("btnSpin").addEventListener("click", function () {
+        autoSpin = !autoSpin;
+        this.classList.toggle("active", autoSpin);
+      });
+      document.getElementById("btnFluxPlane").addEventListener("click", function () {
+        showFluxPlane = !showFluxPlane;
+        this.classList.toggle("active", showFluxPlane);
+      });
+      document.getElementById("btnResetView").addEventListener("click", resetView);
+
+      try {
+        initThree();
+        clearHistory();
+        updateHUD();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        showSimError(err.message);
+      }
+    })();
+  </script>
+</body>
+</html>

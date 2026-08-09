@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 原子の構造 — 光電効果 E=hν 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1220px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(253,224,71,0.35), rgba(96,165,250,0.35));
+      border: 1px solid rgba(244,114,182,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbcfe8; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(253,224,71,0.1), rgba(96,165,250,0.1));
+      border: 1px solid rgba(244,114,182,0.32);
+    }
+    .formula-main { font-size: 0.88rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 960px) {
+      .sim-grid { grid-template-columns: 1.2fr 0.8fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .graphs-col { display: flex; flex-direction: column; gap: 10px; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #111; border: 1px solid rgba(244,114,182,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(600px, 68dvh); min-height: 400px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; font-size: 0.9rem; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); border: 1px solid rgba(244,114,182,0.45);
+      font-size: 0.74rem; font-weight: 700; color: #fbcfe8; line-height: 1.5; white-space: pre-line;
+    }
+    .status-badge {
+      position: absolute; top: 12px; right: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); border: 1px solid rgba(96,165,250,0.4);
+      font-size: 0.72rem; font-weight: 700; color: #93c5fd; line-height: 1.55;
+    }
+    .status-badge.emit { border-color: rgba(74,222,128,0.65); color: #86efac; }
+    .status-badge.block { border-color: rgba(248,113,113,0.55); color: #fca5a5; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .metal-btn {
+      flex: 1; min-width: 68px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .metal-btn.active { background: rgba(244,114,182,0.25); color: #fce7f3; border-color: rgba(244,114,182,0.55); }
+    .answer-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(74,222,128,0.45); background: rgba(74,222,128,0.12); color: #86efac;
+    }
+    .answer-btn.active { background: rgba(74,222,128,0.28); color: #dcfce7; border-color: rgba(74,222,128,0.7); }
+    .answer-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 8px; }
+    .answer-label { width: 100%; font-size: 0.66rem; font-weight: 700; color: #86efac; margin-bottom: 2px; }
+    .viz-foot button.active { background: rgba(244,114,182,0.22); color: #fce7f3; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px) { .hud-grid { grid-template-columns: repeat(8, 1fr); } }
+    .hud-card {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #94a3b8; line-height: 1.3; }
+    .hud-card .num { font-size: 0.8rem; font-weight: 700; color: #fde68a; margin-top: 3px; }
+    .hud-card.col-light .num { color: #fbbf24; }
+    .hud-card.col-e .num { color: #60a5fa; }
+    .hud-card.col-k .num { color: #4ade80; }
+    .hud-card.highlight .num { color: #f472b6; }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(253,224,71,0.08); border: 1px solid rgba(253,224,71,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .graph-panel {
+      padding: 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.18);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px; }
+    .graph-legend-row i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .graph-wrap {
+      position: relative; width: 100%; height: 130px;
+      border-radius: 8px; background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: right; }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #f472b6; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fbcfe8; margin-bottom: 4px; font-size: 0.78rem; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">☀️</div>
+      <p class="chapter-label">第27章 ④ — 原子の構造</p>
+      <h2>光電効果 — E = hν · K₀ = hν − W 3Dラボ</h2>
+      <p class="tagline">光の「色（振動数）」で電子が飛び出す — 強さではなく hν が決める</p>
+      <a id="back" href="00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — 光電効果の本質</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 光子</strong>E = hν · 波長で色とエネルギーが決まる</div>
+        <div class="journey-step" id="step2"><strong>Step 2 条件</strong>hν &gt; W のときだけ電子が飛び出す</div>
+        <div class="journey-step" id="step3"><strong>Step 3 エネルギー</strong>K₀ = hν − W · 強さは電子の「数」だけ</div>
+        <div class="journey-step" id="step4"><strong>Step 4 停止電圧</strong>eV<sub>stop</sub> = K₀ で K₀ を測定</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">E = hν · hν &gt; W · K₀ = hν − W · eV<sub>stop</sub> = K₀</div>
+        <div class="formula-sub">光子1個 → 電子1個 · 強さ↑＝電子数↑（速度は変わらない）</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">光電効果 — 3Dビュー</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>光子</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>光電子</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>停止電圧</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>金属板</span>
+            </div>
+            <p class="viz-legend" id="vizLegend">左から光子が金属板に当たる · 青い電子が飛び出す · 短い波長ほど光子が速い</p>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">λ — · E — · W —</div>
+              <div class="status-badge block" id="statusBadge">放出なし</div>
+            </div>
+            <div class="answer-row">
+              <span class="answer-label">● 光電効果が起きる正解（金属＋波長を自動設定）</span>
+              <button type="button" class="answer-btn" data-answer="Na">● Na 正解</button>
+              <button type="button" class="answer-btn" data-answer="K">● K 正解</button>
+              <button type="button" class="answer-btn" data-answer="Cu">● Cu 正解</button>
+              <button type="button" class="answer-btn" data-answer="Ag">● Ag 正解</button>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="metal-btn active" data-metal="Na">Na</button>
+              <button type="button" class="metal-btn" data-metal="K">K</button>
+              <button type="button" class="metal-btn" data-metal="Cu">Cu</button>
+              <button type="button" class="metal-btn" data-metal="Ag">Ag</button>
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graphs-col">
+            <div class="graph-panel">
+              <div class="graph-title"><span>電子速度 v(t)</span><span id="graphValV">0 km/s</span></div>
+              <div class="graph-legend-row"><span><i style="background:#60a5fa"></i>光電子</span></div>
+              <div class="graph-wrap"><canvas id="graphV"></canvas></div>
+              <div class="graph-axis">直近 8 s</div>
+            </div>
+            <div class="graph-panel">
+              <div class="graph-title"><span>電子数 N(t)</span><span id="graphValN">0 /s</span></div>
+              <div class="graph-legend-row"><span><i style="background:#fbbf24"></i>累積放出数</span></div>
+              <div class="graph-wrap"><canvas id="graphN"></canvas></div>
+              <div class="graph-axis">直近 8 s</div>
+            </div>
+            <div class="graph-panel">
+              <div class="graph-title"><span>V<sub>stop</sub> と K₀</span><span id="graphValK">—</span></div>
+              <div class="graph-legend-row"><span><i style="background:#f87171"></i>V<sub>stop</sub></span><span><i style="background:#4ade80"></i>K₀=hν−W</span></div>
+              <div class="graph-wrap"><canvas id="graphK"></canvas></div>
+              <div class="graph-axis">eV<sub>stop</sub> = K₀</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム物理量</p>
+            <div class="formula-box" id="formulaLive">E = hν · K₀ = hν − W · eV<sub>stop</sub> = K₀</div>
+            <div class="hud-grid">
+              <div class="hud-card col-light"><div class="lbl">波長 λ</div><div class="num" id="hudLam">—</div></div>
+              <div class="hud-card col-light"><div class="lbl">振動数 ν</div><div class="num" id="hudNu">—</div></div>
+              <div class="hud-card col-light"><div class="lbl">光子 E=hν</div><div class="num" id="hudE">—</div></div>
+              <div class="hud-card"><div class="lbl">仕事関数 W</div><div class="num" id="hudW">—</div></div>
+              <div class="hud-card col-k highlight"><div class="lbl">K₀=hν−W</div><div class="num" id="hudK0">—</div></div>
+              <div class="hud-card col-e"><div class="lbl">電子速度 v</div><div class="num" id="hudV">—</div></div>
+              <div class="hud-card col-e"><div class="lbl">電子数 N</div><div class="num" id="hudN">—</div></div>
+              <div class="hud-card highlight"><div class="lbl">停止電圧 V<sub>stop</sub></div><div class="num" id="hudVstop">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>波長 λ <span class="slider-val" id="valLam">550 nm</span></label>
+              <input type="range" id="slLam" min="250" max="700" value="550" step="5">
+            </div>
+            <div class="ctrl-row">
+              <label>光強度 <span class="slider-val" id="valInt">中</span></label>
+              <input type="range" id="slInt" min="1" max="10" value="5" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>仕事関数 W <span class="slider-val" id="valW">2.3 eV</span></label>
+              <input type="range" id="slW" min="20" max="50" value="23" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>停止電圧 V<sub>stop</sub> <span class="slider-val" id="valVstop">0.0 V</span></label>
+              <input type="range" id="slVstop" min="0" max="50" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">1.0×</span></label>
+              <input type="range" id="slSpeed" min="2" max="20" value="10" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">波長を変えて E=hν を確認。hν&lt;W なら強さを上げても電子は出ません。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>光電効果は<strong>光の強さ</strong>ではなく<strong>振動数 ν（色）</strong>で決まる</li>
+        <li><strong>光子1個</strong>が<strong>電子1個</strong>を叩き出す（光の粒子性）</li>
+        <li>電子のエネルギーは <strong>K₀ = hν − W</strong>（強さでは変わらない）</li>
+        <li>光強度を上げると<strong>電子の数</strong>が増える（速度は同じ）</li>
+        <li><strong>停止電圧</strong> eV<sub>stop</sub> = K₀ で最大運動エネルギーを測れる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const H = 6.626e-34;
+      const C = 3e8;
+      const E_CHARGE = 1.602e-19;
+      const M_E = 9.109e-31;
+      const GRAPH_WIN = 8;
+      const VIS_SMOOTH = 0.22;
+      const MAX_PHOTONS = 80;
+      const MAX_ELECTRONS = 120;
+      const INIT_ROT_X = 0.25, INIT_ROT_Y = 0.6, INIT_ZOOM = 5.2;
+      const ZOOM_MIN = 3.5, ZOOM_MAX = 9;
+
+      const METALS = {
+        Na: { name: "ナトリウム Na", W: 2.28, color: 0xb8bcc8, answerLam: 480, answerNote: "λ<544nm（可視光・青緑）" },
+        K: { name: "カリウム K", W: 2.30, color: 0xa8acb8, answerLam: 480, answerNote: "λ<539nm（可視光・青緑）" },
+        Cu: { name: "銅 Cu", W: 4.70, color: 0xb87333, answerLam: 255, answerNote: "λ<264nm（紫外線が必要）" },
+        Ag: { name: "銀 Ag", W: 4.26, color: 0xd0d4dc, answerLam: 280, answerNote: "λ<291nm（紫外線が必要）" },
+      };
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphV = document.getElementById("graphV");
+      const graphN = document.getElementById("graphN");
+      const graphK = document.getElementById("graphK");
+
+      let paused = false, autoSpin = true, simTime = 0, timeScale = 1;
+      let metalKey = "Na";
+      const target = { lam: 550, intensity: 5, W: 2.28, vStop: 0, speed: 1 };
+      const smooth = { lam: 550, intensity: 5, W: 2.28, vStop: 0, speed: 1 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+      const history = [];
+      const k0History = [];
+      let totalEmitted = 0, emitRate = 0, lastEmitCount = 0, lastEmitTime = 0;
+      let sampleElectron = null;
+
+      let scene, camera, renderer, worldGroup;
+      let metalPlate, lightSource, retardingPlate;
+      let photonMesh, electronMesh;
+      const photons = [], electrons = [];
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function photonEnergyEv(lamNm) { return 1240 / lamNm; }
+      function nuFromLam(lamNm) { return C / (lamNm * 1e-9); }
+
+      function thresholdLam(W) { return 1240 / W; }
+
+      function wavelengthColor(lamNm) {
+        let r, g, b;
+        if (lamNm < 380) {
+          const t = clamp((380 - lamNm) / 130, 0, 1);
+          r = 0.45 + 0.35 * t; g = 0; b = 0.75 + 0.25 * (1 - t);
+          return new THREE.Color(r, g, b);
+        }
+        if (lamNm < 440) { r = -(lamNm - 440) / (440 - 380); g = 0; b = 1; }
+        else if (lamNm < 490) { r = 0; g = (lamNm - 440) / (490 - 440); b = 1; }
+        else if (lamNm < 510) { r = 0; g = 1; b = -(lamNm - 510) / (490 - 510); }
+        else if (lamNm < 580) { r = (lamNm - 510) / (580 - 510); g = 1; b = 0; }
+        else if (lamNm < 645) { r = 1; g = -(lamNm - 645) / (580 - 645); b = 0; }
+        else { r = 1; g = 0; b = 0; }
+        return new THREE.Color(r, g, b);
+      }
+
+      function k0Ev() {
+        return Math.max(0, photonEnergyEv(smooth.lam) - smooth.W);
+      }
+
+      function maxElectronSpeed() {
+        const k0 = k0Ev();
+        if (k0 <= 0) return 0;
+        const kEff = Math.max(0, k0 - smooth.vStop);
+        return Math.sqrt(2 * kEff * E_CHARGE / M_E);
+      }
+
+      function canEmit() { return photonEnergyEv(smooth.lam) > smooth.W + 0.001; }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.lam = lerp(smooth.lam, target.lam, k);
+        smooth.intensity = lerp(smooth.intensity, target.intensity, k);
+        smooth.W = lerp(smooth.W, target.W, k);
+        smooth.vStop = lerp(smooth.vStop, target.vStop, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+      }
+
+      function spawnPhoton() {
+        const idx = photons.findIndex((p) => !p.active);
+        const slot = idx >= 0 ? idx : (photons.length < MAX_PHOTONS ? photons.length : -1);
+        if (slot < 0) return;
+        const lam = smooth.lam;
+        const spd = 1.8 + (700 - lam) / 80;
+        photons[slot] = {
+          active: true,
+          x: -2.2 + Math.random() * 0.2,
+          y: (Math.random() - 0.5) * 0.5,
+          z: (Math.random() - 0.5) * 0.35,
+          vx: spd,
+          lam,
+        };
+      }
+
+      function spawnElectron() {
+        const idx = electrons.findIndex((e) => !e.active);
+        const slot = idx >= 0 ? idx : (electrons.length < MAX_ELECTRONS ? electrons.length : -1);
+        if (slot < 0) return;
+        const k0 = k0Ev();
+        const vSi = maxElectronSpeed();
+        const vVis = vSi * 2.8e-5;
+        const angle = (Math.random() - 0.5) * 0.5;
+        electrons[slot] = {
+          active: true,
+          x: 0.05,
+          y: 0.02 + (Math.random() - 0.5) * 0.08,
+          z: (Math.random() - 0.5) * 0.2,
+          vx: vVis * Math.cos(angle),
+          vy: vVis * 0.35 * Math.sin(angle) + vVis * 0.25,
+          vz: vVis * 0.15 * (Math.random() - 0.5),
+          v0: vVis,
+          k0,
+          t0: simTime,
+          stopped: false,
+        };
+        totalEmitted++;
+        sampleElectron = electrons[slot];
+      }
+
+      function stepParticles(dt) {
+        const moveDt = dt * timeScale;
+        const emit = canEmit();
+        const spawnRate = emit ? smooth.intensity * 2.2 : 0;
+        if (Math.random() < spawnRate * moveDt) spawnPhoton();
+
+        photons.forEach((p) => {
+          if (!p.active) return;
+          p.x += p.vx * moveDt;
+          if (p.x >= -0.05) {
+            p.active = false;
+            if (emit && Math.random() < 0.85) spawnElectron();
+          }
+          if (p.x > 3) p.active = false;
+        });
+
+        const retK = smooth.vStop;
+        electrons.forEach((e) => {
+          if (!e.active) return;
+          if (!emit) { e.active = false; return; }
+          const kEff = Math.max(0, e.k0 - retK);
+          const vTarget = e.v0 * Math.sqrt(kEff / Math.max(e.k0, 1e-6));
+          if (retK >= e.k0 - 0.02) {
+            e.vx *= 0.9;
+            e.vy *= 0.9;
+            e.vz *= 0.9;
+            if (Math.abs(e.vx) < 0.002) { e.stopped = true; e.vx = -Math.abs(e.vx) * 0.3 - 0.01; }
+          } else {
+            const scale = vTarget / Math.max(e.v0, 1e-6);
+            e.vx *= 0.98 + scale * 0.02;
+            e.vy *= 0.98 + scale * 0.02;
+          }
+          e.x += e.vx * moveDt;
+          e.y += e.vy * moveDt;
+          e.z += e.vz * moveDt;
+          if (e.x > 2.8 || e.x < -0.5 || Math.abs(e.y) > 1.5) e.active = false;
+        });
+
+        if (simTime - lastEmitTime >= 1) {
+          emitRate = totalEmitted - lastEmitCount;
+          lastEmitCount = totalEmitted;
+          lastEmitTime = simTime;
+        }
+      }
+
+      function pushHistory() {
+        const v = sampleElectron && sampleElectron.active ? Math.sqrt(
+          sampleElectron.vx * sampleElectron.vx + sampleElectron.vy * sampleElectron.vy
+        ) * 3.5e5 : 0;
+        history.push({ t: simTime, v, n: totalEmitted });
+        const tCut = simTime - GRAPH_WIN * 2;
+        while (history.length && history[0].t < tCut) history.shift();
+        const k0 = k0Ev();
+        if (canEmit()) {
+          k0History.push({ t: simTime, k0, vStop: smooth.vStop });
+          while (k0History.length && k0History[0].t < tCut) k0History.shift();
+        }
+      }
+
+      function buildScene3D() {
+        const g = new THREE.Group();
+
+        metalPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 1.4, 1.0),
+          new THREE.MeshStandardMaterial({ color: METALS[metalKey].color, metalness: 0.85, roughness: 0.3, emissive: 0x222222, emissiveIntensity: 0.15 })
+        );
+        metalPlate.position.set(0, 0, 0);
+        g.add(metalPlate);
+
+        retardingPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(0.04, 1.2, 0.9),
+          new THREE.MeshStandardMaterial({ color: 0x475569, emissive: 0xf87171, emissiveIntensity: 0.1, metalness: 0.7, roughness: 0.35 })
+        );
+        retardingPlate.position.set(1.35, 0, 0);
+        g.add(retardingPlate);
+
+        lightSource = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 0.5, 0.5),
+          new THREE.MeshStandardMaterial({ color: 0x334155, emissive: 0xfbbf24, emissiveIntensity: 0.4, metalness: 0.5, roughness: 0.3 })
+        );
+        lightSource.position.set(-2.0, 0.3, 0);
+        g.add(lightSource);
+
+        const beam = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.02, 0.08, 1.6, 12),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.12 })
+        );
+        beam.rotation.z = Math.PI / 2;
+        beam.position.set(-1.0, 0, 0);
+        g.add(beam);
+
+        photonMesh = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 6, 6),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.9 }),
+          MAX_PHOTONS
+        );
+        photonMesh.frustumCulled = false;
+        g.add(photonMesh);
+
+        electronMesh = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 8, 8),
+          new THREE.MeshPhysicalMaterial({ color: 0x60a5fa, emissive: 0x38bdf8, emissiveIntensity: 0.5, transparent: true, opacity: 0.85, roughness: 0.15 }),
+          MAX_ELECTRONS
+        );
+        electronMesh.frustumCulled = false;
+        g.add(electronMesh);
+
+        const grid = new THREE.GridHelper(5, 20, 0x334155, 0x1e293b);
+        grid.position.y = -0.9;
+        g.add(grid);
+
+        worldGroup.add(g);
+      }
+
+      function updateVisuals() {
+        const col = wavelengthColor(smooth.lam);
+        if (lightSource) {
+          lightSource.material.emissive.copy(col);
+          lightSource.material.emissiveIntensity = canEmit() ? 0.65 : 0.2;
+        }
+        if (metalPlate) {
+          metalPlate.material.color.setHex(METALS[metalKey].color);
+          metalPlate.material.emissiveIntensity = canEmit() ? 0.25 : 0.08;
+        }
+        if (retardingPlate) {
+          retardingPlate.material.emissiveIntensity = 0.1 + smooth.vStop * 0.12;
+        }
+
+        const dummy = new THREE.Object3D();
+        for (let i = 0; i < MAX_PHOTONS; i++) {
+          const p = photons[i];
+          if (!p || !p.active) {
+            dummy.position.set(0, -5, 0);
+            dummy.scale.setScalar(0.001);
+          } else {
+            dummy.position.set(p.x, p.y, p.z);
+            dummy.scale.setScalar(0.028);
+            photonMesh.setColorAt(i, wavelengthColor(p.lam));
+          }
+          dummy.updateMatrix();
+          photonMesh.setMatrixAt(i, dummy.matrix);
+        }
+        photonMesh.instanceMatrix.needsUpdate = true;
+        if (photonMesh.instanceColor) photonMesh.instanceColor.needsUpdate = true;
+
+        for (let i = 0; i < MAX_ELECTRONS; i++) {
+          const e = electrons[i];
+          if (!e || !e.active) {
+            dummy.position.set(0, -5, 0);
+            dummy.scale.setScalar(0.001);
+          } else {
+            dummy.position.set(e.x, e.y, e.z);
+            dummy.scale.setScalar(e.stopped ? 0.022 : 0.032);
+            electronMesh.setColorAt(i, new THREE.Color(e.stopped ? 0xf87171 : 0x60a5fa));
+          }
+          dummy.updateMatrix();
+          electronMesh.setMatrixAt(i, dummy.matrix);
+        }
+        electronMesh.instanceMatrix.needsUpdate = true;
+        if (electronMesh.instanceColor) electronMesh.instanceColor.needsUpdate = true;
+      }
+
+      function drawTimeGraph(canvas, key, color, scale) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 180);
+        const h = Math.max(parent ? parent.clientHeight : 0, 100);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 44, r: 10, t: 14, b: 24 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        if (history.length < 2) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("データ収集中…", M.l + 8, h / 2);
+          return;
+        }
+        const tEnd = history[history.length - 1].t;
+        const tStart = Math.max(0, tEnd - GRAPH_WIN);
+        let lo = Infinity, hi = -Infinity;
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const v = pt[key] * (scale || 1);
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        });
+        const span = Math.max(hi - lo, 1e-6);
+        const vmin = lo - span * 0.1, vmax = hi + span * 0.1;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let started = false;
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const x = M.l + ((pt.t - tStart) / GRAPH_WIN) * pw;
+          const y = M.t + ph * (1 - (pt[key] * (scale || 1) - vmin) / (vmax - vmin));
+          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      function drawKGraph() {
+        if (!graphK) return;
+        const parent = graphK.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 180);
+        const h = Math.max(parent ? parent.clientHeight : 0, 100);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        graphK.width = Math.round(w * dpr);
+        graphK.height = Math.round(h * dpr);
+        const ctx = graphK.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 44, r: 10, t: 14, b: 28 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        const k0 = k0Ev();
+        const maxK = Math.max(3, k0 + 0.5);
+        ctx.strokeStyle = "rgba(74,222,128,0.5)";
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(M.l, M.t + ph);
+        ctx.lineTo(M.l + pw, M.t);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#4ade80";
+        ctx.font = "10px Inter, sans-serif";
+        ctx.fillText("K₀", M.l + pw - 24, M.t + 12);
+        if (k0History.length) {
+          const last = k0History[k0History.length - 1];
+          const xK = M.l + (k0 / maxK) * pw;
+          const yK = M.t + ph * (1 - k0 / maxK);
+          ctx.fillStyle = "#4ade80";
+          ctx.beginPath();
+          ctx.arc(xK, yK, 6, 0, Math.PI * 2);
+          ctx.fill();
+          const xV = M.l + (last.vStop / maxK) * pw;
+          const yV = M.t + ph * (1 - last.vStop / maxK);
+          ctx.fillStyle = "#f87171";
+          ctx.beginPath();
+          ctx.arc(xV, yV, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px Inter, sans-serif";
+        ctx.fillText("0", M.l - 4, M.t + ph + 14);
+        ctx.fillText(maxK.toFixed(1) + " eV", M.l + pw - 36, M.t + ph + 14);
+      }
+
+      function updateHUD() {
+        const lam = smooth.lam;
+        const nu = nuFromLam(lam);
+        const E = photonEnergyEv(lam);
+        const W = smooth.W;
+        const k0 = k0Ev();
+        const emit = canEmit();
+        const vMax = maxElectronSpeed();
+
+        document.getElementById("hudLam").textContent = lam.toFixed(0) + " nm";
+        document.getElementById("hudNu").textContent = (nu / 1e14).toFixed(2) + "×10¹⁴ Hz";
+        document.getElementById("hudE").textContent = E.toFixed(2) + " eV";
+        document.getElementById("hudW").textContent = W.toFixed(2) + " eV";
+        document.getElementById("hudK0").textContent = emit ? k0.toFixed(2) + " eV" : "0（放出なし）";
+        document.getElementById("hudV").textContent = emit ? (vMax / 1000).toFixed(1) + " km/s" : "—";
+        document.getElementById("hudN").textContent = emitRate + " /s（計" + totalEmitted + "）";
+        document.getElementById("hudVstop").textContent = smooth.vStop.toFixed(2) + " V";
+
+        document.getElementById("valLam").textContent = Math.round(lam) + " nm";
+        document.getElementById("valInt").textContent = ["弱", "やや弱", "弱め", "やや中", "中", "やや強", "強め", "やや強+", "強", "最強"][Math.round(smooth.intensity) - 1] || "中";
+        document.getElementById("valW").textContent = W.toFixed(2) + " eV";
+        document.getElementById("valVstop").textContent = smooth.vStop.toFixed(2) + " V";
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        const badge = document.getElementById("statusBadge");
+        if (emit) {
+          badge.textContent = "光電子放出中 · N≈" + emitRate + "/s";
+          badge.className = "status-badge emit";
+        } else {
+          badge.textContent = "hν < W → 放出なし";
+          badge.className = "status-badge block";
+        }
+
+        document.getElementById("modeBadge").textContent =
+          "λ=" + Math.round(lam) + " nm · E=" + E.toFixed(2) + " eV\n" +
+          "W=" + W.toFixed(2) + " eV（" + METALS[metalKey].name + "）\n" +
+          (emit ? "K₀=" + k0.toFixed(2) + " eV · v∝√K₀" : "光子エネルギー不足");
+
+        document.getElementById("formulaLive").innerHTML = emit
+          ? "E=" + E.toFixed(2) + " eV &gt; W=" + W.toFixed(2) + " eV · K₀=" + k0.toFixed(2) + " eV · eV<sub>stop</sub>=" + smooth.vStop.toFixed(2) + " V"
+          : "E=" + E.toFixed(2) + " eV &lt; W=" + W.toFixed(2) + " eV → 電子は出ない（強さを上げても無意味）";
+
+        let hintMsg;
+        if (!emit) {
+          hintMsg = "hν < W — 波長を<strong>短く</strong>（紫側）して E を上げると電子が飛び出します。光強度を上げても変化しません。";
+        } else if (smooth.vStop >= k0 - 0.05) {
+          hintMsg = "停止電圧 V<sub>stop</sub> ≥ K₀ — 電子が途中で止まり戻されます（eV<sub>stop</sub> = K₀）。";
+        } else {
+          hintMsg = "光強度を上げると<strong>電子の数</strong>が増えますが、<strong>速度は K₀=hν−W で決まり</strong>変わりません。";
+        }
+        document.getElementById("hintText").innerHTML = hintMsg;
+
+        document.getElementById("step1").classList.toggle("active", true);
+        document.getElementById("step2").classList.toggle("active", emit);
+        document.getElementById("step3").classList.toggle("active", emit && smooth.intensity > 3);
+        document.getElementById("step4").classList.toggle("active", emit && smooth.vStop > 0.1);
+
+        document.getElementById("graphValV").textContent = emit ? (vMax / 1000).toFixed(1) + " km/s" : "—";
+        document.getElementById("graphValN").textContent = emitRate + " /s";
+        document.getElementById("graphValK").textContent = emit ? "K₀=" + k0.toFixed(2) + " eV" : "—";
+
+        drawTimeGraph(graphV, "v", "#60a5fa", 1);
+        drawTimeGraph(graphN, "n", "#fbbf24", 0.15);
+        drawKGraph();
+      }
+
+      function setMetal(key) {
+        metalKey = key;
+        target.W = METALS[key].W;
+        document.getElementById("slW").value = Math.round(target.W * 10);
+        document.querySelectorAll(".metal-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.metal === key);
+        });
+      }
+
+      function applyAnswer(key) {
+        const m = METALS[key];
+        setMetal(key);
+        target.lam = m.answerLam;
+        target.vStop = 0;
+        document.getElementById("slLam").value = m.answerLam;
+        document.getElementById("slVstop").value = 0;
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.answer === key);
+        });
+        const E = photonEnergyEv(m.answerLam);
+        const k0 = E - m.W;
+        document.getElementById("hintText").innerHTML =
+          "<strong>" + m.name + " 正解</strong> — λ=" + m.answerLam + " nm · E=" + E.toFixed(2) +
+          " eV &gt; W=" + m.W.toFixed(2) + " eV · K₀=" + k0.toFixed(2) + " eV（" + m.answerNote + "）";
+      }
+
+      function resetSim() {
+        simTime = 0;
+        photons.forEach((p) => { if (p) p.active = false; });
+        electrons.forEach((e) => { if (e) e.active = false; });
+        history.length = 0;
+        k0History.length = 0;
+        totalEmitted = 0;
+        emitRate = 0;
+        lastEmitCount = 0;
+        lastEmitTime = 0;
+        sampleElectron = null;
+        target.lam = 550; target.intensity = 5; target.vStop = 0; target.speed = 1;
+        smooth.lam = 550; smooth.intensity = 5; smooth.vStop = 0; smooth.speed = 1;
+        setMetal("Na");
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        document.getElementById("slLam").value = 550;
+        document.getElementById("slInt").value = 5;
+        document.getElementById("slVstop").value = 0;
+        document.getElementById("slSpeed").value = 10;
+      }
+
+      function bindControls() {
+        document.getElementById("slLam").addEventListener("input", (e) => {
+          target.lam = +e.target.value;
+          document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        });
+        document.getElementById("slInt").addEventListener("input", (e) => { target.intensity = +e.target.value; });
+        document.getElementById("slW").addEventListener("input", (e) => { target.W = +e.target.value / 10; });
+        document.getElementById("slVstop").addEventListener("input", (e) => { target.vStop = +e.target.value / 10; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.querySelectorAll(".metal-btn").forEach((b) => {
+          b.addEventListener("click", () => {
+            setMetal(b.dataset.metal);
+            document.querySelectorAll(".answer-btn").forEach((ab) => ab.classList.remove("active"));
+          });
+        });
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.addEventListener("click", () => applyAnswer(b.dataset.answer));
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 50);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.7));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(3, 4, 2);
+        scene.add(key);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.85, 0.85);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, ZOOM_MIN, ZOOM_MAX);
+        }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        if (!paused) {
+          simTime += dt * timeScale;
+          stepParticles(dt);
+          pushHistory();
+        }
+        updateVisuals();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.04;
+        const d = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * d, Math.sin(rotX) * d + 0.15, Math.cos(rotY) * Math.cos(rotX) * d);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        setMetal("Na");
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

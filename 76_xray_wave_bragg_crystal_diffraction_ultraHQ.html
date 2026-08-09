@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 — X線回折 · ブラッグ条件 2d sinθ=nλ 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1280px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(96,165,250,0.35));
+      border: 1px solid rgba(244,114,182,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbcfe8; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(96,165,250,0.12));
+      border: 1px solid rgba(244,114,182,0.32);
+    }
+    .formula-main { font-size: 0.9rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.25fr 0.75fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; display: flex; flex-direction: column; gap: 10px; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(244,114,182,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(620px, 70dvh); min-height: 420px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); font-size: 0.72rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(244,114,182,0.45); color: #fbcfe8; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(96,165,250,0.4); color: #93c5fd; }
+    .status-badge.on { border-color: rgba(74,222,128,0.65); color: #86efac; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .crystal-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .crystal-btn.active { background: rgba(244,114,182,0.25); color: #fce7f3; }
+    .viz-foot button.active { background: rgba(244,114,182,0.22); color: #fce7f3; }
+    .answer-btn {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 10px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(74,222,128,0.45); background: rgba(74,222,128,0.12); color: #86efac;
+    }
+    .answer-btn.active { background: rgba(74,222,128,0.28); color: #dcfce7; border-color: rgba(74,222,128,0.7); }
+    .answer-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .answer-label { width: 100%; font-size: 0.66rem; font-weight: 700; color: #86efac; margin-bottom: 2px; }
+    .n-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 10px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(96,165,250,0.5); background: rgba(96,165,250,0.12); color: #93c5fd;
+    }
+    .n-btn.active { background: rgba(96,165,250,0.28); color: #e0f2fe; border-color: rgba(96,165,250,0.75); }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; flex: 1;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.18);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px; }
+    .graph-wrap {
+      position: relative; width: 100%; border-radius: 8px; background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    .graph-wrap.screen { height: min(280px, 32dvh); min-height: 200px; }
+    .graph-wrap.spec { height: min(200px, 24dvh); min-height: 140px; }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: right; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1000px) { .hud-grid { grid-template-columns: repeat(8, 1fr); } }
+    .hud-card {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #94a3b8; }
+    .hud-card .num { font-size: 0.78rem; font-weight: 700; color: #fde68a; margin-top: 3px; }
+    .hud-card.col-w .num { color: #f8fafc; }
+    .hud-card.col-b .num { color: #60a5fa; }
+    .hud-card.highlight .num { color: #86efac; }
+    .hud-card.alert .num { color: #fca5a5; }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #60a5fa; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fbcfe8; margin-bottom: 4px; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">💎</div>
+      <p class="chapter-label">第27章 ⑥ — 原子の構造</p>
+      <h2>X線回折 — ブラッグ条件 2d sinθ = nλ 3Dラボ</h2>
+      <p class="tagline">X線の波動性 · 結晶格子 · 干渉 · 回折パターン</p>
+      <a id="back" href="00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — X線回折の流れ</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 X線管</strong>電子→ターゲット→X線（波）</div>
+        <div class="journey-step" id="step2"><strong>Step 2 波動</strong>波長 λ · 波面が結晶へ</div>
+        <div class="journey-step" id="step3"><strong>Step 3 ブラッグ</strong>2d sinθ = nλ</div>
+        <div class="journey-step" id="step4"><strong>Step 4 回折</strong>干渉→スクリーンにスポット</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">2d sinθ = nλ · ブラッグ反射 · X線回折法の基礎</div>
+        <div class="formula-sub">X線管 → 波としてのX線 → 結晶面で反射・干渉 → 回折スポット</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">X線回折 — 3Dビュー（研究室レベル）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#f8fafc;color:#f8fafc"></i>X線波面</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>結晶面</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>原子</span>
+              <span><i class="color-chip" style="background:#86efac;color:#86efac"></i>ブラッグ反射</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">2d sinθ — · nλ —</div>
+              <div class="status-badge" id="statusBadge">ブラッグ条件 —</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="crystal-btn active" data-crystal="NaCl">NaCl</button>
+              <button type="button" class="crystal-btn" data-crystal="Cu">Cu</button>
+              <button type="button" class="crystal-btn" data-crystal="Si">Si</button>
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graph-panel">
+            <div class="graph-title"><span>ラウエ斑点（回折パターン）</span><span id="screenVal">—</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#f8fafc;width:8px;height:8px;border-radius:50%"></i>強いラウエ斑点</span>
+              <span><i style="background:#60a5fa;width:8px;height:8px;border-radius:50%"></i>中</span>
+              <span><i style="background:#93c5fd;width:8px;height:8px;border-radius:50%"></i>弱</span>
+              <span><i style="background:#1e293b;width:8px;height:8px;border-radius:50%"></i>ビームストップ</span>
+            </div>
+            <div class="graph-wrap screen"><canvas id="graphScreen"></canvas></div>
+            <div class="graph-axis">対称に並ぶラウエ斑点 · n=1,2,3 · ブラッグ成立で白く輝く</div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>X線スペクトル I(λ)</span><span id="specVal">—</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#f8fafc;height:2px;width:14px"></i>連続＋固有X線</span>
+              <span><i style="background:#f472b6;height:8px;width:2px"></i>選択中の λ</span>
+            </div>
+            <div class="graph-wrap spec"><canvas id="graphSpec"></canvas></div>
+            <div class="graph-axis">この波長が回折に寄与</div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム物理量</p>
+            <div class="formula-box" id="formulaLive">2d sinθ = nλ</div>
+            <div class="hud-grid">
+              <div class="hud-card col-w"><div class="lbl">波長 λ</div><div class="num" id="hudLam">—</div></div>
+              <div class="hud-card col-w"><div class="lbl">振動数 ν</div><div class="num" id="hudNu">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">面間隔 d</div><div class="num" id="hudD">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">入射角 θ</div><div class="num" id="hudTheta">—</div></div>
+              <div class="hud-card"><div class="lbl">次数 n</div><div class="num" id="hudN">—</div></div>
+              <div class="hud-card"><div class="lbl">2d sinθ</div><div class="num" id="hudLhs">—</div></div>
+              <div class="hud-card highlight" id="hudBraggCard"><div class="lbl">ブラッグ判定</div><div class="num" id="hudBragg">—</div></div>
+              <div class="hud-card"><div class="lbl">X線強度</div><div class="num" id="hudInt">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>波長 λ <span class="slider-val" id="valLam">0.154 nm</span></label>
+              <input type="range" id="slLam" min="50" max="200" value="154" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>入射角 θ <span class="slider-val" id="valTheta">15°</span></label>
+              <input type="range" id="slTheta" min="0" max="60" value="15" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>面間隔 d <span class="slider-val" id="valD">0.28 nm</span></label>
+              <input type="range" id="slD" min="100" max="500" value="282" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>反射次数 n <span class="slider-val" id="valN">1</span></label>
+              <input type="range" id="slN" min="1" max="3" value="1" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>X線強度 <span class="slider-val" id="valInt">中</span></label>
+              <input type="range" id="slInt" min="1" max="10" value="6" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">0.4×</span></label>
+              <input type="range" id="slSpeed" min="1" max="12" value="4" step="1">
+            </div>
+          </div>
+          <div class="answer-row">
+            <span class="answer-label">● ブラッグ条件 2d sinθ=nλ が成立する正解（結晶＋λ,θ,d 自動 · 次数 n は下で指定）</span>
+            <button type="button" class="answer-btn" data-answer="NaCl">● NaCl 正解</button>
+            <button type="button" class="answer-btn" data-answer="Cu">● Cu 正解</button>
+            <button type="button" class="answer-btn" data-answer="Si">● Si 正解</button>
+          </div>
+          <div class="answer-row">
+            <span class="answer-label">● 反射次数 n を指定（θ を自動計算してブラッグ成立）</span>
+            <button type="button" class="n-btn active" data-n="1">● n = 1</button>
+            <button type="button" class="n-btn" data-n="2">● n = 2</button>
+            <button type="button" class="n-btn" data-n="3">● n = 3</button>
+          </div>
+          <div class="hint-box" id="hintText">λ と d を変えて 2d sinθ = nλ を満たすと、反射波とラウエ斑点が強く輝きます。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>X線は<strong>電磁波（波）</strong>— 波長 λ と振動数 ν = c/λ</li>
+        <li>結晶の<strong>面間隔 d</strong>で反射した波が干渉する</li>
+        <li><strong>ブラッグ条件</strong> 2d sinθ = nλ が成立すると強い反射</li>
+        <li>回折スポット（<strong>ラウエ斑点</strong>）の位置は λ, d, θ, n で決まる</li>
+        <li>X線回折法は結晶構造を調べる基本手法</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const C_LIGHT = 3e8;
+      const NM_SCALE = 14;
+      const VIS_SMOOTH = 0.22;
+      const BRAGG_TOL = 0.008;
+      const WAVE_ANIM = 0.75;
+      const WAVE_TRAVEL_IN = 1.4;
+      const WAVE_TRAVEL_RE = 1.1;
+      const INIT_ROT_X = 0.35, INIT_ROT_Y = 0.45, INIT_ZOOM = 11;
+      const TUBE_X = -5.5, CRYSTAL_X = 0, SCREEN_X = 5.5;
+
+      const CRYSTALS = {
+        NaCl: { name: "NaCl", a: 0.564, dDefault: 0.282, colorA: 0x60a5fa, colorB: 0xf87171, cells: 3, answerLam: 154, answerInt: 9, answerNote: "Cu Kα λ=154pm" },
+        Cu: { name: "Cu", a: 0.361, dDefault: 0.181, colorA: 0xb87333, colorB: 0xb87333, cells: 3, answerLam: 154, answerInt: 9, answerNote: "Cu Kα · d=0.181nm" },
+        Si: { name: "Si", a: 0.543, dDefault: 0.314, colorA: 0x94a3b8, colorB: 0x64748b, cells: 2, answerLam: 154, answerInt: 9, answerNote: "Cu Kα · ダイヤモンド構造" },
+      };
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphScreen = document.getElementById("graphScreen");
+      const graphSpec = document.getElementById("graphSpec");
+
+      let paused = false, autoSpin = true, simTime = 0, timeScale = 1;
+      let crystalKey = "NaCl";
+      const target = { lam: 0.154, theta: 15, d: 0.282, n: 1, intensity: 6, speed: 0.4 };
+      const smooth = { lam: 0.154, theta: 15, d: 0.282, n: 1, intensity: 6, speed: 0.4 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let atomMeshA, atomMeshB, planeGroup, waveGroup, reflectGroup;
+      let tubeGroup, screenMesh, normalArrow;
+      let screenTexCanvas, screenTexture;
+      let atomPositionsA = [], atomPositionsB = [];
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      function deg2rad(d) { return d * Math.PI / 180; }
+
+      function braggLHS(d, thetaDeg) { return 2 * d * Math.sin(deg2rad(thetaDeg)); }
+      function braggMatch(d, theta, lam, n) {
+        return Math.abs(braggLHS(d, theta) - n * lam) < BRAGG_TOL;
+      }
+      function braggStrength(d, theta, lam, n) {
+        const diff = Math.abs(braggLHS(d, theta) - n * lam);
+        return Math.exp(-diff * diff / (BRAGG_TOL * BRAGG_TOL * 0.45));
+      }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.lam = lerp(smooth.lam, target.lam, k);
+        smooth.theta = lerp(smooth.theta, target.theta, k);
+        smooth.d = lerp(smooth.d, target.d, k);
+        smooth.n = lerp(smooth.n, target.n, k);
+        smooth.intensity = lerp(smooth.intensity, target.intensity, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+      }
+
+      function buildFCC(a, cells, offset) {
+        const basis = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]];
+        const pos = [];
+        const sc = a * NM_SCALE;
+        const half = (cells * sc) / 2;
+        for (let i = 0; i < cells; i++) {
+          for (let j = 0; j < cells; j++) {
+            for (let k = 0; k < cells; k++) {
+              basis.forEach((b) => {
+                pos.push({
+                  x: (i + b[0]) * sc - half + CRYSTAL_X,
+                  y: (j + b[1]) * sc - half,
+                  z: (k + b[2]) * sc - half,
+                });
+              });
+            }
+          }
+        }
+        return pos;
+      }
+
+      function buildNaCl(a, cells) {
+        const sc = a * NM_SCALE;
+        const half = (cells * sc) / 2;
+        const posA = [], posB = [];
+        for (let i = 0; i < cells; i++) {
+          for (let j = 0; j < cells; j++) {
+            for (let k = 0; k < cells; k++) {
+              posA.push({ x: i * sc - half + CRYSTAL_X, y: j * sc - half, z: k * sc - half });
+              posB.push({ x: (i + 0.5) * sc - half + CRYSTAL_X, y: (j + 0.5) * sc - half, z: (k + 0.5) * sc - half });
+            }
+          }
+        }
+        return { posA, posB };
+      }
+
+      function buildDiamond(a, cells) {
+        const fcc = buildFCC(a, cells, 0);
+        const sc = a * NM_SCALE;
+        const shifted = fcc.map((p) => ({
+          x: p.x + sc * 0.25,
+          y: p.y + sc * 0.25,
+          z: p.z + sc * 0.25,
+        }));
+        return { posA: fcc, posB: shifted };
+      }
+
+      function rebuildCrystal() {
+        const c = CRYSTALS[crystalKey];
+        let data;
+        if (crystalKey === "NaCl") data = buildNaCl(c.a, c.cells);
+        else if (crystalKey === "Si") data = buildDiamond(c.a, c.cells);
+        else { const p = buildFCC(c.a, c.cells, 0); data = { posA: p, posB: [] }; }
+
+        atomPositionsA = data.posA;
+        atomPositionsB = data.posB;
+        updateAtomMeshes();
+        rebuildPlanes();
+      }
+
+      function updateAtomMeshes() {
+        const c = CRYSTALS[crystalKey];
+        const braggOn = braggMatch(smooth.d, smooth.theta, smooth.lam, Math.round(smooth.n));
+        const glow = braggOn ? 1.8 : 0.6;
+        const dummy = new THREE.Object3D();
+
+        const updateMesh = (mesh, positions, color) => {
+          if (!mesh) return;
+          for (let i = 0; i < mesh.count; i++) {
+            if (i < positions.length) {
+              dummy.position.set(positions[i].x, positions[i].y, positions[i].z);
+              dummy.scale.setScalar(0.11 * glow);
+              mesh.setColorAt(i, new THREE.Color(color));
+            } else {
+              dummy.position.set(0, -10, 0);
+              dummy.scale.setScalar(0.001);
+            }
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+          }
+          mesh.instanceMatrix.needsUpdate = true;
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        };
+
+        updateMesh(atomMeshA, atomPositionsA, c.colorA);
+        updateMesh(atomMeshB, atomPositionsB, c.colorB);
+      }
+
+      function rebuildPlanes() {
+        while (planeGroup.children.length) planeGroup.remove(planeGroup.children[0]);
+        const dVis = smooth.d * NM_SCALE;
+        const c = CRYSTALS[crystalKey];
+        const extent = c.a * c.cells * NM_SCALE;
+        for (let i = -2; i <= 2; i++) {
+          const plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(extent * 1.2, extent * 1.2),
+            new THREE.MeshPhysicalMaterial({
+              color: 0x3b82f6, transparent: true, opacity: 0.14,
+              side: THREE.DoubleSide, metalness: 0.2, roughness: 0.3,
+              emissive: 0x1d4ed8, emissiveIntensity: 0.08,
+            })
+          );
+          plane.rotation.x = -Math.PI / 2;
+          plane.position.set(CRYSTAL_X, i * dVis, 0);
+          planeGroup.add(plane);
+        }
+      }
+
+      function buildWaves() {
+        while (waveGroup.children.length) waveGroup.remove(waveGroup.children[0]);
+        while (reflectGroup.children.length) reflectGroup.remove(reflectGroup.children[0]);
+        for (let i = 0; i < 10; i++) {
+          const geo = new THREE.PlaneGeometry(3.5, 4.5);
+          const mat = new THREE.MeshBasicMaterial({
+            color: 0xf8fafc, transparent: true, opacity: 0.12,
+            side: THREE.DoubleSide, depthWrite: false,
+          });
+          const m = new THREE.Mesh(geo, mat);
+          m.userData.phase = i * 0.6;
+          m.userData.isReflect = false;
+          waveGroup.add(m);
+        }
+        for (let i = 0; i < 6; i++) {
+          const geo = new THREE.PlaneGeometry(3, 4);
+          const mat = new THREE.MeshBasicMaterial({
+            color: 0x86efac, transparent: true, opacity: 0.1,
+            side: THREE.DoubleSide, depthWrite: false,
+          });
+          const m = new THREE.Mesh(geo, mat);
+          m.userData.phase = i * 0.5;
+          m.userData.isReflect = true;
+          reflectGroup.add(m);
+        }
+      }
+
+      function updateWaves(dt) {
+        const lamVis = smooth.lam * NM_SCALE * 2.2;
+        const theta = deg2rad(smooth.theta);
+        const dir = new THREE.Vector3(Math.cos(theta), -Math.sin(theta), 0).normalize();
+        const braggOn = braggMatch(smooth.d, smooth.theta, smooth.lam, Math.round(smooth.n));
+        const str = braggStrength(smooth.d, smooth.theta, smooth.lam, Math.round(smooth.n));
+        const inten = smooth.intensity / 10;
+
+        waveGroup.children.forEach((m, i) => {
+          const phase = m.userData.phase + simTime * WAVE_ANIM * timeScale;
+          const offset = (phase % 1) * lamVis * WAVE_TRAVEL_IN;
+          m.position.set(TUBE_X + 1.5 + offset, Math.sin(theta) * 0.3, 0);
+          m.lookAt(m.position.clone().add(dir));
+          m.material.opacity = 0.08 + inten * 0.12 + Math.sin(phase * Math.PI * 2) * 0.04;
+        });
+
+        const reflDir = new THREE.Vector3(Math.cos(theta), Math.sin(theta), 0).normalize();
+        reflectGroup.children.forEach((m, i) => {
+          const phase = m.userData.phase + simTime * WAVE_ANIM * timeScale;
+          const offset = (phase % 1) * lamVis * WAVE_TRAVEL_RE;
+          m.position.set(CRYSTAL_X + 0.3 + offset, Math.sin(theta) * 0.2, 0);
+          m.lookAt(m.position.clone().add(reflDir));
+          const op = braggOn ? (0.15 + str * 0.55) * inten : 0.03;
+          m.material.opacity = op;
+          m.material.color.setHex(braggOn ? 0x86efac : 0x475569);
+        });
+
+        if (screenMesh) {
+          const match = braggMatch(smooth.d, smooth.theta, smooth.lam, Math.round(smooth.n));
+          const str = braggStrength(smooth.d, smooth.theta, smooth.lam, Math.round(smooth.n));
+          screenMesh.material.emissiveIntensity = match ? 0.95 + str * 0.5 : 0.55;
+        }
+      }
+
+      function braggThetaDeg(d, lam, n) {
+        const s = (n * lam) / (2 * d);
+        if (s > 1) return null;
+        return Math.asin(s) * 180 / Math.PI;
+      }
+
+      function buildLaueSpots(d, lam, theta, inten, selN) {
+        const spots = [];
+        const symSets = [
+          [[0, -1], [1, 0], [-1, 0], [1, -1], [-1, -1]],
+          [[0, -1.2], [0.9, -0.8], [-0.9, -0.8], [1.3, -0.5], [-1.3, -0.5]],
+          [[0, -1.5], [1.1, -1.1], [-1.1, -1.1], [0.7, 0.6], [-0.7, 0.6]],
+        ];
+        for (let order = 1; order <= 3; order++) {
+          const str = braggStrength(d, theta, lam, order);
+          const sinT = order * lam / (2 * d);
+          if (sinT > 1) continue;
+          const twoTheta = 2 * Math.asin(sinT);
+          const baseY = Math.tan(twoTheta * 0.92) * 0.42;
+          const baseX = Math.tan(twoTheta * 0.55) * 0.28 * order;
+          const selBoost = order === selN ? 1.35 : 0.85;
+          const vis = Math.max(str, order === selN ? 0.22 : 0.1) * selBoost;
+          symSets[order - 1].forEach((off, idx) => {
+            spots.push({
+              x: off[0] * baseX,
+              y: off[1] * baseY,
+              str: vis * (idx === 0 ? 1 : 0.55 + 0.15 * (3 - order)),
+              n: order,
+              main: idx === 0,
+            });
+          });
+        }
+        return spots;
+      }
+
+      function drawLaueSpot(ctx, cx, cy, spot, inten, pulse) {
+        const str = spot.str;
+        const rad = (spot.main ? 11 : 8) + str * 26 * inten * pulse;
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        if (str > 0.65) {
+          grd.addColorStop(0, "rgba(255,255,255,1)");
+          grd.addColorStop(0.25, "rgba(230,245,255,0.85)");
+          grd.addColorStop(0.55, "rgba(96,165,250,0.45)");
+          grd.addColorStop(1, "rgba(96,165,250,0)");
+        } else if (str > 0.3) {
+          grd.addColorStop(0, "rgba(147,197,253,0.9)");
+          grd.addColorStop(0.5, "rgba(96,165,250,0.45)");
+          grd.addColorStop(1, "rgba(96,165,250,0)");
+        } else {
+          grd.addColorStop(0, "rgba(96,165,250,0.55)");
+          grd.addColorStop(1, "rgba(96,165,250,0)");
+        }
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.fill();
+        if (str > 0.55 && spot.main) {
+          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(cx, cy, rad * 0.55, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        if (spot.main && str > 0.4) {
+          ctx.fillStyle = str > 0.65 ? "#f8fafc" : "#93c5fd";
+          ctx.font = "bold 10px Inter, sans-serif";
+          ctx.fillText("n=" + spot.n, cx - 12, cy - rad - 5);
+        }
+      }
+
+      function drawLauePattern(ctx, w, h) {
+        const d = smooth.d, lam = smooth.lam, theta = smooth.theta;
+        const inten = smooth.intensity / 10;
+        const match = braggMatch(d, theta, lam, Math.round(smooth.n));
+        const pulse = match ? 1 + 0.15 * Math.sin(simTime * 2.2 * timeScale) : 1;
+
+        ctx.fillStyle = "#030308";
+        ctx.fillRect(0, 0, w, h);
+
+        const cx = w / 2, cy = h / 2;
+        const margin = 10;
+        ctx.strokeStyle = "rgba(148,163,184,0.3)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(margin, margin, w - margin * 2, h - margin * 2);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.12)";
+        ctx.beginPath();
+        ctx.moveTo(cx, margin); ctx.lineTo(cx, h - margin);
+        ctx.moveTo(margin, cy); ctx.lineTo(w - margin, cy);
+        ctx.stroke();
+
+        const stopR = Math.min(w, h) * 0.06;
+        const stopGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, stopR);
+        stopGrd.addColorStop(0, "rgba(0,0,0,0.95)");
+        stopGrd.addColorStop(0.7, "rgba(15,23,42,0.8)");
+        stopGrd.addColorStop(1, "rgba(30,41,59,0)");
+        ctx.fillStyle = stopGrd;
+        ctx.beginPath();
+        ctx.arc(cx, cy, stopR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#475569";
+        ctx.font = "9px Noto Sans JP, sans-serif";
+        ctx.fillText("ビーム", cx - 14, cy + 3);
+
+        const spots = buildLaueSpots(d, lam, theta, inten, Math.round(smooth.n));
+        const scaleY = h * 0.44;
+        const scaleX = w * 0.42;
+        spots.sort((a, b) => a.str - b.str);
+        spots.forEach((spot) => {
+          drawLaueSpot(ctx, cx + spot.x * scaleX, cy + spot.y * scaleY, spot, inten, pulse);
+        });
+
+        if (match) {
+          ctx.strokeStyle = "rgba(134,239,172,0.35)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.strokeRect(margin + 2, margin + 2, w - margin * 2 - 4, h - margin * 2 - 4);
+          ctx.setLineDash([]);
+        }
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "10px Noto Sans JP, sans-serif";
+        ctx.fillText("ラウエ斑点スクリーン", 12, h - 10);
+      }
+
+      function drawScreen() {
+        if (!graphScreen) return;
+        const parent = graphScreen.parentElement;
+        const w = Math.max(parent.clientWidth, 180), h = Math.max(parent.clientHeight, 180);
+        const dpr = Math.min(devicePixelRatio, 2);
+        graphScreen.width = Math.round(w * dpr);
+        graphScreen.height = Math.round(h * dpr);
+        const ctx = graphScreen.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawLauePattern(ctx, w, h);
+        updateScreenTexture();
+      }
+
+      function updateScreenTexture() {
+        if (!screenTexCanvas || !screenTexture) return;
+        const tw = 256, th = 320;
+        screenTexCanvas.width = tw;
+        screenTexCanvas.height = th;
+        const tctx = screenTexCanvas.getContext("2d");
+        drawLauePattern(tctx, tw, th);
+        screenTexture.needsUpdate = true;
+      }
+
+      function drawSpectrum() {
+        if (!graphSpec) return;
+        const parent = graphSpec.parentElement;
+        const w = Math.max(parent.clientWidth, 180), h = Math.max(parent.clientHeight, 120);
+        const dpr = Math.min(devicePixelRatio, 2);
+        graphSpec.width = Math.round(w * dpr);
+        graphSpec.height = Math.round(h * dpr);
+        const ctx = graphSpec.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const M = { l: 44, r: 10, t: 14, b: 28 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(15,23,42,0.65)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+
+        const lamMin = 0.03, lamMax = 0.22;
+        const steps = 200;
+        let iMax = 0;
+        const curve = [];
+        for (let i = 0; i <= steps; i++) {
+          const lam = lamMin + (lamMax - lamMin) * (i / steps);
+          const lmin = 0.031;
+          let I = 0;
+          if (lam > lmin) I = 29 * (lam - lmin) / (lam * lam * lam) * 0.15;
+          if (lam > 0.13 && lam < 0.16) I += 2.5 * Math.exp(-Math.pow((lam - 0.154) / 0.002, 2) * 8);
+          if (lam > 0.12 && lam < 0.14) I += 1.2 * Math.exp(-Math.pow((lam - 0.139) / 0.0015, 2) * 8);
+          curve.push({ lam, I });
+          if (I > iMax) iMax = I;
+        }
+        iMax = Math.max(iMax, 0.1) * 1.1;
+
+        function xMap(lam) { return M.l + ((lam - lamMin) / (lamMax - lamMin)) * pw; }
+        function yMap(I) { return M.t + ph * (1 - I / iMax); }
+
+        ctx.beginPath();
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = 2;
+        let started = false;
+        curve.forEach((pt) => {
+          const x = xMap(pt.lam), y = yMap(pt.I);
+          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        const xSel = xMap(smooth.lam);
+        ctx.strokeStyle = "#f472b6";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(xSel, M.t);
+        ctx.lineTo(xSel, M.t + ph);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#f472b6";
+        ctx.font = "10px Inter, sans-serif";
+        ctx.fillText("λ", xSel + 3, M.t + 10);
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px Noto Sans JP, sans-serif";
+        ctx.fillText("波長 λ", M.l + pw - 28, M.t + ph + 18);
+        ctx.save();
+        ctx.translate(12, M.t + ph / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("X線の強さ", 0, 0);
+        ctx.restore();
+      }
+
+      function buildScene3D() {
+        const g = new THREE.Group();
+
+        tubeGroup = new THREE.Group();
+        const cathode = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15, 0.18, 0.25, 12),
+          new THREE.MeshStandardMaterial({ color: 0x475569, emissive: 0x334155, emissiveIntensity: 0.4, metalness: 0.8, roughness: 0.3 })
+        );
+        cathode.rotation.z = Math.PI / 2;
+        cathode.position.set(TUBE_X - 0.5, 0, 0);
+        tubeGroup.add(cathode);
+        const target = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 0.6, 0.5),
+          new THREE.MeshStandardMaterial({ color: 0xb87333, emissive: 0xfbbf24, emissiveIntensity: 0.35, metalness: 0.85, roughness: 0.25 })
+        );
+        target.position.set(TUBE_X + 0.3, 0, 0);
+        tubeGroup.add(target);
+        const tubeBody = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.35, 0.35, 1.8, 16, 1, true),
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, transparent: true, opacity: 0.35, side: THREE.DoubleSide, metalness: 0.5, roughness: 0.4 })
+        );
+        tubeBody.rotation.z = Math.PI / 2;
+        tubeBody.position.set(TUBE_X, 0, 0);
+        tubeGroup.add(tubeBody);
+        g.add(tubeGroup);
+
+        planeGroup = new THREE.Group();
+        g.add(planeGroup);
+
+        const maxAtoms = 200;
+        const atomGeo = new THREE.SphereGeometry(1, 10, 10);
+        atomMeshA = new THREE.InstancedMesh(
+          atomGeo,
+          new THREE.MeshPhysicalMaterial({ color: 0x60a5fa, emissive: 0x38bdf8, emissiveIntensity: 0.8, transparent: true, opacity: 0.92 }),
+          maxAtoms
+        );
+        atomMeshB = new THREE.InstancedMesh(
+          atomGeo,
+          new THREE.MeshPhysicalMaterial({ color: 0xf87171, emissive: 0xf87171, emissiveIntensity: 0.6, transparent: true, opacity: 0.9 }),
+          maxAtoms
+        );
+        atomMeshA.frustumCulled = false;
+        atomMeshB.frustumCulled = false;
+        g.add(atomMeshA);
+        g.add(atomMeshB);
+
+        waveGroup = new THREE.Group();
+        reflectGroup = new THREE.Group();
+        g.add(waveGroup);
+        g.add(reflectGroup);
+        buildWaves();
+
+        screenMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.2, 2.8),
+          new THREE.MeshStandardMaterial({
+            color: 0x111827, emissive: 0xffffff, emissiveIntensity: 0.85,
+            metalness: 0.2, roughness: 0.45, side: THREE.DoubleSide,
+          })
+        );
+        screenTexCanvas = document.createElement("canvas");
+        screenTexCanvas.width = 256;
+        screenTexCanvas.height = 320;
+        screenTexture = new THREE.CanvasTexture(screenTexCanvas);
+        screenTexture.colorSpace = THREE.SRGBColorSpace;
+        screenMesh.material.emissiveMap = screenTexture;
+        screenMesh.material.map = screenTexture;
+        screenMesh.position.set(SCREEN_X, 0.2, 0);
+        g.add(screenMesh);
+
+        normalArrow = new THREE.ArrowHelper(
+          new THREE.Vector3(0, 1, 0), new THREE.Vector3(CRYSTAL_X, -0.8, 0), 1.2, 0x60a5fa, 0.25, 0.15
+        );
+        g.add(normalArrow);
+
+        const beamIn = new THREE.ArrowHelper(
+          new THREE.Vector3(1, 0, 0), new THREE.Vector3(TUBE_X + 1, 0.5, 0), 2.5, 0xf8fafc, 0.3, 0.18
+        );
+        beamIn.name = "beamIn";
+        g.add(beamIn);
+
+        const grid = new THREE.GridHelper(14, 28, 0x1e293b, 0x111111);
+        grid.position.y = -1.8;
+        g.add(grid);
+
+        worldGroup.add(g);
+        rebuildCrystal();
+      }
+
+      function updateBeamArrow() {
+        const theta = deg2rad(smooth.theta);
+        const beam = worldGroup.getObjectByName("beamIn");
+        if (beam) {
+          beam.setDirection(new THREE.Vector3(Math.cos(theta), -Math.sin(theta), 0).normalize());
+          beam.position.set(TUBE_X + 1, 0.3, 0);
+        }
+      }
+
+      function updateHUD() {
+        const lam = smooth.lam;
+        const nu = C_LIGHT / (lam * 1e-9);
+        const d = smooth.d;
+        const theta = smooth.theta;
+        const n = Math.round(smooth.n);
+        const lhs = braggLHS(d, theta);
+        const rhs = n * lam;
+        const match = braggMatch(d, theta, lam, n);
+        const str = braggStrength(d, theta, lam, n);
+
+        document.getElementById("hudLam").textContent = (lam * 1000).toFixed(0) + " pm";
+        document.getElementById("hudNu").textContent = (nu / 1e18).toFixed(2) + "×10¹⁸ Hz";
+        document.getElementById("hudD").textContent = (d * 1000).toFixed(0) + " pm";
+        document.getElementById("hudTheta").textContent = theta.toFixed(1) + "°";
+        document.getElementById("hudN").textContent = String(n);
+        document.getElementById("hudLhs").textContent = lhs.toFixed(4) + " nm";
+        document.getElementById("hudBragg").textContent = match ? "成立 ✓" : "不成立";
+        document.getElementById("hudBraggCard").className = "hud-card " + (match ? "highlight" : "alert");
+        document.getElementById("hudInt").textContent = ["弱", "やや弱", "弱め", "やや中", "中", "やや強", "強め", "やや強+", "強", "最強"][Math.round(smooth.intensity) - 1] || "中";
+
+        document.getElementById("valLam").textContent = (lam * 1000).toFixed(0) + " pm";
+        document.getElementById("valTheta").textContent = theta.toFixed(0) + "°";
+        document.getElementById("valD").textContent = (d * 1000).toFixed(0) + " pm";
+        document.getElementById("valN").textContent = String(n);
+        document.getElementById("valInt").textContent = document.getElementById("hudInt").textContent;
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("formulaLive").innerHTML = match
+          ? "2d sinθ = " + lhs.toFixed(4) + " ≈ nλ = " + rhs.toFixed(4) + " nm <strong style='color:#86efac'>✓ ブラッグ成立</strong>"
+          : "2d sinθ = " + lhs.toFixed(4) + " · nλ = " + rhs.toFixed(4) + " nm · 差 = " + Math.abs(lhs - rhs).toFixed(4);
+
+        const badge = document.getElementById("statusBadge");
+        if (match) {
+          badge.textContent = "ブラッグ反射 ON · 強度 " + (str * 100).toFixed(0) + "%";
+          badge.className = "status-badge on";
+        } else {
+          badge.textContent = "ブラッグ条件 不成立 · θ,λ,d を調整";
+          badge.className = "status-badge";
+        }
+
+        document.getElementById("modeBadge").textContent =
+          "λ=" + (lam * 1000).toFixed(0) + " pm · d=" + (d * 1000).toFixed(0) + " pm\n" +
+          "θ=" + theta.toFixed(1) + "° · n=" + n + " · " + CRYSTALS[crystalKey].name;
+
+        let hint;
+        if (match) {
+          hint = "<strong>ブラッグ条件成立</strong> — ラウエ斑点が白く輝き、対称に並ぶ回折パターンがはっきり観察できます。";
+        } else {
+          hint = "2d sinθ と nλ を一致させてください。<strong>正解ボタン</strong>でブラッグ成立を確認するか、スライダーで調整してください。";
+        }
+        document.getElementById("hintText").innerHTML = hint;
+
+        document.getElementById("step1").classList.toggle("active", smooth.intensity > 2);
+        document.getElementById("step2").classList.toggle("active", true);
+        document.getElementById("step3").classList.toggle("active", match || str > 0.3);
+        document.getElementById("step4").classList.toggle("active", match);
+
+        document.getElementById("screenVal").textContent = match ? "ラウエ斑点 輝度↑" : "弱いラウエ斑点";
+        document.getElementById("specVal").textContent = "λ=" + (lam * 1000).toFixed(0) + " pm";
+
+        rebuildPlanes();
+        updateAtomMeshes();
+        updateBeamArrow();
+        drawScreen();
+        drawSpectrum();
+      }
+
+      function setNActive(n) {
+        document.querySelectorAll(".n-btn").forEach((b) => {
+          b.classList.toggle("active", +b.dataset.n === n);
+        });
+      }
+
+      function applyAnswerN(n) {
+        const d = target.d;
+        const lam = target.lam;
+        const theta = braggThetaDeg(d, lam, n);
+        if (theta == null) {
+          document.getElementById("hintText").innerHTML =
+            "<strong>n=" + n + " は不成立</strong> — nλ/(2d) &gt; 1 です。λ を長くするか d を大きくしてください。";
+          return;
+        }
+        target.n = n;
+        target.theta = Math.round(theta * 10) / 10;
+        document.getElementById("slN").value = n;
+        document.getElementById("slTheta").value = Math.round(target.theta);
+        setNActive(n);
+        clearAnswerActive();
+        const lhs = braggLHS(d, target.theta);
+        document.getElementById("hintText").innerHTML =
+          "<strong>n=" + n + " 正解</strong> — θ=" + target.theta.toFixed(1) + "° に自動設定 · 2d sinθ=" +
+          lhs.toFixed(4) + " ≈ nλ=" + (n * lam).toFixed(4) + " nm";
+      }
+
+      function applyAnswer(key) {
+        const c = CRYSTALS[key];
+        if (!c) return;
+        const n = Math.round(+document.getElementById("slN").value);
+        const theta = braggThetaDeg(c.dDefault, c.answerLam / 1000, n);
+        if (theta == null) {
+          document.getElementById("hintText").innerHTML =
+            "<strong>" + c.name + " · n=" + n + " は不成立</strong> — 次数 n を下げるか λ を長くしてください。";
+          return;
+        }
+        crystalKey = key;
+        target.lam = c.answerLam / 1000;
+        target.d = c.dDefault;
+        target.theta = Math.round(theta * 10) / 10;
+        target.n = n;
+        target.intensity = c.answerInt;
+        document.getElementById("slLam").value = c.answerLam;
+        document.getElementById("slD").value = Math.round(c.dDefault * 1000);
+        document.getElementById("slTheta").value = Math.round(target.theta);
+        document.getElementById("slN").value = n;
+        document.getElementById("slInt").value = c.answerInt;
+        document.querySelectorAll(".crystal-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.crystal === key);
+        });
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.answer === key);
+        });
+        setNActive(n);
+        rebuildCrystal();
+        const lhs = braggLHS(c.dDefault, target.theta);
+        document.getElementById("hintText").innerHTML =
+          "<strong>" + c.name + " 正解 · n=" + n + "</strong> — λ=" + c.answerLam + " pm · d=" + (c.dDefault * 1000).toFixed(0) +
+          " pm · θ=" + target.theta.toFixed(1) + "° · 2d sinθ=" + lhs.toFixed(4) + "≈nλ（" + c.answerNote + "）";
+      }
+
+      function setCrystal(key) {
+        crystalKey = key;
+        const c = CRYSTALS[key];
+        target.d = c.dDefault;
+        document.getElementById("slD").value = Math.round(c.dDefault * 1000);
+        document.querySelectorAll(".crystal-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.crystal === key);
+        });
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        rebuildCrystal();
+      }
+
+      function resetSim() {
+        simTime = 0;
+        crystalKey = "NaCl";
+        target.lam = 0.154; target.theta = 15; target.d = 0.282; target.n = 1;
+        target.intensity = 6; target.speed = 0.4;
+        smooth.lam = 0.154; smooth.theta = 15; smooth.d = 0.282; smooth.n = 1;
+        smooth.intensity = 6; smooth.speed = 0.4;
+        document.getElementById("slLam").value = 154;
+        document.getElementById("slTheta").value = 15;
+        document.getElementById("slD").value = 282;
+        document.getElementById("slN").value = 1;
+        document.getElementById("slInt").value = 6;
+        document.getElementById("slSpeed").value = 4;
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        setNActive(1);
+        setCrystal("NaCl");
+      }
+
+      function clearAnswerActive() {
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+      }
+
+      function bindControls() {
+        document.getElementById("slLam").addEventListener("input", (e) => { target.lam = +e.target.value / 1000; clearAnswerActive(); });
+        document.getElementById("slTheta").addEventListener("input", (e) => { target.theta = +e.target.value; clearAnswerActive(); });
+        document.getElementById("slD").addEventListener("input", (e) => { target.d = +e.target.value / 1000; clearAnswerActive(); });
+        document.getElementById("slN").addEventListener("input", (e) => {
+          target.n = +e.target.value;
+          setNActive(Math.round(target.n));
+          clearAnswerActive();
+        });
+        document.getElementById("slInt").addEventListener("input", (e) => { target.intensity = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.querySelectorAll(".crystal-btn").forEach((b) => {
+          b.addEventListener("click", () => setCrystal(b.dataset.crystal));
+        });
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.addEventListener("click", () => applyAnswer(b.dataset.answer));
+        });
+        document.querySelectorAll(".n-btn").forEach((b) => {
+          b.addEventListener("click", () => applyAnswerN(+b.dataset.n));
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x93c5fd, 0.5, 20);
+        rim.position.set(-3, 2, 2);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.006, 6, 18);
+        }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        if (!paused) simTime += dt * timeScale;
+        updateWaves(dt);
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.03;
+        const d = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * d, Math.sin(rotX) * d + 1.2, Math.cos(rotY) * Math.cos(rotX) * d);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        setCrystal("NaCl");
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

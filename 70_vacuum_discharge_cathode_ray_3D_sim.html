@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 原子の構造 — 真空放電と陰極線 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #1a0a24 45%, #2e1065 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1220px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(244,114,182,0.45), rgba(167,139,250,0.45));
+      border: 1px solid rgba(244,114,182,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #f9a8d4; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.32);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #f9a8d4; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(244,114,182,0.1), rgba(167,139,250,0.1));
+      border: 1px solid rgba(244,114,182,0.35);
+    }
+    .formula-main { font-size: 0.92rem; font-weight: 800; color: #fbcfe8; line-height: 1.65; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 960px) {
+      .sim-grid { grid-template-columns: 1.2fr 0.8fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .graphs-col { display: flex; flex-direction: column; gap: 10px; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #111; border: 1px solid rgba(244,114,182,0.35); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(560px, 62dvh); min-height: 380px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6;
+      font-size: 0.9rem; text-align: center;
+    }
+    #simError.show { display: flex; }
+    #startOverlay {
+      position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.45); pointer-events: none;
+    }
+    #startOverlay.hide { display: none; }
+    #startOverlay span {
+      padding: 14px 28px; border-radius: 12px;
+      background: rgba(244,114,182,0.25); border: 2px solid rgba(244,114,182,0.6);
+      font-size: 1rem; font-weight: 800; color: #fce7f3;
+    }
+    .mode-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.9); border: 1px solid rgba(244,114,182,0.5);
+      font-size: 0.78rem; font-weight: 700; color: #fbcfe8; line-height: 1.5;
+    }
+    .pressure-badge {
+      position: absolute; top: 12px; right: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.9); border: 1px solid rgba(96,165,250,0.4);
+      font-size: 0.72rem; font-weight: 700; color: #93c5fd; line-height: 1.55;
+    }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.4); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.active { background: rgba(244,114,182,0.28); color: #fce7f3; border-color: rgba(244,114,182,0.65); }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.22);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #f9a8d4; }
+    .hud-card {
+      padding: 12px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.66rem; color: #94a3b8; line-height: 1.35; }
+    .hud-card .num { font-size: 0.88rem; font-weight: 700; color: #fbcfe8; margin-top: 4px; }
+    .hud-card.col-v .num { color: #93c5fd; }
+    .hud-card.col-r .num { color: #fde047; }
+    .hud-card.col-p .num { color: #c4b5fd; }
+    .hud-card.col-ray .num { color: #60a5fa; }
+    .hud-card.highlight { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+    .hud-card.highlight .num { color: #fce7f3; font-size: 1rem; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px) { .hud-grid { grid-template-columns: repeat(6, 1fr); } }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(244,114,182,0.1); border: 1px solid rgba(244,114,182,0.28);
+      font-size: 0.78rem; font-weight: 700; color: #fbcfe8; line-height: 1.65;
+    }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+    .edu-list li { margin-bottom: 4px; }
+    .graph-panel {
+      padding: 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px; }
+    .graph-legend-row i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .graph-wrap {
+      position: relative; width: 100%; height: 140px;
+      border-radius: 8px; background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: right; }
+    .graph-wrap--v { border-color: rgba(96,165,250,0.35); }
+    .graph-wrap--r { border-color: rgba(253,224,71,0.35); }
+    .graph-wrap--g { border-color: rgba(244,114,182,0.35); }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.18);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #f9a8d4; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fbcfe8; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #f472b6; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.08); border: 1px solid rgba(244,114,182,0.22);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .journey-steps {
+      display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); margin-top: 10px;
+    }
+    @media (max-width: 640px) { .journey-steps { grid-template-columns: 1fr; } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+      color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #f9a8d4; margin-bottom: 4px; font-size: 0.78rem; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚡</div>
+      <p class="chapter-label">第27章 ① — 原子の構造</p>
+      <h2>真空放電と陰極線 — 3Dラボ</h2>
+      <p class="tagline">圧力を下げると「電子の光」が見える — ブラウン管の原点を体感</p>
+      <a id="back" href="00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>旅のしおり — 3ステップで陰極線を発見</h3>
+      <p>100年前の実験室を再現します。<strong>圧力を下げる</strong> → <strong>電圧をかける</strong> → <strong>磁石で曲げる</strong> の順に操作してみましょう。</p>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 圧力</strong>高圧では気体全体が赤紫に光る。低圧になると細い青い電子線（陰極線）が現れる。</div>
+        <div class="journey-step" id="step2"><strong>Step 2 電圧</strong>陰極−・陽極＋の間で電子が加速。蛍光板が緑色に光る＝電子が届いた証拠。</div>
+        <div class="journey-step" id="step3"><strong>Step 3 磁場</strong>ローレンツ力で電子線が曲がる。ブラウン管・電子顕微鏡の基本原理と同じ！</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">eV = ½mv²　　F = evB　　r = mv / (eB)</div>
+        <div class="formula-sub">電場で加速 · 磁場で曲がる · 陰極線＝電子の束</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">真空管内部 — 3Dビュー（ドラッグ回転 · ホイールズーム）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>ガラス管</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>陰極 −</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>電子線</span>
+              <span><i class="color-chip" style="background:#4ade80;color:#4ade80"></i>蛍光板</span>
+              <span><i class="color-chip" style="background:#d946ef;color:#d946ef"></i>放電光</span>
+            </div>
+            <p class="viz-legend" id="vizLegend">▶ スタートでアニメーション開始 · 圧力スライダーを動かして放電の変化を観察</p>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div id="startOverlay"><span>▶ スタートで実験開始</span></div>
+              <div class="mode-badge" id="modeBadge">放電状態：—</div>
+              <div class="pressure-badge" id="pressureBadge">P = —</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" id="btnStart">▶ スタート</button>
+              <button type="button" id="btnPause" disabled>一時停止</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graphs-col">
+            <div class="graph-panel">
+              <div class="graph-title"><span>電子速度 v(t)</span><span id="graphValV">—</span></div>
+              <div class="graph-legend-row"><span><i style="background:#60a5fa"></i>v = √(2eV/m)</span></div>
+              <div class="graph-wrap graph-wrap--v"><canvas id="graphV"></canvas></div>
+              <div class="graph-axis" id="graphAxisV">直近 8 s · 右端＝現在</div>
+            </div>
+            <div class="graph-panel">
+              <div class="graph-title"><span>曲がり半径 r(t)</span><span id="graphValR">—</span></div>
+              <div class="graph-legend-row"><span><i style="background:#fde047"></i>r = mv/(eB)</span></div>
+              <div class="graph-wrap graph-wrap--r"><canvas id="graphR"></canvas></div>
+              <div class="graph-axis" id="graphAxisR">直近 8 s · 右端＝現在</div>
+            </div>
+            <div class="graph-panel">
+              <div class="graph-title"><span>放電強度 vs 圧力</span><span id="graphValG">—</span></div>
+              <div class="graph-legend-row"><span><i style="background:#f472b6"></i>放電光</span><span><i style="background:#60a5fa"></i>電子線</span></div>
+              <div class="graph-wrap graph-wrap--g"><canvas id="graphG"></canvas></div>
+              <div class="graph-axis" id="graphAxisG">横軸：log₁₀(P/Pa) · 縦：強度</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム計測</p>
+            <div class="formula-box" id="formulaLive">eV = ½mv² · F = evB · r = mv/(eB)</div>
+            <div class="hud-grid">
+              <div class="hud-card col-p"><div class="lbl">圧力 P</div><div class="num" id="hudP">—</div></div>
+              <div class="hud-card highlight"><div class="lbl">放電状態</div><div class="num" id="hudMode">—</div></div>
+              <div class="hud-card col-v"><div class="lbl">電圧 V</div><div class="num" id="hudV">—</div></div>
+              <div class="hud-card col-v"><div class="lbl">電子速度 v</div><div class="num" id="hudVel">—</div></div>
+              <div class="hud-card col-r"><div class="lbl">曲がり半径 r</div><div class="num" id="hudR">—</div></div>
+              <div class="hud-card col-ray"><div class="lbl">電子線強度</div><div class="num" id="hudRay">—</div></div>
+            </div>
+            <p class="hint-box" id="hintText" style="margin-top:10px;margin-bottom:0">圧力を下げると気体分子との衝突が減り、まっすぐ進む陰極線（電子線）がはっきり見えます。</p>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="btn-row">
+            <button type="button" class="act-btn" id="btnStart2">▶ スタート</button>
+            <button type="button" class="act-btn" id="btnPause2" disabled>一時停止</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>圧力 P <span class="slider-val" id="valP">10⁵ Pa</span></label>
+              <input type="range" id="slP" min="0" max="100" value="70" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>電圧 V <span class="slider-val" id="valV">2000 V</span></label>
+              <input type="range" id="slV" min="0" max="5000" value="2000" step="50">
+            </div>
+            <div class="ctrl-row">
+              <label>磁場 B <span class="slider-val" id="valB">0.010 T</span></label>
+              <input type="range" id="slB" min="0" max="50" value="10" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">0.35×</span></label>
+              <input type="range" id="slSpeed" min="1" max="12" value="4" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="ctrlHint">おすすめ：まず圧力を右端（高圧）→ 左へ下げる。次に V を上げ、最後に B を動かして曲がりを確認。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>圧力が<strong>高い</strong>と電子はすぐ気体分子と衝突 → 管全体が赤紫に光る（グロー放電）</li>
+        <li>圧力が<strong>低い</strong>と衝突が少ない → 陰極から出た電子がまっすぐ飛ぶ（<strong>陰極線</strong>）</li>
+        <li>蛍光板の緑色の光は、電子が当たって発光した証拠 — 陰極線は<strong>電子</strong>である</li>
+        <li>磁場 B をかけると F = evB で曲がる — テレビのブラウン管・電子顕微鏡と同じ原理</li>
+        <li>曲がり半径 r = mv/(eB) → B が大きいほど、電子線はきつく曲がる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const E_CHARGE = 1.602e-19;
+      const M_E = 9.109e-31;
+      const GRAPH_WIN = 8;
+      const VIS_SMOOTH = 0.16;
+      const DEFAULT_SPEED = 0.35;
+      const BEAM_TRAVEL_SEC = 4.2;
+      const INIT_ROT_X = 0.15, INIT_ROT_Y = 0.55, INIT_ZOOM = 4.8;
+      const ZOOM_MIN = 2.8, ZOOM_MAX = 9, ZOOM_WHEEL = 0.004;
+      const TUBE_LEN = 3.6, TUBE_R = 0.38;
+      const CATHODE_X = -1.55, ANODE_X = 1.35, SCREEN_X = 1.15;
+      const N_ELECTRONS = 72;
+      const N_GAS = 120;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphV = document.getElementById("graphV");
+      const graphR = document.getElementById("graphR");
+      const graphG = document.getElementById("graphG");
+
+      let paused = true, started = false, autoSpin = true, simTime = 0, timeScale = DEFAULT_SPEED;
+      const target = { pSlider: 70, voltage: 2000, bMilli: 10, speed: DEFAULT_SPEED };
+      const smooth = { pSlider: 70, voltage: 2000, bMilli: 10, speed: DEFAULT_SPEED };
+      const vis = { v: 0, r: 0, glow: 0, ray: 0, mode: "—" };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+      const history = [];
+
+      let scene, camera, renderer, worldGroup;
+      let tubeGlass, glowMesh, glowCore, cathodeMesh, anodeMesh, screenMesh, screenGlow;
+      let bFieldArrows = [], electronMeshes = [], gasMeshes = [];
+      let trailLines = [], previewBeamLines = [];
+      let screenSpots = [];
+      let previewHitMarker, flowRunners = [], glowPulseLight, sparkGroup;
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function sliderToLogP(s) { return 5 - s * 0.08; }
+      function logPToPa(logP) { return Math.pow(10, logP); }
+
+      function formatPressure(P) {
+        if (P >= 1e5) return (P / 1e5).toFixed(1) + " ×10⁵ Pa";
+        if (P >= 1e3) return (P / 1e3).toFixed(1) + " kPa";
+        if (P >= 1) return P.toFixed(1) + " Pa";
+        if (P >= 1e-3) return (P * 1e3).toFixed(1) + " mPa";
+        return P.toExponential(1) + " Pa";
+      }
+
+      function formatVel(v) {
+        if (v >= 1e7) return (v / 1e6).toFixed(1) + " ×10⁶ m/s";
+        if (v >= 1e6) return (v / 1e6).toFixed(2) + " Mm/s";
+        if (v >= 1e3) return (v / 1e3).toFixed(1) + " km/s";
+        return v.toFixed(0) + " m/s";
+      }
+
+      function formatRadius(r) {
+        if (r >= 1) return r.toFixed(2) + " m";
+        if (r >= 1e-2) return (r * 100).toFixed(1) + " cm";
+        return (r * 1000).toFixed(1) + " mm";
+      }
+
+      function calcPhysics(pSlider, voltage, bT) {
+        const logP = sliderToLogP(pSlider);
+        const P = logPToPa(logP);
+        const v = voltage > 0 ? Math.sqrt(2 * E_CHARGE * voltage / M_E) : 0;
+        const r = bT > 1e-9 && v > 0 ? M_E * v / (E_CHARGE * bT) : Infinity;
+
+        let mode, glow, ray, modeHint;
+        if (logP >= 1.8) {
+          mode = "高圧";
+          glow = 0.75 + 0.25 * Math.min(1, (logP - 1.8) / 2);
+          ray = 0.08 + 0.12 * Math.max(0, (2.5 - logP) / 0.7);
+          modeHint = "気体が多い → 電子はすぐ衝突 → 管全体が赤紫に光る";
+        } else if (logP >= -0.2) {
+          mode = "中圧";
+          const t = (1.8 - logP) / 2;
+          glow = 0.35 + 0.45 * (1 - t);
+          ray = 0.25 + 0.55 * t;
+          modeHint = "放電は細くなる。電子線が少しずつ見え始める";
+        } else {
+          mode = "低圧";
+          glow = 0.08 + 0.12 * Math.max(0, (logP + 2) / 1.8);
+          ray = 0.82 + 0.18 * Math.min(1, (-0.2 - logP) / 2.8);
+          modeHint = "気体が少ない → 陰極線（電子線）がはっきり見える！";
+        }
+
+        return { P, logP, v, r, B: bT, V: voltage, mode, glow, ray, modeHint };
+      }
+
+      function simVelScale(voltage) {
+        return (0.22 + 0.42 * Math.sqrt(voltage / 5000));
+      }
+
+      function computePreviewPath(p) {
+        const pts = [];
+        let x = CATHODE_X + 0.08, y = 0, z = 0;
+        let vx = simVelScale(p.V) * (0.45 + p.ray * 0.45);
+        let vy = 0, vz = 0;
+        const dt = 0.014;
+        const B = p.B;
+        const scatter = p.glow > 0.35;
+        for (let i = 0; i < 220; i++) {
+          pts.push(new THREE.Vector3(x, y, z));
+          if (x >= SCREEN_X - 0.02) break;
+          if (B > 0.001 && p.ray > 0.15) {
+            const q = -E_CHARGE;
+            vz += (-q * vx * B * 0.00055) * dt;
+            vx += (q * vz * B * 0.00055) * dt;
+          }
+          if (scatter && i % 6 === 0) {
+            vy += (Math.sin(i * 0.7) * 0.012) * p.glow;
+            vz += (Math.cos(i * 0.5) * 0.012) * p.glow;
+          }
+          x += vx * dt;
+          y += vy * dt;
+          z += vz * dt;
+        }
+        return { pts, hitY: y, hitZ: z };
+      }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.pSlider = lerp(smooth.pSlider, target.pSlider, k);
+        smooth.voltage = lerp(smooth.voltage, target.voltage, k);
+        smooth.bMilli = lerp(smooth.bMilli, target.bMilli, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+        const p = calcPhysics(smooth.pSlider, smooth.voltage, smooth.bMilli / 1000);
+        vis.v = lerp(vis.v, p.v, k);
+        vis.r = lerp(vis.r, isFinite(p.r) ? p.r : 0, k);
+        vis.glow = lerp(vis.glow, p.glow, k);
+        vis.ray = lerp(vis.ray, p.ray, k);
+        vis.mode = p.mode;
+        return p;
+      }
+
+      function pushHistory(p) {
+        history.push({
+          t: simTime,
+          v: p.v,
+          r: isFinite(p.r) ? p.r : 0,
+          glow: p.glow,
+          ray: p.ray,
+          logP: p.logP,
+        });
+        const tCut = simTime - GRAPH_WIN * 2;
+        while (history.length && history[0].t < tCut) history.shift();
+      }
+
+      function prefillHistory() {
+        history.length = 0;
+        for (let i = 0; i <= 100; i++) {
+          const t = simTime - GRAPH_WIN + (i / 100) * GRAPH_WIN;
+          const p = calcPhysics(smooth.pSlider, smooth.voltage, smooth.bMilli / 1000);
+          history.push({ t, v: p.v, r: isFinite(p.r) ? p.r : 0, glow: p.glow, ray: p.ray, logP: p.logP });
+        }
+      }
+
+      const electrons = [];
+      function resetElectrons() {
+        electrons.length = 0;
+        for (let i = 0; i < N_ELECTRONS; i++) {
+          electrons.push({
+            active: false, x: CATHODE_X + 0.05, y: 0, z: 0,
+            vx: 0, vy: 0, vz: 0, life: 0, trail: [],
+          });
+        }
+      }
+
+      function spawnElectron(p) {
+        if (p.V < 80 || p.ray < 0.05) return;
+        const e = electrons.find((el) => !el.active);
+        if (!e) return;
+        e.active = true;
+        e.x = CATHODE_X + 0.04;
+        e.y = (Math.random() - 0.5) * 0.12;
+        e.z = (Math.random() - 0.5) * 0.12;
+        const vs = simVelScale(p.V) * (0.5 + p.ray * 0.25);
+        e.vx = vs;
+        e.vy = 0;
+        e.vz = 0;
+        e.life = 0;
+        e.trail = [];
+      }
+
+      function stepElectrons(dt, p) {
+        const B = p.B;
+        const collRate = Math.pow(10, p.logP - 1) * 0.35;
+        const Efield = p.V / TUBE_LEN;
+
+        if (Math.random() < (0.45 + p.ray * 1.2) * dt * (p.V / 2500)) spawnElectron(p);
+
+        const moveScale = 0.38;
+        electrons.forEach((e) => {
+          if (!e.active) return;
+          e.life += dt;
+
+          const ax = E_CHARGE * Efield / M_E * 0.00008 * simVelScale(p.V);
+          if (B > 1e-6) {
+            const q = -E_CHARGE;
+            const fx = q * e.vy * B * 0.00055;
+            const fz = -q * e.vx * B * 0.00055;
+            e.vx += fx * dt * moveScale;
+            e.vz += fz * dt * moveScale;
+          }
+          e.vx += ax * dt * 0.012;
+          e.vx = clamp(e.vx, 0.08, 1.1 * simVelScale(p.V));
+
+          if (Math.random() < collRate * dt * (1.2 - p.ray)) {
+            e.vx *= 0.3 + Math.random() * 0.3;
+            e.vy = (Math.random() - 0.5) * 0.4;
+            e.vz = (Math.random() - 0.5) * 0.4;
+            if (p.ray > 0.6 && Math.random() < 0.4) {
+              e.active = false;
+              return;
+            }
+          }
+
+          e.x += e.vx * dt * moveScale;
+          e.y += e.vy * dt * moveScale;
+          e.z += e.vz * dt * moveScale;
+          e.trail.push({ x: e.x, y: e.y, z: e.z });
+          if (e.trail.length > 42) e.trail.shift();
+
+          if (e.x >= SCREEN_X - 0.02) {
+            addScreenSpot(e.y, e.z, p.ray);
+            e.active = false;
+            return;
+          }
+          if (e.x > ANODE_X + 0.2 || e.life > 6 || Math.abs(e.y) > TUBE_R * 0.9 || Math.abs(e.z) > TUBE_R * 0.9) {
+            e.active = false;
+          }
+        });
+      }
+
+      function addScreenSpot(y, z, ray) {
+        screenSpots.push({ y, z, age: 0, str: 0.5 + ray * 0.5 });
+        if (screenSpots.length > 80) screenSpots.shift();
+      }
+
+      function makeTextSprite(text, color, size) {
+        const c = document.createElement("canvas");
+        c.width = 256; c.height = 128;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.font = `bold ${size || 22}px Inter, Noto Sans JP, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(text, 128, 64);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+        spr.scale.set(0.42, 0.2, 1);
+        return spr;
+      }
+
+      function buildScene3D() {
+        const tubeGroup = new THREE.Group();
+
+        tubeGlass = new THREE.Mesh(
+          new THREE.CylinderGeometry(TUBE_R, TUBE_R, TUBE_LEN, 32, 1, true),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xcbd5e1, transparent: true, opacity: 0.18,
+            roughness: 0.05, metalness: 0.1, side: THREE.DoubleSide,
+          })
+        );
+        tubeGlass.rotation.z = Math.PI / 2;
+        tubeGroup.add(tubeGlass);
+
+        glowMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(TUBE_R * 0.55, TUBE_R * 0.55, TUBE_LEN * 0.92, 20),
+          new THREE.MeshBasicMaterial({ color: 0xd946ef, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        glowMesh.rotation.z = Math.PI / 2;
+        tubeGroup.add(glowMesh);
+
+        glowCore = new THREE.Mesh(
+          new THREE.CylinderGeometry(TUBE_R * 0.18, TUBE_R * 0.18, TUBE_LEN * 0.85, 12),
+          new THREE.MeshBasicMaterial({ color: 0xf87171, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        glowCore.rotation.z = Math.PI / 2;
+        tubeGroup.add(glowCore);
+
+        cathodeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.14, 0.14, 0.08, 20),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, emissive: 0xf87171, emissiveIntensity: 0.6, metalness: 0.9, roughness: 0.25 })
+        );
+        cathodeMesh.rotation.z = Math.PI / 2;
+        cathodeMesh.position.set(CATHODE_X, 0, 0);
+        tubeGroup.add(cathodeMesh);
+
+        anodeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.1, 0.1, 0.06, 18),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, emissive: 0x60a5fa, emissiveIntensity: 0.45, metalness: 0.85, roughness: 0.3 })
+        );
+        anodeMesh.rotation.z = Math.PI / 2;
+        anodeMesh.position.set(ANODE_X, 0, 0);
+        tubeGroup.add(anodeMesh);
+
+        screenMesh = new THREE.Mesh(
+          new THREE.CircleGeometry(TUBE_R * 0.82, 32),
+          new THREE.MeshStandardMaterial({ color: 0x14532d, emissive: 0x22c55e, emissiveIntensity: 0.15, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
+        );
+        screenMesh.position.set(SCREEN_X, 0, 0);
+        screenMesh.rotation.y = Math.PI / 2;
+        tubeGroup.add(screenMesh);
+
+        screenGlow = new THREE.Mesh(
+          new THREE.CircleGeometry(TUBE_R * 0.84, 32),
+          new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false })
+        );
+        screenGlow.position.set(SCREEN_X + 0.01, 0, 0);
+        screenGlow.rotation.y = Math.PI / 2;
+        tubeGroup.add(screenGlow);
+
+        for (let i = 0; i < N_GAS; i++) {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.012 + Math.random() * 0.01, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.35 })
+          );
+          m.position.set(
+            (Math.random() - 0.5) * TUBE_LEN * 0.85,
+            (Math.random() - 0.5) * TUBE_R * 1.2,
+            (Math.random() - 0.5) * TUBE_R * 1.2
+          );
+          m.userData.phase = Math.random() * Math.PI * 2;
+          tubeGroup.add(m);
+          gasMeshes.push(m);
+        }
+
+        for (let i = 0; i < N_ELECTRONS; i++) {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.032, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.95 })
+          );
+          m.visible = false;
+          tubeGroup.add(m);
+          electronMeshes.push(m);
+
+          const geo = new THREE.BufferGeometry();
+          const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending }));
+          line.visible = false;
+          tubeGroup.add(line);
+          trailLines.push(line);
+        }
+
+        for (let i = 0; i < 5; i++) {
+          const y = -0.55 + i * 0.28;
+          const arr = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-0.3, y, 0.55), 0.22, 0x818cf8, 0.08, 0.05);
+          arr.visible = false;
+          tubeGroup.add(arr);
+          bFieldArrows.push(arr);
+        }
+
+        const lblC = makeTextSprite("陰極 −", "#f87171", 20);
+        lblC.position.set(CATHODE_X, 0.35, 0);
+        tubeGroup.add(lblC);
+        const lblA = makeTextSprite("陽極 ＋", "#60a5fa", 20);
+        lblA.position.set(ANODE_X, 0.35, 0);
+        tubeGroup.add(lblA);
+        const lblS = makeTextSprite("蛍光板", "#4ade80", 18);
+        lblS.position.set(SCREEN_X, -0.42, 0);
+        lblS.scale.set(0.38, 0.18, 1);
+        tubeGroup.add(lblS);
+
+        const eArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(CATHODE_X + 0.1, -0.42, 0), 0.7, 0xfbbf24, 0.2, 0.1);
+        tubeGroup.add(eArrow);
+
+        for (let n = 0; n < 5; n++) {
+          const line = new THREE.Line(
+            new THREE.BufferGeometry(),
+            new THREE.LineBasicMaterial({ color: n === 2 ? 0x7dd3fc : 0x38bdf8, transparent: true, opacity: 0.7 + n * 0.06, blending: THREE.AdditiveBlending })
+          );
+          tubeGroup.add(line);
+          previewBeamLines.push(line);
+        }
+
+        previewHitMarker = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 14, 14),
+          new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.95 })
+        );
+        const hitGlow = new THREE.Mesh(
+          new THREE.SphereGeometry(0.14, 14, 14),
+          new THREE.MeshBasicMaterial({ color: 0x86efac, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        previewHitMarker.add(hitGlow);
+        tubeGroup.add(previewHitMarker);
+
+        for (let i = 0; i < 6; i++) {
+          const core = new THREE.Mesh(
+            new THREE.SphereGeometry(0.04, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending })
+          );
+          const halo = new THREE.Mesh(
+            new THREE.SphereGeometry(0.09, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })
+          );
+          core.add(halo);
+          core.visible = false;
+          tubeGroup.add(core);
+          flowRunners.push(core);
+        }
+
+        sparkGroup = new THREE.Group();
+        for (let s = 0; s < 24; s++) {
+          const sp = new THREE.Mesh(
+            new THREE.SphereGeometry(0.018 + Math.random() * 0.02, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0, blending: THREE.AdditiveBlending })
+          );
+          sp.position.set((Math.random() - 0.5) * TUBE_LEN * 0.7, (Math.random() - 0.5) * TUBE_R, (Math.random() - 0.5) * TUBE_R);
+          sp.userData.phase = Math.random() * Math.PI * 2;
+          sparkGroup.add(sp);
+        }
+        tubeGroup.add(sparkGroup);
+
+        glowPulseLight = new THREE.PointLight(0xd946ef, 0, 4, 2);
+        glowPulseLight.position.set(0, 0, 0);
+        tubeGroup.add(glowPulseLight);
+
+        worldGroup.add(tubeGroup);
+      }
+
+      function updateFlowRunners(pts, p) {
+        if (!pts || pts.length < 2) {
+          flowRunners.forEach((m) => { m.visible = false; });
+          return;
+        }
+        const period = BEAM_TRAVEL_SEC / Math.max(0.25, timeScale);
+        flowRunners.forEach((m, i) => {
+          const show = p.V > 80 && (p.ray > 0.12 || started);
+          m.visible = show;
+          if (!show) return;
+          const t = ((simTime * 0.55 + i * (period / flowRunners.length)) % period) / period;
+          const f = t * (pts.length - 1);
+          const idx = Math.floor(f);
+          const frac = f - idx;
+          const a = pts[idx];
+          const b = pts[Math.min(idx + 1, pts.length - 1)];
+          m.position.set(
+            a.x + (b.x - a.x) * frac,
+            a.y + (b.y - a.y) * frac + (i - 2.5) * 0.01,
+            a.z + (b.z - a.z) * frac
+          );
+          const pulse = 1 + 0.35 * Math.sin(simTime * 3.5 + i * 1.3);
+          m.scale.setScalar(pulse);
+          m.material.opacity = 0.75 + 0.25 * Math.sin(simTime * 5 + i);
+        });
+      }
+
+      function updateVisuals(p) {
+        const glowPulse = 0.85 + 0.15 * Math.sin(simTime * 2.8);
+        glowMesh.material.opacity = (0.12 + vis.glow * 0.72) * glowPulse;
+        glowCore.material.opacity = (0.1 + vis.glow * 0.58) * glowPulse;
+        glowMesh.material.color.setHex(vis.glow > 0.5 ? 0xe879f9 : 0xd946ef);
+        glowCore.material.color.setHex(vis.glow > 0.4 ? 0xfb7185 : 0xf472b6);
+        if (glowPulseLight) {
+          glowPulseLight.intensity = vis.glow * 1.8 * glowPulse;
+          glowPulseLight.color.setHex(vis.glow > 0.55 ? 0xf472b6 : 0xd946ef);
+        }
+
+        cathodeMesh.material.emissiveIntensity = 0.45 + vis.ray * 0.65 + vis.glow * 0.35 + 0.2 * Math.sin(simTime * 4);
+        screenGlow.material.opacity = 0.08 + vis.ray * 0.55;
+
+        const gasVis = clamp(Math.pow(10, p.logP - 2) * 0.15, 0.04, 1);
+        gasMeshes.forEach((m, i) => {
+          m.visible = gasVis > 0.06;
+          m.material.opacity = 0.12 + gasVis * 0.4;
+          m.position.x += Math.sin(simTime * 1.5 + m.userData.phase) * 0.0004;
+        });
+
+        bFieldArrows.forEach((arr) => {
+          arr.visible = p.B > 0.001;
+          const s = 0.15 + (p.B / 0.05) * 0.2;
+          arr.setLength(s, s * 0.35, s * 0.2);
+        });
+
+        electrons.forEach((e, i) => {
+          const mesh = electronMeshes[i];
+          const line = trailLines[i];
+          if (!e.active) {
+            mesh.visible = false;
+            line.visible = false;
+            return;
+          }
+          mesh.visible = true;
+          mesh.position.set(e.x, e.y, e.z);
+          mesh.material.opacity = 0.55 + vis.ray * 0.45;
+
+          if (e.trail.length >= 2) {
+            const pts = e.trail.map((t) => new THREE.Vector3(t.x, t.y, t.z));
+            line.geometry.dispose();
+            line.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+            line.visible = vis.ray > 0.15;
+            line.material.opacity = 0.45 + vis.ray * 0.55;
+          }
+        });
+
+        if (sparkGroup) {
+          sparkGroup.children.forEach((sp, i) => {
+            const on = vis.glow > 0.25;
+            sp.visible = on;
+            if (!on) return;
+            const flicker = 0.35 + 0.65 * Math.abs(Math.sin(simTime * 6 + sp.userData.phase));
+            sp.material.opacity = vis.glow * flicker * 0.85;
+            sp.scale.setScalar(0.8 + flicker * 1.4);
+          });
+        }
+
+        screenSpots.forEach((s) => { s.age += 0.008; });
+        screenSpots = screenSpots.filter((s) => s.age < 2.5);
+        let spotGlow = 0;
+        screenSpots.forEach((s) => {
+          spotGlow += s.str * Math.max(0, 1 - s.age / 2.5);
+        });
+        screenMesh.material.emissiveIntensity = 0.12 + spotGlow * 0.8;
+        screenGlow.material.opacity = 0.05 + spotGlow * 0.5;
+
+        const preview = computePreviewPath(p);
+        if (p.V > 80 && preview.pts.length >= 2) {
+          previewBeamLines.forEach((line, n) => {
+            const offset = (n - 2) * 0.014;
+            const shifted = preview.pts.map((v) => new THREE.Vector3(v.x, v.y + offset, v.z + offset * 0.4));
+            line.geometry.dispose();
+            line.geometry = new THREE.BufferGeometry().setFromPoints(shifted);
+            line.visible = true;
+            line.material.opacity = (0.5 + vis.ray * 0.45) * (0.75 + n * 0.06);
+          });
+          previewHitMarker.visible = true;
+          previewHitMarker.position.set(SCREEN_X - 0.02, preview.hitY, preview.hitZ);
+          const hitPulse = 1 + 0.4 * Math.sin(simTime * 5);
+          previewHitMarker.scale.setScalar(hitPulse);
+          screenMesh.material.emissiveIntensity = Math.max(screenMesh.material.emissiveIntensity, 0.35 + vis.ray * 0.75);
+          updateFlowRunners(preview.pts, p);
+        } else {
+          previewBeamLines.forEach((line) => { line.visible = false; });
+          previewHitMarker.visible = false;
+          updateFlowRunners(null, p);
+        }
+      }
+
+      function historyRange(key, lo0, hi0) {
+        if (!history.length) return { vmin: lo0, vmax: hi0 };
+        let lo = Infinity, hi = -Infinity;
+        const tEnd = history[history.length - 1].t;
+        const tStart = Math.max(0, tEnd - GRAPH_WIN);
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const v = pt[key];
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        });
+        const ref = Math.max(Math.abs(hi), Math.abs(lo), 1e-12);
+        const span = Math.max(hi - lo, ref * 0.15);
+        return { vmin: lo - span * 0.1, vmax: hi + span * 0.1 };
+      }
+
+      function drawTimeGraph(canvas, key, color, unit, fmt) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 180);
+        const h = Math.max(parent ? parent.clientHeight : 0, 100);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 44, r: 12, t: 14, b: 26 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        if (history.length < 2) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("▶ スタートでグラフ表示", M.l + 8, h / 2);
+          return;
+        }
+        const tEnd = history[history.length - 1].t;
+        const tStart = Math.max(0, tEnd - GRAPH_WIN);
+        let lo = Infinity, hi = -Infinity;
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const v = pt[key];
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        });
+        const ref = Math.max(Math.abs(hi), Math.abs(lo), 1e-12);
+        const range = Math.max(hi - lo, ref * 0.12, 1e-12);
+        const vmin = lo - range * 0.08, vmax = hi + range * 0.08;
+        const zeroY = M.t + ph * (1 - (0 - vmin) / (vmax - vmin));
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.beginPath(); ctx.moveTo(M.l, zeroY); ctx.lineTo(M.l + pw, zeroY); ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        let started = false, lastX = M.l, lastY = zeroY;
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const x = M.l + ((pt.t - tStart) / GRAPH_WIN) * pw;
+          const y = M.t + ph * (1 - (pt[key] - vmin) / (vmax - vmin));
+          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+          lastX = x; lastY = y;
+        });
+        ctx.stroke();
+        if (started) {
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(lastX, lastY, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.7)";
+          ctx.beginPath(); ctx.moveTo(lastX, M.t); ctx.lineTo(lastX, M.t + ph); ctx.stroke();
+        }
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(fmt(vmax) + unit, M.l - 4, M.t + 8);
+        ctx.fillText(fmt(vmin) + unit, M.l - 4, M.t + ph);
+      }
+
+      function drawPressureGraph(canvas) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 180);
+        const h = Math.max(parent ? parent.clientHeight : 0, 100);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 44, r: 12, t: 14, b: 26 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+
+        const pts = [];
+        for (let s = 0; s <= 80; s++) {
+          const logP = 5 - (s / 80) * 8;
+          const pr = calcPhysics((5 - logP) / 0.08, smooth.voltage, smooth.bMilli / 1000);
+          pts.push({ logP, glow: pr.glow, ray: pr.ray });
+        }
+        const xMap = (logP) => M.l + ((5 - logP) / 8) * pw;
+
+        ctx.strokeStyle = "rgba(244,114,182,0.9)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        pts.forEach((pt, i) => {
+          const x = xMap(pt.logP), y = M.t + ph * (1 - pt.glow);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(96,165,250,0.9)";
+        ctx.beginPath();
+        pts.forEach((pt, i) => {
+          const x = xMap(pt.logP), y = M.t + ph * (1 - pt.ray);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        const curLogP = sliderToLogP(smooth.pSlider);
+        const cx = xMap(curLogP);
+        ctx.strokeStyle = "rgba(255,255,255,0.85)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(cx, M.t); ctx.lineTo(cx, M.t + ph); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        [5, 3, 1, -1, -3].forEach((lp) => {
+          ctx.fillText(String(lp), xMap(lp), M.t + ph + 12);
+        });
+      }
+
+      function drawAllGraphs(p) {
+        drawTimeGraph(graphV, "v", "#60a5fa", "", (v) => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : (v / 1e3).toFixed(0) + "k");
+        drawTimeGraph(graphR, "r", "#fde047", " m", (r) => r >= 0.01 ? r.toFixed(2) : (r * 1000).toFixed(0) + "m");
+        drawPressureGraph(graphG);
+        document.getElementById("graphValV").textContent = formatVel(vis.v);
+        document.getElementById("graphValR").textContent = isFinite(p.r) && p.r < 1e6 ? formatRadius(p.r) : "—";
+        document.getElementById("graphValG").textContent = `放電${Math.round(vis.glow * 100)}% · 電子線${Math.round(vis.ray * 100)}%`;
+      }
+
+      function updateJourney(p) {
+        document.getElementById("step1").classList.toggle("active", p.logP < 1.5);
+        document.getElementById("step2").classList.toggle("active", p.V > 800 && p.ray > 0.35);
+        document.getElementById("step3").classList.toggle("active", p.B > 0.005 && p.ray > 0.4);
+      }
+
+      function updateHUD(p) {
+        document.getElementById("hudP").textContent = formatPressure(p.P);
+        document.getElementById("hudMode").textContent = p.mode;
+        document.getElementById("hudV").textContent = Math.round(smooth.voltage) + " V";
+        document.getElementById("hudVel").textContent = formatVel(vis.v);
+        document.getElementById("hudR").textContent = p.B > 0.001 && isFinite(p.r) ? formatRadius(vis.r) : "∞（直進）";
+        document.getElementById("hudRay").textContent = Math.round(vis.ray * 100) + " %";
+
+        document.getElementById("valP").textContent = formatPressure(p.P);
+        document.getElementById("valV").textContent = Math.round(smooth.voltage) + " V";
+        document.getElementById("valB").textContent = (smooth.bMilli / 1000).toFixed(3) + " T";
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("modeBadge").textContent = `放電：${p.mode} · 電子線 ${Math.round(vis.ray * 100)}%`;
+        document.getElementById("pressureBadge").textContent = `P = ${formatPressure(p.P)}\n${p.modeHint}`;
+        document.getElementById("formulaLive").innerHTML =
+          `eV = ½mv² → v = ${formatVel(p.v)} · B = ${(p.B).toFixed(3)} T → r = ${p.B > 0.001 ? formatRadius(vis.r) : "∞"}`;
+        document.getElementById("hintText").textContent = p.modeHint;
+        document.getElementById("vizLegend").textContent =
+          `${p.mode}モード · 放電光 ${Math.round(vis.glow * 100)}% · 蛍光板は電子が当たると緑色に光る`;
+
+        updateJourney(p);
+        drawAllGraphs(p);
+      }
+
+      function setRunningUI(running) {
+        const pt = running ? "一時停止" : "再開";
+        ["btnPause", "btnPause2"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) { el.disabled = !started; el.textContent = pt; }
+        });
+        document.getElementById("startOverlay").classList.toggle("hide", started);
+      }
+
+      function startSim() {
+        if (!started) { started = true; prefillHistory(); }
+        paused = false;
+        setRunningUI(true);
+      }
+
+      function togglePause() {
+        if (!started) { startSim(); return; }
+        paused = !paused;
+        setRunningUI(!paused);
+      }
+
+      function resetSim() {
+        simTime = 0;
+        history.length = 0;
+        started = false;
+        paused = true;
+        target.pSlider = 70; target.voltage = 2000; target.bMilli = 10; target.speed = DEFAULT_SPEED;
+        smooth.pSlider = 70; smooth.voltage = 2000; smooth.bMilli = 10; smooth.speed = DEFAULT_SPEED;
+        document.getElementById("slP").value = 70;
+        document.getElementById("slV").value = 2000;
+        document.getElementById("slB").value = 10;
+        document.getElementById("slSpeed").value = 4;
+        screenSpots = [];
+        resetElectrons();
+        setRunningUI(false);
+        updateHUD(calcPhysics(smooth.pSlider, smooth.voltage, smooth.bMilli / 1000));
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 60);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0x404060, 0.8));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(3, 4, 2);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xf472b6, 0.4, 8);
+        rim.position.set(-2, 1, 1);
+        scene.add(rim);
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+        resetElectrons();
+
+        wrap.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; wrap.setPointerCapture(e.pointerId); });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.85, 0.85);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => { e.preventDefault(); zoom = clamp(zoom + e.deltaY * ZOOM_WHEEL, ZOOM_MIN, ZOOM_MAX); }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function bindControls() {
+        document.getElementById("slP").addEventListener("input", (e) => { target.pSlider = +e.target.value; });
+        document.getElementById("slV").addEventListener("input", (e) => { target.voltage = +e.target.value; });
+        document.getElementById("slB").addEventListener("input", (e) => { target.bMilli = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 20; });
+        document.getElementById("btnStart").addEventListener("click", startSim);
+        document.getElementById("btnStart2").addEventListener("click", startSim);
+        document.getElementById("btnPause").addEventListener("click", togglePause);
+        document.getElementById("btnPause2").addEventListener("click", togglePause);
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        const p = updateSmooth();
+        const running = !paused && started;
+        simTime += dt * timeScale * (running ? 1 : 0.45);
+        if (running) {
+          stepElectrons(dt * timeScale, p);
+          pushHistory(p);
+        }
+        updateVisuals(p);
+        updateHUD(p);
+        if (autoSpin && !dragging) rotY += dt * 0.035;
+        const d = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * d, Math.sin(rotX) * d + 0.15, Math.cos(rotY) * Math.cos(rotX) * d);
+        camera.lookAt(0.1, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        resetSim();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>26章 コイルと交流 — 電磁波の性質 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1428 45%, #1a1030 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1200px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(248,113,113,0.45), rgba(96,165,250,0.45));
+      border: 1px solid rgba(167,139,250,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fcd34d; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #c4b5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.35);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fcd34d; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(248,113,113,0.1), rgba(96,165,250,0.1));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .formula-main { font-size: 0.92rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .graphs-row { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 780px) { .graphs-row { grid-template-columns: repeat(3, 1fr); } }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #111; border: 1px solid rgba(167,139,250,0.35); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(560px, 62dvh); min-height: 380px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6;
+      font-size: 0.9rem; text-align: center; pointer-events: none;
+    }
+    #startOverlay {
+      position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.45); pointer-events: none;
+    }
+    #startOverlay.hide { display: none; }
+    #startOverlay span {
+      padding: 14px 28px; border-radius: 12px;
+      background: rgba(167,139,250,0.25); border: 2px solid rgba(167,139,250,0.6);
+      font-size: 1rem; font-weight: 800; color: #fef3c7;
+    }
+    .wave-badge {
+      position: absolute; top: 12px; right: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.9); border: 1px solid rgba(96,165,250,0.5);
+      font-size: 0.78rem; font-weight: 700; color: #93c5fd; line-height: 1.5;
+    }
+    .energy-badge {
+      position: absolute; left: 12px; top: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.9); border: 1px solid rgba(251,191,36,0.4);
+      font-size: 0.72rem; font-weight: 700; color: #fde68a; line-height: 1.55;
+    }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.4); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.active { background: rgba(167,139,250,0.28); color: #fef3c7; border-color: rgba(167,139,250,0.65); }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.22);
+      margin-bottom: 10px;
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fcd34d; }
+    .hud-card {
+      padding: 12px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.66rem; color: #94a3b8; line-height: 1.35; }
+    .hud-card .num { font-size: 0.88rem; font-weight: 700; color: #fde68a; margin-top: 4px; }
+    .hud-card.col-e .num { color: #f87171; }
+    .hud-card.col-b .num { color: #60a5fa; }
+    .hud-card.col-u .num { color: #fde047; }
+    .hud-card.highlight { border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.1); }
+    .hud-card.highlight .num { color: #c4b5fd; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px) { .hud-grid { grid-template-columns: repeat(5, 1fr); } }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.28);
+      font-size: 0.78rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .edu-list {
+      margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75;
+    }
+    .edu-list li { margin-bottom: 4px; }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.2);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px; }
+    .graph-legend-row span { display: inline-flex; align-items: center; gap: 4px; }
+    .graph-legend-row i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .graph-wrap {
+      position: relative; width: 100%; height: 155px;
+      border-radius: 8px; background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    @media (min-width: 780px) { .graph-wrap { height: 170px; } }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: right; }
+    .graph-wrap--e { border-color: rgba(248,113,113,0.35); }
+    .graph-wrap--b { border-color: rgba(96,165,250,0.35); }
+    .graph-wrap--u { border-color: rgba(253,224,71,0.35); }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.18);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fcd34d; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde047; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #a78bfa; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.22);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .ctrl-row--readonly .slider-val { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">📡</div>
+      <p class="chapter-label">第26章 ⑩ — コイルと交流</p>
+      <h2>電磁波の性質 — ダイポールアンテナ 3Dラボ</h2>
+      <p class="tagline">E ⟂ B ⟂ 進行方向 · 同じ位相で x 方向へ伝わる「電場と磁場の波」</p>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-26">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>
+        <strong style="color:#cbd5e1">ダイポールアンテナ</strong>に交流電流 <strong style="color:#fde047">I(t)=I₀sinωt</strong> を流すと、
+        電荷が上下に振動し、周囲に<strong style="color:#f87171">電場 E</strong> と
+        <strong style="color:#60a5fa">磁場 B</strong> が生まれます。
+        3D では <strong>E は y 方向</strong>、<strong>B は z 方向</strong>、波は <strong>x 方向</strong>へ進みます。
+        グラフで <strong>λ=c/f</strong>・エネルギー密度 <strong>u</strong> も確認しましょう。
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">E(x,t)=E₀sin(ωt−kx) · B(x,t)=B₀sin(ωt−kx) · c=λf · u=½ε₀E²+½μ₀B²</div>
+        <div class="formula-sub">E⟂B⟂進行方向 · 同じ位相 · I(t)=I₀sinωt · 光も電磁波 · c≈3×10⁸ m/s</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">ダイポールアンテナ → 電磁波の伝播（3D · 奥行きあり）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>電場 E（y）</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>磁場 B（z）</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>エネルギー u</span>
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>進行方向 x</span>
+              <span><i class="color-chip" style="background:#ef4444;color:#ef4444"></i>＋電荷</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>−電荷</span>
+            </div>
+            <p class="viz-legend">アンテナの電流変化 → E と B が同位相で右へ伝播 · ドラッグ回転</p>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div id="startOverlay"><span>▶ スタート を押して電磁波を観察</span></div>
+              <div class="energy-badge" id="energyBadge">u — J/m³</div>
+              <div class="wave-badge" id="waveBadge">λ=— · f=— MHz</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" id="btnStart" class="active">▶ スタート</button>
+              <button type="button" id="btnPause" disabled>一時停止</button>
+              <button type="button" id="btnSpin" class="active">視点自動回転</button>
+              <button type="button" id="btnResetView">初期表示</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graphs-row">
+            <div class="graph-panel">
+              <div class="graph-title"><span>電場 E(t)</span><span style="color:#f87171" id="graphValE">0 V/m</span></div>
+              <div class="graph-legend-row"><span><i style="background:#f87171"></i>観測点 x₀ での E(t)</span></div>
+              <div class="graph-wrap graph-wrap--e"><canvas id="graphE"></canvas></div>
+              <div class="graph-axis" id="graphAxisE">E(x,t)=E₀sin(ωt−kx)</div>
+            </div>
+            <div class="graph-panel">
+              <div class="graph-title"><span>磁場 B(t)</span><span style="color:#60a5fa" id="graphValB">0 T</span></div>
+              <div class="graph-legend-row"><span><i style="background:#60a5fa"></i>B(t) [nT] 同位相</span></div>
+              <div class="graph-wrap graph-wrap--b"><canvas id="graphB"></canvas></div>
+              <div class="graph-axis" id="graphAxisB">B(x,t)=B₀sin(ωt−kx)</div>
+            </div>
+            <div class="graph-panel">
+              <div class="graph-title"><span>エネルギー密度 u(t)</span><span style="color:#fde047" id="graphValU">0</span></div>
+              <div class="graph-legend-row"><span><i style="background:#fde047"></i>u(t) [pJ/m³]</span></div>
+              <div class="graph-wrap graph-wrap--u"><canvas id="graphU"></canvas></div>
+              <div class="graph-axis" id="graphAxisU">電磁波のエネルギー</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">電磁波の基本量</p>
+            <div class="formula-box" id="formulaLive">E=0 · B=0 · λ=0 · f=0</div>
+            <div class="hud-grid">
+              <div class="hud-card col-e"><div class="lbl">E(t) 観測点</div><div class="num" id="hudE">0.00 V/m</div></div>
+              <div class="hud-card col-b"><div class="lbl">B(t) 観測点</div><div class="num" id="hudB">0.000 µT</div></div>
+              <div class="hud-card col-u"><div class="lbl">u(t)</div><div class="num" id="hudU">0</div></div>
+              <div class="hud-card highlight"><div class="lbl">周波数 f</div><div class="num" id="hudF">0 MHz</div></div>
+              <div class="hud-card highlight"><div class="lbl">波長 λ=c/f</div><div class="num" id="hudLambda">0 m</div></div>
+              <div class="hud-card"><div class="lbl">周期 T=1/f</div><div class="num" id="hudT">0 ns</div></div>
+              <div class="hud-card"><div class="lbl">波の速さ c</div><div class="num" id="hudC">3.00×10⁸ m/s</div></div>
+              <div class="hud-card col-e"><div class="lbl">I(t)=I₀sinωt</div><div class="num" id="hudI">0.00 A</div></div>
+              <div class="hud-card col-b"><div class="lbl">E₀/B₀≈c</div><div class="num" id="hudRatio">—</div></div>
+            </div>
+          </div>
+          <div class="hud-section">
+            <p class="hud-section-title">電磁波の性質（高校生向け）</p>
+            <ul class="edu-list">
+              <li>電磁波は「<strong style="color:#f87171">電場 E</strong>」と「<strong style="color:#60a5fa">磁場 B</strong>」の波</li>
+              <li><strong>E ⟂ B ⟂ 進行方向</strong>（このシミュレーションでは x 方向へ進む）</li>
+              <li>E と B は<strong>同じ位相</strong>で振動する</li>
+              <li>電磁波は空間を伝わり、エネルギーを運ぶ（u=½ε₀E²+½μ₀B²）</li>
+              <li><strong>光も電磁波</strong>の一種（可視光は高い周波数の電磁波）</li>
+              <li>真空中の速さは <strong>c ≈ 3×10⁸ m/s</strong>、λ=c/f</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="btn-row">
+            <button type="button" class="act-btn active" id="btnStart2">▶ スタート</button>
+            <button type="button" class="act-btn" id="btnPause2" disabled>一時停止</button>
+            <button type="button" class="act-btn" id="btnReset">初期化</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>電流振幅 I₀ <span class="slider-val" id="valI0">1.0 A</span></label>
+              <input type="range" id="slI0" min="2" max="50" value="10" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>周波数 f <span class="slider-val" id="valF">100 MHz</span></label>
+              <input type="range" id="slF" min="1" max="200" value="100" step="1">
+            </div>
+            <div class="ctrl-row ctrl-row--readonly">
+              <label>波長 λ（自動） <span class="slider-val" id="valLambda">3.00 m</span></label>
+              <input type="range" id="slLambda" min="0" max="1" value="0" disabled>
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">0.6×</span></label>
+              <input type="range" id="slSpeed" min="1" max="20" value="6" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">▶ スタートを押すとグラフが動きます（B=nT · u=pJ/m³ 表示）· アンテナの電流が変化すると E と B が生まれ、同じ位相で右へ伝わります。</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+      const C_LIGHT = 3e8;
+      const EPS0 = 8.854e-12;
+      const MU0 = 4 * Math.PI * 1e-7;
+      const COL = { E: 0xf87171, B: 0x60a5fa, U: 0xfde047, ant: 0xcbd5e1, plus: 0xef4444, minus: 0x38bdf8 };
+      const GRAPH_PERIODS = 5;
+      const VIS_SMOOTH = 0.12;
+      const DEFAULT_SPEED = 0.6;
+      const N_WAVE = 12;
+      const N_WAVE_PTS = 48;
+      const SAMPLE_X = 0.6;
+      const ANT_X = -1.15;
+      const INIT_ROT_X = 0.48, INIT_ROT_Y = 0.82, INIT_ZOOM = 5.2;
+      const ZOOM_MIN = 2.5, ZOOM_MAX = 11, ZOOM_WHEEL = 0.0035;
+      const ARROW_MAX = 0.55;
+      const B_GRAPH_SCALE = 1e9;
+      const U_GRAPH_SCALE = 1e12;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphE = document.getElementById("graphE");
+      const graphB = document.getElementById("graphB");
+      const graphU = document.getElementById("graphU");
+
+      let paused = true, started = false, autoSpin = true, simTime = 0, timeScale = DEFAULT_SPEED;
+      const target = { I0: 1.0, fMHz: 100, speed: DEFAULT_SPEED };
+      const smooth = { I0: 1.0, fMHz: 100, speed: DEFAULT_SPEED };
+      const vis = { e: 0, b: 0, u: 0, i: 0, e0: 0, b0: 0, lambda: 3, f: 100e6, t: 1e-8, fAnim: 3, omegaAnim: 0, k: 0 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0, lastDt = 0.016;
+      const history = [];
+      let scene, camera, renderer, worldGroup, sceneGrid;
+      let waveGroup, antennaGroup, energyStrips = [];
+      let eArrows = [], bArrows = [];
+      let antennaRod, topCharge, botCharge, antennaGlow;
+      let propArrow, waveLineE, waveLineB, crestMarker, orthoLines = [];
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function fMHzToHz(m) { return m * 1e6; }
+
+      function getAnimFreq(fMHz) {
+        return clamp(fMHz * 0.035, 0.6, 5);
+      }
+
+      function calcWaveParams(I0, fMHz) {
+        const fReal = fMHzToHz(fMHz);
+        const omegaReal = 2 * Math.PI * fReal;
+        const lambda = C_LIGHT / fReal;
+        const T = 1 / fReal;
+        const fAnim = getAnimFreq(fMHz);
+        const omegaAnim = 2 * Math.PI * fAnim;
+        const lambdaVis = clamp(1.1 * (100 / fMHz), 0.45, 2.2);
+        const kVis = 2 * Math.PI / lambdaVis;
+        const E0 = I0 * 28;
+        const B0 = E0 / C_LIGHT;
+        return { fReal, omegaReal, lambda, T, fAnim, omegaAnim, lambdaVis, kVis, E0, B0 };
+      }
+
+      function fieldAt(x, t, p) {
+        const phase = p.omegaAnim * t - p.kVis * x;
+        const s = Math.sin(phase);
+        const e = p.E0 * s;
+        const b = p.B0 * s;
+        const uE = 0.5 * EPS0 * e * e;
+        const uB = 0.5 * MU0 * b * b;
+        return { e, b, u: uE + uB, phase, s };
+      }
+
+      function calcPhysics(t) {
+        const p = calcWaveParams(smooth.I0, smooth.fMHz);
+        const ant = fieldAt(0, t, p);
+        const obs = fieldAt(SAMPLE_X, t, p);
+        const i = smooth.I0 * Math.sin(p.omegaAnim * t);
+        return {
+          e: obs.e, b: obs.b, u: obs.u,
+          eAnt: ant.e, bAnt: ant.b,
+          i, e0: p.E0, b0: p.B0,
+          lambda: p.lambda, f: p.fReal, t: p.T,
+          fAnim: p.fAnim, omegaAnim: p.omegaAnim,
+          k: p.kVis, lambdaVis: p.lambdaVis,
+        };
+      }
+
+      function updateVisSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.I0 = lerp(smooth.I0, target.I0, k);
+        smooth.fMHz = lerp(smooth.fMHz, target.fMHz, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+        const p = calcPhysics(simTime);
+        for (const key of Object.keys(vis)) vis[key] = lerp(vis[key], p[key], k);
+      }
+
+      function getGraphWindow() {
+        const fAnim = getAnimFreq(smooth.fMHz);
+        return GRAPH_PERIODS / fAnim;
+      }
+
+      function toGraphB(bT) { return bT * B_GRAPH_SCALE; }
+      function toGraphU(uJ) { return uJ * U_GRAPH_SCALE; }
+      function uMaxPhys(e0, b0) {
+        return 0.5 * EPS0 * e0 * e0 + 0.5 * MU0 * b0 * b0;
+      }
+
+      function pushHistory() {
+        const p = calcPhysics(simTime);
+        history.push({ t: simTime, E: p.e, B: toGraphB(p.b), U: toGraphU(p.u) });
+        const tCut = simTime - getGraphWindow() * 2 - 0.05;
+        while (history.length && history[0].t < tCut) history.shift();
+      }
+
+      function stepPhysics(dt) {
+        simTime += dt * timeScale;
+        pushHistory();
+      }
+
+      function prefillHistory() {
+        history.length = 0;
+        const win = getGraphWindow();
+        const steps = 120;
+        for (let i = 0; i <= steps; i++) {
+          const t = simTime - win + (i / steps) * win;
+          const p = calcPhysics(t);
+          history.push({ t, E: p.e, B: toGraphB(p.b), U: toGraphU(p.u) });
+        }
+      }
+
+      function makeArrow(dir, origin, len, color) {
+        const d = dir.clone().normalize();
+        const a = new THREE.ArrowHelper(d, origin.clone(), len, color, len * 0.4, len * 0.2);
+        a.line.material.transparent = true;
+        a.line.material.opacity = 0.95;
+        a.cone.material.transparent = true;
+        a.cone.material.depthTest = false;
+        a.line.material.depthTest = false;
+        a.renderOrder = 20;
+        a.frustumCulled = false;
+        return a;
+      }
+
+      function makeTextSprite(text, color, size) {
+        const c = document.createElement("canvas");
+        c.width = 256; c.height = 128;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.font = `bold ${size || 28}px Inter, Noto Sans JP, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(text, 128, 68);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: new THREE.CanvasTexture(c), transparent: true, depthTest: false,
+        }));
+        spr.scale.set(0.5, 0.25, 1);
+        spr.renderOrder = 12;
+        return spr;
+      }
+
+      function buildAntenna() {
+        antennaGroup = new THREE.Group();
+        antennaGroup.position.set(ANT_X, 0, 0);
+
+        const feed = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.08, 16),
+          new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.3 })
+        );
+        antennaGroup.add(feed);
+
+        antennaRod = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, 1.0, 12),
+          new THREE.MeshStandardMaterial({ color: COL.ant, metalness: 0.85, roughness: 0.2, emissive: 0x6366f1, emissiveIntensity: 0.12 })
+        );
+        antennaGroup.add(antennaRod);
+
+        topCharge = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 16, 16),
+          new THREE.MeshStandardMaterial({ color: COL.plus, emissive: COL.plus, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 })
+        );
+        topCharge.position.y = 0.55;
+        antennaGroup.add(topCharge);
+
+        botCharge = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 16, 16),
+          new THREE.MeshStandardMaterial({ color: COL.minus, emissive: COL.minus, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 })
+        );
+        botCharge.position.y = -0.55;
+        antennaGroup.add(botCharge);
+
+        antennaGlow = new THREE.PointLight(0xa78bfa, 0.35, 2.5, 2);
+        antennaGroup.add(antennaGlow);
+
+        const nearE = [];
+        for (let i = 0; i < 5; i++) {
+          const ang = (i / 4) * Math.PI * 0.85 - Math.PI * 0.425;
+          const r = 0.35;
+          const origin = new THREE.Vector3(Math.sin(ang) * r, 0, Math.cos(ang) * r * 0.5);
+          const arr = makeArrow(new THREE.Vector3(0, 1, 0), origin, 0.15, COL.E);
+          antennaGroup.add(arr);
+          nearE.push({ arrow: arr, origin });
+        }
+        antennaGroup.userData.nearE = nearE;
+
+        const lbl = makeTextSprite("ダイポール", "#e2e8f0", 22);
+        lbl.position.set(0, 0.85, 0);
+        lbl.scale.set(0.5, 0.24, 1);
+        antennaGroup.add(lbl);
+
+        waveGroup.add(antennaGroup);
+      }
+
+      function buildWaveField() {
+        eArrows = [];
+        bArrows = [];
+        energyStrips = [];
+        const p = calcWaveParams(smooth.I0, smooth.fMHz);
+        const xStart = -0.15;
+        const xSpan = 3.6;
+
+        for (let n = 0; n < N_WAVE; n++) {
+          const x = xStart + (n / (N_WAVE - 1)) * xSpan;
+          const zOff = ((n % 3) - 1) * 0.12;
+          const eOrg = new THREE.Vector3(x, 0, zOff);
+          const bOrg = new THREE.Vector3(x, -0.18, zOff + 0.08);
+          const eArr = makeArrow(new THREE.Vector3(0, 1, 0), eOrg, 0.1, COL.E);
+          const bArr = makeArrow(new THREE.Vector3(0, 0, 1), bOrg, 0.1, COL.B);
+          waveGroup.add(eArr, bArr);
+          eArrows.push({ arrow: eArr, x, zOff });
+          bArrows.push({ arrow: bArr, x, zOff });
+
+          const strip = new THREE.Mesh(
+            new THREE.BoxGeometry(xSpan / N_WAVE * 0.85, 0.04, 0.14),
+            new THREE.MeshBasicMaterial({ color: COL.U, transparent: true, opacity: 0.08, depthWrite: false, blending: THREE.AdditiveBlending })
+          );
+          strip.position.set(x, 0.05, zOff);
+          waveGroup.add(strip);
+          energyStrips.push({ mesh: strip, x });
+        }
+
+        propArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-0.5, -0.55, 0.35), 0.7, 0xa78bfa);
+        waveGroup.add(propArrow);
+        const propLbl = makeTextSprite("進行方向 x →", "#c4b5fd", 20);
+        propLbl.position.set(1.2, -0.55, 0.35);
+        propLbl.scale.set(0.55, 0.26, 1);
+        waveGroup.add(propLbl);
+
+        const ePts = [], bPts = [];
+        for (let i = 0; i <= N_WAVE_PTS; i++) {
+          ePts.push(new THREE.Vector3(0, 0, 0));
+          bPts.push(new THREE.Vector3(0, 0, 0));
+        }
+        waveLineE = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(ePts),
+          new THREE.LineBasicMaterial({ color: COL.E, transparent: true, opacity: 0.92, linewidth: 2 })
+        );
+        waveLineB = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(bPts),
+          new THREE.LineBasicMaterial({ color: COL.B, transparent: true, opacity: 0.88 })
+        );
+        waveLineE.position.z = 0.15;
+        waveLineB.position.y = -0.32;
+        waveLineB.position.z = 0.2;
+        waveGroup.add(waveLineE, waveLineB);
+
+        crestMarker = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xfef3c7, transparent: true, opacity: 0.95 })
+        );
+        crestMarker.position.set(0, 0.15, 0.15);
+        waveGroup.add(crestMarker);
+
+        for (let n = 0; n < 4; n++) {
+          const x = 0.3 + n * 0.85;
+          const ln = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, 0, 0), new THREE.Vector3(x, 0, 0)]),
+            new THREE.LineDashedMaterial({ color: 0xc4b5fd, dashSize: 0.06, gapSize: 0.04, transparent: true, opacity: 0.7 })
+          );
+          waveGroup.add(ln);
+          orthoLines.push({ line: ln, x });
+        }
+
+        const orthoLbl = makeTextSprite("E↑ · B→ · 同位相", "#fde68a", 18);
+        orthoLbl.position.set(1.0, 0.75, 0);
+        orthoLbl.scale.set(0.62, 0.28, 1);
+        waveGroup.add(orthoLbl);
+      }
+
+      function buildScene3D() {
+        waveGroup = new THREE.Group();
+        waveGroup.position.set(0, 0.05, -0.08);
+        buildAntenna();
+        buildWaveField();
+        worldGroup.add(waveGroup);
+      }
+
+      function setArrow(arrow, dir, len, origin) {
+        if (len < 0.04) { arrow.visible = false; return; }
+        arrow.visible = true;
+        arrow.position.copy(origin);
+        arrow.setDirection(dir.clone().normalize());
+        arrow.setLength(len, len * 0.38, len * 0.2);
+      }
+
+      function updateVisuals() {
+        const wp = calcWaveParams(smooth.I0, smooth.fMHz);
+        const p = calcPhysics(simTime);
+        const iNorm = clamp(Math.abs(p.i) / (smooth.I0 + 0.001), 0, 1.2);
+        const sinWt = Math.sin(wp.omegaAnim * simTime);
+        const xStart = -0.15, xSpan = 3.6;
+
+        if (antennaRod) {
+          antennaRod.material.emissiveIntensity = 0.15 + iNorm * 1.0;
+          antennaRod.material.emissive.setHex(sinWt >= 0 ? 0xef4444 : 0x38bdf8);
+        }
+        if (antennaGlow) antennaGlow.intensity = 0.25 + iNorm * 1.1;
+        if (topCharge) {
+          const topPlus = sinWt >= 0;
+          topCharge.material.color.setHex(topPlus ? COL.plus : COL.minus);
+          topCharge.material.emissive.setHex(topPlus ? COL.plus : COL.minus);
+          topCharge.material.emissiveIntensity = 0.5 + iNorm * 0.7;
+          topCharge.scale.setScalar(0.9 + iNorm * 0.35);
+        }
+        if (botCharge) {
+          const botPlus = sinWt < 0;
+          botCharge.material.color.setHex(botPlus ? COL.plus : COL.minus);
+          botCharge.material.emissive.setHex(botPlus ? COL.plus : COL.minus);
+          botCharge.material.emissiveIntensity = 0.5 + iNorm * 0.7;
+          botCharge.scale.setScalar(0.9 + iNorm * 0.35);
+        }
+        if (antennaGroup && antennaGroup.userData.nearE) {
+          const nearLen = ARROW_MAX * 0.7 * (0.4 + iNorm * 0.6);
+          const eDir = new THREE.Vector3(0, sinWt >= 0 ? 1 : -1, 0);
+          antennaGroup.userData.nearE.forEach((item) => {
+            setArrow(item.arrow, eDir, nearLen, item.origin);
+          });
+        }
+
+        const eScale = ARROW_MAX / (p.e0 + 0.001);
+        const bScale = ARROW_MAX / (p.b0 + 0.001);
+        eArrows.forEach((item) => {
+          const f = fieldAt(item.x, simTime, wp);
+          const eDir = new THREE.Vector3(0, f.e >= 0 ? 1 : -1, 0);
+          setArrow(item.arrow, eDir, Math.max(0.08, Math.abs(f.e) * eScale), new THREE.Vector3(item.x, 0, item.zOff));
+        });
+        bArrows.forEach((item) => {
+          const f = fieldAt(item.x, simTime, wp);
+          const bDir = new THREE.Vector3(0, 0, f.b >= 0 ? 1 : -1);
+          setArrow(item.arrow, bDir, Math.max(0.08, Math.abs(f.b) * bScale * 80), new THREE.Vector3(item.x, -0.18, item.zOff + 0.08));
+        });
+        const uMax = 0.5 * EPS0 * p.e0 * p.e0 + 0.5 * MU0 * p.b0 * p.b0;
+        energyStrips.forEach((item) => {
+          const f = fieldAt(item.x, simTime, wp);
+          const uNorm = clamp(f.u / (uMax + 1e-30), 0, 1);
+          item.mesh.material.opacity = 0.1 + uNorm * 0.55;
+          item.mesh.scale.y = 0.8 + uNorm * 2.0;
+        });
+
+        if (waveLineE) {
+          const ePts = [];
+          for (let i = 0; i <= N_WAVE_PTS; i++) {
+            const x = xStart + (i / N_WAVE_PTS) * xSpan;
+            const f = fieldAt(x, simTime, wp);
+            ePts.push(new THREE.Vector3(x, f.s * ARROW_MAX * 0.85, 0.15));
+          }
+          waveLineE.geometry.dispose();
+          waveLineE.geometry = new THREE.BufferGeometry().setFromPoints(ePts);
+        }
+        if (waveLineB) {
+          const bPts = [];
+          for (let i = 0; i <= N_WAVE_PTS; i++) {
+            const x = xStart + (i / N_WAVE_PTS) * xSpan;
+            const f = fieldAt(x, simTime, wp);
+            bPts.push(new THREE.Vector3(x, -0.32, f.s * ARROW_MAX * 0.7));
+          }
+          waveLineB.geometry.dispose();
+          waveLineB.geometry = new THREE.BufferGeometry().setFromPoints(bPts);
+        }
+        if (crestMarker) {
+          const progress = (simTime * wp.fAnim) % 1;
+          const crestX = xStart + progress * wp.lambdaVis;
+          const fCrest = fieldAt(crestX, simTime, wp);
+          crestMarker.position.set(crestX, fCrest.s * ARROW_MAX * 0.85, 0.22);
+          crestMarker.scale.setScalar(0.9 + Math.abs(fCrest.s) * 0.6);
+        }
+        orthoLines.forEach((item) => {
+          const f = fieldAt(item.x, simTime, wp);
+          const eLen = f.s * ARROW_MAX * 0.5;
+          const bLen = f.s * ARROW_MAX * 0.4;
+          const pts = [
+            new THREE.Vector3(item.x, 0, 0),
+            new THREE.Vector3(item.x, eLen, 0),
+            new THREE.Vector3(item.x, 0, 0),
+            new THREE.Vector3(item.x, 0, bLen),
+          ];
+          item.line.geometry.dispose();
+          item.line.geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(item.x, 0, 0), new THREE.Vector3(item.x, eLen, 0)
+          ]);
+          item.line.computeLineDistances();
+        });
+      }
+
+      function tickDecimals(v) {
+        const a = Math.abs(v);
+        if (a >= 100) return 0;
+        if (a >= 10) return 1;
+        if (a >= 1) return 2;
+        if (a >= 0.1) return 3;
+        return 4;
+      }
+
+      function formatTick(v, d) {
+        const r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
+        return Number.isInteger(r) ? String(r) : r.toFixed(d);
+      }
+
+      function formatLambda(m) {
+        if (m >= 10) return m.toFixed(1) + " m";
+        if (m >= 1) return m.toFixed(2) + " m";
+        return (m * 100).toFixed(1) + " cm";
+      }
+
+      function formatB(T) {
+        if (Math.abs(T) < 1e-6) return (T * 1e9).toFixed(2) + " nT";
+        return (T * 1e6).toFixed(2) + " µT";
+      }
+
+      function formatT(sec) {
+        if (sec < 1e-6) return (sec * 1e9).toFixed(1) + " ns";
+        if (sec < 1e-3) return (sec * 1e6).toFixed(1) + " µs";
+        return (sec * 1e3).toFixed(2) + " ms";
+      }
+
+      function formatU(u) {
+        if (u < 1e-12) return (u * 1e15).toFixed(2) + " fJ/m³";
+        if (u < 1e-9) return (u * 1e12).toFixed(2) + " pJ/m³";
+        return u.toExponential(2) + " J/m³";
+      }
+
+      function historyRange(key, floorMin, floorMax) {
+        let lo = floorMin, hi = floorMax;
+        const win = getGraphWindow();
+        const tEnd = history.length ? history[history.length - 1].t : 0;
+        const tStart = Math.max(0, tEnd - win);
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const v = pt[key];
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        });
+        const rawSpan = hi - lo;
+        const ref = Math.max(Math.abs(hi), Math.abs(lo), 1e-15);
+        const span = Math.max(rawSpan, ref * 0.12);
+        return { vmin: lo - span * 0.12, vmax: hi + span * 0.12 };
+      }
+
+      function drawGraph(canvas, key, color, vmin, vmax, unit) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 200);
+        const h = Math.max(parent ? parent.clientHeight : 0, 100);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 44, r: 14, t: 16, b: 30 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        const range = Math.max(vmax - vmin, Math.max(Math.abs(vmax), Math.abs(vmin)) * 0.08, 1e-15);
+        const win = getGraphWindow();
+        const period = vis.fAnim > 0 ? 1 / vis.fAnim : win / GRAPH_PERIODS;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        if (history.length < 2) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("データ収集中…", M.l + 8, h / 2);
+          return;
+        }
+        const tEnd = history[history.length - 1].t;
+        const tStart = Math.max(0, tEnd - win);
+        const zeroY = M.t + ph * (1 - (0 - vmin) / range);
+
+        for (let n = 0; n <= GRAPH_PERIODS; n++) {
+          const tMark = tStart + n * period;
+          if (tMark > tEnd + 1e-15) break;
+          const xMark = M.l + ((tMark - tStart) / win) * pw;
+          ctx.strokeStyle = "rgba(148,163,184,0.18)";
+          ctx.beginPath();
+          ctx.moveTo(xMark, M.t);
+          ctx.lineTo(xMark, M.t + ph);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.beginPath();
+        ctx.moveTo(M.l, zeroY);
+        ctx.lineTo(M.l + pw, zeroY);
+        ctx.stroke();
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        let started = false, lastX = M.l, lastY = zeroY;
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const x = M.l + ((pt.t - tStart) / win) * pw;
+          const y = M.t + ph * (1 - (pt[key] - vmin) / range);
+          if (!started) { ctx.moveTo(x, y); started = true; }
+          else ctx.lineTo(x, y);
+          lastX = x; lastY = y;
+        });
+        ctx.stroke();
+        if (started) {
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(lastX, lastY, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.85)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(lastX, M.t);
+          ctx.lineTo(lastX, M.t + ph);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(formatTick(vmax, tickDecimals(vmax)) + unit, M.l - 5, M.t + 9);
+        ctx.fillText(formatTick(vmin, tickDecimals(vmin)) + unit, M.l - 5, M.t + ph);
+        for (let i = 0; i <= 4; i++) {
+          const tLbl = (win * i) / 4;
+          ctx.textAlign = "center";
+          ctx.fillText(tLbl.toFixed(2) + " s", M.l + (pw * i) / 4, M.t + ph + 11);
+        }
+      }
+
+      function setRunningUI(running) {
+        const pauseTxt = running ? "一時停止" : "再開";
+        ["btnPause", "btnPause2"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) { el.disabled = !started; el.textContent = pauseTxt; }
+        });
+        ["btnStart", "btnStart2"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.classList.toggle("active", !running && started);
+        });
+        const ov = document.getElementById("startOverlay");
+        if (ov) ov.classList.toggle("hide", started);
+      }
+
+      function startSim() {
+        if (!started) {
+          started = true;
+          prefillHistory();
+        }
+        paused = false;
+        setRunningUI(true);
+      }
+
+      function togglePause() {
+        if (!started) { startSim(); return; }
+        paused = !paused;
+        setRunningUI(!paused);
+      }
+
+      function drawAllGraphs() {
+        const wp = calcWaveParams(smooth.I0, smooth.fMHz);
+        const e0 = wp.E0;
+        const b0nT = toGraphB(wp.B0);
+        const u0pJ = toGraphU(uMaxPhys(wp.E0, wp.B0));
+        const er = historyRange("E", -e0 * 1.2, e0 * 1.2);
+        drawGraph(graphE, "E", "#f87171", er.vmin, er.vmax, " V/m");
+        const br = historyRange("B", -b0nT * 1.2, b0nT * 1.2);
+        drawGraph(graphB, "B", "#60a5fa", br.vmin, br.vmax, " nT");
+        const ur = historyRange("U", 0, Math.max(u0pJ * 1.15, 1));
+        drawGraph(graphU, "U", "#fde047", 0, Math.max(ur.vmax, u0pJ * 1.05, 1), " pJ/m³");
+      }
+
+      function updateHUD() {
+        const wp = calcWaveParams(smooth.I0, smooth.fMHz);
+        document.getElementById("valI0").textContent = smooth.I0.toFixed(1) + " A";
+        document.getElementById("valF").textContent = smooth.fMHz.toFixed(0) + " MHz";
+        document.getElementById("valLambda").textContent = formatLambda(wp.lambda);
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("hudE").textContent = vis.e.toFixed(2) + " V/m";
+        document.getElementById("hudB").textContent = formatB(vis.b);
+        document.getElementById("hudU").textContent = formatU(vis.u);
+        document.getElementById("hudF").textContent = (wp.fReal / 1e6).toFixed(0) + " MHz";
+        document.getElementById("hudLambda").textContent = formatLambda(wp.lambda);
+        document.getElementById("hudT").textContent = formatT(wp.T);
+        document.getElementById("hudI").textContent = vis.i.toFixed(2) + " A";
+        document.getElementById("hudRatio").textContent = vis.b0 > 0 ? (vis.e0 / vis.b0 / 1e6).toFixed(2) + " Mm/s" : "—";
+
+        document.getElementById("formulaLive").innerHTML =
+          `E=${vis.e.toFixed(1)}V/m · B=${formatB(vis.b)} · <span style="color:#c4b5fd">λ=${formatLambda(wp.lambda)}</span> · f=${smooth.fMHz}MHz`;
+
+        document.getElementById("graphValE").textContent = vis.e.toFixed(2) + " V/m";
+        document.getElementById("graphValB").textContent = toGraphB(vis.b).toFixed(1) + " nT";
+        document.getElementById("graphValU").textContent = toGraphU(vis.u).toFixed(1) + " pJ/m³";
+
+        document.getElementById("energyBadge").textContent = "u = " + formatU(vis.u);
+        document.getElementById("waveBadge").textContent =
+          `λ=${formatLambda(wp.lambda)} · f=${smooth.fMHz} MHz · T=${formatT(wp.T)}`;
+
+        const win = getGraphWindow();
+        const axisTxt = `直近 ${GRAPH_PERIODS} 周期（${win.toFixed(1)} s）· 右端＝現在`;
+        document.getElementById("graphAxisE").textContent = `E(x,t)=E₀sin(ωt−kx) · ${axisTxt}`;
+        document.getElementById("graphAxisB").textContent = `B(x,t)=B₀sin(ωt−kx) · 縦軸 nT · 同位相 · ${axisTxt}`;
+        document.getElementById("graphAxisU").textContent = `u=½ε₀E²+½μ₀B² · 縦軸 pJ/m³ · ${axisTxt}`;
+
+        document.getElementById("hintText").textContent =
+          `λ=c/f=${formatLambda(wp.lambda)} · 3D波は見やすさのため ${wp.fAnim.toFixed(1)} Hz で表示（実周波数 ${smooth.fMHz} MHz）· 赤波線=E · 青波線=B`;
+
+        drawAllGraphs();
+      }
+
+      function resetSim() {
+        simTime = 0;
+        history.length = 0;
+        started = false;
+        paused = true;
+        target.I0 = 1.0; target.fMHz = 100; target.speed = DEFAULT_SPEED;
+        smooth.I0 = 1.0; smooth.fMHz = 100; smooth.speed = DEFAULT_SPEED;
+        document.getElementById("slI0").value = 10;
+        document.getElementById("slF").value = 100;
+        document.getElementById("slSpeed").value = 6;
+        setRunningUI(false);
+        document.getElementById("btnStart").textContent = "▶ スタート";
+        document.getElementById("btnStart2").textContent = "▶ スタート";
+        updateVisuals();
+        updateHUD();
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(50, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x505070, 0.72));
+        const key = new THREE.DirectionalLight(0xffffff, 1.15);
+        key.position.set(4, 5, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xf87171, 0.4, 14);
+        rim.position.set(-2, 2, 4);
+        scene.add(rim);
+        const fill = new THREE.DirectionalLight(0x93c5fd, 0.35);
+        fill.position.set(-3, 2, -2);
+        scene.add(fill);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        sceneGrid = new THREE.GridHelper(9, 30, 0x334155, 0x1e293b);
+        sceneGrid.position.y = -0.65;
+        worldGroup.add(sceneGrid);
+
+        buildScene3D();
+
+        wrap.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; wrap.setPointerCapture(e.pointerId); });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => { e.preventDefault(); zoom = clamp(zoom + e.deltaY * ZOOM_WHEEL, ZOOM_MIN, ZOOM_MAX); }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function bindControls() {
+        document.getElementById("slI0").addEventListener("input", (e) => { target.I0 = +e.target.value / 10; });
+        document.getElementById("slF").addEventListener("input", (e) => { target.fMHz = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.getElementById("btnStart").addEventListener("click", startSim);
+        document.getElementById("btnStart2").addEventListener("click", startSim);
+        document.getElementById("btnPause").addEventListener("click", togglePause);
+        document.getElementById("btnPause2").addEventListener("click", togglePause);
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        lastDt = dt;
+        if (!paused && started) stepPhysics(dt);
+        updateVisSmooth();
+        updateVisuals();
+        if (started) updateHUD();
+        else {
+          drawAllGraphs();
+          const wp = calcWaveParams(smooth.I0, smooth.fMHz);
+          document.getElementById("formulaLive").innerHTML =
+            `▶ スタートで E・B・u のグラフが動き出します · λ=${formatLambda(wp.lambda)} · f=${smooth.fMHz}MHz`;
+        }
+        if (autoSpin && !dragging) rotY += dt * 0.012;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 0.3,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0.3, 0.05, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        resetSim();
+        setRunningUI(false);
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

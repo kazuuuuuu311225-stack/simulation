@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 — 不確定性原理 ΔxΔp≥ħ/2 波束3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #312e81 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1280px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(129,140,248,0.35), rgba(167,139,250,0.35));
+      border: 1px solid rgba(196,181,253,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #ddd6fe; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ede9fe; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(167,139,250,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #ddd6fe; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(129,140,248,0.12));
+      border: 1px solid rgba(167,139,250,0.32);
+    }
+    .formula-main { font-size: 0.9rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.25fr 0.75fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; display: flex; flex-direction: column; gap: 10px; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(167,139,250,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0e7ff; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(620px, 70dvh); min-height: 420px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.72rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(165,180,252,0.7); color: #c7d2fe; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(167,139,250,0.65); color: #ddd6fe; }
+    .status-badge.on { border-color: rgba(134,239,172,0.75); color: #bbf7d0; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active { background: rgba(167,139,250,0.22); color: #ede9fe; }
+    .answer-btn {
+      flex: 1; min-width: 100px; min-height: 36px; padding: 6px 10px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(74,222,128,0.45); background: rgba(74,222,128,0.12); color: #86efac;
+    }
+    .answer-btn.active { background: rgba(74,222,128,0.28); color: #dcfce7; border-color: rgba(74,222,128,0.7); }
+    .answer-btn.warn { border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.1); color: #fde68a; }
+    .answer-btn.warn.active { background: rgba(251,191,36,0.28); color: #fef3c7; }
+    .answer-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .answer-label { width: 100%; font-size: 0.66rem; font-weight: 700; color: #86efac; margin-bottom: 2px; }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; flex: 1;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.18);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #cbd5e1; margin-bottom: 5px; }
+    .graph-wrap {
+      position: relative; width: 100%; border-radius: 8px; background: rgba(8,12,24,0.92);
+      border: 1px solid rgba(148,163,184,0.28); overflow: hidden;
+    }
+    .graph-wrap.x { height: min(200px, 24dvh); min-height: 150px; }
+    .graph-wrap.p { height: min(200px, 24dvh); min-height: 150px; }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #94a3b8; margin-top: 4px; text-align: right; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #ddd6fe; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1000px) { .hud-grid { grid-template-columns: repeat(8, 1fr); } }
+    .hud-card {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #cbd5e1; }
+    .hud-card .num { font-size: 0.78rem; font-weight: 700; color: #fef08a; margin-top: 3px; }
+    .hud-card.col-b .num { color: #a5b4fc; }
+    .hud-card.col-w .num { color: #f8fafc; }
+    .hud-card.highlight .num { color: #86efac; }
+    .hud-card.warn .num { color: #fca5a5; }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #ddd6fe; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #818cf8; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(129,140,248,0.07); border: 1px solid rgba(129,140,248,0.2);
+      font-size: 0.74rem; color: #cbd5e1; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #ddd6fe; margin-bottom: 4px; }
+    .journey-step.active { border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">◎</div>
+      <p class="chapter-label">第27章 ⑨ — 原子の構造</p>
+      <h2>不確定性原理 — ΔxΔp ≥ ħ/2 波束3Dラボ</h2>
+      <p class="tagline">ガウス波束 · 位置と運動量のトレードオフ · 確率分布</p>
+      <a id="back" href="00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — 不確定性の流れ</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 波束</strong>電子は波のかたまり</div>
+        <div class="journey-step" id="step2"><strong>Step 2 位置</strong>|ψ(x)|² でどこにいるか</div>
+        <div class="journey-step" id="step3"><strong>Step 3 運動量</strong>|ψ(p)|² でどんな速さか</div>
+        <div class="journey-step" id="step4"><strong>Step 4 原理</strong>ΔxΔp ≥ ħ/2</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">ψ(x)=exp(−x²/4σ_x²)·e<sup>ikx</sup> · Δx=σ_x · Δp=ħ/(2σ_x) · ΔxΔp ≥ ħ/2</div>
+        <div class="formula-sub">中央＝3D波束 · 下＝位置空間|ψ(x)|² · 右＝運動量空間|ψ(p)|²</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">ガウス波束 — 3D（粒子＋波）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#a5b4fc;color:#a5b4fc"></i>波束（|ψ|²）</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>波面 Re(ψ)</span>
+              <span><i class="color-chip" style="background:#86efac;color:#86efac"></i>位置 |ψ(x)|²</span>
+              <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>運動量 |ψ(p)|²</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">σ_x — · Δx —</div>
+              <div class="status-badge" id="statusBadge">波束進行中</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnMeasure">位置測定</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graph-panel">
+            <div class="graph-title"><span>位置空間 |ψ(x)|²</span><span id="graphXVal">Δx —</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#86efac;width:14px;height:8px;border-radius:2px"></i>位置の確率</span>
+              <span>Δx 小 → 鋭いピーク</span>
+              <span>Δx 大 → 広い分布</span>
+            </div>
+            <div class="graph-wrap x"><canvas id="graphX"></canvas></div>
+            <div class="graph-axis">横軸：位置 x · 縦軸：|ψ(x)|²（どこにいるか）</div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>運動量空間 |ψ(p)|²</span><span id="graphPVal">Δp —</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#fbbf24;width:14px;height:8px;border-radius:2px"></i>運動量の確率</span>
+              <span>Δp 大 → 広い分布</span>
+              <span>Δp 小 → 鋭いピーク</span>
+            </div>
+            <div class="graph-wrap p"><canvas id="graphP"></canvas></div>
+            <div class="graph-axis">横軸：運動量 p · 縦軸：|ψ(p)|²（どんな速さか）</div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム物理量</p>
+            <div class="formula-box" id="formulaLive">ΔxΔp ≥ ħ/2</div>
+            <div class="hud-grid">
+              <div class="hud-card col-b"><div class="lbl">位置の不確かさ Δx</div><div class="num" id="hudDx">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">運動量の不確かさ Δp</div><div class="num" id="hudDp">—</div></div>
+              <div class="hud-card highlight"><div class="lbl">ΔxΔp</div><div class="num" id="hudProd">—</div></div>
+              <div class="hud-card highlight"><div class="lbl">下限 ħ/2</div><div class="num" id="hudHbar">—</div></div>
+              <div class="hud-card" id="hudJudgeCard"><div class="lbl">成立判定</div><div class="num" id="hudJudge">—</div></div>
+              <div class="hud-card col-w"><div class="lbl">平均運動量 p₀</div><div class="num" id="hudP0">—</div></div>
+              <div class="hud-card col-w"><div class="lbl">ド・ブロイ波長 λ</div><div class="num" id="hudLam">—</div></div>
+              <div class="hud-card col-w"><div class="lbl">経過時間 t</div><div class="num" id="hudT">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>波束幅 σ_x <span class="slider-val" id="valSx">0.50</span></label>
+              <input type="range" id="slSx" min="10" max="150" value="50" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>中心位置 x₀ <span class="slider-val" id="valX0">0.0</span></label>
+              <input type="range" id="slX0" min="-80" max="80" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>初期運動量 p₀ <span class="slider-val" id="valP0">0</span></label>
+              <input type="range" id="slP0" min="-100" max="100" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>時間発展速度 <span class="slider-val" id="valSpeed">1.0×</span></label>
+              <input type="range" id="slSpeed" min="0" max="20" value="10" step="1">
+            </div>
+          </div>
+          <div class="answer-row">
+            <span class="answer-label">● 不確定度合プリセット（高校生向け・ワンクリック）</span>
+            <button type="button" class="answer-btn" data-preset="low">● 不確定度合が小さい（Δx小・Δp大）</button>
+            <button type="button" class="answer-btn" data-preset="high">● 不確定度合が大きい（Δx大・Δp小）</button>
+          </div>
+          <div class="hint-box" id="hintText">
+            <strong>ポイント：</strong>位置をくっきり知りたい（Δx↓）と、運動量はブレる（Δp↑）。その逆も同じ。だから <strong>ΔxΔp ≥ ħ/2</strong> が成り立ちます。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校生向け）</h3>
+      <ul class="edu-list">
+        <li>電子は<strong>波のかたまり（波束）</strong>として描けます</li>
+        <li><strong>|ψ(x)|²</strong> は「どこにいるか」の確率 · <strong>|ψ(p)|²</strong> は「どんな運動量か」の確率</li>
+        <li>位置を<strong>くっきり</strong>測ると（Δx↓）、運動量は<strong>ブレる</strong>（Δp↑）</li>
+        <li>逆に位置が<strong>ぼやける</strong>と（Δx↑）、運動量は<strong>はっきり</strong>する（Δp↓）</li>
+        <li>どちらのボタンでも <strong>ΔxΔp ≥ ħ/2</strong> が必ず成立します（測定の限界）</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const HBAR = 1.054571817e-34;
+      const H = 6.62607015e-34;
+      const ME = 9.1093837015e-31;
+      const UNIT_NM = 1e-9;
+      const VIS_SMOOTH = 0.14;
+      const PRESET_BLEND = 0.16;
+      const WAVE_OMEGA = 7.5;
+      const INIT_ROT_X = 0.42, INIT_ROT_Y = 0.55, INIT_ZOOM = 9.5;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphX = document.getElementById("graphX");
+      const graphP = document.getElementById("graphP");
+
+      let paused = false, autoSpin = true, simTime = 0, waveAnimTime = 0, timeScale = 1.0;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      const target = { sx: 0.5, x0: 0, p0: 0, speed: 1.0 };
+      const smooth = { sx: 0.5, x0: 0, p0: 0, speed: 1.0 };
+      const presetTarget = { sx: 0.5, x0: 0, p0: 0 };
+      let presetActive = null;
+      let measureFlash = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let waveMesh, envelopeMesh, floorBars, wallBars, particleMesh;
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function sigmaT(sx0, t) {
+        const denom = 2 * ME * Math.pow(sx0 * UNIT_NM, 2);
+        const factor = Math.pow(HBAR * t / denom, 2);
+        return sx0 * Math.sqrt(1 + factor);
+      }
+
+      function currentSigma() {
+        return sigmaT(smooth.sx, simTime);
+      }
+
+      function deltaX() {
+        return currentSigma() * UNIT_NM;
+      }
+
+      function deltaP(sxNm) {
+        const sx = sxNm * UNIT_NM;
+        return HBAR / (2 * sx);
+      }
+
+      function psiX2(xNm, sxNm, x0Nm) {
+        const sx = sxNm * UNIT_NM;
+        const x0 = x0Nm * UNIT_NM;
+        const dx = xNm * UNIT_NM - x0;
+        const sig = currentSigma() * UNIT_NM;
+        return Math.exp(-(dx * dx) / (2 * sig * sig));
+      }
+
+      function psiP2(p, sxNm, p0) {
+        const dp = deltaP(sxNm);
+        const dpDisp = dp * 1e24;
+        const p0Disp = p0 * 1e-24;
+        const pd = p - p0Disp;
+        const norm = 1 / (dpDisp * Math.sqrt(Math.PI));
+        return norm * norm * Math.exp(-(pd * pd) / (dpDisp * dpDisp));
+      }
+
+      function waveNumberVis(sx, p0) {
+        if (Math.abs(p0) > 0.5) return p0 * 0.14;
+        return (2 * Math.PI) / Math.max(sx * 0.85, 0.12);
+      }
+
+      function rePsi(xNm, sxNm, x0Nm, p0, t, animT) {
+        const sx = sxNm * UNIT_NM;
+        const x0 = x0Nm * UNIT_NM;
+        const dx = xNm * UNIT_NM - x0 - (p0 / ME) * t;
+        const sig = currentSigma() * UNIT_NM;
+        const env = Math.exp(-(dx * dx) / (2 * sig * sig));
+        const xVis = xNm - x0Nm * 0.04;
+        const kVis = waveNumberVis(sxNm, smooth.p0);
+        const phase = kVis * xVis - WAVE_OMEGA * animT;
+        return env * Math.cos(phase);
+      }
+
+      function formatSci(v, unit) {
+        if (Math.abs(v) < 1e-22) return "0 " + unit;
+        if (Math.abs(v) >= 1e-3) return v.toExponential(2) + " " + unit;
+        const e = Math.floor(Math.log10(Math.abs(v)));
+        const m = v / Math.pow(10, e);
+        return m.toFixed(2) + "×10<sup>" + e + "</sup> " + unit;
+      }
+
+      function buildBars(group, count, color, axis) {
+        const bars = [];
+        const mat = new THREE.MeshStandardMaterial({
+          color: color, emissive: color, emissiveIntensity: 0.55,
+          metalness: 0.2, roughness: 0.45, transparent: true, opacity: 0.88,
+        });
+        for (let i = 0; i < count; i++) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.08), mat.clone());
+          m.userData.idx = i;
+          group.add(m);
+          bars.push(m);
+        }
+        return bars;
+      }
+
+      function buildScene3D() {
+        const grid = new THREE.GridHelper(12, 24, 0x475569, 0x1e293b);
+        grid.position.y = -1.2;
+        worldGroup.add(grid);
+
+        const floorGroup = new THREE.Group();
+        floorGroup.position.set(0, -0.95, 0);
+        floorBars = buildBars(floorGroup, 64, 0x4ade80, "x");
+        worldGroup.add(floorGroup);
+
+        const wallGroup = new THREE.Group();
+        wallGroup.position.set(3.2, 0.1, 0);
+        wallGroup.rotation.y = -Math.PI / 2;
+        wallBars = buildBars(wallGroup, 64, 0xfbbf24, "p");
+        worldGroup.add(wallGroup);
+
+        const wavePts = 160;
+        const waveGeo = new THREE.BufferGeometry();
+        const pos = new Float32Array(wavePts * 3);
+        waveGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        waveMesh = new THREE.Line(
+          waveGeo,
+          new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2, transparent: true, opacity: 0.95 })
+        );
+        waveMesh.position.y = 0.15;
+        worldGroup.add(waveMesh);
+
+        const envPts = 80;
+        const envGeo = new THREE.BufferGeometry();
+        const envPos = new Float32Array(envPts * 2 * 3);
+        const envIdx = [];
+        for (let i = 0; i < envPts - 1; i++) {
+          envIdx.push(i, i + 1, envPts + i);
+          envIdx.push(i + 1, envPts + i + 1, envPts + i);
+        }
+        envGeo.setAttribute("position", new THREE.BufferAttribute(envPos, 3));
+        envGeo.setIndex(envIdx);
+        envelopeMesh = new THREE.Mesh(
+          envGeo,
+          new THREE.MeshStandardMaterial({
+            color: 0xa5b4fc, emissive: 0x818cf8, emissiveIntensity: 0.35,
+            transparent: true, opacity: 0.35, side: THREE.DoubleSide, metalness: 0.1, roughness: 0.6,
+          })
+        );
+        envelopeMesh.position.y = 0.05;
+        worldGroup.add(envelopeMesh);
+
+        const pGeo = new THREE.SphereGeometry(0.12, 16, 16);
+        particleMesh = new THREE.Mesh(
+          pGeo,
+          new THREE.MeshPhysicalMaterial({
+            color: 0xe0e7ff, emissive: 0xc7d2fe, emissiveIntensity: 1.2,
+            metalness: 0.3, roughness: 0.2, transparent: true, opacity: 0.85,
+          })
+        );
+        particleMesh.position.set(0, 0.35, 0);
+        worldGroup.add(particleMesh);
+
+        const axMat = new THREE.LineBasicMaterial({ color: 0x64748b });
+        const axX = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-4, -0.95, 0), new THREE.Vector3(4, -0.95, 0),
+        ]);
+        const axP = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(3.2, -1.2, -2), new THREE.Vector3(3.2, 1.5, -2),
+        ]);
+        worldGroup.add(new THREE.Line(axX, axMat));
+        worldGroup.add(new THREE.Line(axP, axMat.clone()));
+      }
+
+      function updateWave3D() {
+        const sx = smooth.sx;
+        const x0 = smooth.x0 * 0.04;
+        const p0 = smooth.p0 * 1e-24;
+        const xRange = 4.2;
+        const wavePos = waveMesh.geometry.attributes.position.array;
+        const envPos = envelopeMesh.geometry.attributes.position.array;
+        const envPts = envPos.length / 6;
+        let maxEnv = 0.001;
+
+        for (let i = 0; i < wavePos.length / 3; i++) {
+          const t = i / (wavePos.length / 3 - 1);
+          const xNm = (t - 0.5) * xRange / 0.04;
+          const psi = rePsi(xNm, sx, smooth.x0, p0, simTime, waveAnimTime);
+          const env = psiX2(xNm, sx, smooth.x0);
+          if (env > maxEnv) maxEnv = env;
+          const xVis = (t - 0.5) * xRange + x0 * 0.04;
+          wavePos[i * 3] = xVis;
+          wavePos[i * 3 + 1] = psi * 0.55;
+          wavePos[i * 3 + 2] = 0;
+        }
+        waveMesh.geometry.attributes.position.needsUpdate = true;
+
+        for (let i = 0; i < envPts; i++) {
+          const t = i / (envPts - 1);
+          const xNm = (t - 0.5) * xRange / 0.04;
+          const env = psiX2(xNm, sx, smooth.x0);
+          const xVis = (t - 0.5) * xRange + x0 * 0.04;
+          const h = env * 1.1;
+          envPos[i * 3] = xVis;
+          envPos[i * 3 + 1] = 0;
+          envPos[i * 3 + 2] = 0;
+          envPos[envPts * 3 + i * 3] = xVis;
+          envPos[envPts * 3 + i * 3 + 1] = h;
+          envPos[envPts * 3 + i * 3 + 2] = 0;
+        }
+        envelopeMesh.geometry.attributes.position.needsUpdate = true;
+        const pulse = 0.28 + 0.12 * Math.sin(waveAnimTime * 1.4);
+        envelopeMesh.material.opacity = pulse;
+        envelopeMesh.material.emissiveIntensity = 0.28 + 0.14 * Math.sin(waveAnimTime * 2.1);
+
+        particleMesh.position.set(x0 + (p0 / ME) * simTime * 0.04, 0.35 + 0.04 * Math.sin(waveAnimTime * 2), 0);
+
+        const xSpan = 4.0;
+        let maxX = 0.001;
+        const xSamples = floorBars.length;
+        for (let i = 0; i < xSamples; i++) {
+          const t = i / (xSamples - 1);
+          const xNm = (t - 0.5) * xRange / 0.04;
+          const v = psiX2(xNm, sx, smooth.x0);
+          if (v > maxX) maxX = v;
+        }
+        floorBars.forEach((bar, i) => {
+          const t = i / (xSamples - 1);
+          const xNm = (t - 0.5) * xRange / 0.04;
+          const v = psiX2(xNm, sx, smooth.x0);
+          const h = (v / maxX) * 0.9 + 0.02;
+          bar.position.set((t - 0.5) * xSpan, h * 0.5, 0);
+          bar.scale.set(1, h / 0.04, 1);
+        });
+
+        const dp = deltaP(sx);
+        const p0Disp = smooth.p0;
+        const pSpan = 3.6;
+        let maxP = 0.001;
+        const pSamples = wallBars.length;
+        for (let i = 0; i < pSamples; i++) {
+          const t = i / (pSamples - 1);
+          const p = (t - 0.5) * 8 + p0Disp;
+          const v = psiP2(p, sx, p0Disp);
+          if (v > maxP) maxP = v;
+        }
+        wallBars.forEach((bar, i) => {
+          const t = i / (pSamples - 1);
+          const p = (t - 0.5) * 8 + p0Disp;
+          const v = psiP2(p, sx, p0Disp);
+          const h = (v / maxP) * 1.2 + 0.02;
+          bar.position.set(0, h * 0.5, (t - 0.5) * pSpan);
+          bar.scale.set(1, h / 0.04, 1);
+        });
+      }
+
+      function drawGraph(canvas, mode) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent.clientWidth, 200), h = Math.max(parent.clientHeight, 140);
+        const dpr = Math.min(devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const sx = smooth.sx;
+        const M = { l: 44, r: 12, t: 16, b: 30 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(8,14,32,0.95)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.strokeRect(M.l, M.t, pw, ph);
+
+        const yBase = M.t + ph;
+        let samples = 200;
+        let xMin, xMax, curve = [], iMax = 0;
+
+        if (mode === "x") {
+          xMin = -3.5; xMax = 3.5;
+          const xMap = (x) => M.l + ((x - xMin) / (xMax - xMin)) * pw;
+          for (let i = 0; i <= samples; i++) {
+            const xNm = xMin + (xMax - xMin) * (i / samples);
+            const I = psiX2(xNm, sx, smooth.x0);
+            curve.push({ x: xNm, I });
+            if (I > iMax) iMax = I;
+          }
+          iMax = Math.max(iMax, 0.05);
+          const grad = ctx.createLinearGradient(0, M.t, 0, yBase);
+          grad.addColorStop(0, "rgba(74,222,128,0.55)");
+          grad.addColorStop(1, "rgba(74,222,128,0.05)");
+          ctx.beginPath();
+          curve.forEach((pt, i) => {
+            const px = xMap(pt.x), py = yBase - (pt.I / iMax) * ph * 0.92;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          });
+          ctx.lineTo(xMap(xMax), yBase);
+          ctx.lineTo(xMap(xMin), yBase);
+          ctx.closePath();
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = "#86efac";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          curve.forEach((pt, i) => {
+            const px = xMap(pt.x), py = yBase - (pt.I / iMax) * ph * 0.92;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          const x0px = xMap(smooth.x0 * 0.04);
+          ctx.strokeStyle = "rgba(253,224,71,0.7)";
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(x0px, M.t);
+          ctx.lineTo(x0px, yBase);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#e2e8f0";
+          ctx.font = "10px Noto Sans JP, sans-serif";
+          ctx.fillText("位置 x", M.l + pw - 28, h - 8);
+        } else {
+          const p0 = smooth.p0;
+          xMin = p0 - 4; xMax = p0 + 4;
+          const xMap = (p) => M.l + ((p - xMin) / (xMax - xMin)) * pw;
+          for (let i = 0; i <= samples; i++) {
+            const p = xMin + (xMax - xMin) * (i / samples);
+            const I = psiP2(p, sx, p0);
+            curve.push({ x: p, I });
+            if (I > iMax) iMax = I;
+          }
+          iMax = Math.max(iMax, 1e-30);
+          const grad = ctx.createLinearGradient(0, M.t, 0, yBase);
+          grad.addColorStop(0, "rgba(251,191,36,0.55)");
+          grad.addColorStop(1, "rgba(251,191,36,0.05)");
+          ctx.beginPath();
+          curve.forEach((pt, i) => {
+            const px = xMap(pt.x), py = yBase - (pt.I / iMax) * ph * 0.92;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          });
+          ctx.lineTo(xMap(xMax), yBase);
+          ctx.lineTo(xMap(xMin), yBase);
+          ctx.closePath();
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = "#fbbf24";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          curve.forEach((pt, i) => {
+            const px = xMap(pt.x), py = yBase - (pt.I / iMax) * ph * 0.92;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          const p0px = xMap(p0);
+          ctx.strokeStyle = "rgba(253,224,71,0.7)";
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(p0px, M.t);
+          ctx.lineTo(p0px, yBase);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#e2e8f0";
+          ctx.font = "10px Noto Sans JP, sans-serif";
+          ctx.fillText("運動量 p (×10⁻²⁴)", M.l + pw - 72, h - 8);
+        }
+
+        ctx.strokeStyle = "rgba(203,213,225,0.55)";
+        ctx.beginPath();
+        ctx.moveTo(M.l, yBase);
+        ctx.lineTo(M.l + pw, yBase);
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(14, M.t + ph / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "10px Noto Sans JP, sans-serif";
+        ctx.fillText("|ψ|²", 0, 0);
+        ctx.restore();
+      }
+
+      function updateSmooth() {
+        const k = presetActive ? PRESET_BLEND : VIS_SMOOTH;
+        smooth.sx = lerp(smooth.sx, presetActive ? presetTarget.sx : target.sx, k);
+        smooth.x0 = lerp(smooth.x0, presetActive ? presetTarget.x0 : target.x0, k);
+        smooth.p0 = lerp(smooth.p0, presetActive ? presetTarget.p0 : target.p0, k);
+        smooth.speed = lerp(smooth.speed, target.speed, VIS_SMOOTH);
+        timeScale = smooth.speed;
+        if (presetActive && Math.abs(smooth.sx - presetTarget.sx) < 0.008) {
+          target.sx = presetTarget.sx;
+          presetActive = null;
+        }
+      }
+
+      function updateHUD() {
+        const sx = smooth.sx;
+        const dx = deltaX();
+        const dp = deltaP(sx);
+        const prod = dx * dp;
+        const hbar2 = HBAR / 2;
+        const ok = prod >= hbar2 * 0.999;
+        const p0Si = smooth.p0 * 1e-24;
+        const lam = p0Si > 1e-30 ? H / p0Si : Infinity;
+
+        document.getElementById("hudDx").innerHTML = formatSci(dx, "m");
+        document.getElementById("hudDp").innerHTML = formatSci(dp, "kg·m/s");
+        document.getElementById("hudProd").innerHTML = formatSci(prod, "J·s");
+        document.getElementById("hudHbar").innerHTML = formatSci(hbar2, "J·s");
+        document.getElementById("hudJudge").textContent = ok ? "成立 ✓" : "要確認";
+        document.getElementById("hudJudgeCard").className = "hud-card " + (ok ? "highlight" : "warn");
+        document.getElementById("hudP0").innerHTML = formatSci(p0Si, "kg·m/s");
+        document.getElementById("hudLam").textContent = isFinite(lam) ? (lam * 1e9).toFixed(2) + " nm" : "—";
+        document.getElementById("hudT").textContent = (simTime * 1e12).toFixed(1) + " ps";
+
+        document.getElementById("valSx").textContent = sx.toFixed(2) + " nm";
+        document.getElementById("valX0").textContent = smooth.x0.toFixed(1);
+        document.getElementById("valP0").textContent = smooth.p0.toFixed(0) + " ×10⁻²⁴";
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("formulaLive").innerHTML =
+          "ΔxΔp = <strong>" + prod.toExponential(2) + "</strong> ≥ ħ/2 = " + hbar2.toExponential(2) + " J·s " +
+          (ok ? "<strong style='color:#86efac'> ✓</strong>" : "");
+
+        document.getElementById("modeBadge").textContent =
+          "σ_x=" + sx.toFixed(2) + " nm · Δx=" + (dx * 1e9).toFixed(2) + " nm\n" +
+          "Δp=" + (dp * 1e24).toFixed(2) + "×10⁻²⁴ kg·m/s";
+
+        document.getElementById("statusBadge").textContent =
+          measureFlash > 0 ? "位置測定！波束が収縮" :
+          (presetActive ? "プリセット切替中…" : "波束が時間とともに広がる");
+        document.getElementById("statusBadge").className = "status-badge" + (ok ? " on" : "");
+
+        document.getElementById("graphXVal").textContent = "Δx≈" + (dx * 1e9).toFixed(2) + " nm";
+        document.getElementById("graphPVal").textContent = "Δp≈" + (dp * 1e24).toFixed(2) + "×10⁻²⁴";
+
+        document.getElementById("step1").classList.toggle("active", true);
+        document.getElementById("step2").classList.toggle("active", sx < 0.8);
+        document.getElementById("step3").classList.toggle("active", sx > 0.35);
+        document.getElementById("step4").classList.toggle("active", ok);
+
+        drawGraph(graphX, "x");
+        drawGraph(graphP, "p");
+      }
+
+      function applyPreset(key) {
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.preset === key);
+        });
+        presetActive = key;
+        simTime = 0;
+        if (key === "low") {
+          presetTarget.sx = 0.2;
+          presetTarget.x0 = target.x0;
+          presetTarget.p0 = target.p0;
+          document.getElementById("slSx").value = 20;
+          document.getElementById("hintText").innerHTML =
+            "<strong>不確定度合が小さい</strong> — 位置は<strong>くっきり</strong>（Δx↓）だが、運動量は<strong>ブレる</strong>（Δp↑）。";
+        } else if (key === "high") {
+          presetTarget.sx = 1.0;
+          presetTarget.x0 = target.x0;
+          presetTarget.p0 = target.p0;
+          document.getElementById("slSx").value = 100;
+          document.getElementById("hintText").innerHTML =
+            "<strong>不確定度合が大きい</strong> — 位置は<strong>ぼやける</strong>（Δx↑）だが、運動量は<strong>はっきり</strong>（Δp↓）。";
+        }
+      }
+
+      function measurePosition() {
+        presetActive = null;
+        target.sx = 0.08;
+        smooth.sx = lerp(smooth.sx, 0.08, 0.35);
+        document.getElementById("slSx").value = 8;
+        measureFlash = 1.2;
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        document.getElementById("hintText").innerHTML =
+          "<strong>位置測定</strong> — 波束が一気に<strong>狭く</strong>なりました（Δx↓）。運動量のブレ（Δp）が大きくなります。";
+      }
+
+      function resetSim() {
+        simTime = 0;
+        waveAnimTime = 0;
+        measureFlash = 0;
+        presetActive = null;
+        target.sx = 0.5; target.x0 = 0; target.p0 = 0; target.speed = 1.0;
+        smooth.sx = 0.5; smooth.x0 = 0; smooth.p0 = 0; smooth.speed = 1.0;
+        document.getElementById("slSx").value = 50;
+        document.getElementById("slX0").value = 0;
+        document.getElementById("slP0").value = 0;
+        document.getElementById("slSpeed").value = 10;
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        document.getElementById("hintText").innerHTML =
+          "<strong>ポイント：</strong>位置をくっきり知りたい（Δx↓）と、運動量はブレる（Δp↑）。その逆も同じ。だから <strong>ΔxΔp ≥ ħ/2</strong> が成り立ちます。";
+        rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+      }
+
+      function bindControls() {
+        document.getElementById("slSx").addEventListener("input", (e) => {
+          presetActive = null;
+          target.sx = +e.target.value / 100;
+          simTime = 0;
+          document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        });
+        document.getElementById("slX0").addEventListener("input", (e) => { target.x0 = +e.target.value / 10; });
+        document.getElementById("slP0").addEventListener("input", (e) => { target.p0 = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.addEventListener("click", () => applyPreset(b.dataset.preset));
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnMeasure").addEventListener("click", measurePosition);
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x506080, 0.65));
+        const key = new THREE.DirectionalLight(0xffffff, 1.15);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x818cf8, 0.55, 20);
+        rim.position.set(-3, 2, 2);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        renderer.domElement.addEventListener("pointerleave", () => { dragging = false; });
+
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.006, 5, 16);
+        }, { passive: false });
+
+        new ResizeObserver(() => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        }).observe(wrap);
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        waveAnimTime += dt * (0.6 + timeScale * 0.9);
+        if (!paused) simTime += dt * timeScale * 2e-13;
+        if (measureFlash > 0) measureFlash -= dt;
+        updateWave3D();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.022;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 1.2,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

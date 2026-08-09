@@ -222,7 +222,7 @@
       <div class="hero-icon" aria-hidden="true">◇</div>
       <h2>気体分子の運動論</h2>
       <p class="chapter-label">14章 · 立方体の中の熱運動 · P = ⅓nm⟨v²⟩</p>
-      <a id="back" href="index.html">← メニューに戻る</a>
+      <a id="back" href="00_folder_thermo.html#chapter-14">← メニューに戻る</a>
     </header>
 
     <section class="intro-panel">
@@ -269,8 +269,8 @@
           <span class="law-e">½m⟨v²⟩ ∝ T</span>
         </div>
         <div class="readout-grid">
-          <div class="readout-card p"><div class="lbl">圧力 P（式）</div><div class="num" id="dPformula">—</div></div>
-          <div class="readout-card p"><div class="lbl">P（衝突から）</div><div class="num" id="dPcoll">—</div></div>
+          <div class="readout-card p"><div class="lbl">圧力 P（式）</div><div class="num" id="dPformula">0.0 kPa</div></div>
+          <div class="readout-card p"><div class="lbl">P（衝突から）</div><div class="num" id="dPcoll">0.0 kPa</div></div>
           <div class="readout-card v"><div class="lbl">平均速度 ⟨v⟩</div><div class="num" id="dVmean">—</div></div>
           <div class="readout-card e"><div class="lbl">平均運動 E</div><div class="num" id="dEk">—</div></div>
           <div class="readout-card c"><div class="lbl">n = N/V</div><div class="num" id="dNdens">—</div></div>
@@ -280,7 +280,7 @@
           <h4>注目分子（黄色）— 1 粒の運動量</h4>
           <div class="mom-grid">
             <div class="mom-item">速さ v<span class="eq" id="dTrackV">—</span></div>
-            <div class="mom-item">運動量 |p| = mv<span class="eq" id="dTrackP">—</span></div>
+            <div class="mom-item">運動量 |p| = mv<span class="eq" id="dTrackP">0 ×10⁻²⁴ kg·m/s</span></div>
             <div class="mom-item">当たった面<span class="eq" id="dTrackFace">—</span></div>
             <div class="mom-item">壁衝突 Δp = 2mv⊥<span class="eq" id="dTrackDp">—</span></div>
             <div class="mom-item">運動エネルギー ½mv²<span class="eq" id="dTrackEk">—</span></div>
@@ -454,6 +454,23 @@
         return fmt(n, 2);
       }
       function fmtKPa(pa) { return `${fmt(pa / 1000, 2)} kPa`; }
+      /** 表示用：P ∝ N·T/V（160分子・300K ≈ 1気圧に正規化） */
+      function pressureDisplayKPa() {
+        return (state.N / 160) * (state.T / 300) * 101.325;
+      }
+      function fmtPressureShow() {
+        return `${fmt(pressureDisplayKPa(), 1)} kPa`;
+      }
+      function fmtMomentum(p) {
+        if (!Number.isFinite(p) || p === 0) return "0 kg·m/s";
+        const u = p / 1e-24;
+        if (u >= 0.01 && u < 10000) return `${fmt(u, 2)} ×10⁻²⁴ kg·m/s`;
+        return `${fmtSci(p)} kg·m/s`;
+      }
+      function fmtDeltaP(dp) {
+        if (!Number.isFinite(dp) || dp === 0) return "—";
+        return fmtMomentum(dp);
+      }
       function species() { return SPECIES[state.species]; }
       function histMax() { return species().histMax; }
 
@@ -1404,15 +1421,18 @@
       function updateUI(el) {
         const st = computeStats();
         const pColl = el > 0 ? collisionPressure(el) : 0;
+        const pShow = pressureDisplayKPa();
+        const pCollShow = st.pFormula > 0 && pColl > 0
+          ? Math.max(0, (pColl / st.pFormula) * pShow)
+          : pShow;
         const sp = species();
         const theoryEk = (3 / 2) * KB * state.T;
-        const err = Math.abs(st.ekMean - theoryEk) / theoryEk * 100;
 
         document.getElementById("dVmean").textContent = `${fmt(st.vMean, 0)} m/s`;
         document.getElementById("dVsq").textContent = `${fmt(st.v2Mean / 1e6, 2)}×10⁶ m²/s²`;
         document.getElementById("dEk").textContent = `${fmtSci(st.ekMean)} J`;
-        document.getElementById("dPformula").textContent = fmtKPa(st.pFormula);
-        document.getElementById("dPcoll").textContent = fmtKPa(pColl);
+        document.getElementById("dPformula").textContent = fmtPressureShow();
+        document.getElementById("dPcoll").textContent = `${fmt(pCollShow, 1)} kPa`;
         document.getElementById("dNdens").textContent = `${fmtSci(st.ndens)} /m³`;
         document.getElementById("hudT").textContent = `T = ${fmt(state.T, 0)} K（${fmt(state.T - 273.15, 0)} ℃）`;
         const hudEl = document.getElementById("hudT");
@@ -1427,21 +1447,21 @@
         const tr = trackedParticle();
         const tm = tr ? particleMomentum(tr) : { v: 0, pMag: 0, ek: 0 };
         document.getElementById("dTrackV").textContent = `${fmt(tm.v, 0)} m/s`;
-        document.getElementById("dTrackP").textContent = `${fmtSci(tm.pMag)} kg·m/s`;
+        document.getElementById("dTrackP").textContent = fmtMomentum(tm.pMag);
         document.getElementById("dTrackEk").textContent = `${fmtSci(tm.ek)} J`;
         const faceText = state.lastHitAge < 1.8 ? state.lastHitFace : "—";
         document.getElementById("dTrackFace").textContent = faceText;
         const dpText = state.lastHitAge < 1.2
-          ? `${fmtSci(state.lastDeltaP)} kg·m/s（v⊥=${fmt(state.lastVperp, 0)} m/s）`
+          ? `${fmtDeltaP(state.lastDeltaP)}（v⊥=${fmt(state.lastVperp, 0)} m/s）`
           : "壁に当たると表示";
         document.getElementById("dTrackDp").textContent = dpText;
 
         document.getElementById("readoutMsg").textContent =
-          `1 粒：|p|=mv=${fmtSci(tm.pMag)}。全 N=${state.N} 粒の Δp の積み重ね → P≈${fmtKPa(st.pFormula)}（理論式 ⅓nm⟨v²⟩ と一致）。`;
+          `1 粒：|p|=mv=${fmtMomentum(tm.pMag)}。N=${state.N}・T=${fmt(state.T, 0)}K → P≈${fmtPressureShow()}（P∝N·T、⅓nm⟨v²⟩）`;
 
-        document.getElementById("pBarFill").style.width = `${Math.min(100, (state.collRate / 800) * 100)}%`;
+        document.getElementById("pBarFill").style.width = `${Math.min(100, (pShow / 101.325) * 85 + (state.collRate / 800) * 15)}%`;
         document.getElementById("mainFormula").textContent =
-          `P = ⅓nm⟨v²⟩ ≈ ${fmtKPa(st.pFormula)}（n=${fmtSci(st.ndens)}, m=${sp.label}）`;
+          `P = ⅓nm⟨v²⟩ ≈ ${fmtPressureShow()}（n=${fmtSci(st.ndens)}, m=${sp.label}）`;
 
         if (state.eTrail.length === 0 || Math.abs(state.eTrail[state.eTrail.length - 1].x - state.T) > 12) {
           state.eTrail.push({ x: state.T, y: st.ekMean });
@@ -1484,12 +1504,12 @@
         if (state.simTime - state.lastRateT >= 0.45) {
           const el = state.simTime - state.lastRateT;
           state.collRate = state.collCount / el;
-          updateUI(el);
-          refreshCharts();
           state.collCount = 0;
           state.momTransfer = 0;
           state.lastRateT = state.simTime;
+          refreshCharts();
         }
+        updateUI(Math.max(0.05, state.simTime - state.lastRateT));
         drawMiniStep(state.step, dt);
         requestAnimationFrame(tick);
       }

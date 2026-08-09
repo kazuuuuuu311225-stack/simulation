@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>26章 コイルと交流 — RLC回路・ソレノイド 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1428 45%, #1a1030 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1200px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(96,165,250,0.5), rgba(167,139,250,0.45));
+      border: 1px solid rgba(96,165,250,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fcd34d; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(96, 165, 250, 0.35);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fcd34d; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.1));
+      border: 1px solid rgba(96,165,250,0.35);
+    }
+    .formula-main { font-size: 0.95rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .graphs-row { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 780px) { .graphs-row { grid-template-columns: repeat(3, 1fr); } }
+    .graphs-stack { display: flex; flex-direction: column; gap: 12px; }
+    .graph-section {
+      padding: 10px 12px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(96,165,250,0.15);
+    }
+    .graph-section-title {
+      margin: 0 0 8px; font-size: 0.78rem; font-weight: 800; color: #fcd34d;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .graph-section-title .badge {
+      font-size: 0.62rem; padding: 2px 8px; border-radius: 6px;
+      background: rgba(96,165,250,0.15); color: #93c5fd; font-weight: 600;
+    }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #111; border: 1px solid rgba(96,165,250,0.35); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(560px, 62dvh); min-height: 380px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6;
+      font-size: 0.9rem; text-align: center; pointer-events: none;
+    }
+    #simError.show { display: flex; }
+    .res-badge {
+      position: absolute; top: 12px; right: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.9); border: 1px solid rgba(251,191,36,0.5);
+      font-size: 0.78rem; font-weight: 700; color: #fde68a; line-height: 1.5;
+    }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(96,165,250,0.4); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.active {
+      background: rgba(96,165,250,0.28); color: #fef3c7; border-color: rgba(96,165,250,0.65);
+    }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(96,165,250,0.22);
+      margin-bottom: 10px;
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fcd34d; }
+    .hud-card {
+      padding: 12px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.66rem; color: #94a3b8; line-height: 1.35; }
+    .hud-card .num { font-size: 0.88rem; font-weight: 700; color: #fde68a; margin-top: 4px; }
+    .hud-card.col-v .num { color: #f87171; }
+    .hud-card.col-i .num { color: #e2e8f0; }
+    .hud-card.col-l .num { color: #60a5fa; }
+    .hud-card.col-c .num { color: #fde047; }
+    .hud-card.col-r .num { color: #94a3b8; }
+    .hud-card.col-b .num { color: #60a5fa; }
+    .hud-card.col-e .num { color: #fbbf24; }
+    .hud-card.highlight { border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.1); }
+    .hud-card.highlight .num { color: #c4b5fd; }
+    .hud-card.resonance { border-color: rgba(251,191,36,0.6); background: rgba(251,191,36,0.12); }
+    .hud-card.resonance .num { color: #fde68a; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px) { .hud-grid { grid-template-columns: repeat(5, 1fr); } }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.28);
+      font-size: 0.78rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(96,165,250,0.2);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px; }
+    .graph-legend-row span { display: inline-flex; align-items: center; gap: 4px; }
+    .graph-legend-row i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .graph-wrap {
+      position: relative; width: 100%; height: 130px;
+      border-radius: 8px; background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    @media (min-width: 780px) { .graph-wrap { height: 140px; } }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: right; }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(96,165,250,0.18);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fcd34d; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde047; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #60a5fa; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.22);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .graph-wrap--r { border-color: rgba(148,163,184,0.35); }
+    .graph-wrap--l { border-color: rgba(96,165,250,0.35); }
+    .graph-wrap--c { border-color: rgba(253,224,71,0.35); }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚡</div>
+      <p class="chapter-label">第26章 ⑧ — コイルと交流</p>
+      <h2>RLC回路 — ソレノイド・リアクタンス・共振 3Dラボ</h2>
+      <p class="tagline">R・L（ソレノイド）・C を直列につないだ交流回路の位相差と共振を 3D で体感</p>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-26">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>
+        交流電源に<strong style="color:#94a3b8">抵抗 R</strong>・
+        <strong style="color:#60a5fa">ソレノイド L</strong>・
+        <strong style="color:#fde047">コンデンサ C</strong>を直列接続した回路を 3D で観察します。
+        磁場・電場・ジュール熱の変化と、下の <strong>R / L / C 各成分の V–I グラフ</strong>で位相差を確認できます。
+        周波数 f を変えて <strong style="color:#fde68a">X<sub>L</sub>=X<sub>C</sub> の共振</strong>を探してみましょう。
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">X<sub>L</sub>=ωL · X<sub>C</sub>=1/(ωC) · X=X<sub>L</sub>−X<sub>C</sub> · I₀=V₀/√(R²+X²) · φ=atan(X/R)</div>
+        <div class="formula-sub">共振：X<sub>L</sub>=X<sub>C</sub> → φ=0 · I 最大 · V<sub>L</sub>とV<sub>C</sub>が打ち消し合う · ω₀=1/√(LC)</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label" id="vizLabel">AC → R → ソレノイド L → C → 閉回路（3D）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>R</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>ソレノイド B</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>V<sub>C</sub></span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>V<sub>R</sub></span>
+              <span><i class="color-chip" style="background:#e2e8f0;color:#e2e8f0"></i>I</span>
+              <span><i class="color-chip" style="background:#4ade80;color:#4ade80"></i>AC</span>
+            </div>
+            <p class="viz-legend" id="vizLegend">奥行き付き直列回路 · ドラッグ回転 · ホイールズーム</p>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="res-badge" id="resBadge">f₀=— Hz</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" id="btnSpin" class="active">視点自動回転</button>
+              <button type="button" id="btnResetView">初期表示</button>
+              <button type="button" id="btnResFreq">共振周波数へ</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graphs-stack">
+            <div class="graph-section">
+              <p class="graph-section-title">抵抗 R <span class="badge">63番同型 · 同位相</span></p>
+              <div class="graphs-row">
+                <div class="graph-panel">
+                  <div class="graph-title"><span>V<sub>R</sub>(t)</span><span style="color:#f87171" id="graphValVR">0 V</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#f87171"></i>V<sub>R</sub>=I·R</span></div>
+                  <div class="graph-wrap graph-wrap--r"><canvas id="graphVR"></canvas></div>
+                  <div class="graph-axis">電流と同じ位相</div>
+                </div>
+                <div class="graph-panel">
+                  <div class="graph-title"><span>I(t)</span><span style="color:#fde047" id="graphValIR">0 A</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#fde047"></i>I=I₀sin(ωt−φ)</span></div>
+                  <div class="graph-wrap graph-wrap--r"><canvas id="graphIR"></canvas></div>
+                  <div class="graph-axis">直列回路の電流（共通）</div>
+                </div>
+                <div class="graph-panel">
+                  <div class="graph-title"><span>位相差 V<sub>R</sub>とI</span><span style="color:#94a3b8" id="graphValPhaseR">同相</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#f87171"></i>V<sub>R</sub></span><span><i style="background:#fde047"></i>I</span></div>
+                  <div class="graph-wrap graph-wrap--r"><canvas id="graphPhaseR"></canvas></div>
+                  <div class="graph-axis">山の位置が一致＝同位相</div>
+                </div>
+              </div>
+            </div>
+            <div class="graph-section">
+              <p class="graph-section-title">リアクタンス L（ソレノイド） <span class="badge">64番同型 · Iが90°遅れ</span></p>
+              <div class="graphs-row">
+                <div class="graph-panel">
+                  <div class="graph-title"><span>V<sub>L</sub>(t)</span><span style="color:#60a5fa" id="graphValVL">0 V</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#60a5fa"></i>V<sub>L</sub>=I·X<sub>L</sub></span></div>
+                  <div class="graph-wrap graph-wrap--l"><canvas id="graphVL"></canvas></div>
+                  <div class="graph-axis">電流より 1/4 周期進む</div>
+                </div>
+                <div class="graph-panel">
+                  <div class="graph-title"><span>I(t)</span><span style="color:#fde047" id="graphValIL">0 A</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#fde047"></i>I=I₀sin(ωt−φ)</span></div>
+                  <div class="graph-wrap graph-wrap--l"><canvas id="graphIL"></canvas></div>
+                  <div class="graph-axis">電流より 1/4 周期遅れる</div>
+                </div>
+                <div class="graph-panel">
+                  <div class="graph-title"><span>位相差 V<sub>L</sub>とI</span><span style="color:#60a5fa" id="graphValPhaseL">90°</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#60a5fa"></i>V<sub>L</sub></span><span><i style="background:#fde047"></i>I（拡大）</span></div>
+                  <div class="graph-wrap graph-wrap--l"><canvas id="graphPhaseL"></canvas></div>
+                  <div class="graph-axis">赤の山が先 → 黄の山が T/4 遅れ</div>
+                </div>
+              </div>
+            </div>
+            <div class="graph-section">
+              <p class="graph-section-title">コンデンサ C <span class="badge">65番同型 · Iが90°進む</span></p>
+              <div class="graphs-row">
+                <div class="graph-panel">
+                  <div class="graph-title"><span>V<sub>C</sub>(t)</span><span style="color:#fde047" id="graphValVC">0 V</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#fde047"></i>V<sub>C</sub>=I·X<sub>C</sub></span></div>
+                  <div class="graph-wrap graph-wrap--c"><canvas id="graphVC"></canvas></div>
+                  <div class="graph-axis">電流より 1/4 周期遅れる</div>
+                </div>
+                <div class="graph-panel">
+                  <div class="graph-title"><span>I(t)</span><span style="color:#38bdf8" id="graphValIC">0 A</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#38bdf8"></i>I=I₀sin(ωt−φ)</span></div>
+                  <div class="graph-wrap graph-wrap--c"><canvas id="graphIC"></canvas></div>
+                  <div class="graph-axis">電流より 1/4 周期進む</div>
+                </div>
+                <div class="graph-panel">
+                  <div class="graph-title"><span>位相差 V<sub>C</sub>とI</span><span style="color:#38bdf8" id="graphValPhaseC">90°</span></div>
+                  <div class="graph-legend-row"><span><i style="background:#fde047"></i>V<sub>C</sub></span><span><i style="background:#38bdf8"></i>I（拡大）</span></div>
+                  <div class="graph-wrap graph-wrap--c"><canvas id="graphPhaseC"></canvas></div>
+                  <div class="graph-axis">青の山が先 → 黄の山が T/4 遅れ</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">回路の基本量</p>
+            <div class="formula-box" id="formulaLive">V=0 · I=0 · X=0 · φ=0°</div>
+            <div class="hud-grid">
+              <div class="hud-card col-v"><div class="lbl">V(t)</div><div class="num" id="hudV">0.00 V</div></div>
+              <div class="hud-card col-i"><div class="lbl">I(t)</div><div class="num" id="hudI">0.000 A</div></div>
+              <div class="hud-card col-l"><div class="lbl">X<sub>L</sub>=ωL</div><div class="num" id="hudXL">0.00 Ω</div></div>
+              <div class="hud-card col-c"><div class="lbl">X<sub>C</sub>=1/(ωC)</div><div class="num" id="hudXC">0.00 Ω</div></div>
+              <div class="hud-card highlight"><div class="lbl">X=X<sub>L</sub>−X<sub>C</sub></div><div class="num" id="hudX">0.00 Ω</div></div>
+              <div class="hud-card highlight"><div class="lbl">位相差 φ</div><div class="num" id="hudPhi">0°</div></div>
+              <div class="hud-card col-i"><div class="lbl">I₀</div><div class="num" id="hudI0">0.000 A</div></div>
+              <div class="hud-card col-r"><div class="lbl">R</div><div class="num" id="hudR">5.0 Ω</div></div>
+              <div class="hud-card"><div class="lbl">周波数 f</div><div class="num" id="hudF">1.0 Hz</div></div>
+              <div class="hud-card resonance" id="hudResCard"><div class="lbl">共振 f₀=1/(2π√LC)</div><div class="num" id="hudF0">— Hz</div></div>
+            </div>
+          </div>
+          <div class="hud-section">
+            <p class="hud-section-title">成分電圧・エネルギー</p>
+            <div class="hud-grid">
+              <div class="hud-card col-v"><div class="lbl">V<sub>R</sub>(t)</div><div class="num" id="hudVR">0.00 V</div></div>
+              <div class="hud-card col-l"><div class="lbl">V<sub>L</sub>(t)</div><div class="num" id="hudVL">0.00 V</div></div>
+              <div class="hud-card col-c"><div class="lbl">V<sub>C</sub>(t)</div><div class="num" id="hudVC">0.00 V</div></div>
+              <div class="hud-card col-b"><div class="lbl">B(t)∝I</div><div class="num" id="hudB">0.000 T</div></div>
+              <div class="hud-card col-l"><div class="lbl">E<sub>L</sub>∝I²</div><div class="num" id="hudEL">0.00 J</div></div>
+              <div class="hud-card col-c"><div class="lbl">Q(t)=CV<sub>C</sub></div><div class="num" id="hudQ">0.0 µC</div></div>
+              <div class="hud-card col-e"><div class="lbl">E<sub>C</sub>∝Q²</div><div class="num" id="hudEC">0.00 J</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="btn-row">
+            <button type="button" class="act-btn" id="btnPause">一時停止</button>
+            <button type="button" class="act-btn" id="btnReset">初期化</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>電圧振幅 V₀ <span class="slider-val" id="valV0">5.0 V</span></label>
+              <input type="range" id="slV0" min="10" max="100" value="50" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>抵抗 R <span class="slider-val" id="valR">5.0 Ω</span></label>
+              <input type="range" id="slR" min="10" max="200" value="50" step="5">
+            </div>
+            <div class="ctrl-row">
+              <label>インダクタンス L <span class="slider-val" id="valL">0.20 H</span></label>
+              <input type="range" id="slL" min="5" max="100" value="20" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>コンデンサ C <span class="slider-val" id="valC">100 µF</span></label>
+              <input type="range" id="slC" min="20" max="500" value="100" step="5">
+            </div>
+            <div class="ctrl-row">
+              <label>周波数 f <span class="slider-val" id="valF">1.0 Hz</span></label>
+              <input type="range" id="slF" min="2" max="500" value="10" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">1.0×</span></label>
+              <input type="range" id="slSpeed" min="2" max="30" value="10" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">X<sub>L</sub>−X<sub>C</sub> の符号で位相が決まります。f を上げると X<sub>L</sub>↑・X<sub>C</sub>↓。共振付近で I が最大になります。</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const COL = {
+        R: 0x94a3b8, L: 0x60a5fa, C: 0xfde047, V: 0xf87171, VL: 0x60a5fa, VC: 0xfde047,
+        I: 0xe2e8f0, wire: 0x7dd3fc, src: 0x4ade80, e: 0x3b82f6, B: 0x4ade80, B_VOL: 0x1d4ed8,
+        E_VOL: 0x38bdf8, plus: 0xf87171, minus: 0x38bdf8, coil: 0xc084fc,
+      };
+      const HISTORY_SEC = 8, N_E = 280, VIS_SMOOTH = 0.12;
+      const SOL_LEN = 1.05, SOL_R = 0.28, N_TURNS = 11;
+      const R_X = -0.55, L_X = 0.18, C_X = 0.92;
+      const PLATE_GAP = 0.13, PLATE_W = 0.48, PLATE_H = 0.4, PLATE_D = 0.02;
+      const INIT_ROT_X = 0.52, INIT_ROT_Y = 0.82, INIT_ZOOM = 4.8;
+      const ZOOM_MIN = 2.2, ZOOM_MAX = 10, ZOOM_WHEEL = 0.0035;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphVR = document.getElementById("graphVR");
+      const graphIR = document.getElementById("graphIR");
+      const graphVL = document.getElementById("graphVL");
+      const graphIL = document.getElementById("graphIL");
+      const graphVC = document.getElementById("graphVC");
+      const graphIC = document.getElementById("graphIC");
+      const graphPhaseR = document.getElementById("graphPhaseR");
+      const graphPhaseL = document.getElementById("graphPhaseL");
+      const graphPhaseC = document.getElementById("graphPhaseC");
+
+      let paused = false, autoSpin = true;
+      let simTime = 0, theta = 0, timeScale = 1.0;
+      const target = { V0: 5.0, R: 5.0, L: 0.2, C: 100e-6, f: 1.0, speed: 1.0 };
+      const smooth = { V0: 5.0, R: 5.0, L: 0.2, C: 100e-6, f: 1.0, speed: 1.0 };
+      const vis = {
+        v: 0, i: 0, vr: 0, vl: 0, vc: 0, xl: 0, xc: 0, x: 0, z: 0, phi: 0, i0: 0,
+        b: 0, el: 0, q: 0, ec: 0, omega: 0, f0: 0, resonant: false,
+      };
+
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0, lastDt = 0.016;
+      const history = [];
+
+      let scene, camera, renderer, worldGroup, sceneGrid;
+      let circuitScene, circuitCurve;
+      let acBox, acGlowRing, resistorMesh, resistorGlow;
+      let solenoidGroup, solenoidTube, coilGlow, fieldLineGroup, bVolumeMesh, bArrows = [];
+      let capGroup, platePlus, plateMinus, capGlow, eFieldMesh, eFieldLines, eArrows = [];
+      let energyBand, wireMeshes = [];
+      let electronMesh, particles = [];
+      let xlValueSprite, xcValueSprite;
+      let lastXlText = "", lastXcText = "";
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      function rad2deg(r) { return ((r * 180 / Math.PI % 360) + 360) % 360; }
+
+      function calcPhysics(wt) {
+        const omega = 2 * Math.PI * smooth.f;
+        const xl = omega * smooth.L;
+        const xc = omega > 0.001 && smooth.C > 0 ? 1 / (omega * smooth.C) : 0;
+        const x = xl - xc;
+        const z = Math.sqrt(smooth.R * smooth.R + x * x);
+        const i0 = z > 0.001 ? smooth.V0 / z : 0;
+        const phi = Math.atan2(x, smooth.R);
+        const v = smooth.V0 * Math.sin(wt);
+        const i = i0 * Math.sin(wt - phi);
+        const vr = i * smooth.R;
+        const vl = i0 * xl * Math.sin(wt - phi + Math.PI / 2);
+        const vc = i0 * xc * Math.sin(wt - phi - Math.PI / 2);
+        const b = i * 0.09 / (i0 + 0.001);
+        const el = 0.5 * smooth.L * i * i;
+        const q = smooth.C * vc;
+        const ec = 0.5 * q * q / (smooth.C + 1e-9);
+        const f0 = smooth.L > 0 && smooth.C > 0 ? 1 / (2 * Math.PI * Math.sqrt(smooth.L * smooth.C)) : 0;
+        const resonant = Math.abs(x) < 0.15 * Math.max(xl, xc, 1);
+        return { omega, xl, xc, x, z, i0, phi, v, i, vr, vl, vc, b, el, q, ec, f0, resonant };
+      }
+
+      function updateVisSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.V0 = lerp(smooth.V0, target.V0, k);
+        smooth.R = lerp(smooth.R, target.R, k);
+        smooth.L = lerp(smooth.L, target.L, k);
+        smooth.C = lerp(smooth.C, target.C, k);
+        smooth.f = lerp(smooth.f, target.f, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+        const p = calcPhysics(theta);
+        for (const key of Object.keys(vis)) vis[key] = lerp(vis[key], p[key], k);
+      }
+
+      function stepPhysics(dt) {
+        const omega = 2 * Math.PI * smooth.f;
+        theta += omega * dt * timeScale;
+        simTime += dt * timeScale;
+        pushHistory();
+      }
+
+      function pushHistory() {
+        const p = calcPhysics(theta);
+        history.push({ t: simTime, V: p.v, I: p.i, VR: p.vr, VL: p.vl, VC: p.vc });
+        const tCut = simTime - HISTORY_SEC - 1;
+        while (history.length && history[0].t < tCut) history.shift();
+      }
+
+      function makeArrow(dir, origin, len, color) {
+        const d = dir.clone().normalize();
+        const a = new THREE.ArrowHelper(d, origin.clone(), len, color, len * 0.32, len * 0.16);
+        a.line.material.transparent = true;
+        a.cone.material.transparent = true;
+        a.frustumCulled = false;
+        return a;
+      }
+
+      function makeTextSprite(text, color, size) {
+        const c = document.createElement("canvas");
+        c.width = 256; c.height = 128;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.font = `bold ${size || 30}px Inter, Noto Sans JP, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(text, 128, 68);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: new THREE.CanvasTexture(c), transparent: true, depthTest: false,
+        }));
+        spr.scale.set(0.5, 0.25, 1);
+        spr.renderOrder = 10;
+        return spr;
+      }
+
+      function orientRod(mesh, from, to) {
+        const dir = new THREE.Vector3().subVectors(to, from);
+        const len = dir.length();
+        if (len < 0.002) { mesh.visible = false; return; }
+        mesh.visible = true;
+        mesh.position.copy(from).addScaledVector(dir, 0.5);
+        mesh.scale.set(1, len, 1);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      }
+
+      function addWireTube(pts, radius) {
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const mesh = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 28, radius || 0.01, 8, false),
+          new THREE.MeshStandardMaterial({
+            color: COL.wire, metalness: 0.8, roughness: 0.25,
+            emissive: 0x0c4a6e, emissiveIntensity: 0.1,
+          })
+        );
+        circuitScene.add(mesh);
+        wireMeshes.push(mesh);
+        return mesh;
+      }
+
+      function getCircuitPoints() {
+        const acR = -1.65;
+        const yTop = 0.22, yBot = -0.1, zF = 0.1;
+        const rL = R_X - 0.14, rR = R_X + 0.14;
+        const coilL = L_X - SOL_LEN / 2, coilR = L_X + SOL_LEN / 2;
+        const capL = C_X - PLATE_GAP / 2, capR = C_X + PLATE_GAP / 2;
+        return [
+          new THREE.Vector3(acR + 0.22, yTop, 0),
+          new THREE.Vector3(-1.05, yTop, 0.14),
+          new THREE.Vector3(rL, 0.1, 0.12),
+          new THREE.Vector3(rR, 0.1, 0.06),
+          new THREE.Vector3(coilL, 0.1, -0.06),
+          new THREE.Vector3(coilR, 0.1, -0.02),
+          new THREE.Vector3(capL, 0.1, 0.08),
+          new THREE.Vector3(capR, 0.1, 0.08),
+          new THREE.Vector3(1.3, yBot, zF),
+          new THREE.Vector3(acR + 0.22, yBot, 0),
+          new THREE.Vector3(acR + 0.22, yTop, 0),
+        ];
+      }
+
+      function posOnHelix(t, turns) {
+        const frac = (t % turns) / turns;
+        const ang = t * Math.PI * 2;
+        return new THREE.Vector3(-SOL_LEN / 2 + frac * SOL_LEN, Math.cos(ang) * SOL_R, Math.sin(ang) * SOL_R);
+      }
+
+      function spawnElectron() { return { u: Math.random(), speed: 0.08 + Math.random() * 0.14 }; }
+
+      function buildResistor() {
+        resistorMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.28, 0.1, 0.1),
+          new THREE.MeshStandardMaterial({ color: COL.R, metalness: 0.65, roughness: 0.35, emissive: 0x334155, emissiveIntensity: 0.05 })
+        );
+        resistorMesh.position.set(R_X, 0.1, 0.1);
+        circuitScene.add(resistorMesh);
+        resistorGlow = new THREE.PointLight(0xef4444, 0, 2.5, 2);
+        resistorGlow.position.copy(resistorMesh.position);
+        circuitScene.add(resistorGlow);
+        const lbl = makeTextSprite("R", "#cbd5e1", 28);
+        lbl.position.set(R_X, 0.28, 0.1);
+        lbl.scale.set(0.4, 0.2, 1);
+        circuitScene.add(lbl);
+      }
+
+      function buildSolenoid() {
+        solenoidGroup = new THREE.Group();
+        const tubePts = [];
+        for (let i = 0; i <= N_TURNS * 28; i++) {
+          const u = i / 28;
+          const ang = u * Math.PI * 2;
+          tubePts.push(new THREE.Vector3(-SOL_LEN / 2 + (u / N_TURNS) * SOL_LEN, Math.cos(ang) * SOL_R, Math.sin(ang) * SOL_R));
+        }
+        solenoidTube = new THREE.Mesh(
+          new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tubePts), 120, 0.018, 10, false),
+          new THREE.MeshStandardMaterial({ color: COL.coil, metalness: 0.78, roughness: 0.22, emissive: 0x6d28d9, emissiveIntensity: 0.14 })
+        );
+        solenoidGroup.add(solenoidTube);
+        coilGlow = new THREE.PointLight(0x60a5fa, 0.3, 3.5, 2);
+        solenoidGroup.add(coilGlow);
+        fieldLineGroup = new THREE.Group();
+        solenoidGroup.add(fieldLineGroup);
+        for (let row = -2; row <= 2; row++) {
+          for (let col = 0; col < 4; col++) {
+            const pts = [];
+            for (let i = 0; i <= 20; i++) {
+              pts.push(new THREE.Vector3(-SOL_LEN / 2 + (i / 20) * SOL_LEN, row * 0.11, (col - 1.5) * 0.13));
+            }
+            fieldLineGroup.add(new THREE.Line(
+              new THREE.BufferGeometry().setFromPoints(pts),
+              new THREE.LineBasicMaterial({ color: COL.B, transparent: true, opacity: 0.4 })
+            ));
+          }
+        }
+        bVolumeMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(SOL_LEN * 0.85, SOL_R * 1.3, SOL_R * 1.3),
+          new THREE.MeshBasicMaterial({ color: COL.B_VOL, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+        );
+        solenoidGroup.add(bVolumeMesh);
+        bArrows = [];
+        for (let i = 0; i < 5; i++) {
+          const arr = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-0.12, (i - 2) * 0.09, 0), 0.36, COL.B);
+          arr.visible = false;
+          solenoidGroup.add(arr);
+          bArrows.push(arr);
+        }
+        xlValueSprite = makeTextSprite("X_L", "#93c5fd", 24);
+        xlValueSprite.position.set(0, SOL_R + 0.22, 0);
+        xlValueSprite.scale.set(0.48, 0.22, 1);
+        solenoidGroup.add(xlValueSprite);
+        solenoidGroup.position.set(L_X, 0.1, -0.04);
+        circuitScene.add(solenoidGroup);
+      }
+
+      function buildCapacitor() {
+        capGroup = new THREE.Group();
+        platePlus = new THREE.Mesh(
+          new THREE.BoxGeometry(PLATE_D, PLATE_H, PLATE_W),
+          new THREE.MeshStandardMaterial({ color: COL.plus, metalness: 0.72, roughness: 0.24, emissive: 0xdc2626, emissiveIntensity: 0.15 })
+        );
+        platePlus.position.x = -PLATE_GAP / 2;
+        capGroup.add(platePlus);
+        plateMinus = new THREE.Mesh(
+          new THREE.BoxGeometry(PLATE_D, PLATE_H, PLATE_W),
+          new THREE.MeshStandardMaterial({ color: COL.minus, metalness: 0.72, roughness: 0.24, emissive: 0x0284c7, emissiveIntensity: 0.15 })
+        );
+        plateMinus.position.x = PLATE_GAP / 2;
+        capGroup.add(plateMinus);
+        capGlow = new THREE.PointLight(0xfde047, 0.28, 3.2, 2);
+        capGroup.add(capGlow);
+        eFieldMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(PLATE_GAP * 0.88, PLATE_H * 0.7, PLATE_W * 0.78),
+          new THREE.MeshBasicMaterial({ color: COL.E_VOL, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+        );
+        capGroup.add(eFieldMesh);
+        eFieldLines = new THREE.Group();
+        for (let row = -2; row <= 2; row++) {
+          for (let col = 0; col < 3; col++) {
+            const pts = [new THREE.Vector3(-PLATE_GAP / 2 + 0.02, row * 0.09, (col - 1) * 0.15), new THREE.Vector3(PLATE_GAP / 2 - 0.02, row * 0.09, (col - 1) * 0.15)];
+            eFieldLines.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: COL.E_VOL, transparent: true, opacity: 0.38 })));
+          }
+        }
+        capGroup.add(eFieldLines);
+        eArrows = [];
+        for (let i = 0; i < 4; i++) {
+          const arr = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, (i - 1.5) * 0.1, 0), 0.3, COL.E_VOL);
+          arr.visible = false;
+          capGroup.add(arr);
+          eArrows.push(arr);
+        }
+        xcValueSprite = makeTextSprite("X_C", "#fde68a", 24);
+        xcValueSprite.position.set(0, PLATE_H / 2 + 0.22, 0);
+        xcValueSprite.scale.set(0.48, 0.22, 1);
+        capGroup.add(xcValueSprite);
+        capGroup.position.set(C_X, 0.1, 0.08);
+        circuitScene.add(capGroup);
+      }
+
+      function buildCircuitScene() {
+        circuitScene = new THREE.Group();
+        circuitScene.position.set(0, 0.02, -0.12);
+        wireMeshes = [];
+        const acR = -1.65;
+        acBox = new THREE.Mesh(
+          new THREE.BoxGeometry(0.42, 0.36, 0.3),
+          new THREE.MeshStandardMaterial({ color: 0x14532d, metalness: 0.55, roughness: 0.35, emissive: COL.src, emissiveIntensity: 0.18 })
+        );
+        acBox.position.set(acR, 0.06, 0);
+        circuitScene.add(acBox);
+        acGlowRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.28, 0.014, 10, 40),
+          new THREE.MeshBasicMaterial({ color: COL.src, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        acGlowRing.position.copy(acBox.position);
+        acGlowRing.rotation.x = Math.PI / 2;
+        circuitScene.add(acGlowRing);
+        const acLbl = makeTextSprite("AC", "#4ade80", 34);
+        acLbl.position.set(acR, 0.34, 0);
+        circuitScene.add(acLbl);
+
+        buildResistor();
+        buildSolenoid();
+        buildCapacitor();
+
+        const rL = R_X - 0.14, rR = R_X + 0.14;
+        const coilL = L_X - SOL_LEN / 2, coilR = L_X + SOL_LEN / 2;
+        const capL = C_X - PLATE_GAP / 2, capR = C_X + PLATE_GAP / 2;
+        const yTop = 0.22, yBot = -0.1, zF = 0.1;
+        addWireTube([new THREE.Vector3(acR + 0.22, yTop, 0), new THREE.Vector3(-1.05, yTop, 0.14), new THREE.Vector3(rL, 0.1, 0.12)]);
+        addWireTube([new THREE.Vector3(rR, 0.1, 0.06), new THREE.Vector3(coilL, 0.1, -0.06)]);
+        addWireTube([new THREE.Vector3(coilR, 0.1, -0.02), new THREE.Vector3(capL, 0.1, 0.08)]);
+        addWireTube([new THREE.Vector3(capR, 0.1, 0.08), new THREE.Vector3(1.3, yBot, zF), new THREE.Vector3(acR + 0.22, yBot, 0)]);
+        addWireTube([new THREE.Vector3(acR + 0.22, yBot, 0), new THREE.Vector3(acR + 0.22, yTop, 0)]);
+
+        energyBand = new THREE.Mesh(
+          new THREE.BoxGeometry(1.1, 0.06, 0.18),
+          new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+        );
+        energyBand.position.set((L_X + C_X) / 2, 0.18, 0.02);
+        circuitScene.add(energyBand);
+
+        circuitCurve = new THREE.CatmullRomCurve3(getCircuitPoints(), true, "catmullrom", 0.35);
+        electronMesh = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(0.008, 6, 6),
+          new THREE.MeshStandardMaterial({ color: COL.e, emissive: 0x2563eb, emissiveIntensity: 0.85, metalness: 0.15, roughness: 0.35 }),
+          N_E
+        );
+        circuitScene.add(electronMesh);
+        particles.length = 0;
+        for (let n = 0; n < N_E; n++) particles.push(spawnElectron());
+
+        const deck = new THREE.Mesh(
+          new THREE.BoxGeometry(4.2, 0.02, 1.45),
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.25, roughness: 0.65, transparent: true, opacity: 0.55 })
+        );
+        deck.position.set(-0.1, -0.38, 0);
+        circuitScene.add(deck);
+        circuitScene.visible = true;
+        worldGroup.add(circuitScene);
+      }
+
+      function updateCircuitVisuals(wt, iNorm, sign) {
+        const p = calcPhysics(wt);
+        const heat = iNorm * iNorm;
+        if (resistorMesh) {
+          resistorMesh.material.emissiveIntensity = 0.05 + heat * 0.85;
+          resistorMesh.material.emissive.setHex(heat > 0.15 ? 0xef4444 : 0x334155);
+        }
+        if (resistorGlow) resistorGlow.intensity = heat * 1.2;
+
+        const bNorm = clamp(Math.abs(p.b), 0, 1.2);
+        if (bVolumeMesh) bVolumeMesh.material.opacity = bNorm * 0.22;
+        if (coilGlow) coilGlow.intensity = 0.2 + bNorm * 1.1;
+        fieldLineGroup.children.forEach((ln) => { ln.material.opacity = 0.15 + bNorm * 0.55; });
+        bArrows.forEach((arr, i) => {
+          const s = bNorm * (0.5 + 0.1 * i);
+          arr.visible = s > 0.04;
+          if (arr.visible) {
+            arr.setLength(0.2 + s * 0.5, 0.08 + s * 0.15, 0.05 + s * 0.08);
+            arr.setColor(COL.B);
+          }
+        });
+
+        const qNorm = clamp(Math.abs(p.q) / (smooth.C * smooth.V0 + 0.001), 0, 1);
+        if (platePlus) platePlus.material.emissiveIntensity = 0.12 + qNorm * 0.75;
+        if (plateMinus) plateMinus.material.emissiveIntensity = 0.12 + qNorm * 0.75;
+        if (eFieldMesh) eFieldMesh.material.opacity = qNorm * 0.35;
+        if (capGlow) capGlow.intensity = 0.15 + qNorm * 0.9;
+        eFieldLines.children.forEach((ln) => { ln.material.opacity = 0.12 + qNorm * 0.5; });
+        eArrows.forEach((arr, i) => {
+          const s = qNorm * (0.45 + i * 0.08);
+          arr.visible = s > 0.04;
+          if (arr.visible) arr.setLength(0.15 + s * 0.4, 0.06, 0.04);
+        });
+
+        const magE = 0.5 * p.el / (0.5 * smooth.L * p.i0 * p.i0 + 0.001);
+        const capE = p.ec / (0.5 * smooth.C * smooth.V0 * smooth.V0 + 0.001);
+        if (energyBand) {
+          energyBand.material.opacity = p.resonant ? 0.15 + 0.25 * Math.abs(Math.sin(2 * wt)) : 0.04;
+          energyBand.material.color.setHex(magE > capE ? 0x60a5fa : 0xfde047);
+        }
+
+        const xlTxt = p.xl.toFixed(2) + " Ω";
+        if (xlTxt !== lastXlText && xlValueSprite) {
+          lastXlText = xlTxt;
+          xlValueSprite.material.map.dispose();
+          xlValueSprite.material.dispose();
+          const ns = makeTextSprite("X_L=" + xlTxt, "#93c5fd", 20);
+          ns.position.copy(xlValueSprite.position);
+          ns.scale.copy(xlValueSprite.scale);
+          solenoidGroup.remove(xlValueSprite);
+          xlValueSprite = ns;
+          solenoidGroup.add(xlValueSprite);
+        }
+        const xcTxt = p.xc.toFixed(1) + " Ω";
+        if (xcTxt !== lastXcText && xcValueSprite) {
+          lastXcText = xcTxt;
+          xcValueSprite.material.map.dispose();
+          xcValueSprite.material.dispose();
+          const ns = makeTextSprite("X_C=" + xcTxt, "#fde68a", 20);
+          ns.position.copy(xcValueSprite.position);
+          ns.scale.copy(xcValueSprite.scale);
+          capGroup.remove(xcValueSprite);
+          xcValueSprite = ns;
+          capGroup.add(xcValueSprite);
+        }
+
+        if (acGlowRing) acGlowRing.material.opacity = 0.25 + 0.35 * Math.abs(Math.sin(wt));
+        updateElectrons(iNorm, sign);
+      }
+
+      function updateElectrons(iNorm, sign) {
+        if (!circuitCurve || !electronMesh) return;
+        const dummy = new THREE.Object3D();
+        for (let n = 0; n < particles.length; n++) {
+          const p = particles[n];
+          p.u += p.speed * (0.2 + iNorm * 2.2) * lastDt * sign;
+          if (p.u > 1) p.u -= 1;
+          if (p.u < 0) p.u += 1;
+          const pos = circuitCurve.getPoint(p.u);
+          dummy.position.copy(pos);
+          dummy.scale.setScalar(0.6 + iNorm * 1.6);
+          dummy.updateMatrix();
+          electronMesh.setMatrixAt(n, dummy.matrix);
+        }
+        electronMesh.instanceMatrix.needsUpdate = true;
+      }
+
+      function updateVisuals() {
+        const wt = theta;
+        const p = calcPhysics(wt);
+        const iNorm = clamp(Math.abs(p.i) / (p.i0 + 0.001), 0, 1.2);
+        const sign = p.i >= 0 ? 1 : -1;
+        if (circuitScene) updateCircuitVisuals(wt, iNorm, sign);
+      }
+
+      function tickDecimals(v) {
+        const a = Math.abs(v);
+        if (a >= 100) return 0;
+        if (a >= 10) return 1;
+        if (a >= 1) return 2;
+        if (a >= 0.1) return 3;
+        return 4;
+      }
+
+      function formatTick(v, d) {
+        const r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
+        return Number.isInteger(r) ? String(r) : r.toFixed(d);
+      }
+
+      function formatCapC(c) {
+        if (c >= 1e-3) return (c * 1e3).toFixed(1) + " mF";
+        return (c * 1e6).toFixed(0) + " µF";
+      }
+
+      function formatPhi(phi) {
+        const d = Math.round(rad2deg(phi));
+        if (Math.abs(d) < 2) return "0°（同相）";
+        return (d > 0 ? "+" : "") + d + "°" + (d > 0 ? "遅れ" : "進み");
+      }
+
+      function historyRange(key, floorMin, floorMax) {
+        let lo = floorMin, hi = floorMax;
+        const tEnd = history.length ? history[history.length - 1].t : 0;
+        const tStart = Math.max(0, tEnd - HISTORY_SEC);
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const v = pt[key];
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        });
+        const span = Math.max(hi - lo, 0.01);
+        return { vmin: lo - span * 0.15, vmax: hi + span * 0.15 };
+      }
+
+      function drawGraph(canvas, key, color, vmin, vmax, unit) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 200);
+        const h = Math.max(parent ? parent.clientHeight : 0, 100);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 44, r: 10, t: 16, b: 24 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        const range = Math.max(vmax - vmin, 0.01);
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        if (history.length < 2) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("データ収集中…", M.l + 8, h / 2);
+          return;
+        }
+        const tEnd = history[history.length - 1].t;
+        const tStart = Math.max(0, tEnd - HISTORY_SEC);
+        const zeroY = M.t + ph * (1 - (0 - vmin) / range);
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.beginPath();
+        ctx.moveTo(M.l, zeroY);
+        ctx.lineTo(M.l + pw, zeroY);
+        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let started = false;
+        history.forEach((pt) => {
+          if (pt.t < tStart) return;
+          const x = M.l + ((pt.t - tStart) / HISTORY_SEC) * pw;
+          const y = M.t + ph * (1 - (pt[key] - vmin) / range);
+          if (!started) { ctx.moveTo(x, y); started = true; }
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(formatTick(vmax, tickDecimals(vmax)) + unit, M.l - 5, M.t + 9);
+        ctx.fillText(formatTick(vmin, tickDecimals(vmin)) + unit, M.l - 5, M.t + ph);
+      }
+
+      function drawComponentPhaseGraph(canvas, opts) {
+        if (!canvas) return;
+        const { vKey, vColor, iColor, vAmp, iAmp, lead } = opts;
+        const parent = canvas.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 160);
+        const h = Math.max(parent ? parent.clientHeight : 0, 90);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const M = { l: 42, r: 8, t: 18, b: 28 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        const iScale = iAmp > 1e-6 ? vAmp / iAmp : 1;
+        const vmin = -vAmp * 1.12, vmax = vAmp * 1.12;
+        const range = vmax - vmin;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        if (history.length < 2) return;
+        const tEnd = history[history.length - 1].t;
+        const tStart = Math.max(0, tEnd - HISTORY_SEC);
+        function tToX(t) { return M.l + ((t - tStart) / HISTORY_SEC) * pw; }
+        function valToY(val) { return M.t + ph * (1 - (val - vmin) / range); }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.beginPath();
+        ctx.moveTo(M.l, valToY(0));
+        ctx.lineTo(M.l + pw, valToY(0));
+        ctx.stroke();
+
+        function drawLine(getVal, color) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          let started = false;
+          history.forEach((pt) => {
+            if (pt.t < tStart) return;
+            const x = tToX(pt.t);
+            const y = valToY(getVal(pt));
+            if (!started) { ctx.moveTo(x, y); started = true; }
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        }
+        drawLine((pt) => pt[vKey], vColor);
+        drawLine((pt) => pt.I * iScale, iColor);
+
+        const omega = 2 * Math.PI * smooth.f;
+        if (omega > 0.01 && lead !== "same") {
+          const period = 2 * Math.PI / omega;
+          const quarter = period / 4;
+          const phi = vis.phi;
+          let xFirst = null, xSecond = null;
+          for (let n = Math.ceil(tStart / period); ; n++) {
+            if (lead === "vLeads") {
+              const tv = n * period + phi / omega;
+              const ti = tv + quarter;
+              if (ti > tEnd) break;
+              if (tv >= tStart && ti <= tEnd) { xFirst = tToX(tv); xSecond = tToX(ti); break; }
+            } else {
+              const ti = n * period + (phi + Math.PI / 2) / omega;
+              const tv = ti + quarter;
+              if (tv > tEnd) break;
+              if (ti >= tStart && tv <= tEnd) { xFirst = tToX(ti); xSecond = tToX(tv); break; }
+            }
+          }
+          if (xFirst !== null && xSecond !== null) {
+            const xL = Math.min(xFirst, xSecond), xR = Math.max(xFirst, xSecond);
+            ctx.fillStyle = lead === "iLeads" ? "rgba(56,189,248,0.14)" : "rgba(96,165,250,0.14)";
+            ctx.fillRect(xL, M.t, Math.max(xR - xL, 2), ph);
+            const arrowY = M.t + ph + 10;
+            ctx.strokeStyle = iColor;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(xL, arrowY);
+            ctx.lineTo(xR, arrowY);
+            ctx.stroke();
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "8px Inter, Noto Sans JP, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("T/4 = 90°", (xL + xR) / 2, arrowY - 4);
+          }
+        }
+      }
+
+      function drawAllComponentGraphs() {
+        const vRAmp = vis.i0 * smooth.R;
+        const vLAmp = vis.i0 * vis.xl;
+        const vCAmp = vis.i0 * vis.xc;
+
+        const vrr = historyRange("VR", -vRAmp * 1.2, vRAmp * 1.2);
+        drawGraph(graphVR, "VR", "#f87171", vrr.vmin, vrr.vmax, " V");
+        const irr = historyRange("I", -vis.i0 * 1.2, vis.i0 * 1.2);
+        drawGraph(graphIR, "I", "#fde047", irr.vmin, irr.vmax, " A");
+        drawComponentPhaseGraph(graphPhaseR, { vKey: "VR", vColor: "#f87171", iColor: "#fde047", vAmp: vRAmp, iAmp: vis.i0, lead: "same" });
+
+        const vlr = historyRange("VL", -vLAmp * 1.2, vLAmp * 1.2);
+        drawGraph(graphVL, "VL", "#60a5fa", vlr.vmin, vlr.vmax, " V");
+        drawGraph(graphIL, "I", "#fde047", irr.vmin, irr.vmax, " A");
+        drawComponentPhaseGraph(graphPhaseL, { vKey: "VL", vColor: "#60a5fa", iColor: "#fde047", vAmp: vLAmp || smooth.V0 * 0.01, iAmp: vis.i0, lead: "vLeads" });
+
+        const vcr = historyRange("VC", -vCAmp * 1.2, vCAmp * 1.2);
+        drawGraph(graphVC, "VC", "#fde047", vcr.vmin, vcr.vmax, " V");
+        drawGraph(graphIC, "I", "#38bdf8", irr.vmin, irr.vmax, " A");
+        drawComponentPhaseGraph(graphPhaseC, { vKey: "VC", vColor: "#fde047", iColor: "#38bdf8", vAmp: vCAmp || smooth.V0 * 0.01, iAmp: vis.i0, lead: "iLeads" });
+      }
+
+      function updateHUD() {
+        document.getElementById("valV0").textContent = smooth.V0.toFixed(1) + " V";
+        document.getElementById("valR").textContent = smooth.R.toFixed(1) + " Ω";
+        document.getElementById("valL").textContent = smooth.L.toFixed(2) + " H";
+        document.getElementById("valC").textContent = formatCapC(smooth.C);
+        document.getElementById("valF").textContent = smooth.f.toFixed(1) + " Hz";
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("hudV").textContent = vis.v.toFixed(2) + " V";
+        document.getElementById("hudI").textContent = vis.i.toFixed(3) + " A";
+        document.getElementById("hudXL").textContent = vis.xl.toFixed(2) + " Ω";
+        document.getElementById("hudXC").textContent = vis.xc.toFixed(1) + " Ω";
+        document.getElementById("hudX").textContent = vis.x.toFixed(2) + " Ω";
+        document.getElementById("hudPhi").textContent = formatPhi(vis.phi);
+        document.getElementById("hudI0").textContent = vis.i0.toFixed(3) + " A";
+        document.getElementById("hudR").textContent = smooth.R.toFixed(1) + " Ω";
+        document.getElementById("hudF").textContent = smooth.f.toFixed(1) + " Hz";
+        document.getElementById("hudF0").textContent = vis.f0 > 0 ? vis.f0.toFixed(1) + " Hz" : "—";
+        document.getElementById("hudVR").textContent = vis.vr.toFixed(2) + " V";
+        document.getElementById("hudVL").textContent = vis.vl.toFixed(2) + " V";
+        document.getElementById("hudVC").textContent = vis.vc.toFixed(2) + " V";
+        document.getElementById("hudB").textContent = vis.b.toFixed(3) + " T";
+        document.getElementById("hudEL").textContent = vis.el.toFixed(3) + " J";
+        document.getElementById("hudQ").textContent = (vis.q * 1e6).toFixed(1) + " µC";
+        document.getElementById("hudEC").textContent = vis.ec.toFixed(4) + " J";
+
+        const resCard = document.getElementById("hudResCard");
+        if (resCard) resCard.classList.toggle("resonance", vis.resonant);
+        document.getElementById("resBadge").textContent = "f₀=" + (vis.f0 > 0 ? vis.f0.toFixed(1) : "—") + " Hz";
+
+        document.getElementById("formulaLive").innerHTML =
+          `V=${vis.v.toFixed(2)}V · I=${vis.i.toFixed(3)}A · X=${vis.x.toFixed(2)}Ω · <span style="color:#c4b5fd">φ=${formatPhi(vis.phi)}</span>`;
+
+        document.getElementById("graphValVR").textContent = vis.vr.toFixed(2) + " V";
+        document.getElementById("graphValIR").textContent = vis.i.toFixed(3) + " A";
+        document.getElementById("graphValVL").textContent = vis.vl.toFixed(2) + " V";
+        document.getElementById("graphValIL").textContent = vis.i.toFixed(3) + " A";
+        document.getElementById("graphValVC").textContent = vis.vc.toFixed(2) + " V";
+        document.getElementById("graphValIC").textContent = vis.i.toFixed(3) + " A";
+        document.getElementById("graphValPhaseR").textContent = "同相";
+        document.getElementById("graphValPhaseL").textContent = "V→I: 90°";
+        document.getElementById("graphValPhaseC").textContent = "I→V: 90°";
+
+        drawAllComponentGraphs();
+
+        let hint = `X<sub>L</sub>=${vis.xl.toFixed(2)}Ω · X<sub>C</sub>=${vis.xc.toFixed(1)}Ω · I₀=${vis.i0.toFixed(3)}A · f₀≈${vis.f0.toFixed(1)}Hz · φ=${formatPhi(vis.phi)}`;
+        if (vis.resonant) hint += ' · <span style="color:#fde68a">共振！</span>';
+        document.getElementById("hintText").innerHTML = hint;
+      }
+
+      function resetSim() {
+        simTime = 0; theta = 0; history.length = 0;
+        target.V0 = 5.0; target.R = 5.0; target.L = 0.2; target.C = 100e-6; target.f = 1.0; target.speed = 1.0;
+        smooth.V0 = 5.0; smooth.R = 5.0; smooth.L = 0.2; smooth.C = 100e-6; smooth.f = 1.0; smooth.speed = 1.0;
+        document.getElementById("slV0").value = 50;
+        document.getElementById("slR").value = 50;
+        document.getElementById("slL").value = 20;
+        document.getElementById("slC").value = 100;
+        document.getElementById("slF").value = 10;
+        document.getElementById("slSpeed").value = 10;
+        paused = false;
+        document.getElementById("btnPause").textContent = "一時停止";
+        pushHistory();
+      }
+
+      function setResonantFreq() {
+        const f0 = smooth.L > 0 && smooth.C > 0 ? 1 / (2 * Math.PI * Math.sqrt(smooth.L * smooth.C)) : 1;
+        target.f = clamp(f0, 0.2, 50);
+        document.getElementById("slF").value = Math.round(target.f * 10);
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(50, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x505070, 0.72));
+        const key = new THREE.DirectionalLight(0xffffff, 1.15);
+        key.position.set(4, 5, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x60a5fa, 0.45, 14);
+        rim.position.set(-2, 2, 4);
+        scene.add(rim);
+        const fill = new THREE.DirectionalLight(0x93c5fd, 0.35);
+        fill.position.set(-3, 2, -2);
+        scene.add(fill);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        sceneGrid = new THREE.GridHelper(8, 28, 0x334155, 0x1e293b);
+        sceneGrid.position.y = -0.35;
+        worldGroup.add(sceneGrid);
+
+        buildCircuitScene();
+
+        wrap.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; wrap.setPointerCapture(e.pointerId); });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => { e.preventDefault(); zoom = clamp(zoom + e.deltaY * ZOOM_WHEEL, ZOOM_MIN, ZOOM_MAX); }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function bindControls() {
+        document.getElementById("slV0").addEventListener("input", (e) => { target.V0 = +e.target.value / 10; });
+        document.getElementById("slR").addEventListener("input", (e) => { target.R = +e.target.value / 10; });
+        document.getElementById("slL").addEventListener("input", (e) => { target.L = +e.target.value / 100; });
+        document.getElementById("slC").addEventListener("input", (e) => { target.C = +e.target.value * 1e-6; });
+        document.getElementById("slF").addEventListener("input", (e) => { target.f = +e.target.value / 10; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnResFreq").addEventListener("click", setResonantFreq);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        lastDt = dt;
+        if (!paused) stepPhysics(dt);
+        updateVisSmooth();
+        updateVisuals();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.04;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 0.35,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0, 0.12, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        resetSim();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>
