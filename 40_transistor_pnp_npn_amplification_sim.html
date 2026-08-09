@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>23章 電流 — トランジスタ（npn・pnp）増幅</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --panel: rgba(10, 12, 28, 0.92); --border: rgba(251, 191, 36, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1628 42%, #101820 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.4), rgba(248,113,113,0.35));
+      border: 1px solid rgba(56,189,248,0.45); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+      font-size: 0.86rem; color: #bae6fd; text-align: center; line-height: 1.65;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #060a14; border: 1px solid rgba(56,189,248,0.2);
+      box-shadow: inset 0 0 48px rgba(0,0,0,0.45);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(500px, 62dvh);
+      min-height: 420px; touch-action: none;
+    }
+    .mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .mode-btn {
+      flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
+      color: #cbd5e1; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    }
+    .mode-btn.is-active {
+      background: rgba(56,189,248,0.18); border-color: rgba(56,189,248,0.55); color: #bae6fd;
+    }
+    .mode-btn.is-pnp.is-active {
+      background: rgba(248,113,113,0.18); border-color: rgba(248,113,113,0.55); color: #fca5a5;
+    }
+    .mode-guide {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.28);
+      font-size: 0.84rem; color: #bae6fd; line-height: 1.65;
+    }
+    .preset-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px;
+    }
+    .preset-label { font-size: 0.8rem; color: var(--muted); width: 100%; }
+    @media (min-width: 640px) { .preset-label { width: auto; } }
+    .preset-btn {
+      flex: 1; min-width: 140px; padding: 9px 12px; border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
+      color: #cbd5e1; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .preset-btn.is-active {
+      background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.55); color: #bae6fd;
+    }
+    .preset-btn.is-recommended { border-color: rgba(250,204,21,0.45); }
+    .preset-btn.is-recommended.is-active {
+      background: rgba(250,204,21,0.15); border-color: rgba(250,204,21,0.65); color: #fde68a;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 860px) { .param-grid { grid-template-columns: repeat(4, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .toggle-btn {
+      padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(148,163,184,0.35);
+      background: rgba(15,30,45,0.65); color: #cbd5e1; font: inherit; font-size: 0.84rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-on {
+      background: rgba(74,222,128,0.2); border-color: rgba(74,222,128,0.55); color: #bbf7d0;
+    }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(3, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .readout.is-b { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.28); }
+    .readout.is-b dd { color: #fde68a; }
+    .readout.is-c { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
+    .readout.is-c dd { color: #bae6fd; }
+    .readout.is-v { background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.28); }
+    .readout.is-v dd { color: #bbf7d0; }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.86rem; font-weight: 700; color: #eef2ff; }
+    .legend-row {
+      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+      font-size: 0.76rem; color: var(--muted);
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.86rem; color: #bae6fd; line-height: 1.65; text-align: center;
+    }
+    .explain-box {
+      margin-top: 10px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(250,204,21,0.06); border: 1px solid rgba(250,204,21,0.28);
+      font-size: 0.84rem; color: #fde68a; line-height: 1.75;
+    }
+    .explain-box strong { color: #fef3c7; }
+    .explain-box ul { margin: 8px 0 0; padding-left: 1.2em; }
+    .explain-box li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">▲</div>
+      <p class="chapter-label">第23章 — 電流</p>
+      <h2>トランジスタ — npn・pnp 増幅作用</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>ベース電流でコレクタ電流を制御する</h3>
+      <p>
+        トランジスタは「ベースの小さな電流変化で、コレクタの大きな電流を変化させる」増幅素子です。
+        npn では電子、pnp では正孔がエミッタからベースへ注入され、ベース–エミッタは順バイアス、
+        ベース–コレクタは逆バイアスで動作します。
+      </p>
+      <div class="formula-box">
+        v<sub>in</sub>(t)=V<sub>BE</sub>+A<sub>in</sub>sin(2πf<sub>in</sub>t) ·
+        i<sub>B</sub>=k<sub>B</sub>·max(0,|v<sub>in</sub>|−V<sub>th</sub>) ·
+        i<sub>C</sub>=β·i<sub>B</sub> · v<sub>out</sub>=V<sub>CC</sub>−R<sub>C</sub>·i<sub>C</sub>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas" width="900" height="500" aria-label="トランジスタ実空間と入出力波形"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#38bdf8">● 青 ＝ 電子</span>
+        <span style="color:#f87171">● 赤 ＝ 正孔</span>
+        <span style="color:#4ade80">● 緑 ＝ ドナー（n型）</span>
+        <span style="color:#c084fc">● 紫 ＝ アクセプタ（p型）</span>
+        <span>左＝チップ内部の様子 · 右＝入力と出力の電圧波形</span>
+      </div>
+
+      <div class="explain-box" id="explainBox">
+        <strong>見方（高校生向け）</strong>
+        <ul>
+          <li><strong>左（実空間）</strong>：トランジスタの中を横から見た図。青＝電子、赤＝正孔。<strong>npn</strong>では青い e⁻ が左→右へ、赤い h⁺ はベース内でゆっくり動いて e⁻ と再結合。<strong>pnp</strong>では赤い h⁺ が左→右へ、青い e⁻ はベース内でゆっくり動いて h⁺ と再結合。</li>
+          <li><strong>上の黄い波 v<sub>in</sub></strong>：ベースへの<strong>入力電圧</strong>（小さな信号）。スライダー V<sub>BE</sub>＋入力 ON で決まります。</li>
+          <li><strong>下の緑の波 v<sub>out</sub></strong>：コレクタの<strong>出力電圧</strong>。v<sub>in</sub>が上がると v<sub>out</sub>は下がる（<strong>逆位相＝位相が逆</strong>）のがコモンエミッタ増幅の特徴です。</li>
+        </ul>
+      </div>
+
+      <div class="mode-row">
+        <button type="button" class="mode-btn is-active" data-mode="npn">npn モード</button>
+        <button type="button" class="mode-btn is-pnp" data-mode="pnp">pnp モード</button>
+      </div>
+      <p class="mode-guide" id="modeGuide">—</p>
+
+      <div class="preset-row">
+        <span class="preset-label">増幅の典型：</span>
+        <button type="button" class="preset-btn is-recommended is-active" data-scenario="npn_amplify">✓ npn 増幅（正解）</button>
+        <button type="button" class="preset-btn" data-scenario="pnp_amplify">pnp 増幅（正解）</button>
+        <button type="button" class="preset-btn" data-scenario="cutoff">カットオフ（入力 OFF）</button>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="vbeSlider">ベースバイアス V<sub>BE</sub> <span class="slider-val" id="vbeVal">0.65 V</span></label>
+          <input type="range" id="vbeSlider" min="-80" max="80" value="65" step="1">
+        </div>
+        <div>
+          <label for="vccSlider">コレクタ電源 V<sub>CC</sub> <span class="slider-val" id="vccVal">5.0 V</span></label>
+          <input type="range" id="vccSlider" min="30" max="120" value="50" step="1">
+        </div>
+        <div>
+          <label for="ainSlider">入力振幅 A<sub>in</sub> <span class="slider-val" id="ainVal">0.10 V</span></label>
+          <input type="range" id="ainSlider" min="0" max="30" value="10" step="1">
+        </div>
+        <div>
+          <label for="finSlider">入力周波数 f<sub>in</sub> <span class="slider-val" id="finVal">1.0 Hz</span></label>
+          <input type="range" id="finSlider" min="2" max="50" value="10" step="1">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="toggle-btn is-on" id="inputToggle">入力 ON</button>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout is-b"><dt>増幅率 β</dt><dd id="readBeta">—</dd></dl>
+        <dl class="readout is-b"><dt>ベース電流 i<sub>B</sub></dt><dd id="readIB">—</dd></dl>
+        <dl class="readout is-c"><dt>コレクタ電流 i<sub>C</sub></dt><dd id="readIC">—</dd></dl>
+        <dl class="readout is-v"><dt>入力 v<sub>in</sub></dt><dd id="readVin">—</dd></dl>
+        <dl class="readout is-v"><dt>出力 v<sub>out</sub></dt><dd id="readVout">—</dd></dl>
+        <dl class="readout"><dt>バイアス状態</dt><dd id="readBias">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">—</div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas && canvas.getContext ? canvas.getContext("2d") : null;
+    const canvasWrap = document.getElementById("canvasWrap");
+    const modeGuide = document.getElementById("modeGuide");
+    const formulaLive = document.getElementById("formulaLive");
+    const vbeSlider = document.getElementById("vbeSlider");
+    const vccSlider = document.getElementById("vccSlider");
+    const ainSlider = document.getElementById("ainSlider");
+    const finSlider = document.getElementById("finSlider");
+    const inputToggle = document.getElementById("inputToggle");
+
+    const REF_W = 900, REF_H = 500;
+    const PHYS_W = 430;
+    const RIGHT_X = 438;
+    const WAVE_TOP = 28;
+    const WAVE_MID = 248;
+    const WAVE_BOT = 468;
+
+    const COL = {
+      electron: "#38bdf8",
+      hole: "#f87171",
+      donor: "rgba(74,222,128,0.55)",
+      acceptor: "rgba(192,132,252,0.55)",
+      depletion: "rgba(251,191,36,0.14)",
+      depEdge: "rgba(251,191,36,0.55)",
+      vin: "#fde68a",
+      vout: "#4ade80",
+      grid: "rgba(148,163,184,0.12)",
+      divider: "rgba(148,163,184,0.35)",
+    };
+
+    const MODE_GUIDES = {
+      npn: "<strong>npn</strong>：左 N（エミッタ）→ 中央 P（ベース・薄層）→ 右 N（コレクタ）。V<sub>BE</sub>&gt;0 で順バイアス、V<sub>CB</sub>&gt;0 で逆バイアス。電子がエミッタから大量注入され、ベースで一部再結合、残りがコレクタへ。",
+      pnp: "<strong>pnp</strong>：左 P（エミッタ）→ 中央 N（ベース・薄層）→ 右 P（コレクタ）。V<sub>BE</sub>&lt;0 で順バイアス、V<sub>CB</sub>&lt;0 で逆バイアス。正孔がエミッタから注入され、ベースで再結合、残りがコレクタへ。",
+    };
+
+    const SCENARIOS = {
+      npn_amplify: {
+        mode: "npn", vbe: 65, vcc: 50, ain: 8, fin: 10, inputOn: true,
+        guide: "<strong>正解の組み合わせ</strong>：npn + V<sub>BE</sub>≈0.65V + 入力 ON。青い e⁻ がエミッタ→ベース→コレクタへ流れ、ベースで赤い h⁺ と再結合。i<sub>C</sub>≈β·i<sub>B</sub> で増幅。",
+      },
+      pnp_amplify: {
+        mode: "pnp", vbe: -65, vcc: 50, ain: 8, fin: 10, inputOn: true,
+        guide: "<strong>pnp 正解</strong>：V<sub>BE</sub>≈−0.65V + 入力 ON。赤い h⁺ がエミッタ→ベース→コレクタへ流れ、ベースで青い e⁻ と再結合。",
+      },
+      cutoff: {
+        mode: "npn", vbe: 25, vcc: 50, ain: 0, fin: 10, inputOn: false,
+        guide: "カットオフ：V<sub>BE</sub> が閾値以下 · 入力 OFF。キャリアの流れが止まり、増幅なし。",
+      },
+    };
+
+    let activeScenario = "npn_amplify";
+
+    const BETA = 95;
+    const K_B = 0.0006;
+    const R_C = 200;
+    const V_TH = 0.55;
+
+    let canvasW = 900, canvasH = 500, dpr = 1;
+    let mode = "npn";
+    let inputOn = true;
+    let animClock = 0;
+    let lastFrame = performance.now();
+    let carriers = [];
+    let impurities = [];
+    let recombFlashes = [];
+    let waveHistory = [];
+    const WAVE_LEN = 320;
+
+    function isActiveBias(iB) { return iB > 0.00002; }
+
+    function showBootError(err) {
+      if (!canvas || !ctx) {
+        if (canvasWrap) {
+          canvasWrap.innerHTML = "<p style=\"color:#fca5a5;padding:16px;font:600 14px sans-serif\">シミュレーションの初期化に失敗しました。ページを再読み込みしてください。</p>";
+        }
+        return;
+      }
+      ctx.fillStyle = "#050810";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fca5a5";
+      ctx.font = "600 13px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("初期化エラー: " + (err && err.message ? err.message : err), 20, 40);
+      console.error(err);
+    }
+
+    function getVBE() { return +vbeSlider.value / 100; }
+    function getVCC() { return +vccSlider.value / 10; }
+    function getAin() { return +ainSlider.value / 100; }
+    function getFin() { return +finSlider.value / 10; }
+
+    function vinAt(t) {
+      const bias = getVBE();
+      const ac = inputOn ? getAin() * Math.sin(2 * Math.PI * getFin() * t) : 0;
+      return bias + ac;
+    }
+
+    function iBAt(vin) {
+      if (mode === "npn") return K_B * Math.max(0, vin - V_TH);
+      return K_B * Math.max(0, -vin - V_TH);
+    }
+
+    function iCAt(iB) { return BETA * iB; }
+
+    function voutAt(iC) {
+      return Math.max(0.05, getVCC() - R_C * iC);
+    }
+
+    function getLayout(cw, ch) {
+      const sx = cw / REF_W, sy = ch / REF_H;
+      return {
+        sx, sy, cw, ch,
+        physW: PHYS_W * sx,
+        rightX: RIGHT_X * sx,
+        waveTop: WAVE_TOP * sy,
+        waveMid: WAVE_MID * sy,
+        waveBot: WAVE_BOT * sy,
+        top: 36 * sy,
+        bot: ch - 28 * sy,
+      };
+    }
+
+    function regionBounds(L) {
+      const x0 = 18 * L.sx;
+      const x1 = L.physW - 14 * L.sx;
+      const w = x1 - x0;
+      return {
+        x0, x1, w,
+        emL: x0,
+        emR: x0 + w * 0.28,
+        baL: x0 + w * 0.28,
+        baR: x0 + w * 0.44,
+        coL: x0 + w * 0.44,
+        coR: x1,
+        beJ: x0 + w * 0.28,
+        bcJ: x0 + w * 0.44,
+        midY: (L.top + L.bot) * 0.5,
+      };
+    }
+
+    function regionType(r) {
+      if (mode === "npn") {
+        if (r === "emitter") return "n";
+        if (r === "base") return "p";
+        return "n";
+      }
+      if (r === "emitter") return "p";
+      if (r === "base") return "n";
+      return "p";
+    }
+
+    function buildImpurities(L) {
+      impurities = [];
+      const R = regionBounds(L);
+      const rows = 7;
+      const y0 = L.top + 18 * L.sy;
+      const dy = (L.bot - L.top - 36 * L.sy) / (rows - 1);
+      [["emitter", R.emL, R.emR], ["base", R.baL, R.baR], ["collector", R.coL, R.coR]].forEach(([reg, xl, xr]) => {
+        const kind = regionType(reg);
+        const cols = reg === "base" ? 5 : 9;
+        const dx = (xr - xl - 16 * L.sx) / Math.max(cols - 1, 1);
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            impurities.push({
+              x: xl + 8 * L.sx + c * dx + (Math.random() - 0.5) * 4,
+              y: y0 + r * dy + (Math.random() - 0.5) * 3,
+              kind,
+            });
+          }
+        }
+      });
+    }
+
+    function spawnCarrier(L, stage) {
+      const R = regionBounds(L);
+      const major = mode === "npn" ? "electron" : "hole";
+      const st = stage || "emitter";
+      let x, vx;
+      if (st === "emitter") {
+        x = R.emL + 12 * L.sx + Math.random() * (R.emR - R.emL - 24 * L.sx);
+        vx = 110 + Math.random() * 70;
+      } else if (st === "base") {
+        x = R.baL + 6 * L.sx + Math.random() * (R.baR - R.baL - 12 * L.sx);
+        vx = 70 + Math.random() * 50;
+      } else {
+        x = R.bcJ + 8 * L.sx + Math.random() * (R.coR - R.bcJ - 20 * L.sx);
+        vx = 150 + Math.random() * 80;
+      }
+      return {
+        type: major, stage: st, x,
+        y: R.midY + (Math.random() - 0.5) * (L.bot - L.top) * 0.5,
+        vx, vy: (Math.random() - 0.5) * 50, age: 0,
+      };
+    }
+
+    function spawnBaseMinority(L) {
+      const R = regionBounds(L);
+      const minor = mode === "npn" ? "hole" : "electron";
+      return {
+        type: minor, stage: "base",
+        x: R.baL + 8 * L.sx + Math.random() * (R.baR - R.baL - 16 * L.sx),
+        y: R.midY + (Math.random() - 0.5) * 36 * L.sy,
+        vx: (Math.random() - 0.5) * 30,
+        vy: (Math.random() - 0.5) * 30, age: 0,
+      };
+    }
+
+    function resetCarriers(L) {
+      carriers = [];
+      for (let i = 0; i < 14; i++) carriers.push(spawnCarrier(L, "emitter"));
+      for (let i = 0; i < 10; i++) carriers.push(spawnCarrier(L, "base"));
+      for (let i = 0; i < 8; i++) carriers.push(spawnCarrier(L, "collector"));
+      for (let i = 0; i < 12; i++) carriers.push(spawnBaseMinority(L));
+    }
+
+    function syncCarrierPopulation(L, iB, iC) {
+      const active = isActiveBias(iB);
+      const majorType = mode === "npn" ? "electron" : "hole";
+      const minorType = mode === "npn" ? "hole" : "electron";
+      const emit = carriers.filter((c) => c.stage === "emitter" && c.type === majorType);
+      const baseMaj = carriers.filter((c) => c.stage === "base" && c.type === majorType);
+      const col = carriers.filter((c) => c.stage === "collector");
+      const baseMin = carriers.filter((c) => c.stage === "base" && c.type === minorType);
+      const minEmit = active ? 18 : 4;
+      const minBase = active ? 14 : 3;
+      const minCol = active ? 22 : 2;
+      const minMin = active ? 10 : 4;
+      while (emit.length < minEmit) { const c = spawnCarrier(L, "emitter"); carriers.push(c); emit.push(c); }
+      while (baseMaj.length < minBase) { const c = spawnCarrier(L, "base"); carriers.push(c); baseMaj.push(c); }
+      while (col.length < minCol) { const c = spawnCarrier(L, "collector"); carriers.push(c); col.push(c); }
+      while (baseMin.length < minMin) { const c = spawnBaseMinority(L); carriers.push(c); baseMin.push(c); }
+    }
+
+    function handleBaseRecombination(R, L) {
+      const zoneX = (R.baR - R.baL) * 0.9;
+      const midBx = (R.baL + R.baR) * 0.5;
+      const majors = [];
+      const minors = [];
+      const toRemove = new Set();
+      carriers.forEach((c, i) => {
+        if (c.stage !== "base") return;
+        if (Math.abs(c.x - midBx) > zoneX * 0.5) return;
+        if (mode === "npn") {
+          if (c.type === "electron") majors.push({ c, i });
+          else minors.push({ c, i });
+        } else {
+          if (c.type === "hole") majors.push({ c, i });
+          else minors.push({ c, i });
+        }
+      });
+      majors.forEach((m) => {
+        if (toRemove.has(m.i)) return;
+        let best = null, bestD = 28;
+        minors.forEach((h) => {
+          if (toRemove.has(h.i)) return;
+          const d = Math.hypot(m.c.x - h.c.x, m.c.y - h.c.y);
+          if (d < bestD) { bestD = d; best = h; }
+        });
+        if (best) {
+          toRemove.add(m.i);
+          toRemove.add(best.i);
+          addRecombFlash((m.c.x + best.c.x) * 0.5, (m.c.y + best.c.y) * 0.5);
+        }
+      });
+      if (toRemove.size) carriers = carriers.filter((_, i) => !toRemove.has(i));
+    }
+
+    function addRecombFlash(x, y) {
+      recombFlashes.push({ x, y, life: 1 });
+    }
+
+    function updateCarriers(dt, L, iB, iC) {
+      const R = regionBounds(L);
+      const active = isActiveBias(iB);
+      syncCarrierPopulation(L, iB, iC);
+
+      const injectRate = active ? 22 + iB * 900000 : 2;
+      let injectAcc = injectRate * dt;
+      while (injectAcc >= 1) {
+        carriers.push(spawnCarrier(L, "emitter"));
+        injectAcc -= 1;
+      }
+
+      const speedMul = active ? 6.2 : 2.5;
+      const toRemove = new Set();
+      const passFrac = Math.min(0.94, 0.72 + iC * 0.015);
+      const majorType = mode === "npn" ? "electron" : "hole";
+
+      carriers.forEach((c, idx) => {
+        c.age += dt;
+        const rnd = 95 * Math.sqrt(dt);
+        c.vx += (Math.random() - 0.5) * rnd * 0.25;
+        c.vy += (Math.random() - 0.5) * rnd;
+
+        if (c.stage === "emitter") {
+          c.vx += (active ? 160 : 40) * dt;
+          if (c.x > R.beJ - 6 * L.sx) {
+            c.stage = "base";
+            c.vx = 80 + Math.random() * 40;
+          }
+        } else if (c.stage === "base") {
+          if (c.type === majorType) {
+            c.vx += (active ? 120 : 30) * dt;
+            if (c.x > R.bcJ - 4 * L.sx && (Math.random() < passFrac || c.x > R.bcJ + 4 * L.sx)) {
+              c.stage = "collector";
+              c.vx = 170 + Math.random() * 90;
+            }
+          } else {
+            const towardBE = active ? -42 : -10;
+            c.vx += towardBE * dt;
+            c.vx += (Math.random() - 0.5) * 55 * dt;
+            c.vy += (Math.random() - 0.5) * 35 * dt;
+          }
+        } else if (c.stage === "collector") {
+          c.vx += (active ? 90 : 20) * dt;
+          if (c.x > R.coR - 8 * L.sx) toRemove.add(idx);
+        }
+
+        c.vx *= 0.982;
+        c.vy *= 0.982;
+        c.x += c.vx * dt * speedMul;
+        c.y += c.vy * dt * speedMul;
+
+        const m = 10 * L.sx;
+        if (c.y < L.top + m) { c.y = L.top + m; c.vy = Math.abs(c.vy) * 0.45; }
+        if (c.y > L.bot - m) { c.y = L.bot - m; c.vy = -Math.abs(c.vy) * 0.45; }
+        if (c.x < R.emL + 4) { c.x = R.emL + 4; c.vx = Math.abs(c.vx); }
+        if (c.stage === "base" && c.type === majorType && c.x < R.baL + 2) {
+          c.x = R.baL + 2; c.vx = Math.abs(c.vx) * 0.5;
+        }
+        if (c.stage === "base" && c.type !== majorType) {
+          if (c.x < R.baL + 2) { c.x = R.baL + 2; c.vx = Math.abs(c.vx) * 0.25; }
+          if (c.x > R.baR - 2) { c.x = R.baR - 2; c.vx = -Math.abs(c.vx) * 0.25; }
+        }
+        if (c.stage === "collector" && c.x > R.coR - 4) { c.x = R.coR - 4; }
+        if (c.age > 8) toRemove.add(idx);
+      });
+
+      if (toRemove.size) carriers = carriers.filter((_, i) => !toRemove.has(i));
+      while (carriers.length > 160) carriers.shift();
+      if (active) handleBaseRecombination(R, L);
+    }
+
+    function drawPhysBg(L) {
+      const R = regionBounds(L);
+      const h = L.bot - L.top;
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("実空間（チップの中）", R.emL, L.top - 6);
+
+      const regions = mode === "npn"
+        ? [
+            { l: R.emL, r: R.emR, col: "rgba(56,189,248,0.07)", label: "N エミッタ", sub: "e⁻ 多数" },
+            { l: R.baL, r: R.baR, col: "rgba(248,113,113,0.09)", label: "P ベース", sub: "薄い · h⁺" },
+            { l: R.coL, r: R.coR, col: "rgba(56,189,248,0.07)", label: "N コレクタ", sub: "e⁻ 多数" },
+          ]
+        : [
+            { l: R.emL, r: R.emR, col: "rgba(248,113,113,0.09)", label: "P エミッタ", sub: "h⁺ 多数" },
+            { l: R.baL, r: R.baR, col: "rgba(56,189,248,0.07)", label: "N ベース", sub: "薄い · e⁻" },
+            { l: R.coL, r: R.coR, col: "rgba(248,113,113,0.09)", label: "P コレクタ", sub: "h⁺ 多数" },
+          ];
+
+      regions.forEach((rg) => {
+        ctx.fillStyle = rg.col;
+        ctx.fillRect(rg.l, L.top, rg.r - rg.l, h);
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(rg.label, (rg.l + rg.r) * 0.5, L.top + 14);
+        ctx.fillStyle = "rgba(148,163,184,0.8)";
+        ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(rg.sub, (rg.l + rg.r) * 0.5, L.top + 26);
+      });
+
+      const depBE = 6 * L.sx;
+      const depBC = 14 * L.sx;
+      ctx.fillStyle = COL.depletion;
+      ctx.fillRect(R.beJ - depBE * 0.5, L.top, depBE, h);
+      ctx.fillRect(R.bcJ - depBC * 0.5, L.top, depBC, h);
+
+      ctx.strokeStyle = COL.depEdge;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(R.beJ - depBE * 0.5, L.top, depBE, h);
+      ctx.strokeRect(R.bcJ - depBC * 0.5, L.top, depBC, h);
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#86efac";
+      ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("BE 順", R.beJ, L.bot + 14 * L.sy);
+      ctx.fillStyle = "#fca5a5";
+      ctx.fillText("BC 逆", R.bcJ, L.bot + 14 * L.sy);
+
+      impurities.forEach((p) => {
+        ctx.fillStyle = p.kind === "n" ? COL.donor : COL.acceptor;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.strokeStyle = COL.divider;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(R.beJ, L.top);
+      ctx.lineTo(R.beJ, L.bot);
+      ctx.moveTo(R.bcJ, L.top);
+      ctx.lineTo(R.bcJ, L.bot);
+      ctx.stroke();
+    }
+
+    function drawCarrier(c) {
+      if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return;
+      const col = c.type === "electron" ? COL.electron : COL.hole;
+      const r = c.type === "electron" ? 4.2 : 4.6;
+      const spd = Math.hypot(c.vx, c.vy);
+      if (spd > 12) {
+        ctx.strokeStyle = col + "99";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(c.x - c.vx * 0.07, c.y - c.vy * 0.07);
+        ctx.lineTo(c.x, c.y);
+        ctx.stroke();
+      }
+      const glow = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r + 3);
+      glow.addColorStop(0, col);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r + 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.beginPath();
+      ctx.arc(c.x - 0.9, c.y - 0.9, r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      if (c.type === "hole") {
+        ctx.strokeStyle = "rgba(248,113,113,0.85)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, r + 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function drawRecombFlashes() {
+      recombFlashes.forEach((f) => {
+        const r = 6 + (1 - f.life) * 14;
+        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
+        g.addColorStop(0, "rgba(255,255,255," + (f.life * 0.95) + ")");
+        g.addColorStop(0.4, "rgba(250,204,21," + (f.life * 0.75) + ")");
+        g.addColorStop(1, "rgba(250,204,21,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawFlowArrows(L, iB, iC) {
+      const R = regionBounds(L);
+      const y = R.midY;
+      ctx.textAlign = "left";
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      const major = mode === "npn" ? "e⁻" : "h⁺";
+      ctx.fillStyle = mode === "npn" ? "#7dd3fc" : "#fca5a5";
+      ctx.fillText(major + " 注入（多）", R.emL + 6, y - 22);
+      ctx.fillStyle = "#fde68a";
+      ctx.fillText("i_B 小 · 再結合", (R.baL + R.baR) * 0.5 - 28, y - 22);
+      ctx.fillStyle = "rgba(248,113,113,0.75)";
+      ctx.font = "600 7px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(mode === "npn" ? "h⁺ ベース内" : "e⁻ ベース内", (R.baL + R.baR) * 0.5 - 22, y + 32);
+      ctx.fillStyle = mode === "npn" ? "#7dd3fc" : "#fca5a5";
+      ctx.fillText("i_C ≈ β·i_B（大）", R.coL + 8, y - 22);
+
+      const barB = Math.min(1, iB * 8) * 40 * L.sx;
+      const barC = Math.min(1, iC * 0.08) * 40 * L.sx;
+      ctx.fillStyle = "rgba(250,204,21,0.75)";
+      ctx.fillRect((R.baL + R.baR) * 0.5 - barB * 0.5, y + 18, barB, 5);
+      ctx.fillStyle = "rgba(56,189,248,0.85)";
+      ctx.fillRect(R.coL + 20, y + 18, barC, 5);
+    }
+
+    function drawWaves(L, vin, vout, iB) {
+      const x0 = L.rightX + 10 * L.sx;
+      const w = Math.max(100, L.cw - x0 - 12 * L.sx);
+      const hTop = Math.max(50, L.waveMid - L.waveTop - 16 * L.sy);
+      const hBot = Math.max(50, L.waveBot - L.waveMid - 16 * L.sy);
+      const vcc = getVCC();
+      const bias = getVBE();
+
+      function panel(y0, h, title, sub, col, yMin, yMax, current, refLines) {
+        ctx.fillStyle = "rgba(18, 28, 52, 0.98)";
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(x0, y0, w, h);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(title, x0 + 8, y0 + 16);
+        ctx.fillStyle = "rgba(148,163,184,0.85)";
+        ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(sub, x0 + 8, y0 + 28);
+
+        const gx = x0 + 36;
+        const gw = w - 48;
+        const gh = h - 36;
+        const gy = y0 + 34;
+        ctx.strokeStyle = COL.grid;
+        for (let i = 0; i <= 4; i++) {
+          const ly = gy + (i / 4) * gh;
+          ctx.beginPath();
+          ctx.moveTo(gx, ly);
+          ctx.lineTo(gx + gw, ly);
+          ctx.stroke();
+        }
+
+        function valToY(v) {
+          return gy + gh * (1 - (v - yMin) / Math.max(yMax - yMin, 0.01));
+        }
+
+        (refLines || []).forEach((rf) => {
+          const ry = valToY(rf.val);
+          ctx.strokeStyle = rf.col;
+          ctx.lineWidth = 1;
+          ctx.setLineDash(rf.dash || [4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(gx, ry);
+          ctx.lineTo(gx + gw, ry);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = rf.col;
+          ctx.font = "600 7px Inter, sans-serif";
+          ctx.fillText(rf.label, gx + 4, ry - 3);
+        });
+
+        if (waveHistory.length > 1) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          waveHistory.forEach((pt, i) => {
+            const t = i / Math.max(waveHistory.length - 1, 1);
+            const px = gx + t * gw;
+            const py = valToY(pt[title.indexOf("v_in") >= 0 ? "vin" : "vout"]);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+        }
+
+        const py = valToY(current);
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(gx + gw, py, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(203,213,225,0.9)";
+        ctx.font = "600 8px Inter, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(current.toFixed(2) + " V", gx + gw, py - 8);
+      }
+
+      const vinMin = bias - 0.28;
+      const vinMax = bias + 0.28;
+      const voutMin = 0;
+      const voutMax = vcc * 1.05;
+      const thLine = mode === "npn" ? V_TH : -V_TH;
+
+      panel(
+        L.waveTop, hTop,
+        "v_in(t) 入力",
+        "ベース電圧（小さい信号）",
+        COL.vin, vinMin, vinMax, vin,
+        [{ val: thLine, col: "rgba(248,113,113,0.65)", label: "V_th", dash: [3, 3] }]
+      );
+      panel(
+        L.waveMid, hBot,
+        "v_out(t) 出力",
+        "コレクタ電圧（大きい · v_in と逆位相）",
+        COL.vout, voutMin, voutMax, vout,
+        [{ val: vcc, col: "rgba(148,163,184,0.55)", label: "V_CC", dash: [5, 4] }]
+      );
+
+      if (iB > 0.00001 && inputOn) {
+        ctx.fillStyle = "rgba(74,222,128,0.85)";
+        ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("↑ v_in ↑ → i_B ↑ → i_C ↑ → v_out ↓", x0 + 8, L.waveMid - 4);
+      }
+
+      ctx.strokeStyle = COL.divider;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(L.rightX, 0);
+      ctx.lineTo(L.rightX, L.ch);
+      ctx.stroke();
+    }
+
+    function updateReadouts(vin, iB, iC, vout) {
+      document.getElementById("vbeVal").textContent = getVBE().toFixed(2) + " V";
+      document.getElementById("vccVal").textContent = getVCC().toFixed(1) + " V";
+      document.getElementById("ainVal").textContent = getAin().toFixed(2) + " V";
+      document.getElementById("finVal").textContent = getFin().toFixed(1) + " Hz";
+      document.getElementById("readBeta").textContent = BETA.toString();
+      document.getElementById("readIB").textContent = (iB * 1000).toFixed(2) + " mA";
+      document.getElementById("readIC").textContent = (iC * 1000).toFixed(1) + " mA";
+      document.getElementById("readVin").textContent = vin.toFixed(3) + " V";
+      document.getElementById("readVout").textContent = vout.toFixed(3) + " V";
+      const be = mode === "npn" ? "BE 順 · CB 逆" : "BE 順 · CB 逆";
+      document.getElementById("readBias").textContent = isActiveBias(iB) ? be + " · 動作中" : "カットオフ（電流ほぼゼロ）";
+      const voutSwing = getVCC() - vout;
+      const clipped = vout <= 0.06;
+      formulaLive.innerHTML =
+        "v<sub>in</sub>↑ → i<sub>B</sub>=" + (iB * 1000).toFixed(2) + " mA → i<sub>C</sub>=β·i<sub>B</sub>=" + (iC * 1000).toFixed(1) +
+        " mA → v<sub>out</sub>=" + vout.toFixed(2) + " V" +
+        (clipped ? "（下限付近）" : "") +
+        " · <strong>入力の小さな振れが、出力の大きな振れに（逆位相で）変わる</strong>";
+    }
+
+    function drawFrame() {
+      if (!ctx || canvasW < 10 || canvasH < 10) return;
+      const L = getLayout(canvasW, canvasH);
+      const vin = vinAt(animClock);
+      const iB = iBAt(vin);
+      const iC = iCAt(iB);
+      const vout = voutAt(iC);
+
+      ctx.fillStyle = "#050810";
+      ctx.fillRect(0, 0, L.cw, L.ch);
+
+      drawPhysBg(L);
+      ctx.save();
+      try {
+        ctx.beginPath();
+        ctx.rect(0, L.top - 4, L.physW + 4, L.bot - L.top + 8);
+        ctx.clip();
+        carriers.forEach(drawCarrier);
+        drawRecombFlashes();
+      } finally {
+        ctx.restore();
+      }
+      drawFlowArrows(L, iB, iC);
+      drawWaves(L, vin, vout, iB);
+      updateReadouts(vin, iB, iC, vout);
+    }
+
+    function setMode(m, keepSliders) {
+      mode = m;
+      document.querySelectorAll(".mode-btn").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.mode === m);
+      });
+      if (!keepSliders) {
+        if (m === "pnp" && +vbeSlider.value > 0) vbeSlider.value = -65;
+        if (m === "npn" && +vbeSlider.value < 0) vbeSlider.value = 65;
+      }
+      modeGuide.innerHTML = MODE_GUIDES[m];
+      const L = getLayout(canvasW, canvasH);
+      buildImpurities(L);
+      resetCarriers(L);
+      if (!keepSliders) waveHistory = [];
+      drawFrame();
+    }
+
+    function highlightScenario(key) {
+      activeScenario = key;
+      document.querySelectorAll(".preset-btn").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.scenario === key);
+      });
+    }
+
+    function clearScenarioHighlight() {
+      activeScenario = null;
+      document.querySelectorAll(".preset-btn").forEach((btn) => btn.classList.remove("is-active"));
+    }
+
+    function applyScenario(key) {
+      const s = SCENARIOS[key];
+      if (!s) return;
+      vbeSlider.value = s.vbe;
+      vccSlider.value = s.vcc;
+      ainSlider.value = s.ain;
+      finSlider.value = s.fin;
+      inputOn = s.inputOn;
+      inputToggle.textContent = inputOn ? "入力 ON" : "入力 OFF";
+      inputToggle.classList.toggle("is-on", inputOn);
+      highlightScenario(key);
+      if (mode !== s.mode) {
+        setMode(s.mode, true);
+      } else {
+        const L = getLayout(canvasW, canvasH);
+        resetCarriers(L);
+        waveHistory = [];
+      }
+      modeGuide.innerHTML = s.guide;
+      drawFrame();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const rw = Math.max(320, Math.round(rect.width || 900));
+      const rh = Math.max(420, Math.round(rect.height || rw * (REF_H / REF_W)));
+      canvasW = rw;
+      canvasH = Math.min(500, Math.max(420, rh));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const L = getLayout(canvasW, canvasH);
+      buildImpurities(L);
+      if (carriers.length === 0) resetCarriers(L);
+    }
+
+    let loopRunning = false;
+
+    function loop(now) {
+      loopRunning = true;
+      try {
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        animClock += dt;
+        const L = getLayout(canvasW, canvasH);
+        const vin = vinAt(animClock);
+        const iB = iBAt(vin);
+        const iC = iCAt(iB);
+        const vout = voutAt(iC);
+
+        updateCarriers(dt, L, iB, iC);
+        waveHistory.push({ vin, vout, t: animClock });
+        if (waveHistory.length > WAVE_LEN) waveHistory.shift();
+
+        recombFlashes.forEach((f) => { f.life -= dt * 3.5; });
+        recombFlashes = recombFlashes.filter((f) => f.life > 0);
+
+        drawFrame();
+      } catch (err) {
+        console.error("loop error:", err);
+        showBootError(err);
+        return;
+      }
+      requestAnimationFrame(loop);
+    }
+
+    inputToggle.addEventListener("click", () => {
+      inputOn = !inputOn;
+      inputToggle.textContent = inputOn ? "入力 ON" : "入力 OFF";
+      inputToggle.classList.toggle("is-on", inputOn);
+      if (!inputOn) waveHistory = [];
+    });
+
+    document.querySelectorAll(".mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        clearScenarioHighlight();
+        setMode(btn.dataset.mode);
+      });
+    });
+    document.querySelectorAll(".preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => applyScenario(btn.dataset.scenario));
+    });
+    [vbeSlider, vccSlider, ainSlider, finSlider].forEach((sl) => {
+      sl.addEventListener("input", () => {
+        clearScenarioHighlight();
+        drawFrame();
+      });
+    });
+
+    function boot() {
+      if (!ctx) {
+        showBootError(new Error("Canvas 2D が利用できません"));
+        return;
+      }
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+      resizeCanvas();
+      applyScenario("npn_amplify");
+      if (!loopRunning) requestAnimationFrame(loop);
+    }
+
+    try {
+      boot();
+    } catch (err) {
+      showBootError(err);
+    }
+  </script>
+</body>
+</html>

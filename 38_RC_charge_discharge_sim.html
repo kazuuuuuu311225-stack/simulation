@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>23章 電流 — RC 回路の充電・放電</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --panel: rgba(10, 12, 28, 0.92); --border: rgba(251, 191, 36, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1628 42%, #101820 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.45), rgba(167,139,250,0.35));
+      border: 1px solid rgba(56,189,248,0.45); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+      font-size: 0.86rem; color: #bae6fd; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.86rem; color: #bae6fd; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #060a14; border: 1px solid rgba(56,189,248,0.2);
+      box-shadow: inset 0 0 48px rgba(0,0,0,0.45);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(600px, 68dvh);
+      min-height: 500px; touch-action: none;
+    }
+    .step-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .step-btn {
+      flex: 1; min-width: 72px; padding: 10px 8px; border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
+      color: #cbd5e1; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .step-btn.is-active {
+      background: rgba(56,189,248,0.22); border-color: rgba(56,189,248,0.6); color: #bae6fd;
+    }
+    .step-btn.is-done { border-color: rgba(34,197,94,0.45); }
+    .step-guide {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.28);
+      font-size: 0.84rem; color: #bae6fd; line-height: 1.65;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    label.is-disabled { opacity: 0.45; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; }
+    input[type="range"]:disabled { opacity: 0.35; cursor: not-allowed; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-row button {
+      padding: 10px 16px; border-radius: 10px; font: inherit; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(251,191,36,0.35);
+      background: rgba(251,191,36,0.12); color: #fef08a;
+    }
+    .btn-row button#chargeBtn {
+      border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.18); color: #bae6fd;
+    }
+    .btn-row button#dischargeBtn {
+      border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.18); color: #e9d5ff;
+    }
+    .btn-row button.is-hidden { display: none; }
+    .btn-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .run-status {
+      margin-top: 8px; padding: 8px 12px; border-radius: 10px; font-size: 0.78rem;
+      background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); color: #94a3b8;
+    }
+    .run-status.running { color: #bae6fd; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .readout.is-i dd { color: #bae6fd; }
+    .readout.is-i { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
+    .readout.is-v dd { color: #fde68a; }
+    .readout.is-v { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.28); }
+    .readout.is-c dd { color: #c4b5fd; }
+    .readout.is-c { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.35); }
+    .readout.is-tau { grid-column: 1 / -1; background: rgba(15,23,42,0.75); border-color: rgba(56,189,248,0.4); }
+    .readout.is-tau dd { color: #bbf7d0; }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #eef2ff; }
+    .legend-row {
+      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+      font-size: 0.76rem; color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚡</div>
+      <p class="chapter-label">第23章 — 電流</p>
+      <h2>RC 回路の充電・放電</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>時定数 τ = RC</h3>
+      <p>
+        抵抗 R とコンデンサ C の直列回路では、充電・放電の過程が指数関数で記述されます。
+        電子モデルと <strong>I–t / V<sub>R</sub>–t / V<sub>C</sub>–t</strong> グラフで理解します。
+      </p>
+      <div class="formula-box">
+        充電：I=(E₀/R)e<sup>−t/τ</sup> · V<sub>C</sub>=E₀(1−e<sup>−t/τ</sup>) · 放電：I=−(V<sub>C0</sub>/R)e<sup>−t/τ</sup> · τ=RC
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション（操作手順モード）</h3>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas" width="900" height="560"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#38bdf8">● 青粒 ＝ 自由電子</span>
+        <span style="color:#a78bfa">|| C ＝ コンデンサ</span>
+        <span style="color:#fde68a">S ＝ スイッチ（充電/放電）</span>
+        <span>右：I–t · V<sub>R</sub>–t · V<sub>C</sub>–t グラフ</span>
+      </div>
+
+      <div class="step-row">
+        <button type="button" class="step-btn is-active" data-step="1">Step1<br>回路確認</button>
+        <button type="button" class="step-btn" data-step="2">Step2<br>充電準備</button>
+        <button type="button" class="step-btn" data-step="3">Step3<br>充電開始</button>
+        <button type="button" class="step-btn" data-step="4">Step4<br>放電開始</button>
+        <button type="button" class="step-btn" data-step="5">Step5<br>比較理解</button>
+      </div>
+      <p class="step-guide" id="stepGuide">—</p>
+
+      <div class="param-grid">
+        <div>
+          <label for="e0Slider" id="e0Label" class="is-disabled">起電力 E₀ <span class="slider-val" id="e0Val">12.0 V</span></label>
+          <input type="range" id="e0Slider" min="0" max="240" value="120" step="1" disabled>
+        </div>
+        <div>
+          <label for="rSlider" id="rLabel" class="is-disabled">抵抗 R <span class="slider-val" id="rVal">1000 Ω</span></label>
+          <input type="range" id="rSlider" min="1" max="1000" value="1000" step="1" disabled>
+        </div>
+        <div>
+          <label for="cSlider" id="cLabel" class="is-disabled">容量 C <span class="slider-val" id="cVal">470 μF</span></label>
+          <input type="range" id="cSlider" min="1" max="10000" value="2200" step="1" disabled>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" id="chargeBtn" class="is-hidden" disabled>充電開始</button>
+        <button type="button" id="dischargeBtn" class="is-hidden" disabled>放電開始</button>
+        <button type="button" id="resetBtn">リセット</button>
+      </div>
+      <p class="run-status" id="runStatus">—</p>
+
+      <div class="readout-grid">
+        <dl class="readout is-i"><dt>電流 I(t)</dt><dd id="readI">—</dd></dl>
+        <dl class="readout is-v"><dt>抵抗 V<sub>R</sub>(t)</dt><dd id="readVR">—</dd></dl>
+        <dl class="readout is-c"><dt>コンデンサ V<sub>C</sub>(t)</dt><dd id="readVC">—</dd></dl>
+        <dl class="readout is-tau"><dt>時定数 τ = RC</dt><dd id="readTau">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">—</div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+    const runStatus = document.getElementById("runStatus");
+    const stepGuide = document.getElementById("stepGuide");
+    const e0Slider = document.getElementById("e0Slider");
+    const rSlider = document.getElementById("rSlider");
+    const cSlider = document.getElementById("cSlider");
+    const chargeBtn = document.getElementById("chargeBtn");
+    const dischargeBtn = document.getElementById("dischargeBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const REF_W = 900, REF_H = 560;
+    const GRAPH_X = 540;
+    const CIRCUIT_X0 = 125;
+    const CIRCUIT_X1 = 705;
+    const CIRCUIT_PAD = 26;
+    const T_MAX = 5;
+    const DRIFT_K = 280;
+    const DRIFT_MAX = 950;
+    const MIN_CHARGE_WALL_SEC = 2.5;
+    const MIN_DISCHARGE_WALL_SEC = 3.5;
+    const DISCHARGE_DRIFT_SCALE = 0.38;
+    const SIM_SCALE_MIN = 0.45;
+    const SIM_SCALE_MAX = 2.5;
+
+    const COL = {
+      electron: "#38bdf8",
+      wire: "#64748b",
+      wireMain: "#e2e8f0",
+      wireGlow: "rgba(186,230,253,0.45)",
+      batFill: "rgba(167,139,250,0.12)",
+      batStroke: "rgba(167,139,250,0.55)",
+      rFill: "#1e293b",
+      rStroke: "#fbbf24",
+      cStroke: "#a78bfa",
+      cFill: "rgba(167,139,250,0.15)",
+      swStroke: "#fde68a",
+      plus: "#f87171",
+      minus: "#38bdf8",
+      graphI: "#38bdf8",
+      graphVR: "#fb923c",
+      graphVC: "#a78bfa",
+      graphChg: "#38bdf8",
+      graphDchg: "#c084fc",
+    };
+
+    const STEP_GUIDES = [
+      "",
+      "Step1：電池・R・S・C の回路を確認（電子停止 · グラフ空）。",
+      "Step2：E₀・R・C を設定。スイッチ S は充電位置（電池接続）。",
+      "Step3：「充電開始」→ I(t) 減少 · V_C(t) 増加 · グラフに充電曲線を描画。",
+      "Step4：スイッチを放電位置に切替。「放電開始」→ V_C(t) 減少 · 電池切離。",
+      "Step5：充電・放電曲線を重ね表示。τ = RC の意味を比較。",
+    ];
+
+    let canvasW = 900, canvasH = 500, dpr = 1;
+    let currentStep = 1;
+    let lastFrame = performance.now();
+    let simTime = 0;
+    let phase = "idle";
+    let switchPos = "charge";
+    let vC0 = 0;
+    let electrons = [];
+    let histCharge = [];
+    let histDischarge = [];
+    let loopPhase = 0;
+
+    function getE0() { return +e0Slider.value / 10; }
+    function getR() { return +rSlider.value; }
+    function getC() { return +cSlider.value * 1e-6; }
+    function getTau() { return getR() * getC(); }
+
+    function getSimTimeScale() {
+      if (phase !== "charging" && phase !== "discharging") return 1;
+      const tau = getTau();
+      if (tau <= 0) return 1;
+      const targetWall = phase === "discharging" ? MIN_DISCHARGE_WALL_SEC : MIN_CHARGE_WALL_SEC;
+      let scale = tau / targetWall;
+      if (tau > T_MAX * 0.55) {
+        scale = Math.max(scale, tau / (T_MAX * 0.82));
+      }
+      return Math.min(SIM_SCALE_MAX, Math.max(SIM_SCALE_MIN, scale));
+    }
+
+    function seedHistory(mode) {
+      const st = rcState(0, mode);
+      const pt = {
+        t: 0,
+        I: iPlotValue(st.I, mode === "discharging"),
+        Vr: st.Vr,
+        Vc: st.Vc,
+      };
+      if (mode === "charging") histCharge = [pt];
+      else histDischarge = [pt];
+    }
+
+    function rcState(t, mode) {
+      const E0 = getE0(), R = getR(), tau = getTau();
+      if (tau <= 0 || R <= 0) return { I: 0, Vc: 0, Vr: 0, tau };
+      if (mode === "charging") {
+        const I = (E0 / R) * Math.exp(-t / tau);
+        const Vc = E0 * (1 - Math.exp(-t / tau));
+        const Vr = E0 - Vc;
+        return { I, Vc, Vr, tau };
+      }
+      if (mode === "discharging") {
+        const Vc = vC0 * Math.exp(-t / tau);
+        const I = Vc / R;
+        const Vr = I * R;
+        return { I, Vc, Vr, tau };
+      }
+      return { I: 0, Vc: mode === "charged" ? E0 : 0, Vr: 0, tau };
+    }
+
+    function getLayout(cw, ch) {
+      const sx = cw / REF_W, sy = ch / REF_H;
+      const circuitW = GRAPH_X * sx;
+      const graphX = GRAPH_X * sx;
+      const cscale = (GRAPH_X - CIRCUIT_PAD) / (CIRCUIT_X1 - CIRCUIT_X0);
+      const tcx = (x) => (x - CIRCUIT_X0) * cscale + CIRCUIT_PAD;
+      const sc = (x, y) => ({ x: tcx(x) * sx, y: y * sy });
+      const mk = (x, y, w, h) => {
+        const px = tcx(x) * sx, py = y * sy, pw = w * cscale * sx, ph = h * sy;
+        return {
+          x: px, y: py, w: pw, h: ph,
+          cx: px + pw * 0.5, cy: py + ph * 0.5,
+          leftX: px, rightX: px + pw,
+          midY: py + ph * 0.5,
+        };
+      };
+      const TOP_Y = 240, BOT_Y = 330;
+      return {
+        sx, sy, cw, ch, cscale,
+        circuitW, graphX,
+        TOP_Y: TOP_Y * sy, BOT_Y: BOT_Y * sy,
+        BAT: mk(150, 220, 100, 60),
+        R: mk(350, 220, 120, 40),
+        S: mk(500, 220, 40, 40),
+        C: mk(600, 220, 80, 60),
+        MINUS: sc(150, TOP_Y),
+        PLUS: sc(150, BOT_Y),
+        Cleft: sc(600, TOP_Y),
+        Cright: sc(680, TOP_Y),
+        botRight: sc(680, BOT_Y),
+      };
+    }
+
+    function addSeg(list, x1, y1, x2, y2, tag) {
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (len > 0.5) list.push({ x1, y1, x2, y2, len, tag });
+    }
+
+    function wireHV(segs, x1, y1, x2, y2, tag) {
+      if (Math.abs(y2 - y1) > 0.5) addSeg(segs, x1, y1, x1, y2, tag);
+      if (Math.abs(x2 - x1) > 0.5) addSeg(segs, x1, y2, x2, y2, tag);
+    }
+
+    function buildChargePath(L) {
+      const segs = [];
+      const y = L.TOP_Y;
+      addSeg(segs, L.MINUS.x, L.MINUS.y, L.BAT.rightX, y, "wire");
+      addSeg(segs, L.BAT.rightX, y, L.R.leftX, y, "wire");
+      addSeg(segs, L.R.leftX, y, L.R.rightX, y, "r");
+      addSeg(segs, L.R.rightX, y, L.S.leftX, y, "wire");
+      addSeg(segs, L.S.rightX, y, L.Cleft.x, y, "wire");
+      addSeg(segs, L.Cleft.x, y, L.Cright.x, y, "c");
+      addSeg(segs, L.Cright.x, y, L.botRight.x, L.botRight.y, "wire");
+      addSeg(segs, L.botRight.x, L.botRight.y, L.PLUS.x, L.PLUS.y, "wire");
+      addSeg(segs, L.PLUS.x, L.PLUS.y, L.MINUS.x, L.MINUS.y, "wire");
+      return { segments: segs, total: segs.reduce((a, s) => a + s.len, 0) };
+    }
+
+    function buildDischargePath(L) {
+      const segs = [];
+      const y = L.TOP_Y;
+      addSeg(segs, L.Cleft.x, y, L.R.rightX, y, "c");
+      addSeg(segs, L.R.rightX, y, L.R.leftX, y, "r");
+      addSeg(segs, L.R.leftX, y, L.R.leftX, L.BOT_Y, "wire");
+      addSeg(segs, L.R.leftX, L.BOT_Y, L.botRight.x, L.BOT_Y, "wire");
+      addSeg(segs, L.botRight.x, L.BOT_Y, L.Cright.x, y, "wire");
+      return { segments: segs, total: segs.reduce((a, s) => a + s.len, 0) };
+    }
+
+    function pathPointAtDist(s, path) {
+      let dist = ((s % path.total) + path.total) % path.total;
+      for (let i = 0; i < path.segments.length; i++) {
+        const seg = path.segments[i];
+        if (dist <= seg.len + 1e-9) {
+          const u = seg.len > 0 ? dist / seg.len : 0;
+          return { x: seg.x1 + (seg.x2 - seg.x1) * u, y: seg.y1 + (seg.y2 - seg.y1) * u, tag: seg.tag };
+        }
+        dist -= seg.len;
+      }
+      const last = path.segments[path.segments.length - 1];
+      return { x: last.x2, y: last.y2, tag: last.tag };
+    }
+
+    function electronDrift(I, tag) {
+      if (I <= 1e-7) return 0;
+      const R = getR(), E0 = getE0();
+      const st = rcState(Math.min(simTime, T_MAX), phase);
+      const vcFactor = E0 > 0 ? 1 / (1 + st.Vc / E0 * 2.5) : 1;
+      const rScale = tag === "r" ? Math.sqrt(1000 / Math.max(R, 1)) : 1;
+      let v = DRIFT_K * I * rScale * vcFactor;
+      if (phase === "discharging") v *= DISCHARGE_DRIFT_SCALE;
+      const vMax = phase === "discharging" ? DRIFT_MAX * 0.55 : DRIFT_MAX;
+      return v <= 1 ? 0 : Math.min(v, vMax);
+    }
+
+    function isDischargeComplete() {
+      if (phase !== "discharging") return false;
+      const st = rcState(simTime, "discharging");
+      return st.I <= 1e-7 || st.Vc <= Math.max(vC0 * 0.015, 0.002);
+    }
+
+    function isElectronFlowActive() {
+      if (phase === "discharging") return !isDischargeComplete();
+      if (phase === "charging") {
+        const st = rcState(simTime, "charging");
+        return st.I > 1e-7 && st.Vc < getE0() * 0.995;
+      }
+      return false;
+    }
+
+    function syncElectrons(L) {
+      if (!isElectronFlowActive()) { electrons = []; return; }
+      const st = rcState(Math.min(simTime, T_MAX), phase);
+      const path = phase === "charging" ? buildChargePath(L) : buildDischargePath(L);
+      let n;
+      if (phase === "discharging") {
+        const chargeRatio = vC0 > 0 ? st.Vc / vC0 : 0;
+        n = Math.min(40, Math.max(10, Math.round(8 + chargeRatio * 18 + st.I * getR() * 0.6)));
+      } else {
+        n = Math.min(48, Math.max(6, Math.round(8 + st.I * getR() * 0.8)));
+      }
+      if (electrons.length !== n) {
+        electrons = [];
+        for (let i = 0; i < n; i++) electrons.push({ s: Math.random() * path.total });
+      }
+    }
+
+    function advanceElectrons(dt, L) {
+      if (!isElectronFlowActive()) return;
+      const st = rcState(Math.min(simTime, T_MAX), phase);
+      const path = phase === "charging" ? buildChargePath(L) : buildDischargePath(L);
+      electrons.forEach((e) => {
+        const pt = pathPointAtDist(e.s, path);
+        e.s += dt * electronDrift(st.I, pt.tag);
+      });
+    }
+
+    function iPlotValue(I, discharge) {
+      return discharge ? -Math.abs(I) : I;
+    }
+
+    function recordHistory() {
+      const tPlot = Math.min(simTime, T_MAX);
+      const st = rcState(tPlot, phase);
+      const pt = {
+        t: tPlot,
+        I: iPlotValue(st.I, phase === "discharging"),
+        Vr: st.Vr,
+        Vc: st.Vc,
+      };
+      const hist = phase === "charging" ? histCharge : histDischarge;
+      const last = hist[hist.length - 1];
+      if (last && Math.abs(last.t - tPlot) < 0.008) {
+        hist[hist.length - 1] = pt;
+      } else {
+        hist.push(pt);
+      }
+    }
+
+    function buildTheoreticalCurve(mode, steps) {
+      const data = [];
+      const E0 = getE0(), vcStart = mode === "discharging" ? (vC0 || E0) : 0;
+      for (let i = 0; i <= steps; i++) {
+        const t = (T_MAX * i) / steps;
+        const st = mode === "charging"
+          ? rcState(t, "charging")
+          : (() => {
+              const tau = getTau(), R = getR();
+              const Vc = vcStart * Math.exp(-t / tau);
+              const I = Vc / R;
+              return { I, Vc, Vr: I * R };
+            })();
+        data.push({
+          t,
+          I: iPlotValue(st.I, mode === "discharging"),
+          Vr: st.Vr,
+          Vc: st.Vc,
+        });
+      }
+      return data;
+    }
+
+    function ensureCompareCurves() {
+      if (!histCharge.length) histCharge = buildTheoreticalCurve("charging", 120);
+      if (!histDischarge.length) {
+        vC0 = vC0 || getE0();
+        histDischarge = buildTheoreticalCurve("discharging", 120);
+      }
+    }
+
+    function fmtI(I) {
+      const a = Math.abs(I);
+      if (a >= 1) return I.toFixed(3) + " A";
+      if (a >= 1e-3) return (I * 1e3).toFixed(2) + " mA";
+      if (a < 1e-9) return "0 A";
+      return (I * 1e6).toFixed(1) + " μA";
+    }
+
+    function fmtV(V) { return V.toFixed(2) + " V"; }
+
+    function fmtTau(tau) {
+      if (tau >= 1) return tau.toFixed(2) + " s";
+      if (tau >= 1e-3) return (tau * 1e3).toFixed(2) + " ms";
+      return (tau * 1e6).toFixed(1) + " μs";
+    }
+
+    function syncSliders() {
+      document.getElementById("e0Val").textContent = getE0().toFixed(1) + " V";
+      document.getElementById("rVal").textContent = getR() + " Ω";
+      document.getElementById("cVal").textContent = (+cSlider.value) + " μF";
+    }
+
+    function updateReadouts() {
+      const tau = getTau();
+      const tPlot = Math.min(simTime, T_MAX);
+      let st;
+      if (phase === "discharging" && isDischargeComplete()) {
+        st = { I: 0, Vc: 0, Vr: 0 };
+      } else if (phase === "charging" || phase === "discharging") {
+        st = rcState(tPlot, phase);
+      } else {
+        st = { I: 0, Vc: 0, Vr: 0 };
+      }
+      document.getElementById("readI").textContent = fmtI(
+        phase === "discharging" ? iPlotValue(st.I, true) : st.I
+      );
+      document.getElementById("readVR").textContent = fmtV(st.Vr);
+      document.getElementById("readVC").textContent = fmtV(st.Vc);
+      document.getElementById("readTau").textContent = fmtTau(tau)
+        + " · 5τ = " + fmtTau(tau * 5);
+
+      let html = "τ = RC = " + getR() + " × " + (+cSlider.value) + "μF = <strong>" + fmtTau(tau) + "</strong>";
+      if (phase === "charging") {
+        html += "<br>充電：I = (E₀/R)e<sup>−t/τ</sup> = <strong>" + fmtI(st.I) + "</strong>"
+          + " · V<sub>C</sub> = <strong>" + fmtV(st.Vc) + "</strong>";
+      } else if (phase === "discharging") {
+        html += "<br>放電：I = −(V<sub>C0</sub>/R)e<sup>−t/τ</sup> = <strong>" + fmtI(iPlotValue(st.I, true)) + "</strong>"
+          + " · V<sub>C</sub> = <strong>" + fmtV(st.Vc) + "</strong>";
+      }
+      formulaLive.innerHTML = html;
+
+      const active = phase === "charging" || phase === "discharging";
+      if (active) {
+        const tShow = Math.min(simTime, T_MAX);
+        if (phase === "discharging" && isDischargeComplete()) {
+          runStatus.textContent = "放電完了 — 電流・自由電子は停止 · リセットでやり直し";
+          runStatus.className = "run-status";
+        } else {
+          const slow = getSimTimeScale() < 0.75;
+          const fast = getSimTimeScale() > 1.05;
+          runStatus.textContent = (phase === "charging" ? "充電中" : "放電中")
+            + (slow ? "（ややスロー）" : fast ? "（やや高速）" : "")
+            + " · t = " + tShow.toFixed(2) + " s"
+            + (simTime > T_MAX ? "（5 s 以降は平衡付近）" : "")
+            + " · S = " + (switchPos === "charge" ? "充電位置" : "放電位置")
+            + " · リセットで停止";
+          runStatus.className = "run-status running";
+        }
+      } else if (currentStep === 1) {
+        runStatus.textContent = "回路確認 — 電子停止";
+        runStatus.className = "run-status";
+      } else {
+        runStatus.textContent = "停止中 — 「充電開始」または「放電開始」を押してください";
+        runStatus.className = "run-status";
+      }
+    }
+
+    function setStep(step) {
+      currentStep = step;
+      document.querySelectorAll(".step-btn").forEach((btn) => {
+        const s = +btn.dataset.step;
+        btn.classList.toggle("is-active", s === step);
+        btn.classList.toggle("is-done", s < step);
+      });
+      stepGuide.textContent = STEP_GUIDES[step];
+
+      const paramOn = step >= 2;
+      [e0Slider, rSlider, cSlider].forEach((sl) => { sl.disabled = !paramOn; });
+      ["e0Label", "rLabel", "cLabel"].forEach((id) => {
+        document.getElementById(id).classList.toggle("is-disabled", !paramOn);
+      });
+
+      chargeBtn.classList.toggle("is-hidden", step < 3);
+      dischargeBtn.classList.toggle("is-hidden", step < 4);
+
+      if (step === 2) {
+        switchPos = "charge";
+        phase = "idle";
+        simTime = 0;
+        histCharge = [];
+        histDischarge = [];
+      }
+      if (step === 4) switchPos = "discharge";
+      if (step === 5) {
+        switchPos = "charge";
+        ensureCompareCurves();
+      }
+
+      chargeBtn.disabled = step !== 3;
+      dischargeBtn.disabled = step !== 4;
+
+      if (step < 3) { phase = "idle"; simTime = 0; }
+      electrons = [];
+      syncSliders();
+      updateReadouts();
+      drawFrame();
+    }
+
+    function startCharge() {
+      if (currentStep < 3 || getE0() <= 0) return;
+      switchPos = "charge";
+      phase = "charging";
+      simTime = 0;
+      electrons = [];
+      seedHistory("charging");
+      updateReadouts();
+      drawFrame();
+    }
+
+    function startDischarge() {
+      if (currentStep < 4) return;
+      switchPos = "discharge";
+      vC0 = histCharge.length ? histCharge[histCharge.length - 1].Vc : getE0() * 0.95;
+      if (vC0 < 0.01) vC0 = getE0();
+      phase = "discharging";
+      simTime = 0;
+      electrons = [];
+      seedHistory("discharging");
+      updateReadouts();
+      drawFrame();
+    }
+
+    function resetSim() {
+      phase = "idle";
+      simTime = 0;
+      switchPos = currentStep >= 4 ? "discharge" : "charge";
+      histCharge = [];
+      histDischarge = [];
+      electrons = [];
+      chargeBtn.disabled = currentStep !== 3;
+      dischargeBtn.disabled = currentStep !== 4;
+      updateReadouts();
+      drawFrame();
+    }
+
+    function drawBg(L) {
+      ctx.fillStyle = "#050810";
+      ctx.fillRect(0, 0, L.cw, L.ch);
+
+      const cg = ctx.createRadialGradient(L.circuitW * 0.45, L.ch * 0.5, 0, L.circuitW * 0.45, L.ch * 0.5, L.circuitW * 0.7);
+      cg.addColorStop(0, "rgba(56,189,248,0.07)");
+      cg.addColorStop(1, "#050810");
+      ctx.fillStyle = cg;
+      ctx.fillRect(0, 0, L.circuitW, L.ch);
+
+      ctx.fillStyle = "rgba(148,163,184,0.06)";
+      ctx.fillRect(L.graphX, 0, L.cw - L.graphX, L.ch);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.05)";
+      for (let x = 0; x < L.circuitW; x += 36) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, L.ch); ctx.stroke();
+      }
+      for (let y = 0; y < L.ch; y += 36) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(L.circuitW, y); ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(148,163,184,0.28)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(L.graphX, 6);
+      ctx.lineTo(L.graphX, L.ch - 6);
+      ctx.stroke();
+    }
+
+    function drawWireSeg(x1, y1, x2, y2, live) {
+      ctx.save();
+      if (live) { ctx.shadowColor = COL.wireGlow; ctx.shadowBlur = 6; }
+      ctx.strokeStyle = live ? COL.wireMain : COL.wire;
+      ctx.lineWidth = live ? 3.2 : 2.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawWires(L, live, includeBattery) {
+      const y = L.TOP_Y;
+      if (switchPos === "charge") {
+        if (includeBattery) drawWireSeg(L.MINUS.x, L.MINUS.y, L.BAT.rightX, y, live);
+        drawWireSeg(L.BAT.rightX, y, L.R.leftX, y, live);
+        drawWireSeg(L.R.rightX, y, L.S.leftX, y, live);
+        drawWireSeg(L.S.rightX, y, L.Cleft.x, y, live);
+        drawWireSeg(L.Cleft.x, y, L.Cright.x, y, live);
+        drawWireSeg(L.Cright.x, y, L.botRight.x, L.botRight.y, live);
+        drawWireSeg(L.botRight.x, L.botRight.y, L.PLUS.x, L.PLUS.y, live);
+        if (includeBattery) drawWireSeg(L.PLUS.x, L.PLUS.y, L.MINUS.x, L.MINUS.y, live);
+      } else {
+        drawWireSeg(L.Cleft.x, y, L.R.rightX, y, live);
+        drawWireSeg(L.R.rightX, y, L.R.leftX, y, live);
+        drawWireSeg(L.R.leftX, y, L.R.leftX, L.BOT_Y, live);
+        drawWireSeg(L.R.leftX, L.BOT_Y, L.botRight.x, L.BOT_Y, live);
+        drawWireSeg(L.botRight.x, L.BOT_Y, L.Cright.x, y, live);
+        drawWireSeg(L.S.leftX, y, L.S.rightX, y, live);
+        ctx.strokeStyle = "#fca5a5";
+        ctx.setLineDash([4, 3]);
+        drawWireSeg(L.BAT.rightX, y, L.R.leftX, y, false);
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawBattery(L, E0, connected) {
+      const b = L.BAT;
+      ctx.fillStyle = connected ? COL.batFill : "rgba(167,139,250,0.05)";
+      ctx.strokeStyle = COL.batStroke;
+      ctx.lineWidth = 2.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill(); ctx.stroke();
+      }
+      ctx.fillStyle = "#c4b5fd";
+      ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("E₀", b.cx, b.cy - 4);
+      ctx.fillText(E0.toFixed(1) + "V", b.cx, b.cy + 10);
+      ctx.strokeStyle = COL.minus;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(L.MINUS.x - 10, L.MINUS.y);
+      ctx.lineTo(L.MINUS.x + 10, L.MINUS.y);
+      ctx.stroke();
+      ctx.strokeStyle = COL.plus;
+      ctx.beginPath();
+      ctx.moveTo(L.PLUS.x - 12, L.PLUS.y);
+      ctx.lineTo(L.PLUS.x + 12, L.PLUS.y);
+      ctx.stroke();
+      if (!connected) {
+        ctx.strokeStyle = "#fca5a5";
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(L.BAT.rightX, L.TOP_Y);
+        ctx.lineTo(L.BAT.rightX + 18, L.TOP_Y - 14);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawResistor(L, live, Vr) {
+      const r = L.R;
+      const ratio = getE0() > 0 ? Vr / getE0() : 0;
+      ctx.fillStyle = live ? "rgba(251,191,36," + (0.15 + ratio * 0.35) + ")" : COL.rFill;
+      ctx.strokeStyle = COL.rStroke;
+      ctx.lineWidth = 2.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 5); ctx.fill(); ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(248,250,252,0.35)";
+      ctx.beginPath();
+      const zy = r.midY, z0 = r.x + r.w * 0.12, z1 = r.x + r.w * 0.88, step = (z1 - z0) / 6;
+      ctx.moveTo(z0, zy);
+      for (let i = 1; i <= 6; i++) {
+        ctx.lineTo(z0 + step * i, zy + (i % 2 ? -r.h * 0.28 : r.h * 0.28));
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#fde68a";
+      ctx.font = "700 11px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("R", r.cx, r.y - 8);
+    }
+
+    function drawCapacitor(L, Vc) {
+      const c = L.C;
+      let fill = 0;
+      if (phase === "discharging" && vC0 > 0) fill = Math.min(1, Vc / vC0);
+      else if (getE0() > 0) fill = Math.min(1, Vc / getE0());
+      ctx.fillStyle = "rgba(167,139,250," + (0.08 + fill * 0.35) + ")";
+      ctx.strokeStyle = COL.cStroke;
+      ctx.lineWidth = 2.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(c.x, c.y, c.w, c.h, 6); ctx.fill(); ctx.stroke();
+      }
+      const gap = 10 * L.cscale * L.sx;
+      const cx = c.cx;
+      ctx.strokeStyle = "#e9d5ff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx - gap, c.y + 8);
+      ctx.lineTo(cx - gap, c.y + c.h - 8);
+      ctx.moveTo(cx + gap, c.y + 8);
+      ctx.lineTo(cx + gap, c.y + c.h - 8);
+      ctx.stroke();
+      for (let i = 0; i < Math.round(fill * 14); i++) {
+        const ex = cx - gap + 4 + (i % 2) * (gap * 2 - 4);
+        const ey = c.y + 14 + (i * 7) % (c.h - 20);
+        ctx.fillStyle = COL.electron;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#c4b5fd";
+      ctx.font = "700 11px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("C", c.cx, c.y - 8);
+    }
+
+    function drawSwitch(L) {
+      const s = L.S;
+      ctx.fillStyle = "rgba(253,224,71,0.12)";
+      ctx.strokeStyle = COL.swStroke;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(s.x, s.y, s.w, s.h);
+      ctx.strokeStyle = "#fde68a";
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      if (switchPos === "charge") {
+        ctx.moveTo(s.x + 6, s.y + s.h - 8);
+        ctx.lineTo(s.x + s.w - 6, s.y + 8);
+      } else {
+        ctx.moveTo(s.x + 6, s.y + 8);
+        ctx.lineTo(s.x + s.w - 6, s.y + s.h - 8);
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#fde68a";
+      ctx.font = "700 10px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("S", s.cx, s.y - 8);
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(switchPos === "charge" ? "充電" : "放電", s.cx, s.y + s.h + 12);
+    }
+
+    function drawElectrons(L) {
+      if (!isElectronFlowActive()) return;
+      const st = rcState(Math.min(simTime, T_MAX), phase);
+      const path = phase === "charging" ? buildChargePath(L) : buildDischargePath(L);
+      electrons.forEach((e) => {
+        const pt = pathPointAtDist(e.s, path);
+        const g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, 9);
+        g.addColorStop(0, "#fff");
+        g.addColorStop(0.3, COL.electron);
+        g.addColorStop(1, "rgba(56,189,248,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function getGraphYRange(dataKey, overlay) {
+      const E0 = getE0();
+      const iMax = Math.max(E0 / Math.max(getR(), 1), 1e-9);
+      if (dataKey === "I") {
+        const showDischarge = overlay
+          || phase === "discharging"
+          || (currentStep >= 4 && histDischarge.length > 0);
+        if (showDischarge) return { yMin: -iMax, yMax: iMax };
+        return { yMin: 0, yMax: iMax };
+      }
+      return { yMin: 0, yMax: Math.max(E0, 1e-6) };
+    }
+
+    function valToGraphY(val, yMin, yMax, gy, gh) {
+      return gy + ((yMax - val) / (yMax - yMin)) * gh;
+    }
+
+    function drawMiniGraph(x, y, w, h, title, color, dataKey, overlay, yUnit) {
+      ctx.fillStyle = "rgba(8,12,24,0.9)";
+      ctx.strokeStyle = "rgba(148,163,184,0.28)";
+      ctx.lineWidth = 1;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(x, y, w, h, 7); ctx.fill(); ctx.stroke();
+      }
+
+      const padL = 40, padR = 10, padT = 20, padB = 20;
+      const gx = x + padL, gy = y + padT, gw = w - padL - padR, gh = h - padT - padB;
+      const { yMin, yMax } = getGraphYRange(dataKey, overlay);
+      const bipolar = dataKey === "I" && yMin < 0;
+
+      ctx.strokeStyle = "rgba(148,163,184,0.13)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const ly = gy + (i / 4) * gh;
+        ctx.beginPath(); ctx.moveTo(gx, ly); ctx.lineTo(gx + gw, ly); ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(148,163,184,0.5)";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gh); ctx.lineTo(gx + gw, gy + gh);
+      ctx.stroke();
+
+      if (bipolar) {
+        const y0 = valToGraphY(0, yMin, yMax, gy, gh);
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(gx, y0); ctx.lineTo(gx + gw, y0);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.fillStyle = color;
+      ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(title, x + 8, y + 15);
+
+      ctx.fillStyle = "rgba(148,163,184,0.7)";
+      ctx.font = "600 8px Inter, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(
+        yMax.toFixed(dataKey === "I" && yMax < 0.01 ? 3 : 1),
+        gx - 3, gy + 4
+      );
+      if (bipolar) {
+        ctx.fillText("0", gx - 3, valToGraphY(0, yMin, yMax, gy, gh) + 3);
+        ctx.fillText(
+          yMin.toFixed(dataKey === "I" && Math.abs(yMin) < 0.01 ? 3 : 1),
+          gx - 3, gy + gh + 3
+        );
+      }
+      ctx.textAlign = "center";
+      ctx.fillText("5s", gx + gw, gy + gh + 13);
+
+      function plotSeries(data, col, alpha, lw) {
+        if (!data.length) return;
+        ctx.strokeStyle = col;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = lw || 2.2;
+        ctx.beginPath();
+        data.forEach((p, i) => {
+          const px = gx + (p.t / T_MAX) * gw;
+          const val = p[dataKey];
+          const py = valToGraphY(val, yMin, yMax, gy, gh);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      if (overlay && currentStep >= 5) {
+        plotSeries(histCharge, COL.graphChg, 0.88, 2.2);
+        plotSeries(histDischarge, COL.graphDchg, 0.88, 2.2);
+        ctx.font = "700 9px Inter, sans-serif";
+        ctx.fillStyle = COL.graphChg;
+        ctx.fillText("充電", gx + 4, gy + 10);
+        ctx.fillStyle = COL.graphDchg;
+        ctx.fillText("放電", gx + 42, gy + 10);
+      } else {
+        const data = phase === "discharging" ? histDischarge
+          : phase === "charging" ? histCharge : [];
+        plotSeries(data, color, 1, 2.5);
+      }
+
+      if (phase === "charging" || phase === "discharging" || currentStep >= 5) {
+        const tau = getTau();
+        if (tau > 0 && tau <= T_MAX) {
+          const tx = gx + (tau / T_MAX) * gw;
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = "rgba(134,239,172,0.5)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(tx, gy); ctx.lineTo(tx, gy + gh);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    function drawGraphs(L) {
+      if (currentStep === 1) return;
+      if (currentStep >= 5) ensureCompareCurves();
+      const x = L.graphX + 8;
+      const w = L.cw - x - 8;
+      const gap = 6;
+      const gh = (L.ch - gap * 4) / 3;
+      const overlay = currentStep >= 5;
+      drawMiniGraph(x, gap, w, gh, "I–t", COL.graphI, "I", overlay, "A");
+      drawMiniGraph(x, gap + gh + gap, w, gh, "V_R–t", COL.graphVR, "Vr", overlay, "V");
+      drawMiniGraph(x, gap + (gh + gap) * 2, w, gh, "V_C–t", COL.graphVC, "Vc", overlay, "V");
+    }
+
+    function drawFrame() {
+      const L = getLayout(canvasW, canvasH);
+      const tPlot = Math.min(simTime, T_MAX);
+      let st;
+      if (phase === "discharging" && isDischargeComplete()) {
+        st = { Vc: 0, Vr: 0, I: 0 };
+      } else if (phase === "charging" || phase === "discharging") {
+        st = rcState(tPlot, phase);
+      } else {
+        st = { Vc: 0, Vr: 0, I: 0 };
+      }
+      const live = (phase === "charging" || phase === "discharging") && isElectronFlowActive();
+      const batConnected = switchPos === "charge";
+
+      drawBg(L);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, L.circuitW - 2, L.ch);
+      ctx.clip();
+      drawWires(L, live, batConnected);
+      drawBattery(L, getE0(), batConnected);
+      drawResistor(L, live, st.Vr);
+      drawSwitch(L);
+      drawCapacitor(L, st.Vc);
+      syncElectrons(L);
+      drawElectrons(L);
+      ctx.restore();
+
+      drawGraphs(L);
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(500, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      loopPhase += dt * 3;
+
+      if (phase === "charging" || phase === "discharging") {
+        simTime += dt * getSimTimeScale();
+        if (simTime <= T_MAX) recordHistory();
+        const L = getLayout(canvasW, canvasH);
+        advanceElectrons(dt, L);
+        updateReadouts();
+      }
+
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+
+    document.querySelectorAll(".step-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setStep(+btn.dataset.step));
+    });
+    [e0Slider, rSlider, cSlider].forEach((sl) => {
+      sl.addEventListener("input", () => {
+        if (phase === "idle") {
+          syncSliders();
+          updateReadouts();
+        }
+      });
+    });
+    chargeBtn.addEventListener("click", startCharge);
+    dischargeBtn.addEventListener("click", startDischarge);
+    resetBtn.addEventListener("click", resetSim);
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    setStep(1);
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

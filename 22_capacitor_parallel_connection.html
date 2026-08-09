@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>22章 コンデンサ — 並列接続 · 充放電 · 電流分配</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8; --accent-light: #a5b4fc;
+      --panel: rgba(10, 12, 28, 0.9); --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f1030 45%, #0a1628 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(52,211,153,0.45), rgba(129,140,248,0.4));
+      border: 1px solid rgba(129,140,248,0.4); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.22);
+      font-size: 0.88rem; color: #c7d2fe; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(129,140,248,0.2);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #020617; border: 1px solid rgba(129,140,248,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(640px, 68dvh);
+      min-height: 440px; touch-action: none;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c7d2fe; font-variant-numeric: tabular-nums; }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .toggle-btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(129,140,248,0.3); background: rgba(15,30,45,0.6);
+      color: #cbd5e1; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-active {
+      background: rgba(129,140,248,0.22); border-color: rgba(129,140,248,0.55); color: #e0e7ff;
+    }
+    .toggle-btn.is-charge.is-active {
+      background: rgba(34,197,94,0.2); border-color: rgba(34,197,94,0.55); color: #bbf7d0;
+    }
+    .toggle-btn.is-discharge.is-active {
+      background: rgba(248,113,113,0.18); border-color: rgba(248,113,113,0.5); color: #fecaca;
+    }
+    .cap-row.is-hidden { display: none; }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(129,140,248,0.06); border: 1px solid rgba(129,140,248,0.16);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.82rem; font-weight: 700; color: #eef2ff; }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+    .hint { margin-top: 8px; font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⫘</div>
+      <p class="chapter-label">第22章 — コンデンサ</p>
+      <h2>並列接続 — 共通 V · 電荷分配 · C_total</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-22">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>並列接続の本質</h3>
+      <p>
+        並列接続では各コンデンサーの<strong>電位差 V は共通</strong>。
+        充電では <strong>Q<sub>i</sub> = C<sub>i</sub> V</strong> で電荷が分配され、
+        放電では<strong>電流も C<sub>i</sub> に比例して分岐</strong>します（I<sub>i</sub> = I<sub>total</sub>·C<sub>i</sub>/C<sub>total</sub>）。
+      </p>
+      <div class="formula-box">
+        C<sub>total</sub> = C<sub>1</sub>+C<sub>2</sub> · Q<sub>i</sub>=C<sub>i</sub>V · 放電 I<sub>i</sub>∝C<sub>i</sub>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnCap2">2個</button>
+        <button type="button" class="toggle-btn" id="btnCap3">3個</button>
+        <button type="button" class="toggle-btn is-charge" id="btnCharge">充電 OFF</button>
+        <button type="button" class="toggle-btn is-discharge" id="btnDischarge">放電 OFF</button>
+        <button type="button" class="toggle-btn is-active" id="btnCurrent">電流表示 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnVectors">電場矢印 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGradient">電位グラデーション ON</button>
+      </div>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnGraphQV">Q(V) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphC">C_total ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphE">I 分配 ON</button>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="vSlider">電源電圧 V<sub>s</sub> <span class="slider-val" id="vVal">12 V</span></label>
+          <input type="range" id="vSlider" min="0" max="50" value="12" step="1">
+        </div>
+        <div>
+          <label for="distSlider">板間距離 d <span class="slider-val" id="distVal">2.0 mm</span></label>
+          <input type="range" id="distSlider" min="10" max="50" value="20" step="5">
+        </div>
+        <div>
+          <label for="s1Slider">C1 板面積 S<sub>1</sub> <span class="slider-val" id="s1Val">1.0</span></label>
+          <input type="range" id="s1Slider" min="20" max="120" value="50" step="5">
+        </div>
+        <div>
+          <label for="s2Slider">C2 板面積 S<sub>2</sub> <span class="slider-val" id="s2Val">1.6</span></label>
+          <input type="range" id="s2Slider" min="20" max="120" value="80" step="5">
+        </div>
+        <div class="cap-row is-hidden" id="s3Row">
+          <label for="s3Slider">C3 板面積 S<sub>3</sub> <span class="slider-val" id="s3Val">0.8</span></label>
+          <input type="range" id="s3Slider" min="20" max="120" value="40" step="5">
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout"><dt>共通 V</dt><dd id="readV">—</dd></dl>
+        <dl class="readout"><dt>C<sub>total</sub></dt><dd id="readCtot">—</dd></dl>
+        <dl class="readout"><dt>Q<sub>1</sub> · Q<sub>2</sub></dt><dd id="readQ12">—</dd></dl>
+        <dl class="readout"><dt>I<sub>total</sub></dt><dd id="readI">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">充電 ON → 全 Cap に同じ V · 放電 ON → 電流が C に比例して分岐</div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#fde047">→ 電場（Q に比例）</span>
+        <span style="color:#34d399">充電 · 緑の電流</span>
+        <span style="color:#f87171">放電 · 赤の電流</span>
+        <span style="color:#34d399">C1</span>
+        <span style="color:#818cf8">C2</span>
+        <span style="color:#f472b6">C3</span>
+      </div>
+      <p class="hint">平行板を縦に並列 · 充電→左の電源 · 放電→右の豆電球 · I<sub>i</sub>=I·C<sub>i</sub>/C<sub>total</sub> で枝分かれ</p>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+
+    const R_LOAD = 3500;
+    const GRAPH_PANEL_RATIO = 0.38;
+    const VIEW2D = { padX: 12, padTop: 22, padBottom: 12 };
+    const CAP_COLORS = ["#34d399", "#818cf8", "#f472b6"];
+    const C_SCALE = 3e-6;
+
+    let canvasW = 800, canvasH = 500, dpr = 1;
+    let worldHalfW = 2.05, worldHalfH = 1.42;
+
+    let capCount = 2;
+    let chargeOn = false, dischargeOn = false;
+    let showCurrent = true, showVectors = true, showGradient = true;
+    let showGraphQV = true, showGraphC = true, showGraphI = true;
+
+    let V_cap = 0;
+    let flowPhase = 0;
+    let simTime = 0;
+    let lastFrame = performance.now();
+
+    function getVSupply() { return parseFloat(document.getElementById("vSlider").value); }
+    function getDistMm() { return parseFloat(document.getElementById("distSlider").value) / 10; }
+    function getSRel(i) {
+      const ids = ["s1Slider", "s2Slider", "s3Slider"];
+      return parseFloat(document.getElementById(ids[i]).value) / 50;
+    }
+
+    function getCapacitance(i) {
+      const d = Math.max(0.5, getDistMm());
+      return getSRel(i) / d * C_SCALE;
+    }
+
+    function getCTotal() {
+      let sum = 0;
+      for (let i = 0; i < capCount; i += 1) sum += getCapacitance(i);
+      return sum;
+    }
+
+    function getQ(i) { return getCapacitance(i) * V_cap; }
+    function getQTotal() { return getCTotal() * V_cap; }
+    function getTau() { return R_LOAD * getCTotal(); }
+
+    /** 充電・放電電流（回路全体） */
+    function getTotalCurrent() {
+      const Vs = getVSupply();
+      if (chargeOn && !dischargeOn) return (Vs - V_cap) / R_LOAD;
+      if (dischargeOn && !chargeOn) return V_cap / R_LOAD;
+      return 0;
+    }
+
+    function getBranchCurrent(i) {
+      const It = getTotalCurrent();
+      const Ctot = getCTotal();
+      if (Ctot <= 0) return 0;
+      return It * (getCapacitance(i) / Ctot);
+    }
+
+    function getChargeRatio(i) {
+      const Vs = getVSupply();
+      const Ci = getCapacitance(i);
+      if (Vs <= 0 || Ci <= 0) return 0;
+      return Math.min(1, Math.abs(getQ(i)) / (Ci * Vs));
+    }
+
+    function getBulbBrightness() {
+      if (!dischargeOn) return 0;
+      const Vs = getVSupply();
+      if (Vs <= 0) return 0;
+      const vRatio = Math.min(1, V_cap / Vs);
+      return Math.min(1, Math.pow(vRatio, 0.45) * 1.15);
+    }
+
+    /** 平行板コンデンサー配置（縦並列 · 左＋右−） */
+    function getCapLayout() {
+      const n = capCount;
+      const span = n === 2 ? 1.05 : 1.38;
+      const step = span / Math.max(n - 1, 1);
+      const y0 = (n - 1) * step * 0.5;
+      const caps = [];
+      for (let i = 0; i < n; i += 1) {
+        const y = y0 - i * step;
+        const plateH = 0.28 + getSRel(i) * 0.15;
+        caps.push({
+          index: i,
+          y,
+          plateH,
+          leftX: -0.72,
+          rightX: 0.72,
+          gapL: -0.5,
+          gapR: 0.5,
+          color: CAP_COLORS[i],
+          label: "C" + (i + 1)
+        });
+      }
+      return caps;
+    }
+
+    /** 共通母線・電源・負荷の位置 */
+    function getBusGeometry() {
+      const caps = getCapLayout();
+      return {
+        caps,
+        topY: Math.max(...caps.map((c) => c.y + c.plateH * 0.5)) + 0.42,
+        botY: Math.min(...caps.map((c) => c.y - c.plateH * 0.5)) - 0.42,
+        busL: -1.05,
+        busR: 0.88,
+        leftBus: -0.72,
+        rightBus: 0.72,
+        batX: -1.02,
+        loadX: 1.02
+      };
+    }
+
+    function getEField() {
+      const dM = getDistMm() * 1e-3;
+      if (dM <= 0 || V_cap <= 0) return 0;
+      return V_cap / dM;
+    }
+
+    function chargeAlpha(Q) {
+      const Vs = getVSupply();
+      const maxQ = Math.max(getCapacitance(0) * Math.max(Vs, 1), 1e-12);
+      return 0.25 + 0.65 * Math.min(1, Math.abs(Q) / maxQ);
+    }
+
+    function formatC(C) {
+      if (C >= 1e-6) return (C * 1e6).toFixed(2) + " μF";
+      if (C >= 1e-9) return (C * 1e9).toFixed(1) + " nF";
+      return C.toExponential(2) + " F";
+    }
+
+    function formatQ(Q) {
+      const uC = Q * 1e6;
+      if (Math.abs(uC) >= 100) return uC.toFixed(1) + " μC";
+      if (Math.abs(uC) >= 1) return uC.toFixed(2) + " μC";
+      return (Q * 1e9).toFixed(1) + " nC";
+    }
+
+    function formatI(I) {
+      const uA = I * 1e6;
+      if (Math.abs(uA) >= 100) return uA.toFixed(0) + " μA";
+      if (Math.abs(uA) >= 1) return uA.toFixed(1) + " μA";
+      return (I * 1e9).toFixed(1) + " nA";
+    }
+
+    function formatPhys(n, unit, d) {
+      if (!Number.isFinite(n)) return "—";
+      const abs = Math.abs(n);
+      if (abs >= 1e4 || (abs > 0 && abs < 0.01)) return n.toExponential(2) + " " + unit;
+      return n.toFixed(d) + " " + unit;
+    }
+
+    function mainViewWidth() { return canvasW * (1 - GRAPH_PANEL_RATIO); }
+    function graphPanelX() { return mainViewWidth(); }
+
+    function view2DBounds() {
+      const w = mainViewWidth();
+      const plotW = w - VIEW2D.padX * 2;
+      const plotH = canvasH - VIEW2D.padTop - VIEW2D.padBottom;
+      return { x: VIEW2D.padX, y: VIEW2D.padTop, w: plotW, h: plotH, cx: VIEW2D.padX + plotW * 0.5, cy: VIEW2D.padTop + plotH * 0.5 };
+    }
+
+    function worldScale() {
+      const v = view2DBounds();
+      return { sx: v.w / (worldHalfW * 2), sy: v.h / (worldHalfH * 2) };
+    }
+
+    function worldToScreen(x, y) {
+      const v = view2DBounds();
+      const sc = worldScale();
+      return { x: v.cx + x * sc.sx, y: v.cy - y * sc.sy };
+    }
+
+    function clipView2D() {
+      const v = view2DBounds();
+      ctx.beginPath();
+      ctx.rect(v.x - 2, v.y - 2, v.w + 4, v.h + 4);
+      ctx.clip();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(360, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function physicsStep(dt) {
+      const dtC = Math.min(dt, 0.05);
+      const Vs = getVSupply();
+      const tau = Math.max(getTau(), 1e-6);
+
+      if (chargeOn && !dischargeOn) {
+        V_cap += (Vs - V_cap) * Math.min(1, dtC / tau);
+      } else if (dischargeOn && !chargeOn) {
+        V_cap *= Math.exp(-dtC / tau);
+        if (V_cap < 1e-6) V_cap = 0;
+      }
+
+      const I = getTotalCurrent();
+      flowPhase += dtC * (0.4 + Math.min(1, Math.abs(I) * 8e5));
+      simTime += dtC;
+    }
+
+    function drawBackground2D() {
+      const v = view2DBounds();
+      const grad = ctx.createLinearGradient(v.x, v.y, v.x + v.w, v.y + v.h);
+      grad.addColorStop(0, "#020617");
+      grad.addColorStop(1, "#0f172a");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, mainViewWidth(), canvasH);
+    }
+
+    function drawViewLabel() {
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("並列接続（平行板）", VIEW2D.padX, 18);
+    }
+
+    function strokeWire(x1, y1, x2, y2, color, lw) {
+      const p1 = worldToScreen(x1, y1);
+      const p2 = worldToScreen(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+
+    /** 区間上を流れる電流粒子 */
+    function drawFlowSegment(x1, y1, x2, y2, intensity, color, reverse) {
+      if (!showCurrent || intensity < 0.02) return;
+      const p1 = worldToScreen(x1, y1);
+      const p2 = worldToScreen(x2, y2);
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 8) return;
+      const nDots = Math.max(2, Math.round(2 + intensity * 6));
+      for (let k = 0; k < nDots; k += 1) {
+        const t = reverse
+          ? (1 - ((flowPhase * (0.35 + intensity * 0.5) + k / nDots) % 1))
+          : ((flowPhase * (0.35 + intensity * 0.5) + k / nDots) % 1);
+        const px = p1.x + dx * t;
+        const py = p1.y + dy * t;
+        const r = 2.5 + intensity * 2.5;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawArrow(sx, sy, dx, dy, color, lw) {
+      const ex = sx + dx, ey = sy + dy;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(8, Math.hypot(dx, dy) * 0.28);
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - 0.45), ey - head * Math.sin(ang - 0.45));
+      ctx.lineTo(ex - head * Math.cos(ang + 0.45), ey - head * Math.sin(ang + 0.45));
+      ctx.closePath(); ctx.fill();
+    }
+
+    /** 平行板コンデンサー — 板の色は Q に比例 */
+    function drawCapacitors() {
+      const caps = getCapLayout();
+      caps.forEach((cap) => {
+        const Q = getQ(cap.index);
+        const C = getCapacitance(cap.index);
+        const alpha = chargeAlpha(Q);
+        const yTop = cap.y + cap.plateH * 0.5;
+        const yBot = cap.y - cap.plateH * 0.5;
+
+        const lTl = worldToScreen(cap.leftX, yTop);
+        const lBr = worldToScreen(cap.leftX + 0.12, yBot);
+        const rTl = worldToScreen(cap.rightX - 0.12, yTop);
+        const rBr = worldToScreen(cap.rightX, yBot);
+        const gTl = worldToScreen(cap.gapL, yTop - 0.02);
+        const gBr = worldToScreen(cap.gapR, yBot + 0.02);
+
+        ctx.fillStyle = "rgba(248,113,113," + alpha + ")";
+        ctx.fillRect(lTl.x, lTl.y, lBr.x - lTl.x, lBr.y - lTl.y);
+        ctx.fillStyle = "rgba(56,189,248," + alpha + ")";
+        ctx.fillRect(rTl.x, rTl.y, rBr.x - rTl.x, rBr.y - rTl.y);
+
+        ctx.strokeStyle = cap.color;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(lTl.x, lTl.y, lBr.x - lTl.x, lBr.y - lTl.y);
+        ctx.strokeRect(rTl.x, rTl.y, rBr.x - rTl.x, rBr.y - rTl.y);
+
+        if (showGradient && V_cap > 0) {
+          const cols = 14;
+          for (let k = 0; k < cols; k += 1) {
+            const t = k / (cols - 1);
+            const wx = cap.gapL + t * (cap.gapR - cap.gapL);
+            const vRatio = 0.5 - t;
+            const r = Math.round(248 + (56 - 248) * (0.5 - vRatio * 0.5));
+            const g = Math.round(113 + (189 - 113) * (0.5 - vRatio * 0.5));
+            const b = Math.round(113 + (248 - 113) * (0.5 - vRatio * 0.5));
+            const px = worldToScreen(wx, cap.y).x;
+            const pw = (worldToScreen(cap.gapR, cap.y).x - worldToScreen(cap.gapL, cap.y).x) / cols + 1;
+            ctx.fillStyle = "rgba(" + r + "," + g + "," + b + ",0.22)";
+            ctx.fillRect(px, gBr.y, pw, gTl.y - gBr.y);
+          }
+        }
+
+        ctx.fillStyle = cap.color;
+        ctx.font = "700 13px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(cap.label, (lTl.x + rBr.x) / 2, cap.y + 5);
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#e2e8f0";
+        ctx.fillText(formatC(C), (lTl.x + rBr.x) / 2, cap.y - 12);
+        ctx.fillStyle = "#fde68a";
+        ctx.fillText("Q=" + formatQ(Q), (lTl.x + rBr.x) / 2, cap.y + 22);
+        ctx.textAlign = "left";
+      });
+    }
+
+    /** 電場矢印 — 長さ・濃さは Q（∝ C）に比例 */
+    function drawFieldVectors() {
+      if (!showVectors || V_cap <= 0) return;
+      const caps = getCapLayout();
+      const maxQ = Math.max(...caps.map((_, i) => getQ(i)), 1e-15);
+      const eMag = getEField();
+
+      ctx.save();
+      clipView2D();
+      caps.forEach((cap) => {
+        const Q = getQ(cap.index);
+        const qNorm = Q / maxQ;
+        const rows = 3;
+        for (let j = 0; j < rows; j += 1) {
+          const wy = cap.y - cap.plateH * 0.35 + (j / (rows - 1)) * cap.plateH * 0.7;
+          const cols = 5;
+          for (let i = 0; i < cols; i += 1) {
+            const wx = cap.gapL + 0.08 + (i / (cols - 1)) * (cap.gapR - cap.gapL - 0.16);
+            const len = 6 + qNorm * 22;
+            const p = worldToScreen(wx, wy);
+            const alpha = 0.35 + qNorm * 0.6;
+            drawArrow(p.x - len * 0.5, p.y, len, 0, "rgba(253,224,71," + alpha + ")", 1.5 + qNorm);
+          }
+        }
+        ctx.fillStyle = "rgba(148,163,184,0.8)";
+        ctx.font = "8px Inter, sans-serif";
+        const ep = worldToScreen(cap.gapR + 0.06, cap.y);
+        ctx.fillText("E=" + formatPhys(eMag / 1e3, "kV/m", 1), ep.x, ep.y + 3);
+      });
+      ctx.restore();
+    }
+
+    function drawResistor(x, y, w, h) {
+      const p = worldToScreen(x, y);
+      const sc = worldScale();
+      const rw = w * sc.sx, rh = h * sc.sy;
+      ctx.strokeStyle = "rgba(251,191,36,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const zig = 6;
+      ctx.moveTo(p.x - rw * 0.5, p.y);
+      for (let i = 0; i <= zig; i += 1) {
+        ctx.lineTo(p.x - rw * 0.5 + (rw / zig) * i, p.y + (i % 2 === 0 ? -rh * 0.4 : rh * 0.4));
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "8px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("R", p.x, p.y + rh * 0.9);
+      ctx.textAlign = "left";
+    }
+
+    function drawMiniBulb(sx, sy, brightness) {
+      const b = Math.max(0, Math.min(1, brightness));
+      const r = 13;
+      if (b > 0.02) {
+        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * (2.2 + b * 2));
+        glow.addColorStop(0, "rgba(255,250,200," + (0.4 + b * 0.5) + ")");
+        glow.addColorStop(1, "rgba(251,191,36,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = b > 0.05 ? "#fde68a" : "#64748b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = b > 0.05 ? "rgba(253,224,71," + (0.3 + b * 0.5) + ")" : "rgba(100,116,139,0.3)";
+      ctx.fill();
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("豆電球", sx, sy + r + 14);
+      ctx.textAlign = "left";
+    }
+
+    /** 共通母線 · 電源 · 放電負荷 · 電流アニメーション */
+    function drawParallelCircuit() {
+      const bus = getBusGeometry();
+      const wireColor = chargeOn ? "rgba(34,197,94,0.75)" : dischargeOn ? "rgba(248,113,113,0.75)" : "rgba(148,163,184,0.55)";
+      const flowColor = chargeOn ? "rgba(134,239,172,0.95)" : "rgba(252,165,165,0.95)";
+      const I = getTotalCurrent();
+      const Iref = Math.max(getVSupply() / R_LOAD, 1e-9);
+      const iNorm = Math.min(1, Math.abs(I) / Iref);
+
+      // 共通 +/− 母線
+      strokeWire(bus.busL, bus.topY, bus.busR, bus.topY, "rgba(248,113,113,0.85)", 3);
+      strokeWire(bus.busL, bus.botY, bus.busR, bus.botY, "rgba(56,189,248,0.85)", 3);
+
+      // 各 Cap への接続線
+      bus.caps.forEach((cap) => {
+        const yTop = cap.y + cap.plateH * 0.5;
+        const yBot = cap.y - cap.plateH * 0.5;
+        strokeWire(bus.leftBus, yTop, bus.leftBus, bus.topY, wireColor, 2);
+        strokeWire(bus.rightBus, yBot, bus.rightBus, bus.botY, wireColor, 2);
+      });
+
+      // 左：電源
+      strokeWire(bus.batX, bus.topY, bus.busL, bus.topY, wireColor, 2.5);
+      strokeWire(bus.batX, bus.botY, bus.busL, bus.botY, wireColor, 2.5);
+      const batMid = worldToScreen(bus.batX, (bus.topY + bus.botY) * 0.5);
+      const batH = (bus.topY - bus.botY) * 0.55;
+      const pPlus = worldToScreen(bus.batX, (bus.topY + bus.botY) * 0.5 + batH * 0.35);
+      const pMinus = worldToScreen(bus.batX, (bus.topY + bus.botY) * 0.5 - batH * 0.35);
+
+      if (chargeOn) {
+        ctx.fillStyle = "rgba(34,197,94,0.15)";
+        ctx.strokeStyle = "rgba(34,197,94,0.7)";
+        ctx.lineWidth = 2;
+        ctx.fillRect(batMid.x - 20, batMid.y - 22, 40, 44);
+        ctx.strokeRect(batMid.x - 20.5, batMid.y - 22.5, 41, 45);
+      } else {
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(batMid.x - 18, batMid.y - 20, 36, 40);
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = chargeOn ? "#86efac" : "#64748b";
+      ctx.font = "700 16px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("+", pPlus.x - 14, pPlus.y + 5);
+      ctx.fillStyle = chargeOn ? "#7dd3fc" : "#64748b";
+      ctx.fillText("−", pMinus.x - 14, pMinus.y + 5);
+      ctx.fillStyle = chargeOn ? "#bbf7d0" : "#64748b";
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(chargeOn ? getVSupply() + " V" : "充電 OFF", batMid.x - 18, pPlus.y - 18);
+      ctx.textAlign = "left";
+
+      // 右：放電負荷（豆電球）
+      strokeWire(bus.busR, bus.topY, bus.loadX, bus.topY, wireColor, 2.5);
+      strokeWire(bus.busR, bus.botY, bus.loadX, bus.botY, wireColor, 2.5);
+      const loadMid = worldToScreen(bus.loadX, (bus.topY + bus.botY) * 0.5);
+      if (dischargeOn) {
+        strokeWire(bus.loadX, bus.topY, bus.loadX, bus.topY - 0.15, wireColor, 2);
+        strokeWire(bus.loadX, bus.botY, bus.loadX, bus.botY + 0.15, wireColor, 2);
+        drawResistor(bus.loadX, (bus.topY + bus.botY) * 0.5 + 0.06, 0.12, 0.1);
+        drawMiniBulb(loadMid.x, loadMid.y - 6, getBulbBrightness());
+      } else {
+        drawMiniBulb(loadMid.x, loadMid.y, 0);
+      }
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("共通 +", worldToScreen(bus.busR - 0.05, bus.topY).x - 30, worldToScreen(0, bus.topY).y - 6);
+      ctx.fillText("共通 −", worldToScreen(bus.busR - 0.05, bus.botY).x - 30, worldToScreen(0, bus.botY).y + 14);
+      ctx.fillStyle = "#fde68a";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("V = " + formatPhys(V_cap, "V", 1), worldToScreen(-0.82, bus.topY + 0.2).x, worldToScreen(0, bus.topY + 0.2).y);
+
+      // 電流アニメーション（導線上）
+      if (chargeOn && !dischargeOn) {
+        drawFlowSegment(bus.batX, bus.topY, bus.busL, bus.topY, iNorm, flowColor, false);
+        drawFlowSegment(bus.busL, bus.topY, bus.busR, bus.topY, iNorm, flowColor, false);
+        bus.caps.forEach((cap, i) => {
+          const yTop = cap.y + cap.plateH * 0.5;
+          const yBot = cap.y - cap.plateH * 0.5;
+          const bi = Math.min(1, Math.abs(getBranchCurrent(i)) / Iref);
+          drawFlowSegment(bus.leftBus, bus.topY, bus.leftBus, yTop, bi, flowColor, false);
+          drawFlowSegment(cap.gapL, cap.y, cap.gapR, cap.y, bi * 0.85, flowColor, false);
+          drawFlowSegment(bus.rightBus, yBot, bus.rightBus, bus.botY, bi, flowColor, false);
+          const lp = worldToScreen(cap.gapR + 0.08, cap.y);
+          ctx.fillStyle = CAP_COLORS[i];
+          ctx.font = "600 8px Inter, sans-serif";
+          ctx.fillText("I" + (i + 1), lp.x, lp.y - 6);
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "7px Inter, sans-serif";
+          ctx.fillText(formatI(getBranchCurrent(i)), lp.x, lp.y + 4);
+        });
+        drawFlowSegment(bus.busR, bus.botY, bus.busL, bus.botY, iNorm, flowColor, true);
+        drawFlowSegment(bus.busL, bus.botY, bus.batX, bus.botY, iNorm, flowColor, true);
+      }
+
+      if (dischargeOn && !chargeOn) {
+        bus.caps.forEach((cap, i) => {
+          const yTop = cap.y + cap.plateH * 0.5;
+          const yBot = cap.y - cap.plateH * 0.5;
+          const bi = Math.min(1, Math.abs(getBranchCurrent(i)) / Iref);
+          drawFlowSegment(bus.leftBus, yTop, bus.leftBus, bus.topY, bi, flowColor, true);
+          drawFlowSegment(cap.gapL, cap.y, cap.gapR, cap.y, bi * 0.85, flowColor, true);
+          drawFlowSegment(bus.rightBus, bus.botY, bus.rightBus, yBot, bi, flowColor, true);
+          const lp = worldToScreen(cap.gapR + 0.08, cap.y);
+          ctx.fillStyle = CAP_COLORS[i];
+          ctx.font = "600 8px Inter, sans-serif";
+          ctx.fillText("I" + (i + 1), lp.x, lp.y - 6);
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "7px Inter, sans-serif";
+          ctx.fillText(formatI(getBranchCurrent(i)), lp.x, lp.y + 4);
+        });
+        drawFlowSegment(bus.busL, bus.topY, bus.busR, bus.topY, iNorm, flowColor, true);
+        drawFlowSegment(bus.busR, bus.topY, bus.loadX, bus.topY, iNorm, flowColor, true);
+        drawFlowSegment(bus.loadX, bus.topY, bus.loadX, bus.topY - 0.15, iNorm, flowColor, true);
+        drawFlowSegment(bus.loadX, bus.botY + 0.15, bus.loadX, bus.botY, iNorm, flowColor, true);
+        drawFlowSegment(bus.loadX, bus.botY, bus.busL, bus.botY, iNorm, flowColor, false);
+        const ip = worldToScreen(bus.loadX + 0.1, (bus.topY + bus.botY) * 0.5);
+        ctx.fillStyle = "#fca5a5";
+        ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("I=" + formatI(I), ip.x, ip.y);
+      }
+    }
+
+    function drawGraphDivider() {
+      const gx = graphPanelX();
+      ctx.strokeStyle = "rgba(129,140,248,0.45)";
+      ctx.beginPath();
+      ctx.moveTo(gx + 0.5, 0);
+      ctx.lineTo(gx + 0.5, canvasH);
+      ctx.stroke();
+    }
+
+    function countActiveGraphs() {
+      let n = 0;
+      if (showGraphQV) n += 1;
+      if (showGraphC) n += 1;
+      if (showGraphI) n += 1;
+      return Math.max(n, 1);
+    }
+
+    function graphLayout() {
+      const gx = graphPanelX() + 4;
+      const gw = canvasW - gx - 4;
+      const n = countActiveGraphs();
+      const gh = (canvasH - 8) / n;
+      const graphs = [];
+      let idx = 0;
+      if (showGraphQV) { graphs.push({ id: "QV", y: 4 + idx * gh, h: gh - 4 }); idx += 1; }
+      if (showGraphC) { graphs.push({ id: "C", y: 4 + idx * gh, h: gh - 4 }); idx += 1; }
+      if (showGraphI) { graphs.push({ id: "I", y: 4 + idx * gh, h: gh - 4 }); idx += 1; }
+      return { gx, gw, graphs };
+    }
+
+    function drawGraphFrame(gx, gy, gw, gh, title, yLabel) {
+      ctx.fillStyle = "rgba(8,12,24,0.92)";
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.strokeStyle = "rgba(129,140,248,0.22)";
+      ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+      const ml = 34, mr = 8, mt = 20, mb = 18;
+      const plotX = gx + ml, plotY = gy + mt;
+      const plotW = gw - ml - mr, plotH = gh - mt - mb;
+      ctx.strokeStyle = "rgba(148,163,184,0.35)";
+      ctx.beginPath();
+      ctx.moveTo(plotX, plotY);
+      ctx.lineTo(plotX, plotY + plotH);
+      ctx.lineTo(plotX + plotW, plotY + plotH);
+      ctx.stroke();
+      ctx.fillStyle = "#c7d2fe";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(title, gx + 8, gy + 14);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "9px Inter, sans-serif";
+      ctx.save();
+      ctx.translate(gx + 10, plotY + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+      return { plotX, plotY, plotW, plotH };
+    }
+
+    function drawGraphQV(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "Q(V)  傾き=C", "Q (μC)");
+      const vMax = 50;
+      let qMax = 1e-9;
+      for (let i = 0; i < capCount; i += 1) qMax = Math.max(qMax, getCapacitance(i) * vMax);
+      qMax *= 1.12;
+      const xToPx = (v) => base.plotX + (v / vMax) * base.plotW;
+      const yToPx = (q) => base.plotY + base.plotH - (q / qMax) * base.plotH;
+
+      for (let i = 0; i < capCount; i += 1) {
+        const C = getCapacitance(i);
+        ctx.strokeStyle = CAP_COLORS[i];
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(xToPx(0), yToPx(0));
+        ctx.lineTo(xToPx(vMax), yToPx(C * vMax));
+        ctx.stroke();
+        ctx.fillStyle = CAP_COLORS[i];
+        ctx.beginPath();
+        ctx.arc(xToPx(V_cap), yToPx(getQ(i)), 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "8px Inter, sans-serif";
+      ctx.fillText("V (V)", base.plotX + base.plotW / 2 - 8, gy + gh - 4);
+    }
+
+    function drawGraphCBar(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "C_total = C1+C2+…", "C (μF)");
+      const vals = [];
+      for (let i = 0; i < capCount; i += 1) vals.push(getCapacitance(i) * 1e6);
+      vals.push(getCTotal() * 1e6);
+      const cMax = Math.max(...vals, 0.01) * 1.15;
+      const labels = [];
+      for (let i = 0; i < capCount; i += 1) labels.push("C" + (i + 1));
+      labels.push("Σ");
+      const nBars = labels.length;
+      const barW = base.plotW / (nBars * 1.8);
+      const gap = barW * 0.35;
+
+      labels.forEach((lab, i) => {
+        const val = vals[i];
+        const x = base.plotX + gap + i * (barW + gap);
+        const h = (val / cMax) * base.plotH;
+        const isTotal = i === nBars - 1;
+        ctx.fillStyle = isTotal ? "rgba(253,224,71,0.85)" : CAP_COLORS[i] + "cc";
+        ctx.fillRect(x, base.plotY + base.plotH - h, barW, h);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "600 9px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(lab, x + barW / 2, base.plotY + base.plotH + 12);
+        ctx.fillText(val.toFixed(2), x + barW / 2, base.plotY + base.plotH - h - 4);
+        ctx.textAlign = "left";
+      });
+    }
+
+    /** 放電時の電流分配 I_i = I·C_i/C_total */
+    function drawGraphIDist(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "I 分配 I_i∝C_i", "I (相対)");
+      const It = getTotalCurrent();
+      const Iref = Math.max(getVSupply() / R_LOAD, 1e-12);
+      const iNorm = Math.min(1, It / Iref);
+      if (iNorm < 0.01) {
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("充電/放電 ON で表示", base.plotX + 8, base.plotY + base.plotH * 0.5);
+        return;
+      }
+      const nBars = capCount;
+      const barW = base.plotW / (nBars * 1.6);
+      const gap = barW * 0.45;
+      for (let i = 0; i < capCount; i += 1) {
+        const frac = getCapacitance(i) / getCTotal();
+        const h = base.plotH * 0.75 * frac * (It / Iref);
+        const x = base.plotX + gap + i * (barW + gap);
+        ctx.fillStyle = CAP_COLORS[i] + "cc";
+        ctx.fillRect(x, base.plotY + base.plotH - h, barW, h);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "600 9px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("I" + (i + 1), x + barW / 2, base.plotY + base.plotH + 12);
+        ctx.font = "7px Inter, sans-serif";
+        ctx.fillText((frac * 100).toFixed(0) + "%", x + barW / 2, base.plotY + base.plotH - h - 4);
+        ctx.textAlign = "left";
+      }
+    }
+
+    function drawGraphs() {
+      const lay = graphLayout();
+      lay.graphs.forEach((g) => {
+        if (g.id === "QV") drawGraphQV(lay.gx, g.y, lay.gw, g.h);
+        else if (g.id === "C") drawGraphCBar(lay.gx, g.y, lay.gw, g.h);
+        else if (g.id === "I") drawGraphIDist(lay.gx, g.y, lay.gw, g.h);
+      });
+    }
+
+    function updateReadouts() {
+      const parts = [];
+      const iParts = [];
+      for (let i = 0; i < capCount; i += 1) {
+        parts.push("Q" + (i + 1) + "=" + formatQ(getQ(i)));
+        iParts.push("I" + (i + 1) + "=" + formatI(getBranchCurrent(i)));
+      }
+      document.getElementById("readV").textContent = formatPhys(V_cap, "V", 1);
+      document.getElementById("readCtot").textContent = formatC(getCTotal());
+      document.getElementById("readQ12").textContent = parts.join(" · ");
+      document.getElementById("readI").textContent = formatI(getTotalCurrent());
+
+      let mode = "充電/放電 OFF — スイッチを ON に";
+      if (chargeOn) mode = "充電中 · τ=RC≈" + getTau().toFixed(1) + "s · V→" + getVSupply() + "V";
+      if (dischargeOn) mode = "放電中 · " + iParts.join(" · ") + " · I∝C_i";
+
+      let cParts = [];
+      for (let i = 0; i < capCount; i += 1) cParts.push("C" + (i + 1) + "=" + formatC(getCapacitance(i)));
+      formulaLive.innerHTML = mode + "<br>"
+        + cParts.join(" · ")
+        + " · <strong>C<sub>total</sub>=" + formatC(getCTotal()) + "</strong>"
+        + " · V=<strong>" + formatPhys(V_cap, "V", 1) + "</strong>"
+        + " · Q<sub>total</sub>=<strong>" + formatQ(getQTotal()) + "</strong>";
+    }
+
+    function syncSliders() {
+      document.getElementById("vVal").textContent = getVSupply() + " V";
+      document.getElementById("distVal").textContent = getDistMm().toFixed(1) + " mm";
+      document.getElementById("s1Val").textContent = getSRel(0).toFixed(1);
+      document.getElementById("s2Val").textContent = getSRel(1).toFixed(1);
+      document.getElementById("s3Val").textContent = getSRel(2).toFixed(1);
+    }
+
+    function syncCapCount(n) {
+      capCount = n;
+      document.getElementById("btnCap2").classList.toggle("is-active", n === 2);
+      document.getElementById("btnCap3").classList.toggle("is-active", n === 3);
+      document.getElementById("s3Row").classList.toggle("is-hidden", n < 3);
+    }
+
+    function syncChargeBtns() {
+      document.getElementById("btnCharge").textContent = chargeOn ? "充電 ON" : "充電 OFF";
+      document.getElementById("btnCharge").classList.toggle("is-active", chargeOn);
+      document.getElementById("btnDischarge").textContent = dischargeOn ? "放電 ON" : "放電 OFF";
+      document.getElementById("btnDischarge").classList.toggle("is-active", dischargeOn);
+    }
+
+    function drawScene() {
+      resizeCanvas();
+      physicsStep((performance.now() - lastFrame) / 1000);
+      lastFrame = performance.now();
+      drawBackground2D();
+      ctx.save();
+      clipView2D();
+      drawParallelCircuit();
+      drawCapacitors();
+      drawFieldVectors();
+      ctx.restore();
+      drawViewLabel();
+      drawGraphDivider();
+      drawGraphs();
+      updateReadouts();
+      syncSliders();
+      syncChargeBtns();
+    }
+
+    function bindToggle(id, get, set) {
+      document.getElementById(id).addEventListener("click", () => {
+        set(!get());
+        document.getElementById(id).classList.toggle("is-active", get());
+      });
+    }
+
+    document.getElementById("btnCap2").addEventListener("click", () => syncCapCount(2));
+    document.getElementById("btnCap3").addEventListener("click", () => syncCapCount(3));
+
+    document.getElementById("btnCharge").addEventListener("click", () => {
+      chargeOn = !chargeOn;
+      if (chargeOn) dischargeOn = false;
+      syncChargeBtns();
+    });
+    document.getElementById("btnDischarge").addEventListener("click", () => {
+      dischargeOn = !dischargeOn;
+      if (dischargeOn) chargeOn = false;
+      syncChargeBtns();
+    });
+
+    bindToggle("btnCurrent", () => showCurrent, (v) => { showCurrent = v; });
+    bindToggle("btnVectors", () => showVectors, (v) => { showVectors = v; });
+    bindToggle("btnGradient", () => showGradient, (v) => { showGradient = v; });
+    bindToggle("btnGraphQV", () => showGraphQV, (v) => { showGraphQV = v; });
+    bindToggle("btnGraphC", () => showGraphC, (v) => { showGraphC = v; });
+    bindToggle("btnGraphE", () => showGraphI, (v) => { showGraphI = v; });
+
+    ["vSlider", "distSlider", "s1Slider", "s2Slider", "s3Slider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", drawScene);
+    });
+
+    window.addEventListener("resize", drawScene);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(drawScene).observe(canvasWrap);
+    function loop() { drawScene(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>24章 電流と磁場 — 磁力線ラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8;
+      --panel: rgba(8, 12, 28, 0.92);
+      --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --north: #ff6b6b;
+      --south: #38bdf8;
+      --gold: #fde047;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255,107,107,0.5), rgba(56,189,248,0.45));
+      border: 1px solid rgba(253,224,71,0.4); font-size: 1.6rem;
+      box-shadow: 0 0 32px rgba(253,224,71,0.25);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c7d2fe; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #a5b4fc; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+
+    .sim-layout { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+    .canvas-wrap {
+      position: relative; width: 100%;
+      aspect-ratio: 900 / 560;
+      border-radius: 16px; overflow: hidden;
+      background: #0c0c10;
+      border: 2px solid rgba(253,224,71,0.2);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 0 80px rgba(129,140,248,0.06);
+    }
+    .canvas-wrap canvas {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .canvas-wrap canvas.is-dragging { cursor: grabbing; }
+
+    .canvas-hud {
+      position: absolute; pointer-events: none;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+    }
+    .hud-mission {
+      top: 12px; left: 12px; max-width: min(300px, 42vw);
+      padding: 10px 14px; border-radius: 12px;
+      background: rgba(10,10,18,0.88);
+      border: 1px solid rgba(129,140,248,0.4);
+      backdrop-filter: blur(6px);
+    }
+    .hud-mission .lbl { font-size: 0.68rem; font-weight: 700; color: #c4b5fd; letter-spacing: 0.06em; }
+    .hud-mission p { margin: 4px 0 0; font-size: 0.8rem; font-weight: 600; color: #ede9fe; line-height: 1.5; }
+    .hud-meter {
+      bottom: 12px; right: 12px; min-width: 170px;
+      padding: 12px 16px; border-radius: 14px;
+      background: rgba(10,10,18,0.9);
+      border: 1px solid rgba(253,224,71,0.45);
+      backdrop-filter: blur(6px);
+    }
+    .hud-meter .h-val {
+      font-size: 1.5rem; font-weight: 800; color: #fde68a;
+      font-variant-numeric: tabular-nums; line-height: 1.2;
+    }
+    .hud-meter .h-lbl { font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px; }
+    .hud-meter .meter-bar {
+      height: 8px; border-radius: 4px; margin: 8px 0 6px;
+      background: rgba(50,50,60,0.8); overflow: hidden;
+    }
+    .hud-meter .meter-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, #38bdf8, #fde047, #ff6b6b);
+      transition: width 0.12s ease-out;
+    }
+    .hud-meter .h-level { font-size: 0.78rem; font-weight: 600; color: #94a3b8; }
+    .canvas-badge {
+      position: absolute; top: 10px; right: 12px;
+      padding: 5px 10px; border-radius: 20px;
+      background: rgba(253,224,71,0.15); border: 1px solid rgba(253,224,71,0.35);
+      font-size: 0.72rem; font-weight: 700; color: #fde68a;
+      pointer-events: none; letter-spacing: 0.04em;
+    }
+
+    .mode-cards { display: grid; gap: 10px; }
+    @media (min-width: 520px) { .mode-cards { grid-template-columns: 1fr 1fr; } }
+    .mode-card {
+      padding: 14px 16px; border-radius: 14px; text-align: left;
+      border: 2px solid rgba(148,163,184,0.2);
+      background: rgba(20,20,28,0.8); color: #cbd5e1;
+      font: inherit; cursor: pointer; transition: border-color .2s, transform .15s, box-shadow .2s;
+    }
+    .mode-card:hover { transform: translateY(-2px); }
+    .mode-card.is-active {
+      border-color: rgba(129,140,248,0.7);
+      background: rgba(49,46,129,0.35);
+      box-shadow: 0 0 24px rgba(129,140,248,0.2);
+    }
+    .mode-card .mode-icon { font-size: 1.5rem; margin-bottom: 4px; }
+    .mode-card strong { display: block; font-size: 0.95rem; color: #e0e7ff; margin-bottom: 2px; }
+    .mode-card span { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+    .fx-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fx-btn {
+      padding: 9px 14px; border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.25);
+      background: rgba(30,30,36,0.8); color: #cbd5e1;
+      font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .fx-btn.is-active {
+      background: rgba(253,224,71,0.12);
+      border-color: rgba(253,224,71,0.45); color: #fde68a;
+    }
+    .fx-btn.is-active.blue {
+      background: rgba(56,189,248,0.12);
+      border-color: rgba(56,189,248,0.45); color: #7dd3fc;
+    }
+
+    .param-grid { display: grid; gap: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: 1fr 1fr; } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c7d2fe; }
+    .slider-range { font-size: 0.72rem; font-weight: 600; color: #94a3b8; }
+
+    .mission-box {
+      padding: 14px 16px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(49,46,129,0.5), rgba(30,27,75,0.4));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .mission-box .mission-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      color: #c4b5fd; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .mission-box p { margin: 0; font-size: 0.92rem; color: #ede9fe; line-height: 1.65; }
+    .mission-box .mission-reward {
+      margin-top: 8px; font-size: 0.78rem; color: #fde68a; font-weight: 600;
+    }
+
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 12px; border-radius: 12px;
+      background: rgba(30,30,36,0.7); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .readout dt { margin: 0; font-size: 0.7rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.95rem; font-weight: 700; color: #f8fafc; }
+    .readout dd.big { font-size: 1.2rem; color: #fde68a; }
+    .readout dd.good { color: #4ade80; }
+    .readout dd.warn { color: #fb923c; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">🧲</div>
+      <p class="chapter-label">第24章 — 電流と磁場</p>
+      <h2>磁力線ラボ</h2>
+      <p class="tagline">鉄粉が並ぶ！ 光が流れる！ 探針で |H| を測定！</p>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-24">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>理科の実験で見た<strong>鉄粉の模様</strong>を再現。黄色い光が<strong>N極→S極</strong>へ流れるのを目で追い、
+        <strong>白い探針</strong>を動かして「ここ、磁場どれくらい強い？」を調べましょう。</p>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="sim-layout">
+        <div class="canvas-wrap">
+          <span class="canvas-badge">ドラッグで探針移動</span>
+          <canvas id="simCanvas" width="900" height="560" aria-label="磁力線ラボ"></canvas>
+          <div class="canvas-hud hud-mission">
+            <div class="lbl">🔬 ミッション</div>
+            <p id="hudMission">白い探針をドラッグして |H| を測ろう</p>
+          </div>
+          <div class="canvas-hud hud-meter">
+            <div class="h-lbl">探針の磁場の強さ</div>
+            <div class="h-val" id="hudH">|H| = —</div>
+            <div class="meter-bar"><div class="meter-fill" id="hudMeterFill" style="width:0%"></div></div>
+            <div class="h-level" id="hudLevel">—</div>
+          </div>
+        </div>
+
+        <div class="mode-cards">
+          <button type="button" class="mode-card is-active" data-mode="dipole">
+            <div class="mode-icon">🧲</div>
+            <strong>N・S 磁石</strong>
+            <span>鉄粉が N から出て S に入る。教科書の定番パターン！</span>
+          </button>
+          <button type="button" class="mode-card" data-mode="same">
+            <div class="mode-icon">↔️</div>
+            <strong>同極 N・N（斥力）</strong>
+            <span>同じ極どうしは反発。中央で鉄粉が薄くなるのを確認</span>
+          </button>
+        </div>
+
+        <div class="fx-row">
+          <button type="button" class="fx-btn is-active" id="btnFilings">✨ 鉄粉モード</button>
+          <button type="button" class="fx-btn is-active" id="btnFlow">💫 流れアニメ</button>
+          <button type="button" class="fx-btn blue" id="btnHeat">🌡 強さヒートマップ</button>
+          <button type="button" class="fx-btn is-active" id="btnLines">〰 磁力線 ON</button>
+          <button type="button" class="fx-btn" id="btnReset">↺ リセット</button>
+        </div>
+
+        <div class="param-grid">
+          <div>
+            <label for="mSlider">磁石の強さ |m| <span class="slider-val" id="mVal">5.0</span> <span class="slider-range">（1〜25）</span></label>
+            <input type="range" id="mSlider" min="10" max="250" value="50" step="1">
+          </div>
+          <div>
+            <label for="kmSlider">比例定数 k<sub>m</sub> <span class="slider-val" id="kmVal">1.00</span> <span class="slider-range">（0.1〜8）</span></label>
+            <input type="range" id="kmSlider" min="1" max="80" value="10" step="1">
+          </div>
+        </div>
+
+        <div class="mission-box">
+          <div class="mission-label">🔬 ミッション</div>
+          <p id="missionText">白い探針をドラッグして、磁場の強さ |H| を測ってみよう！</p>
+          <div class="mission-reward" id="missionReward"></div>
+        </div>
+
+        <div class="readout-grid">
+          <dl class="readout"><dt>探針の |H|</dt><dd class="big" id="readH">—</dd></dl>
+          <dl class="readout"><dt>強さレベル</dt><dd id="readLevel">—</dd></dl>
+          <dl class="readout"><dt>最寄り磁極まで</dt><dd id="readDist">—</dd></dl>
+          <dl class="readout"><dt>探針の向き</dt><dd id="readAngle">—</dd></dl>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const CW = 900, CH = 560, PAD = 20;
+      const FILING_STEP = 4;
+      const MIN_R2 = 320, MAG_W = 190, MAG_H = 58, POLE_R = 26, POLE_GAP = 210;
+      const H_DISPLAY = 1400;
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+      const filingsLayer = document.createElement("canvas");
+      filingsLayer.width = CW;
+      filingsLayer.height = CH;
+      const fctx = filingsLayer.getContext("2d");
+
+      const DEFAULT = {
+        magnet: { cx: CW * 0.5, cy: CH * 0.5 },
+        probe: { x: CW * 0.5 - 200, y: CH * 0.5 - 90 },
+        pair: { cx: CW * 0.5, cy: CH * 0.5 },
+      };
+
+      const MISSIONS = [
+        { id: "start", text: "白い探針をドラッグして、磁場の強さ |H| を測ってみよう！", check: () => true },
+        { id: "near", text: "探針を N極（赤）のすぐそばに置いてみよう → |H| がぐんと大きくなる！", check: (s) => s.nearestDist < 55 && s.hMag > 1.5 },
+        { id: "far", text: "探針を画面の端まで遠ざけてみよう → 距離が2倍になると |H| はだいたい¼になる", check: (s) => s.nearestDist > 180 },
+        { id: "same", text: "「同極 N・N」に切り替えて、鉄粉が中央で薄くなるのを観察しよう", check: (s) => s.mode === "same" },
+        { id: "weak", text: "同極モードで探針を2つの N極のちょうど真ん中に置こう → 磁場が弱いゾーン！", check: (s) => s.mode === "same" && s.nearestDist < 130 && s.hMag < 0.6 },
+        { id: "strong", text: "磁石の強さスライダーを最大にして、鉄粉の模様がどう変わるか見てみよう", check: (s) => s.mStrength >= 20 },
+      ];
+
+      let mode = "dipole", mStrength = 5, km = 1;
+      let showFilings = true, showFlow = true, showHeat = false, showLines = true;
+      let magnetCX = DEFAULT.magnet.cx, magnetCY = DEFAULT.magnet.cy;
+      let pairCX = DEFAULT.pair.cx, pairCY = DEFAULT.pair.cy;
+      let probeX = DEFAULT.probe.x, probeY = DEFAULT.probe.y;
+      let dragProbe = false, dragMagnet = false, phase = 0;
+      let missionIdx = 0, completedMissions = new Set();
+      let cachedLines = [], flowParticles = [], ambientFlow = [];
+      let maxFieldCache = 1, dirtyField = true, filingsDirty = true;
+
+      function poles() {
+        if (mode === "dipole") {
+          return [
+            { x: magnetCX - MAG_W * 0.25, y: magnetCY, m: mStrength, label: "N", color: "#ff6b6b", glow: "rgba(255,107,107," },
+            { x: magnetCX + MAG_W * 0.25, y: magnetCY, m: -mStrength, label: "S", color: "#38bdf8", glow: "rgba(56,189,248," },
+          ];
+        }
+        return [
+          { x: pairCX - POLE_GAP / 2, y: pairCY, m: mStrength, label: "N", color: "#ff6b6b", glow: "rgba(255,107,107," },
+          { x: pairCX + POLE_GAP / 2, y: pairCY, m: mStrength, label: "N", color: "#ff6b6b", glow: "rgba(255,107,107," },
+        ];
+      }
+
+      function fieldRaw(x, y) {
+        let hx = 0, hy = 0;
+        for (const p of poles()) {
+          const dx = x - p.x, dy = y - p.y;
+          const r2 = dx * dx + dy * dy + MIN_R2;
+          const r = Math.sqrt(r2);
+          const s = (km * p.m) / r2;
+          hx += s * (dx / r); hy += s * (dy / r);
+        }
+        const mag = Math.hypot(hx, hy);
+        return { hx, hy, mag, angle: Math.atan2(hy, hx) };
+      }
+
+      function fieldAt(x, y) {
+        const r = fieldRaw(x, y);
+        return { hx: r.hx, hy: r.hy, mag: r.mag, angle: r.angle, dispH: r.mag * H_DISPLAY };
+      }
+
+      function displayH(mag) { return mag * H_DISPLAY; }
+
+      function insideBody(x, y) {
+        if (mode === "dipole") return Math.abs(x - magnetCX) < MAG_W / 2 + 2 && Math.abs(y - magnetCY) < MAG_H / 2 + 2;
+        for (const p of poles()) if (Math.hypot(x - p.x, y - p.y) < POLE_R - 2) return true;
+        return false;
+      }
+
+      function outOfBounds(x, y) { return x < PAD || x > CW - PAD || y < PAD || y > CH - PAD; }
+
+      function nearestPole(x, y) {
+        let best = poles()[0], bestD = Infinity;
+        for (const p of poles()) {
+          const d = Math.hypot(x - p.x, y - p.y);
+          if (d < bestD) { bestD = d; best = p; }
+        }
+        return { pole: best, dist: bestD };
+      }
+
+      function nearestSink(x, y) {
+        let best = null, bestD = Infinity;
+        for (const p of poles()) {
+          if (p.m >= 0) continue;
+          const d = Math.hypot(x - p.x, y - p.y);
+          if (d < bestD) { bestD = d; best = p; }
+        }
+        return best;
+      }
+
+      function traceLine(sx, sy, maxSteps) {
+        const pts = [{ x: sx, y: sy }];
+        let x = sx, y = sy;
+        for (let i = 0; i < maxSteps; i++) {
+          const f = fieldRaw(x, y);
+          if (f.mag < 0.012) break;
+          const step = Math.min(11, 3 + 9 / Math.sqrt(f.mag + 0.15));
+          const nx = x + (f.hx / f.mag) * step, ny = y + (f.hy / f.mag) * step;
+          const sink = nearestSink(nx, ny);
+          if (sink && Math.hypot(nx - sink.x, ny - sink.y) < POLE_R + 4) {
+            pts.push({ x: sink.x, y: sink.y }); break;
+          }
+          if (insideBody(nx, ny)) break;
+          if (outOfBounds(nx, ny)) { pts.push({ x: nx, y: ny }); break; }
+          x = nx; y = ny; pts.push({ x, y });
+        }
+        return pts;
+      }
+
+      function buildSeeds() {
+        const seeds = [], ps = poles();
+        const n = Math.max(32, Math.round(28 + mStrength * 3.5));
+        ps.forEach((p) => {
+          if (p.m <= 0) return;
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2;
+            seeds.push({ x: p.x + Math.cos(a) * (POLE_R + 6), y: p.y + Math.sin(a) * (POLE_R + 6) });
+          }
+          for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            seeds.push({ x: p.x + Math.cos(a) * (POLE_R + 18), y: p.y + Math.sin(a) * (POLE_R + 18) });
+          }
+          if (mode === "dipole") {
+            for (let j = 0; j < 8; j++) {
+              const tx = magnetCX - MAG_W * 0.24 + (j / 7) * MAG_W * 0.48;
+              seeds.push({ x: tx, y: magnetCY - MAG_H / 2 - 10 });
+              seeds.push({ x: tx, y: magnetCY + MAG_H / 2 + 10 });
+            }
+          }
+        });
+        return seeds;
+      }
+
+      function initAmbientFlow() {
+        ambientFlow = [];
+        const cols = Math.max(18, Math.floor(CW / 38));
+        const rows = Math.max(11, Math.floor(CH / 38));
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            ambientFlow.push({
+              x: ((col + 0.5) / cols) * CW,
+              y: ((row + 0.5) / rows) * CH,
+              trail: [],
+            });
+          }
+        }
+      }
+
+      function respawnAmbient(p) {
+        const sources = poles().filter((pole) => pole.m > 0);
+        const pole = sources[Math.floor(Math.random() * sources.length)] || poles()[0];
+        const a = Math.random() * Math.PI * 2;
+        const r = POLE_R + 14 + Math.random() * 50;
+        p.x = pole.x + Math.cos(a) * r;
+        p.y = pole.y + Math.sin(a) * r;
+        p.trail = [];
+      }
+
+      function updateAmbientFlow() {
+        ambientFlow.forEach((p) => {
+          if (insideBody(p.x, p.y)) { respawnAmbient(p); return; }
+          const f = fieldRaw(p.x, p.y);
+          if (f.mag < 0.006) { respawnAmbient(p); return; }
+          const step = 2.5 + 5 / Math.sqrt(f.mag + 0.08);
+          p.trail.push({ x: p.x, y: p.y });
+          if (p.trail.length > 5) p.trail.shift();
+          p.x += (f.hx / f.mag) * step;
+          p.y += (f.hy / f.mag) * step;
+          if (outOfBounds(p.x, p.y) || p.x < 2 || p.x > CW - 2 || p.y < 2 || p.y > CH - 2) respawnAmbient(p);
+        });
+      }
+
+      function rebuildFieldCache() {
+        cachedLines = [];
+        buildSeeds().forEach((seed) => {
+          const pts = traceLine(seed.x, seed.y, 300);
+          if (pts.length >= 4) cachedLines.push(pts);
+        });
+        flowParticles = [];
+        cachedLines.forEach((pts, li) => {
+          const n = 7;
+          for (let i = 0; i < n; i++) {
+            flowParticles.push({ line: li, t: i / n + Math.random() * 0.15, speed: 0.0035 + Math.random() * 0.004 });
+          }
+        });
+        initAmbientFlow();
+        maxFieldCache = 0.1;
+        for (let gy = PAD; gy < CH - PAD; gy += 28) {
+          for (let gx = PAD; gx < CW - PAD; gx += 28) {
+            if (!insideBody(gx, gy)) maxFieldCache = Math.max(maxFieldCache, fieldRaw(gx, gy).mag);
+          }
+        }
+        dirtyField = false;
+      }
+
+      function rebuildFilingsLayer() {
+        fctx.setTransform(1, 0, 0, 1, 0, 0);
+        fctx.clearRect(0, 0, CW, CH);
+        fctx.fillStyle = "#5c6378";
+        fctx.fillRect(0, 0, CW, CH);
+
+        const cols = Math.floor(CW / FILING_STEP);
+        const rows = Math.floor(CH / FILING_STEP);
+        fctx.lineCap = "round";
+
+        for (let row = 0; row <= rows; row++) {
+          for (let col = 0; col <= cols; col++) {
+            const x = col * FILING_STEP + FILING_STEP * 0.5;
+            const y = row * FILING_STEP + FILING_STEP * 0.5;
+            if (x < 0 || y < 0 || x > CW || y > CH) continue;
+
+            const fld = fieldRaw(x, y);
+            const t = Math.pow(Math.min(1, fld.mag / maxFieldCache), 0.28);
+            const ang = fld.angle + ((col * 13 + row * 29) % 97) / 97 * 0.18 - 0.09;
+            const cos = Math.cos(ang), sin = Math.sin(ang);
+            const baseLen = 9;
+            const boostLen = t * 14;
+            const baseLw = 2;
+            const boostLw = t * 2;
+
+            fctx.fillStyle = "rgba(235,240,250,0.95)";
+            fctx.beginPath();
+            fctx.arc(x, y, 1.4, 0, Math.PI * 2);
+            fctx.fill();
+
+            fctx.strokeStyle = "rgba(25,30,40,0.9)";
+            fctx.lineWidth = baseLw + 1.5;
+            fctx.beginPath();
+            fctx.moveTo(x - cos * baseLen * 0.5, y - sin * baseLen * 0.5);
+            fctx.lineTo(x + cos * baseLen * 0.5, y + sin * baseLen * 0.5);
+            fctx.stroke();
+
+            fctx.strokeStyle = "rgba(250,252,255,0.97)";
+            fctx.lineWidth = baseLw;
+            fctx.beginPath();
+            fctx.moveTo(x - cos * baseLen * 0.5, y - sin * baseLen * 0.5);
+            fctx.lineTo(x + cos * baseLen * 0.5, y + sin * baseLen * 0.5);
+            fctx.stroke();
+
+            if (boostLen > 1) {
+              const total = baseLen + boostLen;
+              fctx.strokeStyle = "rgba(255,255,255,1)";
+              fctx.lineWidth = baseLw + boostLw;
+              fctx.beginPath();
+              fctx.moveTo(x - cos * total * 0.5, y - sin * total * 0.5);
+              fctx.lineTo(x + cos * total * 0.5, y + sin * total * 0.5);
+              fctx.stroke();
+            }
+          }
+        }
+        filingsDirty = false;
+      }
+
+      function strengthLevel(h) {
+        const r = h / maxFieldCache;
+        if (r > 0.65) return { label: "超強い 🔥", cls: "warn" };
+        if (r > 0.35) return { label: "強い 💪", cls: "good" };
+        if (r > 0.12) return { label: "ふつう", cls: "" };
+        return { label: "弱いゾーン 🍃", cls: "" };
+      }
+
+      function markDirty() { dirtyField = true; filingsDirty = true; }
+
+      /* ---- drawing ---- */
+
+      function drawHeatmap() {
+        const cols = 36, rows = 22;
+        const gw = CW - PAD * 2, gh = CH - PAD * 2;
+        const logMax = Math.log(maxFieldCache + 0.05);
+        const dim = showFilings ? 0.15 : 1;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const px = PAD + (col / cols) * gw, py = PAD + (row / rows) * gh;
+            if (insideBody(px, py)) continue;
+            const h = fieldRaw(px, py).mag;
+            const t = Math.min(1, (Math.log(h + 0.05) - Math.log(0.05)) / (logMax - Math.log(0.05)));
+            const hue = 240 - t * 200;
+            const alpha = (0.06 + t * 0.18) * dim;
+            ctx.fillStyle = `hsla(${hue}, 85%, 55%, ${alpha})`;
+            ctx.fillRect(px - gw / cols / 2, py - gh / rows / 2, gw / cols + 1, gh / rows + 1);
+          }
+        }
+      }
+
+      function drawFilings() {
+        if (filingsDirty) rebuildFilingsLayer();
+        ctx.drawImage(filingsLayer, 0, 0, CW, CH);
+      }
+
+      function drawFieldLines() {
+        cachedLines.forEach((pts, idx) => {
+          const alpha = 0.55 + 0.3 * Math.sin(phase + idx * 0.2);
+          ctx.strokeStyle = `rgba(253, 224, 71, ${alpha})`;
+          ctx.lineWidth = mode === "same" ? 2 : 2.5;
+          ctx.shadowColor = "rgba(253,224,71,0.4)";
+          ctx.shadowBlur = 4;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        });
+      }
+
+      function drawFlowDot(x, y, radius, bright) {
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        glow.addColorStop(0, bright ? "rgba(255,255,220,0.98)" : "rgba(253,224,71,0.75)");
+        glow.addColorStop(0.35, "rgba(253,224,71,0.45)");
+        glow.addColorStop(1, "rgba(253,224,71,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(x, y, bright ? 3.5 : 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawFlowParticles() {
+        updateAmbientFlow();
+
+        ambientFlow.forEach((p) => {
+          if (insideBody(p.x, p.y)) return;
+          if (p.trail.length > 1) {
+            ctx.strokeStyle = "rgba(253,224,71,0.22)";
+            ctx.lineWidth = 2;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(p.trail[0].x, p.trail[0].y);
+            for (let i = 1; i < p.trail.length; i++) ctx.lineTo(p.trail[i].x, p.trail[i].y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+          }
+          drawFlowDot(p.x, p.y, 7, false);
+        });
+
+        flowParticles.forEach((fp) => {
+          fp.t += fp.speed;
+          if (fp.t > 1) fp.t -= 1;
+          const pts = cachedLines[fp.line];
+          if (!pts || pts.length < 2) return;
+          const idx = fp.t * (pts.length - 1);
+          const i0 = Math.floor(idx), i1 = Math.min(i0 + 1, pts.length - 1);
+          const f = idx - i0;
+          const x = pts[i0].x + (pts[i1].x - pts[i0].x) * f;
+          const y = pts[i0].y + (pts[i1].y - pts[i0].y) * f;
+          drawFlowDot(x, y, 11, true);
+        });
+      }
+
+      function drawPoleGlow(p) {
+        const pulse = 1 + Math.sin(phase * 2 + p.x * 0.01) * 0.15;
+        const r = (POLE_R + 18) * pulse;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, p.glow + "0.35)");
+        g.addColorStop(1, p.glow + "0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawMagnet() {
+        const x0 = magnetCX - MAG_W / 2, y0 = magnetCY - MAG_H / 2, r = 12;
+        poles().forEach(drawPoleGlow);
+        const shine = ctx.createLinearGradient(x0, y0, x0, y0 + MAG_H);
+        shine.addColorStop(0, "rgba(255,255,255,0.25)");
+        shine.addColorStop(0.5, "rgba(255,255,255,0)");
+        shine.addColorStop(1, "rgba(0,0,0,0.2)");
+        ctx.fillStyle = "rgba(255,107,107,0.95)";
+        ctx.beginPath(); ctx.roundRect(x0, y0, MAG_W / 2, MAG_H, [r, 0, 0, r]); ctx.fill();
+        ctx.fillStyle = "rgba(56,189,248,0.95)";
+        ctx.beginPath(); ctx.roundRect(x0 + MAG_W / 2, y0, MAG_W / 2, MAG_H, [0, r, r, 0]); ctx.fill();
+        ctx.fillStyle = shine;
+        ctx.fillRect(x0, y0, MAG_W, MAG_H);
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x0 + 1, y0 + 1, MAG_W - 2, MAG_H - 2);
+        ctx.fillStyle = "#fff";
+        ctx.font = "800 28px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("N", magnetCX - MAG_W * 0.25, magnetCY);
+        ctx.fillText("S", magnetCX + MAG_W * 0.25, magnetCY);
+        ctx.textBaseline = "alphabetic";
+      }
+
+      function drawPoleDisc(p) {
+        drawPoleGlow(p);
+        const g = ctx.createRadialGradient(p.x - 5, p.y - 5, 1, p.x, p.y, POLE_R);
+        g.addColorStop(0, "#fff");
+        g.addColorStop(0.3, p.color);
+        g.addColorStop(1, p.color);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x, p.y, POLE_R, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "800 24px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(p.label, p.x, p.y);
+        ctx.textBaseline = "alphabetic";
+      }
+
+      function drawPoles() {
+        if (mode === "dipole") drawMagnet();
+        else poles().forEach(drawPoleDisc);
+      }
+
+      function drawCompass(x, y, angle, size) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "rgba(15,23,42,0.85)";
+        ctx.strokeStyle = "rgba(148,163,184,0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ff6b6b";
+        ctx.beginPath();
+        ctx.moveTo(0, -size + 4); ctx.lineTo(-5, 2); ctx.lineTo(5, 2); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#94a3b8";
+        ctx.beginPath();
+        ctx.moveTo(0, size - 4); ctx.lineTo(-5, -2); ctx.lineTo(5, -2); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+
+      function drawProbe(pf) {
+        const disp = pf.dispH;
+        const len = Math.min(80, 18 + disp * 4);
+        const head = Math.max(12, len * 0.28);
+        const tipX = probeX + Math.cos(pf.angle) * len, tipY = probeY + Math.sin(pf.angle) * len;
+        const baseX = tipX - Math.cos(pf.angle) * head, baseY = tipY - Math.sin(pf.angle) * head;
+        const wing = Math.PI / 5;
+
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 6; ctx.lineCap = "round";
+        ctx.shadowColor = "rgba(251,191,36,0.8)"; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.moveTo(probeX, probeY); ctx.lineTo(baseX, baseY); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fbbf24";
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX - head * Math.cos(pf.angle - wing), tipY - head * Math.sin(pf.angle - wing));
+        ctx.lineTo(tipX - head * 0.5 * Math.cos(pf.angle), tipY - head * 0.5 * Math.sin(pf.angle));
+        ctx.lineTo(tipX - head * Math.cos(pf.angle + wing), tipY - head * Math.sin(pf.angle + wing));
+        ctx.closePath(); ctx.fill();
+
+        const pulse = 16 + Math.sin(phase * 4) * 3;
+        ctx.strokeStyle = "rgba(167,139,250,0.5)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(probeX, probeY, pulse, 0, Math.PI * 2); ctx.stroke();
+
+        ctx.fillStyle = "#fff"; ctx.strokeStyle = "#818cf8"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(probeX, probeY, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        drawCompass(probeX - 28, probeY + 28, pf.angle, 14);
+
+        const { pole, dist } = nearestPole(probeX, probeY);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = "rgba(148,163,184,0.35)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(probeX, probeY); ctx.lineTo(pole.x, pole.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function drawBackground() {
+        const g = ctx.createRadialGradient(CW / 2, CH / 2, 0, CW / 2, CH / 2, Math.max(CW, CH) * 0.65);
+        g.addColorStop(0, "#1e1e2a");
+        g.addColorStop(1, "#0a0a0e");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, CW, CH);
+      }
+
+      function drawScene() {
+        if (dirtyField) rebuildFieldCache();
+        if (showFilings && filingsDirty) rebuildFilingsLayer();
+
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const bufW = Math.max(1, Math.round(rect.width * dpr));
+        const bufH = Math.max(1, Math.round(rect.height * dpr));
+
+        if (canvas.width !== bufW || canvas.height !== bufH) {
+          canvas.width = bufW;
+          canvas.height = bufH;
+        }
+
+        ctx.setTransform(bufW / CW, 0, 0, bufH / CH, 0, 0);
+
+        if (!showFilings) {
+          drawBackground();
+        }
+        if (showHeat) drawHeatmap();
+        if (showFilings) drawFilings();
+        if (showLines) drawFieldLines();
+        if (showFlow) drawFlowParticles();
+        drawPoles();
+
+        const pf = fieldAt(probeX, probeY);
+        if (!insideBody(probeX, probeY)) drawProbe(pf);
+        updateUI(pf);
+      }
+
+      function updateMissions(pf) {
+        const state = {
+          mode, mStrength, hMag: pf.dispH,
+          nearestDist: nearestPole(probeX, probeY).dist,
+        };
+        const cur = MISSIONS[missionIdx];
+        if (cur.check(state) && !completedMissions.has(cur.id)) {
+          completedMissions.add(cur.id);
+          document.getElementById("missionReward").textContent = "✅ クリア！ いい観察だね";
+          if (missionIdx < MISSIONS.length - 1) {
+            missionIdx++;
+            setTimeout(() => {
+              document.getElementById("missionReward").textContent = "";
+            }, 2000);
+          }
+        }
+        document.getElementById("missionText").textContent = MISSIONS[missionIdx].text;
+        document.getElementById("hudMission").textContent = MISSIONS[missionIdx].text;
+      }
+
+      function updateUI(pf) {
+        const { dist } = nearestPole(probeX, probeY);
+        const level = strengthLevel(pf.mag);
+        const deg = ((pf.angle * 180) / Math.PI + 360) % 360;
+        const hStr = pf.dispH.toFixed(2);
+
+        document.getElementById("readH").textContent = hStr;
+        document.getElementById("hudH").textContent = "|H| = " + hStr;
+        document.getElementById("hudMeterFill").style.width = (Math.min(1, pf.mag / maxFieldCache) * 100).toFixed(1) + "%";
+        document.getElementById("hudLevel").textContent = level.label;
+        const lvlEl = document.getElementById("readLevel");
+        lvlEl.textContent = level.label;
+        lvlEl.className = level.cls;
+        document.getElementById("readDist").textContent = dist.toFixed(0) + " px";
+        document.getElementById("readAngle").textContent = deg.toFixed(0) + "°";
+        document.getElementById("mVal").textContent = mStrength.toFixed(1);
+        document.getElementById("kmVal").textContent = km.toFixed(2);
+        updateMissions(pf);
+      }
+
+      function setProbe(p) {
+        probeX = Math.max(PAD, Math.min(CW - PAD, p.x));
+        probeY = Math.max(PAD, Math.min(CH - PAD, p.y));
+      }
+
+      function canvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (cx - rect.left) * (CW / rect.width),
+          y: (cy - rect.top) * (CH / rect.height),
+        };
+      }
+
+      function onDown(e) {
+        const p = canvasPos(e);
+        if (Math.hypot(p.x - probeX, p.y - probeY) < 24) {
+          dragProbe = true; canvas.classList.add("is-dragging");
+        } else if ((mode === "dipole" && insideBody(p.x, p.y)) ||
+          (mode === "same" && Math.hypot(p.x - pairCX, p.y - pairCY) < POLE_GAP * 0.5)) {
+          dragMagnet = true; canvas.classList.add("is-dragging");
+        } else {
+          setProbe(p);
+        }
+      }
+
+      function onMove(e) {
+        const p = canvasPos(e);
+        if (dragProbe) setProbe(p);
+        if (dragMagnet) {
+          if (mode === "dipole") {
+            magnetCX = Math.max(MAG_W / 2 + PAD, Math.min(CW - MAG_W / 2 - PAD, p.x));
+            magnetCY = Math.max(MAG_H / 2 + PAD, Math.min(CH - MAG_H / 2 - PAD, p.y));
+          } else {
+            pairCX = Math.max(POLE_GAP / 2 + PAD, Math.min(CW - POLE_GAP / 2 - PAD, p.x));
+            pairCY = Math.max(POLE_R + PAD, Math.min(CH - POLE_R - PAD, p.y));
+          }
+          markDirty();
+        }
+      }
+
+      function onUp() { dragProbe = false; dragMagnet = false; canvas.classList.remove("is-dragging"); }
+
+      canvas.addEventListener("mousedown", onDown);
+      canvas.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+      canvas.addEventListener("touchstart", onDown, { passive: true });
+      canvas.addEventListener("touchmove", onMove, { passive: true });
+      window.addEventListener("touchend", onUp);
+
+      document.querySelectorAll(".mode-card").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          mode = btn.dataset.mode;
+          document.querySelectorAll(".mode-card").forEach((b) => b.classList.toggle("is-active", b === btn));
+          markDirty();
+        });
+      });
+
+      document.getElementById("btnFilings").addEventListener("click", function () {
+        showFilings = !showFilings;
+        if (showFilings) filingsDirty = true;
+        this.classList.toggle("is-active", showFilings);
+        this.textContent = showFilings ? "✨ 鉄粉モード" : "鉄粉 OFF";
+      });
+      document.getElementById("btnFlow").addEventListener("click", function () {
+        showFlow = !showFlow;
+        this.classList.toggle("is-active", showFlow);
+        this.textContent = showFlow ? "💫 流れアニメ" : "流れ OFF";
+      });
+      document.getElementById("btnHeat").addEventListener("click", function () {
+        showHeat = !showHeat;
+        this.classList.toggle("is-active", showHeat);
+        this.textContent = showHeat ? "🌡 強さヒートマップ" : "ヒート OFF";
+      });
+      document.getElementById("btnLines").addEventListener("click", function () {
+        showLines = !showLines;
+        this.classList.toggle("is-active", showLines);
+        this.textContent = showLines ? "〰 磁力線 ON" : "〰 磁力線";
+      });
+
+      document.getElementById("mSlider").addEventListener("input", (e) => {
+        mStrength = +e.target.value / 10; markDirty();
+      });
+      document.getElementById("kmSlider").addEventListener("input", (e) => {
+        km = +e.target.value / 10; markDirty();
+      });
+
+      document.getElementById("btnReset").addEventListener("click", () => {
+        magnetCX = DEFAULT.magnet.cx; magnetCY = DEFAULT.magnet.cy;
+        pairCX = DEFAULT.pair.cx; pairCY = DEFAULT.pair.cy;
+        probeX = DEFAULT.probe.x; probeY = DEFAULT.probe.y;
+        missionIdx = 0; completedMissions.clear();
+        document.getElementById("missionReward").textContent = "";
+        markDirty();
+      });
+
+      function ensureFxOn() {
+        showFilings = true;
+        showFlow = true;
+        filingsDirty = true;
+        document.getElementById("btnFilings").classList.add("is-active");
+        document.getElementById("btnFilings").textContent = "✨ 鉄粉モード";
+        document.getElementById("btnFlow").classList.add("is-active");
+        document.getElementById("btnFlow").textContent = "💫 流れアニメ";
+      }
+
+      let started = false;
+      function startApp() {
+        if (started) return;
+        started = true;
+        ensureFxOn();
+        rebuildFieldCache();
+        rebuildFilingsLayer();
+        drawScene();
+        loop();
+      }
+
+      rebuildFieldCache();
+      rebuildFilingsLayer();
+      ensureFxOn();
+
+      function loop() {
+        phase += 0.035;
+        drawScene();
+        requestAnimationFrame(loop);
+      }
+      window.addEventListener("resize", drawScene);
+      window.addEventListener("load", startApp);
+      if (document.readyState === "complete") startApp();
+    })();
+  </script>
+</body>
+</html>

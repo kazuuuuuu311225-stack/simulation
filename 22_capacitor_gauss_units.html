@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>22章 コンデンサ — ガウス単位系 E·C·充放電</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8; --accent-light: #a5b4fc;
+      --panel: rgba(10, 12, 28, 0.9); --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f1030 45%, #0a1628 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(129,140,248,0.5), rgba(250,204,21,0.35));
+      border: 1px solid rgba(129,140,248,0.4); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.22);
+      font-size: 0.88rem; color: #c7d2fe; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(129,140,248,0.2);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #020617; border: 1px solid rgba(129,140,248,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(640px, 68dvh);
+      min-height: 440px; touch-action: none;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c7d2fe; font-variant-numeric: tabular-nums; }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .toggle-btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(129,140,248,0.3); background: rgba(15,30,45,0.6);
+      color: #cbd5e1; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-active {
+      background: rgba(129,140,248,0.22); border-color: rgba(129,140,248,0.55); color: #e0e7ff;
+    }
+    .toggle-btn.is-charge.is-active { background: rgba(34,197,94,0.2); border-color: rgba(34,197,94,0.5); }
+    .toggle-btn.is-discharge.is-active { background: rgba(248,113,113,0.2); border-color: rgba(248,113,113,0.5); }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(129,140,248,0.06); border: 1px solid rgba(129,140,248,0.16);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.82rem; font-weight: 700; color: #eef2ff; }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+    .hint { margin-top: 8px; font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">4π</div>
+      <p class="chapter-label">第22章 — コンデンサ</p>
+      <h2>ガウス単位系 — 平行板コンデンサ</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-22">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>4πk₀ 形式の E と C</h3>
+      <p>
+        平行板コンデンサの理想モデルでは
+        <strong>E = 4πk₀ Q / S</strong>（d に依存しない）、
+        <strong>C = ε<sub>r</sub>S / (4πk₀ d)</strong>、
+        <strong>Q = CV</strong> です。
+      </p>
+      <div class="formula-box">
+        E = 4πk₀Q/S · C = εrS/(4πk₀d) · Q = CV · V = Q/C
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-charge" id="btnCharge">充電 OFF</button>
+        <button type="button" class="toggle-btn is-discharge" id="btnDischarge">放電 OFF</button>
+        <button type="button" class="toggle-btn is-active" id="btnVectors">電場矢印 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGradient">電位グラデーション ON</button>
+      </div>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnGraphEQ">E(Q) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphCS">C(S) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphCd">C(d) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphQt">Q(t) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphVt">V(t) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphEt">E(t) ON</button>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="qSlider">目標電荷 Q <span class="slider-val" id="qVal">+5.0 μC</span></label>
+          <input type="range" id="qSlider" min="-100" max="100" value="50" step="5">
+        </div>
+        <div>
+          <label for="areaSlider">板面積 S <span class="slider-val" id="areaVal">5.0</span></label>
+          <input type="range" id="areaSlider" min="10" max="100" value="50" step="5">
+        </div>
+        <div>
+          <label for="distSlider">板間距離 d <span class="slider-val" id="distVal">5.0 mm</span></label>
+          <input type="range" id="distSlider" min="10" max="100" value="50" step="5">
+        </div>
+        <div>
+          <label for="epsSlider">誘電率 ε<sub>r</sub> <span class="slider-val" id="epsVal">1.0</span></label>
+          <input type="range" id="epsSlider" min="10" max="100" value="10" step="5">
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout"><dt>4πk₀Q/S</dt><dd id="readE">—</dd></dl>
+        <dl class="readout"><dt>容量 C</dt><dd id="readC">—</dd></dl>
+        <dl class="readout"><dt>電荷 Q</dt><dd id="readQ">—</dd></dl>
+        <dl class="readout"><dt>電位差 V</dt><dd id="readV">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">スライダーで E(Q) と C(S), C(d) を確認 · 充電/放電で Q(t) を観察</div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#f87171">■ ＋板</span>
+        <span style="color:#38bdf8">■ −板</span>
+        <span style="color:#fde047">→ E ∝ Q/S</span>
+        <span style="color:#c7d2fe">C ∝ S/d</span>
+        <span style="color:#fde047">● 現在の Q</span>
+      </div>
+      <p class="hint">左：S·d で板形状変化 · 右：E(Q)·C(S)·C(d) と充放電 Q(t)·V(t)·E(t)</p>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+
+    const K0 = 8.99e9;
+    const FOUR_PI_K0 = 4 * Math.PI * K0;
+    const R_OHM = 4000;
+    const GRAPH_PANEL_RATIO = 0.38;
+    const VIEW2D = { padX: 12, padTop: 22, padBottom: 12 };
+    const PLATE_W = 0.11;
+    const HISTORY_SEC = 10;
+    const MAX_HISTORY = 500;
+
+    let canvasW = 800, canvasH = 500, dpr = 1;
+    let worldHalfW = 2.05, worldHalfH = 1.38;
+
+    let chargeOn = false, dischargeOn = false;
+    let showVectors = true, showGradient = true;
+    let showGraphEQ = true, showGraphCS = true, showGraphCd = true;
+    let showGraphQt = true, showGraphVt = true, showGraphEt = true;
+
+    let Q = 0, simTime = 0, lastFrame = performance.now();
+    const history = [];
+
+    function getEpsR() { return parseFloat(document.getElementById("epsSlider").value) / 10; }
+    function getAreaRel() { return parseFloat(document.getElementById("areaSlider").value) / 10; }
+    function getDistMm() { return parseFloat(document.getElementById("distSlider").value) / 10; }
+    function getDistM() { return getDistMm() * 1e-3; }
+    function getAreaM2() { return getAreaRel() * 0.02; }
+    function getQTargetC() { return parseFloat(document.getElementById("qSlider").value) / 10 * 1e-6; }
+
+    /** ガウス単位系：C = εr S / (4πk₀ d) */
+    function getCapacitance(S, d) {
+      const area = S !== undefined ? S : getAreaM2();
+      const dist = d !== undefined ? d : getDistM();
+      if (dist <= 0) return 0;
+      return getEpsR() * area / (FOUR_PI_K0 * dist);
+    }
+
+    /** ガウス単位系：E = 4πk₀ Q / (εr S) — d に依存しない */
+    function getFieldE(q, S) {
+      const area = S !== undefined ? S : getAreaM2();
+      const charge = q !== undefined ? q : Q;
+      if (area <= 0) return 0;
+      return FOUR_PI_K0 * Math.abs(charge) / (getEpsR() * area);
+    }
+
+    function getV(q) {
+      const charge = q !== undefined ? q : Q;
+      const C = getCapacitance();
+      return C > 0 ? charge / C : 0;
+    }
+
+    function getTau() { return R_OHM * getCapacitance(); }
+
+    function getPlateGeometry() {
+      const dRel = getDistMm() / 5;
+      const halfGap = 0.55 + dRel * 0.55;
+      const yHalf = 0.42 + getAreaRel() * 0.12;
+      return { left: -halfGap, right: halfGap, yHalf };
+    }
+
+    function getChargeRatio() {
+      const target = Math.abs(getQTargetC());
+      if (target < 1e-12) return 0;
+      return Math.min(1, Math.abs(Q) / target);
+    }
+
+    function formatQMicro(qC) {
+      const qMicro = qC * 1e6;
+      return (qMicro >= 0 ? "+" : "") + qMicro.toFixed(1) + " μC";
+    }
+
+    function formatC(C) {
+      if (C >= 1e-6) return (C * 1e6).toFixed(2) + " μF";
+      if (C >= 1e-9) return (C * 1e9).toFixed(1) + " nF";
+      return C.toExponential(2) + " F";
+    }
+
+    function formatPhys(n, unit, d) {
+      if (!Number.isFinite(n)) return "—";
+      const abs = Math.abs(n);
+      if (abs >= 1e4 || (abs > 0 && abs < 0.01)) return n.toExponential(2) + " " + unit;
+      return n.toFixed(d) + " " + unit;
+    }
+
+    function mainViewWidth() { return canvasW * (1 - GRAPH_PANEL_RATIO); }
+    function graphPanelX() { return mainViewWidth(); }
+
+    function view2DBounds() {
+      const w = mainViewWidth();
+      const plotW = w - VIEW2D.padX * 2;
+      const plotH = canvasH - VIEW2D.padTop - VIEW2D.padBottom;
+      return { x: VIEW2D.padX, y: VIEW2D.padTop, w: plotW, h: plotH, cx: VIEW2D.padX + plotW * 0.5, cy: VIEW2D.padTop + plotH * 0.5 };
+    }
+
+    function worldScale() {
+      const v = view2DBounds();
+      return { sx: v.w / (worldHalfW * 2), sy: v.h / (worldHalfH * 2) };
+    }
+
+    function worldToScreen(x, y) {
+      const v = view2DBounds();
+      const sc = worldScale();
+      return { x: v.cx + x * sc.sx, y: v.cy - y * sc.sy };
+    }
+
+    function clipView2D() {
+      const v = view2DBounds();
+      ctx.beginPath();
+      ctx.rect(v.x - 2, v.y - 2, v.w + 4, v.h + 4);
+      ctx.clip();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(360, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function physicsStep(dt) {
+      const dtClamped = Math.min(dt, 0.05);
+      const C = getCapacitance();
+      const tau = Math.max(getTau(), 0.001);
+      const Qtarget = getQTargetC();
+
+      if (chargeOn && !dischargeOn) {
+        Q = Qtarget - (Qtarget - Q) * Math.exp(-dtClamped / tau);
+      } else if (dischargeOn && !chargeOn) {
+        Q = Q * Math.exp(-dtClamped / tau);
+      } else {
+        Q = Qtarget;
+      }
+
+      simTime += dtClamped;
+      history.push({ t: simTime, Q, V: getV(), E: getFieldE() });
+      if (history.length > MAX_HISTORY) history.shift();
+      while (history.length > 1 && history[0].t < simTime - HISTORY_SEC) history.shift();
+    }
+
+    function potentialColor(ratio) {
+      const t = Math.max(-1, Math.min(1, ratio * 2 - 1));
+      if (t >= 0) return "rgba(" + Math.round(180 + 75 * t) + "," + Math.round(40 + 30 * (1 - t)) + "," + Math.round(50 + 20 * (1 - t)) + ",0.5)";
+      const s = -t;
+      return "rgba(" + Math.round(40 + 30 * (1 - s)) + "," + Math.round(50 + 40 * (1 - s)) + "," + Math.round(160 + 90 * s) + ",0.5)";
+    }
+
+    function drawBackground2D() {
+      const v = view2DBounds();
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      const grad = ctx.createLinearGradient(v.x, v.y, v.x, v.y + v.h);
+      grad.addColorStop(0, "rgba(15,23,42,0.95)");
+      grad.addColorStop(1, "rgba(8,12,28,0.98)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(v.x, v.y, v.w, v.h);
+      ctx.strokeStyle = "rgba(129,140,248,0.35)";
+      ctx.strokeRect(v.x + 0.5, v.y + 0.5, v.w - 1, v.h - 1);
+
+      ctx.save();
+      clipView2D();
+      if (showGradient) {
+        const pg = getPlateGeometry();
+        const gL = pg.left + PLATE_W;
+        const gR = pg.right - PLATE_W;
+        const tl = worldToScreen(gL, pg.yHalf);
+        const br = worldToScreen(gR, -pg.yHalf);
+        const Vmax = Math.max(Math.abs(getV()), 1);
+        for (let px = tl.x; px < br.x; px += 7) {
+          const wx = gL + (px - tl.x) / (br.x - tl.x) * (gR - gL);
+          const localV = getV() * (wx - gL) / (gR - gL);
+          ctx.fillStyle = potentialColor(localV / Vmax);
+          ctx.fillRect(px, br.y, 8, tl.y - br.y);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawPlates() {
+      const pg = getPlateGeometry();
+      const ratio = getChargeRatio();
+      const yTop = pg.yHalf + 0.1;
+      const yBot = -pg.yHalf - 0.1;
+      const lTl = worldToScreen(pg.left, yTop);
+      const lBr = worldToScreen(pg.left + PLATE_W, yBot);
+      const rTl = worldToScreen(pg.right - PLATE_W, yTop);
+      const rBr = worldToScreen(pg.right, yBot);
+
+      ctx.fillStyle = "rgba(248,113,113," + (0.55 + ratio * 0.45) + ")";
+      ctx.fillRect(lTl.x, lTl.y, lBr.x - lTl.x, lBr.y - lTl.y);
+      ctx.fillStyle = "rgba(56,189,248," + (0.55 + ratio * 0.45) + ")";
+      ctx.fillRect(rTl.x, rTl.y, rBr.x - rTl.x, rBr.y - rTl.y);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(lTl.x + 0.5, lTl.y + 0.5, lBr.x - lTl.x - 1, lBr.y - lTl.y - 1);
+      ctx.strokeRect(rTl.x + 0.5, rTl.y + 0.5, rBr.x - rTl.x - 1, rBr.y - rTl.y - 1);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 15px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("+", (lTl.x + lBr.x) / 2, (lTl.y + lBr.y) / 2);
+      ctx.fillText("−", (rTl.x + rBr.x) / 2, (rTl.y + rBr.y) / 2);
+      ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left";
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("S∝" + getAreaRel().toFixed(1), (lTl.x + rBr.x) / 2 - 18, yTop > 0 ? worldToScreen(0, yTop).y - 8 : 0);
+      ctx.fillText("d=" + getDistMm().toFixed(1) + "mm", (lTl.x + rBr.x) / 2 - 22, worldToScreen(pg.right, -pg.yHalf - 0.25).y);
+    }
+
+    function drawFieldVectors() {
+      if (!showVectors) return;
+      const pg = getPlateGeometry();
+      const E = getFieldE();
+      const Eref = getFieldE(getQTargetC());
+      const lenScale = Eref > 0 ? E / Eref : 0;
+      if (lenScale < 0.02) return;
+
+      ctx.save();
+      clipView2D();
+      for (let j = 0; j < 5; j += 1) {
+        const wy = -pg.yHalf * 0.75 + (j / 4) * pg.yHalf * 1.5;
+        for (let i = 0; i < 8; i += 1) {
+          const wx = pg.left + PLATE_W + 0.12 + (i / 7) * (pg.right - pg.left - PLATE_W * 2 - 0.24);
+          const len = 8 + lenScale * 30;
+          const p = worldToScreen(wx, wy);
+          drawArrow(p.x - len * 0.5, p.y, len, 0, "rgba(253,224,71,0.92)", 2.2);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawArrow(sx, sy, dx, dy, color, lw) {
+      const ex = sx + dx, ey = sy + dy;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(9, Math.hypot(dx, dy) * 0.28);
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - 0.45), ey - head * Math.sin(ang - 0.45));
+      ctx.lineTo(ex - head * Math.cos(ang + 0.45), ey - head * Math.sin(ang + 0.45));
+      ctx.closePath(); ctx.fill();
+    }
+
+    function drawCircuit() {
+      const pg = getPlateGeometry();
+      const lMid = worldToScreen(pg.left + PLATE_W * 0.5, 0);
+      const rMid = worldToScreen(pg.right - PLATE_W * 0.5, 0);
+      const batX = worldToScreen(pg.left - 0.5, 0);
+      const shortY = worldToScreen(0, -pg.yHalf - 0.5);
+
+      if (chargeOn) {
+        ctx.strokeStyle = "rgba(34,197,94,0.85)"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(lMid.x, lMid.y); ctx.lineTo(batX.x + 18, lMid.y);
+        ctx.lineTo(batX.x + 18, batX.y); ctx.lineTo(batX.x - 18, batX.y);
+        ctx.lineTo(batX.x - 18, rMid.y); ctx.lineTo(rMid.x, rMid.y);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(34,197,94,0.15)"; ctx.strokeStyle = "rgba(34,197,94,0.7)";
+        ctx.fillRect(batX.x - 20, batX.y - 16, 40, 32);
+        ctx.strokeRect(batX.x - 20.5, batX.y - 16.5, 41, 33);
+        ctx.fillStyle = "#86efac"; ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("充電", batX.x, batX.y + 3);
+        ctx.textAlign = "left";
+      }
+      if (dischargeOn) {
+        ctx.strokeStyle = "rgba(248,113,113,0.85)"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(lMid.x, lMid.y - 24); ctx.lineTo(lMid.x, shortY.y);
+        ctx.lineTo(rMid.x, shortY.y); ctx.lineTo(rMid.x, rMid.y - 24);
+        ctx.stroke();
+        ctx.fillStyle = "#fca5a5"; ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("ショート", shortY.x, shortY.y - 5);
+        ctx.textAlign = "left";
+      }
+    }
+
+    function drawViewLabel() {
+      const v = view2DBounds();
+      ctx.fillStyle = "rgba(8,12,24,0.82)";
+      ctx.fillRect(v.x + 8, v.y + 6, 132, 22);
+      ctx.fillStyle = "#c7d2fe";
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("2D 平行板（ガウス単位系）", v.x + 16, v.y + 21);
+    }
+
+    function drawGraphDivider() {
+      const gx = graphPanelX();
+      ctx.strokeStyle = "rgba(129,140,248,0.45)";
+      ctx.beginPath(); ctx.moveTo(gx + 0.5, 0); ctx.lineTo(gx + 0.5, canvasH); ctx.stroke();
+    }
+
+    function activeGraphList() {
+      const list = [];
+      if (showGraphEQ) list.push("EQ");
+      if (showGraphCS) list.push("CS");
+      if (showGraphCd) list.push("Cd");
+      if (showGraphQt) list.push("Qt");
+      if (showGraphVt) list.push("Vt");
+      if (showGraphEt) list.push("Et");
+      return list.length ? list : ["EQ"];
+    }
+
+    function drawGraphFrame(gx, gy, gw, gh, title, yLabel) {
+      ctx.fillStyle = "rgba(8,12,24,0.92)";
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.strokeStyle = "rgba(129,140,248,0.22)";
+      ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+      const ml = 32, mr = 6, mt = 18, mb = 14;
+      const plotX = gx + ml, plotY = gy + mt, plotW = gw - ml - mr, plotH = gh - mt - mb;
+      ctx.strokeStyle = "rgba(148,163,184,0.35)";
+      ctx.beginPath();
+      ctx.moveTo(plotX, plotY); ctx.lineTo(plotX, plotY + plotH); ctx.lineTo(plotX + plotW, plotY + plotH);
+      ctx.stroke();
+      ctx.fillStyle = "#c7d2fe"; ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(title, gx + 6, gy + 12);
+      ctx.fillStyle = "#94a3b8"; ctx.font = "8px Inter, sans-serif";
+      ctx.save();
+      ctx.translate(gx + 8, plotY + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
+      return { plotX, plotY, plotW, plotH };
+    }
+
+    function drawGraphs() {
+      const gx = graphPanelX() + 3;
+      const gw = canvasW - gx - 3;
+      const ids = activeGraphList();
+      const gh = (canvasH - 6) / ids.length;
+      ids.forEach((id, i) => {
+        const gy = 3 + i * gh;
+        if (id === "EQ") drawGraphEQ(gx, gy, gw, gh - 3);
+        else if (id === "CS") drawGraphCS(gx, gy, gw, gh - 3);
+        else if (id === "Cd") drawGraphCd(gx, gy, gw, gh - 3);
+        else if (id === "Qt") drawTimeGraph(gx, gy, gw, gh - 3, "Q(t)", "Q (μC)", (h) => h.Q * 1e6);
+        else if (id === "Vt") drawTimeGraph(gx, gy, gw, gh - 3, "V(t)", "V (V)", (h) => h.V);
+        else if (id === "Et") drawTimeGraph(gx, gy, gw, gh - 3, "E(t)", "E (V/m)", (h) => h.E);
+      });
+    }
+
+    /** E(Q) — 傾き 4πk₀/S */
+    function drawGraphEQ(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "E(Q)  E=4πk₀Q/S", "E (V/m)");
+      const S = getAreaM2();
+      const qMax = Math.max(Math.abs(getQTargetC()), Math.abs(Q), 1e-6);
+      const eMax = getFieldE(qMax, S) * 1.1;
+      const xToPx = (q) => base.plotX + (q / qMax) * base.plotW;
+      const yToPx = (e) => base.plotY + base.plotH - (e / eMax) * base.plotH;
+
+      ctx.strokeStyle = "rgba(148,163,184,0.35)"; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(base.plotX, yToPx(0)); ctx.lineTo(base.plotX + base.plotW, yToPx(getFieldE(qMax, S))); ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath(); ctx.arc(xToPx(Math.abs(Q)), yToPx(getFieldE()), 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    /** C(S) — 傾き εr/(4πk₀d) */
+    function drawGraphCS(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "C(S)  C=εrS/(4πk₀d)", "C (nF)");
+      const d = getDistM();
+      const sMax = getAreaRel() * 0.02 * 1.5;
+      const cMax = getCapacitance(sMax, d) * 1e9 * 1.15;
+      const xToPx = (s) => base.plotX + (s / sMax) * base.plotW;
+      const yToPx = (c) => base.plotY + base.plotH - (c / cMax) * base.plotH;
+
+      ctx.strokeStyle = "#34d399"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(xToPx(0), yToPx(0)); ctx.lineTo(xToPx(sMax), yToPx(getCapacitance(sMax, d) * 1e9)); ctx.stroke();
+
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath(); ctx.arc(xToPx(getAreaM2()), yToPx(getCapacitance() * 1e9), 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    /** C(d) — d に反比例 */
+    function drawGraphCd(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "C(d)  C=εrS/(4πk₀d)", "C (nF)");
+      const dMin = 0.001, dMax = 0.02;
+      const cMax = getCapacitance(getAreaM2(), dMin) * 1e9 * 1.1;
+      const xToPx = (d) => base.plotX + ((d - dMin) / (dMax - dMin)) * base.plotW;
+      const yToPx = (c) => base.plotY + base.plotH - (c / cMax) * base.plotH;
+
+      ctx.strokeStyle = "#34d399"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 40; i += 1) {
+        const d = dMin + (dMax - dMin) * (i / 40);
+        const px = xToPx(d), py = yToPx(getCapacitance(getAreaM2(), d) * 1e9);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath(); ctx.arc(xToPx(getDistM()), yToPx(getCapacitance() * 1e9), 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawTimeGraph(gx, gy, gw, gh, title, yLabel, valFn) {
+      const base = drawGraphFrame(gx, gy, gw, gh, title, yLabel);
+      if (history.length < 2) return;
+      const tMin = Math.max(0, simTime - HISTORY_SEC);
+      const tMax = Math.max(tMin + 0.5, simTime);
+      let yMax = 1;
+      history.forEach((h) => { if (h.t >= tMin) yMax = Math.max(yMax, Math.abs(valFn(h))); });
+      yMax *= 1.15;
+      const xToPx = (t) => base.plotX + ((t - tMin) / (tMax - tMin)) * base.plotW;
+      const yToPx = (v) => base.plotY + base.plotH - (v / yMax) * base.plotH;
+
+      ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      let started = false;
+      history.forEach((h) => {
+        if (h.t < tMin) return;
+        const px = xToPx(h.t), py = yToPx(valFn(h));
+        if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
+
+    function updateReadouts() {
+      const E = getFieldE();
+      const C = getCapacitance();
+      const V = getV();
+      document.getElementById("readE").textContent = formatPhys(E, "V/m", 0);
+      document.getElementById("readC").textContent = formatC(C);
+      document.getElementById("readQ").textContent = formatQMicro(Q);
+      document.getElementById("readV").textContent = formatPhys(V, "V", 1);
+
+      let mode = "手動 Q · E=4πk₀Q/S · C=εrS/(4πk₀d)";
+      if (chargeOn) mode = "充電中 · Q→目標 · E=4πk₀Q/S 増加";
+      if (dischargeOn) mode = "放電中 · Q→0 · E 減衰";
+      formulaLive.innerHTML =
+        mode + "<br><strong>E</strong>=" + formatPhys(E, "V/m", 0)
+        + " · <strong>C</strong>=" + formatC(C)
+        + " · <strong>Q</strong>=" + formatQMicro(Q)
+        + " · <strong>V=Q/C</strong>=" + formatPhys(V, "V", 1);
+    }
+
+    function syncSliders() {
+      document.getElementById("qVal").textContent = formatQMicro(getQTargetC());
+      document.getElementById("areaVal").textContent = getAreaRel().toFixed(1);
+      document.getElementById("distVal").textContent = getDistMm().toFixed(1) + " mm";
+      document.getElementById("epsVal").textContent = getEpsR().toFixed(1);
+    }
+
+    function syncChargeBtns() {
+      document.getElementById("btnCharge").textContent = chargeOn ? "充電 ON" : "充電 OFF";
+      document.getElementById("btnCharge").classList.toggle("is-active", chargeOn);
+      document.getElementById("btnDischarge").textContent = dischargeOn ? "放電 ON" : "放電 OFF";
+      document.getElementById("btnDischarge").classList.toggle("is-active", dischargeOn);
+    }
+
+    function drawScene() {
+      resizeCanvas();
+      physicsStep((performance.now() - lastFrame) / 1000);
+      lastFrame = performance.now();
+      drawBackground2D();
+      ctx.save(); clipView2D();
+      drawPlates(); drawFieldVectors(); drawCircuit();
+      ctx.restore();
+      drawViewLabel(); drawGraphDivider(); drawGraphs();
+      updateReadouts(); syncSliders();
+    }
+
+    function bindToggle(btnId, getter, setter) {
+      document.getElementById(btnId).addEventListener("click", () => {
+        setter(!getter());
+        document.getElementById(btnId).classList.toggle("is-active", getter());
+      });
+    }
+
+    document.getElementById("btnCharge").addEventListener("click", () => {
+      chargeOn = !chargeOn; if (chargeOn) dischargeOn = false; syncChargeBtns();
+    });
+    document.getElementById("btnDischarge").addEventListener("click", () => {
+      dischargeOn = !dischargeOn; if (dischargeOn) chargeOn = false; syncChargeBtns();
+    });
+
+    bindToggle("btnVectors", () => showVectors, (v) => { showVectors = v; });
+    bindToggle("btnGradient", () => showGradient, (v) => { showGradient = v; });
+    bindToggle("btnGraphEQ", () => showGraphEQ, (v) => { showGraphEQ = v; });
+    bindToggle("btnGraphCS", () => showGraphCS, (v) => { showGraphCS = v; });
+    bindToggle("btnGraphCd", () => showGraphCd, (v) => { showGraphCd = v; });
+    bindToggle("btnGraphQt", () => showGraphQt, (v) => { showGraphQt = v; });
+    bindToggle("btnGraphVt", () => showGraphVt, (v) => { showGraphVt = v; });
+    bindToggle("btnGraphEt", () => showGraphEt, (v) => { showGraphEt = v; });
+
+    ["qSlider", "areaSlider", "distSlider", "epsSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", syncSliders);
+    });
+
+    syncChargeBtns();
+    window.addEventListener("resize", drawScene);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(drawScene).observe(canvasWrap);
+
+    function loop() { drawScene(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

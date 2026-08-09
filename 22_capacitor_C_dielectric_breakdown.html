@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>22章 コンデンサ — C · 誘電体 · 絶縁破壊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8; --accent-light: #a5b4fc;
+      --panel: rgba(10, 12, 28, 0.9); --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f1030 45%, #0a1628 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(248,113,113,0.45), rgba(56,189,248,0.4));
+      border: 1px solid rgba(129,140,248,0.4); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.22);
+      font-size: 0.88rem; color: #c7d2fe; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(129,140,248,0.2);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #020617; border: 1px solid rgba(129,140,248,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(640px, 68dvh);
+      min-height: 440px; touch-action: none;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c7d2fe; font-variant-numeric: tabular-nums; }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .toggle-btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(129,140,248,0.3); background: rgba(15,30,45,0.6);
+      color: #cbd5e1; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-active {
+      background: rgba(129,140,248,0.22); border-color: rgba(129,140,248,0.55); color: #e0e7ff;
+    }
+    .toggle-btn.is-trigger {
+      border-color: rgba(248,113,113,0.45); color: #fecaca;
+      background: rgba(248,113,113,0.12);
+    }
+    .toggle-btn.is-trigger:hover:not(:disabled) {
+      background: rgba(248,113,113,0.22);
+    }
+    .toggle-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(129,140,248,0.06); border: 1px solid rgba(129,140,248,0.16);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.82rem; font-weight: 700; color: #eef2ff; }
+    .readout.is-alert { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.08); }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+    .hint { margin-top: 8px; font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚡</div>
+      <p class="chapter-label">第22章 — コンデンサ</p>
+      <h2>C · 誘電体 · 絶縁破壊</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-22">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>容量 · 比誘電率 · 耐電圧</h3>
+      <p>
+        <strong>C = ε<sub>r</sub>ε<sub>0</sub>S/d</strong>、板間の誘電体で
+        <strong>E = E<sub>0</sub>/ε<sub>r</sub></strong> に弱まり容量が増えます。
+        <strong>E &gt; E<sub>break</sub></strong> で絶縁破壊し、V と Q が急落します。
+      </p>
+      <div class="formula-box">
+        C = εS/d · E = E₀/εr · Q = CV · E &gt; E<sub>break</sub> → 絶縁破壊
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnVectors">電場矢印 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGradient">電位グラデーション ON</button>
+        <button type="button" class="toggle-btn is-trigger" id="btnBreakdown">絶縁破壊 デモ</button>
+        <button type="button" class="toggle-btn" id="btnReset">破壊リセット</button>
+      </div>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnGraphEx">E(x) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphVx">V(x) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphCS">C(S) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphCd">C(d) ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphQV">Q–V ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGraphTime">E·V·Q(t) ON</button>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="vSlider">印加電圧 V <span class="slider-val" id="vVal">3000 V</span></label>
+          <input type="range" id="vSlider" min="0" max="100" value="30" step="1">
+        </div>
+        <div>
+          <label for="areaSlider">板面積 S <span class="slider-val" id="areaVal">7.0</span></label>
+          <input type="range" id="areaSlider" min="10" max="100" value="70" step="5">
+        </div>
+        <div>
+          <label for="distSlider">板間距離 d <span class="slider-val" id="distVal">2.0 mm</span></label>
+          <input type="range" id="distSlider" min="10" max="100" value="20" step="5">
+        </div>
+        <div>
+          <label for="epsSlider">比誘電率 ε<sub>r</sub> <span class="slider-val" id="epsVal">3.0</span></label>
+          <input type="range" id="epsSlider" min="10" max="100" value="30" step="5">
+        </div>
+        <div>
+          <label for="breakSlider">耐電圧 E<sub>break</sub> <span class="slider-val" id="breakVal">3.0 MV/m</span></label>
+          <input type="range" id="breakSlider" min="10" max="100" value="30" step="5">
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout" id="readCBox"><dt>容量 C</dt><dd id="readC">—</dd></dl>
+        <dl class="readout"><dt>電荷 Q</dt><dd id="readQ">—</dd></dl>
+        <dl class="readout" id="readEBox"><dt>電場 E</dt><dd id="readE">—</dd></dl>
+        <dl class="readout" id="readVBox"><dt>電位差 V</dt><dd id="readV">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">電圧を上げて E &gt; E<sub>break</sub> で絶縁破壊を確認</div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#7dd3fc">■ 誘電体</span>
+        <span style="color:#fde047">→ 電場 E</span>
+        <span style="color:#f87171">絶縁破壊 · 火花</span>
+        <span style="color:#c7d2fe">C ∝ εr S/d</span>
+      </div>
+      <p class="hint">E = V/d（d は mm 表示）が E<sub>break</sub> を超えると自動破壊。例：d=2 mm · E<sub>break</sub>=3 MV/m → V ≳ 6000 V。デモは「絶縁破壊 デモ」ボタン。</p>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+
+    const GRAPH_PANEL_RATIO = 0.38;
+    const VIEW2D = { padX: 12, padTop: 22, padBottom: 12 };
+    const PLATE_W = 0.11;
+    const HISTORY_SEC = 14;
+    const MAX_HISTORY = 500;
+
+    let canvasW = 800, canvasH = 500, dpr = 1;
+    let worldHalfW = 2.05, worldHalfH = 1.38;
+
+    let showVectors = true, showGradient = true;
+    let showGraphEx = true, showGraphVx = true, showGraphCS = true;
+    let showGraphCd = true, showGraphQV = true, showGraphTime = true;
+
+    let V_eff = 3000;
+    let broken = false;
+    let flashT = 0;
+    let simTime = 0;
+    let lastFrame = performance.now();
+    const history = [];
+    const sparks = [];
+
+    function getEpsR() { return parseFloat(document.getElementById("epsSlider").value) / 10; }
+    function getAreaRel() { return parseFloat(document.getElementById("areaSlider").value) / 10; }
+    function getDistMm() { return parseFloat(document.getElementById("distSlider").value) / 10; }
+    function getDistM() { return getDistMm() * 1e-3; }
+    function getVTarget() { return parseFloat(document.getElementById("vSlider").value) * 100; }
+    function getEBreak() { return parseFloat(document.getElementById("breakSlider").value) / 10 * 1e6; }
+
+    /** C = εr S / d（表示用 μF スケール） */
+    function getCapacitance(S, dMm) {
+      const Srel = S !== undefined ? S : getAreaRel();
+      const d = dMm !== undefined ? Math.max(0.5, dMm) : Math.max(0.5, getDistMm());
+      return getEpsR() * Srel / d * 3e-6;
+    }
+
+    function getPlateGeometry() {
+      const dRel = getDistMm() / 5;
+      const halfGap = 0.5 + dRel * 0.55;
+      const yHalf = 0.42 + getAreaRel() * 0.12;
+      return { left: -halfGap, right: halfGap, yHalf };
+    }
+
+    /** E₀ = V/d（d は mm→m 変換）· 誘電体内 E = E₀/εr · 破壊判定も E₀ */
+    function getE0Air() {
+      const dM = getDistM();
+      if (dM <= 0) return 0;
+      return V_eff / dM;
+    }
+
+    /** 絶縁破壊が起きる目安の印加電圧 V ≥ E_break · d */
+    function getBreakdownVoltage() {
+      return getEBreak() * getDistM();
+    }
+
+    function getEDielectric() {
+      return getE0Air() / getEpsR();
+    }
+
+    function getMaxE() {
+      return getE0Air();
+    }
+
+    function getQ() { return getCapacitance() * V_eff; }
+
+    function isInsideDielectric(x, y) {
+      const pg = getPlateGeometry();
+      const innerL = pg.left + PLATE_W;
+      const innerR = pg.right - PLATE_W;
+      return x >= innerL && x <= innerR && y >= -pg.yHalf && y <= pg.yHalf;
+    }
+
+    function fieldExAt(x) {
+      return isInsideDielectric(x, 0) ? getEDielectric() : getE0Air();
+    }
+
+    function potentialAt(x) {
+      const pg = getPlateGeometry();
+      const innerL = pg.left + PLATE_W;
+      const innerR = pg.right - PLATE_W;
+      x = Math.max(innerL, Math.min(innerR, x));
+      const Vplus = V_eff * 0.5;
+      const Vminus = -V_eff * 0.5;
+      const t = (x - innerL) / (innerR - innerL);
+      return Vplus + (Vminus - Vplus) * t;
+    }
+
+    function profileEx(x) {
+      if (Math.abs(x) > worldHalfW) return 0;
+      const pg = getPlateGeometry();
+      if (x < pg.left + PLATE_W || x > pg.right - PLATE_W) return 0;
+      return fieldExAt(x);
+    }
+
+    function profileV(x) {
+      const pg = getPlateGeometry();
+      if (x < pg.left + PLATE_W) return V_eff * 0.5;
+      if (x > pg.right - PLATE_W) return -V_eff * 0.5;
+      return potentialAt(x);
+    }
+
+    function formatC(C) {
+      if (C >= 1e-6) return (C * 1e6).toFixed(2) + " μF";
+      if (C >= 1e-9) return (C * 1e9).toFixed(1) + " nF";
+      return C.toExponential(2) + " F";
+    }
+
+    function formatPhys(n, unit, d) {
+      if (!Number.isFinite(n)) return "—";
+      const abs = Math.abs(n);
+      if (abs >= 1e4 || (abs > 0 && abs < 0.01)) return n.toExponential(2) + " " + unit;
+      return n.toFixed(d) + " " + unit;
+    }
+
+    function formatEMv(E) {
+      if (E >= 1e6) return (E / 1e6).toFixed(2) + " MV/m";
+      if (E >= 1e3) return (E / 1e3).toFixed(1) + " kV/m";
+      return Math.round(E) + " V/m";
+    }
+
+    function mainViewWidth() { return canvasW * (1 - GRAPH_PANEL_RATIO); }
+    function graphPanelX() { return mainViewWidth(); }
+
+    function view2DBounds() {
+      const w = mainViewWidth();
+      const plotW = w - VIEW2D.padX * 2;
+      const plotH = canvasH - VIEW2D.padTop - VIEW2D.padBottom;
+      return { x: VIEW2D.padX, y: VIEW2D.padTop, w: plotW, h: plotH, cx: VIEW2D.padX + plotW * 0.5, cy: VIEW2D.padTop + plotH * 0.5 };
+    }
+
+    function worldScale() {
+      const v = view2DBounds();
+      return { sx: v.w / (worldHalfW * 2), sy: v.h / (worldHalfH * 2) };
+    }
+
+    function worldToScreen(x, y) {
+      const v = view2DBounds();
+      const sc = worldScale();
+      return { x: v.cx + x * sc.sx, y: v.cy - y * sc.sy };
+    }
+
+    function clipView2D() {
+      const v = view2DBounds();
+      ctx.beginPath();
+      ctx.rect(v.x - 2, v.y - 2, v.w + 4, v.h + 4);
+      ctx.clip();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(360, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function spawnSparks() {
+      sparks.length = 0;
+      const pg = getPlateGeometry();
+      for (let i = 0; i < 16; i += 1) {
+        sparks.push({
+          x: (pg.left + pg.right) * 0.5 + (Math.random() - 0.5) * (pg.right - pg.left) * 0.7,
+          y: (Math.random() - 0.5) * pg.yHalf * 1.4,
+          dx: (Math.random() - 0.5) * 0.35,
+          dy: (Math.random() - 0.5) * 0.35,
+          life: 0.4 + Math.random() * 0.5
+        });
+      }
+    }
+
+    /** 絶縁破壊イベントを開始（E > E_break 到達時・デモボタン共通） */
+    function triggerBreakdown() {
+      if (broken) return;
+      broken = true;
+      flashT = 0;
+      spawnSparks();
+      syncBreakdownButtons();
+    }
+
+    function syncBreakdownButtons() {
+      const btnBreak = document.getElementById("btnBreakdown");
+      const btnReset = document.getElementById("btnReset");
+      if (btnBreak) btnBreak.disabled = broken;
+      if (btnReset) btnReset.disabled = !broken;
+    }
+
+    function physicsStep(dt) {
+      const dtC = Math.min(dt, 0.05);
+      const Vt = getVTarget();
+      const eBreak = getEBreak();
+
+      if (!broken) {
+        V_eff += (Vt - V_eff) * Math.min(1, dtC * 6);
+        if (getMaxE() > eBreak) {
+          triggerBreakdown();
+        }
+      } else {
+        flashT += dtC;
+        V_eff *= Math.exp(-dtC * 14);
+        V_eff = Math.max(V_eff, Vt * 0.04);
+        if (flashT > 0.12 && Math.random() < 0.25) spawnSparks();
+        if (getMaxE() < eBreak * 0.75 && Math.abs(V_eff - Vt) < Vt * 0.15 + 50) {
+          if (flashT > 1.2) {
+            broken = false;
+            syncBreakdownButtons();
+          }
+        }
+      }
+
+      simTime += dtC;
+      history.push({ t: simTime, E: getMaxE(), V: V_eff, Q: getQ(), broken });
+      if (history.length > MAX_HISTORY) history.shift();
+      while (history.length > 1 && history[0].t < simTime - HISTORY_SEC) history.shift();
+
+      sparks.forEach((s) => { s.life -= dtC; });
+      for (let i = sparks.length - 1; i >= 0; i -= 1) {
+        if (sparks[i].life <= 0) sparks.splice(i, 1);
+      }
+    }
+
+    function potentialColor(ratio) {
+      const t = Math.max(-1, Math.min(1, ratio));
+      if (t >= 0) return "rgba(" + Math.round(180 + 75 * t) + "," + Math.round(40 + 30 * (1 - t)) + "," + Math.round(50 + 20 * (1 - t)) + ",0.48)";
+      const s = -t;
+      return "rgba(" + Math.round(40 + 30 * (1 - s)) + "," + Math.round(50 + 40 * (1 - s)) + "," + Math.round(160 + 90 * s) + ",0.48)";
+    }
+
+    function drawBackground2D() {
+      const v = view2DBounds();
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      const grad = ctx.createLinearGradient(v.x, v.y, v.x, v.y + v.h);
+      grad.addColorStop(0, "rgba(15,23,42,0.95)");
+      grad.addColorStop(1, "rgba(8,12,28,0.98)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(v.x, v.y, v.w, v.h);
+      ctx.strokeStyle = "rgba(129,140,248,0.35)";
+      ctx.strokeRect(v.x + 0.5, v.y + 0.5, v.w - 1, v.h - 1);
+
+      ctx.save();
+      clipView2D();
+      if (showGradient) {
+        const pg = getPlateGeometry();
+        const gL = pg.left + PLATE_W;
+        const gR = pg.right - PLATE_W;
+        const tl = worldToScreen(gL, pg.yHalf);
+        const br = worldToScreen(gR, -pg.yHalf);
+        for (let px = tl.x; px < br.x; px += 7) {
+          const wx = gL + (px - tl.x) / (br.x - tl.x) * (gR - gL);
+          const vLocal = potentialAt(wx);
+          ctx.fillStyle = potentialColor(vLocal / Math.max(V_eff, 1));
+          ctx.fillRect(px, br.y, 8, tl.y - br.y);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawPlatesAndDielectric() {
+      const pg = getPlateGeometry();
+      const yTop = pg.yHalf + 0.1;
+      const yBot = -pg.yHalf - 0.1;
+      const lTl = worldToScreen(pg.left, yTop);
+      const lBr = worldToScreen(pg.left + PLATE_W, yBot);
+      const rTl = worldToScreen(pg.right - PLATE_W, yTop);
+      const rBr = worldToScreen(pg.right, yBot);
+      const dTl = worldToScreen(pg.left + PLATE_W, pg.yHalf);
+      const dBr = worldToScreen(pg.right - PLATE_W, -pg.yHalf);
+
+      ctx.fillStyle = "rgba(248,113,113,0.85)";
+      ctx.fillRect(lTl.x, lTl.y, lBr.x - lTl.x, lBr.y - lTl.y);
+      ctx.fillStyle = "rgba(56,189,248,0.85)";
+      ctx.fillRect(rTl.x, rTl.y, rBr.x - rTl.x, rBr.y - rTl.y);
+
+      const flash = broken && Math.sin(flashT * 28) > 0;
+      ctx.fillStyle = flash ? "rgba(248,113,113,0.55)" : "rgba(125,211,252,0.38)";
+      ctx.strokeStyle = flash ? "rgba(248,113,113,0.95)" : "rgba(56,189,248,0.85)";
+      ctx.lineWidth = broken ? 2.5 : 2;
+      ctx.fillRect(dTl.x, dBr.y, dBr.x - dTl.x, dTl.y - dBr.y);
+      ctx.strokeRect(dTl.x + 0.5, dBr.y + 0.5, dBr.x - dTl.x - 1, dTl.y - dBr.y - 1);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 14px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("+", (lTl.x + lBr.x) / 2, (lTl.y + lBr.y) / 2);
+      ctx.fillText("−", (rTl.x + rBr.x) / 2, (rTl.y + rBr.y) / 2);
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = flash ? "#fca5a5" : "#e0f2fe";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(flash ? "絶縁破壊!" : "誘電体 εr=" + getEpsR().toFixed(1), (dTl.x + dBr.x) / 2, (dTl.y + dBr.y) / 2);
+      ctx.textAlign = "left";
+    }
+
+    function drawFieldVectors() {
+      if (!showVectors) return;
+      const pg = getPlateGeometry();
+      const eDie = getEDielectric();
+      const eAir = getE0Air();
+      const eRef = Math.max(eAir, getEBreak(), 1);
+      const chaotic = broken && flashT < 2;
+
+      ctx.save();
+      clipView2D();
+      for (let j = 0; j < 5; j += 1) {
+        const wy = -pg.yHalf * 0.75 + (j / 4) * pg.yHalf * 1.5;
+        for (let i = 0; i < 8; i += 1) {
+          const wx = pg.left + PLATE_W + 0.1 + (i / 7) * (pg.right - pg.left - PLATE_W * 2 - 0.2);
+          const inD = isInsideDielectric(wx, wy);
+          const e = inD ? eDie : eAir;
+          let len = 8 + (e / eRef) * 28;
+          if (chaotic) {
+            len *= 0.6 + Math.random() * 0.8;
+          }
+          const p = worldToScreen(wx, wy);
+          const ang = chaotic ? (Math.random() - 0.5) * 0.8 : 0;
+          const dx = len * Math.cos(ang);
+          const dy = len * Math.sin(ang) * 0.3;
+          drawArrow(p.x - dx * 0.5, p.y - dy * 0.5, dx, dy, broken ? "rgba(248,113,113,0.85)" : "rgba(253,224,71,0.9)", 2);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawSparks() {
+      if (!broken || sparks.length === 0) return;
+      ctx.save();
+      clipView2D();
+      sparks.forEach((s) => {
+        const p1 = worldToScreen(s.x, s.y);
+        const p2 = worldToScreen(s.x + s.dx, s.y + s.dy);
+        ctx.strokeStyle = "rgba(253,224,71," + Math.min(1, s.life * 2) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    function drawArrow(sx, sy, dx, dy, color, lw) {
+      const ex = sx + dx, ey = sy + dy;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(9, Math.hypot(dx, dy) * 0.28);
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - 0.45), ey - head * Math.sin(ang - 0.45));
+      ctx.lineTo(ex - head * Math.cos(ang + 0.45), ey - head * Math.sin(ang + 0.45));
+      ctx.closePath(); ctx.fill();
+    }
+
+    function drawProfileLine() {
+      const pg = getPlateGeometry();
+      const left = worldToScreen(pg.left, 0);
+      const right = worldToScreen(pg.right, 0);
+      ctx.strokeStyle = "rgba(253,224,71,0.5)";
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(left.x, left.y);
+      ctx.lineTo(right.x, right.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawViewLabel() {
+      const v = view2DBounds();
+      ctx.fillStyle = "rgba(8,12,24,0.82)";
+      ctx.fillRect(v.x + 8, v.y + 6, 140, 22);
+      ctx.fillStyle = "#c7d2fe";
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("2D 平行板＋誘電体", v.x + 16, v.y + 21);
+    }
+
+    function drawGraphDivider() {
+      const gx = graphPanelX();
+      ctx.strokeStyle = "rgba(129,140,248,0.45)";
+      ctx.beginPath(); ctx.moveTo(gx + 0.5, 0); ctx.lineTo(gx + 0.5, canvasH); ctx.stroke();
+    }
+
+    function activeGraphs() {
+      const g = [];
+      if (showGraphEx) g.push("Ex");
+      if (showGraphVx) g.push("Vx");
+      if (showGraphCS) g.push("CS");
+      if (showGraphCd) g.push("Cd");
+      if (showGraphQV) g.push("QV");
+      if (showGraphTime) g.push("Time");
+      return g.length ? g : ["Ex"];
+    }
+
+    function drawGraphFrame(gx, gy, gw, gh, title, yLabel) {
+      ctx.fillStyle = "rgba(8,12,24,0.92)";
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.strokeStyle = "rgba(129,140,248,0.22)";
+      ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+      const ml = 34, mr = 6, mt = 18, mb = 14;
+      const plotX = gx + ml, plotY = gy + mt, plotW = gw - ml - mr, plotH = gh - mt - mb;
+      ctx.strokeStyle = "rgba(148,163,184,0.35)";
+      ctx.beginPath();
+      ctx.moveTo(plotX, plotY); ctx.lineTo(plotX, plotY + plotH); ctx.lineTo(plotX + plotW, plotY + plotH);
+      ctx.stroke();
+      ctx.fillStyle = "#c7d2fe"; ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(title, gx + 6, gy + 12);
+      ctx.fillStyle = "#94a3b8"; ctx.font = "8px Inter, sans-serif";
+      ctx.save();
+      ctx.translate(gx + 8, plotY + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
+      return { plotX, plotY, plotW, plotH };
+    }
+
+    function drawGraphs() {
+      const gx = graphPanelX() + 3;
+      const gw = canvasW - gx - 3;
+      const ids = activeGraphs();
+      const gh = (canvasH - 6) / ids.length;
+      ids.forEach((id, i) => {
+        const gy = 3 + i * gh;
+        if (id === "Ex") drawGraphEx(gx, gy, gw, gh - 3);
+        else if (id === "Vx") drawGraphVx(gx, gy, gw, gh - 3);
+        else if (id === "CS") drawGraphCS(gx, gy, gw, gh - 3);
+        else if (id === "Cd") drawGraphCd(gx, gy, gw, gh - 3);
+        else if (id === "QV") drawGraphQV(gx, gy, gw, gh - 3);
+        else if (id === "Time") drawGraphTime(gx, gy, gw, gh - 3);
+      });
+    }
+
+    function drawGraphEx(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "E(x)  E₀/εr", "E (MV/m)");
+      const pg = getPlateGeometry();
+      const xMin = pg.left - 0.3, xMax = pg.right + 0.3;
+      const innerL = pg.left + PLATE_W, innerR = pg.right - PLATE_W;
+      const eMax = Math.max(getE0Air(), getEBreak()) / 1e6 * 1.2;
+      const xToPx = (x) => base.plotX + ((x - xMin) / (xMax - xMin)) * base.plotW;
+      const yToPx = (e) => base.plotY + base.plotH - (e / eMax) * base.plotH;
+
+      ctx.fillStyle = "rgba(56,189,248,0.12)";
+      ctx.fillRect(xToPx(innerL), base.plotY, xToPx(innerR) - xToPx(innerL), base.plotH);
+
+      const eBreakMv = getEBreak() / 1e6;
+      ctx.strokeStyle = "rgba(248,113,113,0.6)"; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(base.plotX, yToPx(eBreakMv)); ctx.lineTo(base.plotX + base.plotW, yToPx(eBreakMv)); ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = "#34d399"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 80; i += 1) {
+        const x = xMin + (xMax - xMin) * (i / 80);
+        let e = 0;
+        if (x >= innerL && x <= innerR) e = profileEx(x) / 1e6;
+        const px = xToPx(x), py = yToPx(e);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    function drawGraphVx(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "V(x)", "V (V)");
+      const pg = getPlateGeometry();
+      const xMin = pg.left - 0.3, xMax = pg.right + 0.3;
+      const vMax = Math.max(V_eff, getVTarget()) * 0.55;
+      const xToPx = (x) => base.plotX + ((x - xMin) / (xMax - xMin)) * base.plotW;
+      const yToPx = (v) => base.plotY + base.plotH / 2 - (v / (vMax * 2)) * base.plotH;
+
+      ctx.strokeStyle = "#fde047"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 80; i += 1) {
+        const x = xMin + (xMax - xMin) * (i / 80);
+        const px = xToPx(x), py = yToPx(profileV(x));
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    function drawGraphCS(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "C(S)", "C (μF)");
+      const d = getDistMm();
+      const sMax = 10;
+      const cMax = getCapacitance(sMax, d) * 1e6 * 1.15;
+      const xToPx = (sRel) => base.plotX + (sRel / sMax) * base.plotW;
+      const yToPx = (c) => base.plotY + base.plotH - (c / cMax) * base.plotH;
+      ctx.strokeStyle = "#34d399"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xToPx(0), yToPx(0));
+      ctx.lineTo(xToPx(sMax), yToPx(getCapacitance(sMax, d) * 1e6));
+      ctx.stroke();
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath(); ctx.arc(xToPx(getAreaRel()), yToPx(getCapacitance(getAreaRel(), d) * 1e6), 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function getAreaM2() { return getAreaRel() * 0.02; }
+
+    function drawGraphCd(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "C(d)", "C (μF)");
+      const dMin = 0.5, dMax = 10;
+      const cMax = getCapacitance(getAreaRel(), dMin) * 1e6 * 1.1;
+      const xToPx = (d) => base.plotX + ((d - dMin) / (dMax - dMin)) * base.plotW;
+      const yToPx = (c) => base.plotY + base.plotH - (c / cMax) * base.plotH;
+      ctx.strokeStyle = "#34d399"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 40; i += 1) {
+        const d = dMin + (dMax - dMin) * (i / 40);
+        const px = xToPx(d), py = yToPx(getCapacitance(getAreaRel(), d) * 1e6);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath(); ctx.arc(xToPx(getDistMm()), yToPx(getCapacitance() * 1e6), 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawGraphQV(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "Q–V  傾き=C", "Q (μC)");
+      const vMax = Math.max(getVTarget(), V_eff, 100);
+      const qMax = getCapacitance() * vMax * 1e6 * 1.1;
+      const xToPx = (v) => base.plotX + (v / vMax) * base.plotW;
+      const yToPx = (q) => base.plotY + base.plotH - (q / qMax) * base.plotH;
+      ctx.strokeStyle = "rgba(148,163,184,0.4)"; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(base.plotX, yToPx(0)); ctx.lineTo(xToPx(vMax), yToPx(getCapacitance() * vMax * 1e6)); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = broken ? "#f87171" : "#fde047";
+      ctx.beginPath(); ctx.arc(xToPx(V_eff), yToPx(getQ() * 1e6), 5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawGraphTime(gx, gy, gw, gh) {
+      const base = drawGraphFrame(gx, gy, gw, gh, "E·V·Q(t)", "norm");
+      if (history.length < 2) return;
+      const tMin = Math.max(0, simTime - HISTORY_SEC);
+      const tMax = Math.max(tMin + 0.5, simTime);
+      const xToPx = (t) => base.plotX + ((t - tMin) / (tMax - tMin)) * base.plotW;
+      const yToPx = (n) => base.plotY + base.plotH - n * base.plotH;
+
+      [["#a78bfa", (h) => h.E / Math.max(getEBreak(), 1)], ["#fde047", (h) => h.V / Math.max(getVTarget(), 1)], ["#34d399", (h) => h.Q / Math.max(getCapacitance() * getVTarget(), 1e-9)]].forEach(([col, fn]) => {
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        let started = false;
+        history.forEach((h) => {
+          if (h.t < tMin) return;
+          const px = xToPx(h.t), py = yToPx(Math.min(1, fn(h)));
+          if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      });
+    }
+
+    function updateReadouts() {
+      const C = getCapacitance();
+      const E = getMaxE();
+      const eBreak = getEBreak();
+      const vCrit = getBreakdownVoltage();
+      const vTarget = getVTarget();
+      document.getElementById("readC").textContent = formatC(C);
+      document.getElementById("readQ").textContent = formatPhys(getQ() * 1e6, "μC", 1);
+      document.getElementById("readE").textContent = formatEMv(E);
+      document.getElementById("readV").textContent = formatPhys(V_eff, "V", 0);
+
+      document.getElementById("readEBox").classList.toggle("is-alert", E > eBreak * 0.9);
+      document.getElementById("readCBox").classList.toggle("is-alert", broken);
+
+      let msg = "E = V/d ≈ <strong>" + formatEMv(E) + "</strong> · E<sub>break</sub> = "
+        + formatEMv(eBreak) + " · 破壊目安 <strong>V ≥ " + Math.ceil(vCrit) + " V</strong>"
+        + " · C ≈ " + formatC(C);
+      if (broken) msg = "<strong style='color:#f87171'>絶縁破壊!</strong> · V, Q 急減 · " + msg;
+      else if (E > eBreak) msg = "<strong style='color:#f87171'>E &gt; E<sub>break</sub></strong> · " + msg;
+      else if (E > eBreak * 0.85) {
+        const vRemain = Math.max(0, Math.ceil(vCrit - vTarget));
+        msg = "<strong style='color:#fde68a'>E ≈ E<sub>break</sub></strong>"
+          + (vRemain > 0 ? " · あと " + vRemain + " V" : "")
+          + " · " + msg;
+      }
+      formulaLive.innerHTML = msg;
+    }
+
+    function syncSliders() {
+      document.getElementById("vVal").textContent = getVTarget() + " V";
+      document.getElementById("areaVal").textContent = getAreaRel().toFixed(1);
+      document.getElementById("distVal").textContent = getDistMm().toFixed(1) + " mm";
+      document.getElementById("epsVal").textContent = getEpsR().toFixed(1);
+      document.getElementById("breakVal").textContent = (getEBreak() / 1e6).toFixed(1) + " MV/m";
+    }
+
+    function drawScene() {
+      resizeCanvas();
+      physicsStep((performance.now() - lastFrame) / 1000);
+      lastFrame = performance.now();
+      drawBackground2D();
+      ctx.save(); clipView2D();
+      drawPlatesAndDielectric();
+      drawFieldVectors();
+      drawSparks();
+      drawProfileLine();
+      ctx.restore();
+      drawViewLabel();
+      drawGraphDivider();
+      drawGraphs();
+      updateReadouts();
+      syncSliders();
+    }
+
+    function bindToggle(id, get, set) {
+      document.getElementById(id).addEventListener("click", () => {
+        set(!get());
+        document.getElementById(id).classList.toggle("is-active", get());
+      });
+    }
+
+    document.getElementById("btnBreakdown").addEventListener("click", triggerBreakdown);
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+      broken = false;
+      flashT = 0;
+      sparks.length = 0;
+      V_eff = getVTarget();
+      syncBreakdownButtons();
+    });
+
+    bindToggle("btnVectors", () => showVectors, (v) => { showVectors = v; });
+    bindToggle("btnGradient", () => showGradient, (v) => { showGradient = v; });
+    bindToggle("btnGraphEx", () => showGraphEx, (v) => { showGraphEx = v; });
+    bindToggle("btnGraphVx", () => showGraphVx, (v) => { showGraphVx = v; });
+    bindToggle("btnGraphCS", () => showGraphCS, (v) => { showGraphCS = v; });
+    bindToggle("btnGraphCd", () => showGraphCd, (v) => { showGraphCd = v; });
+    bindToggle("btnGraphQV", () => showGraphQV, (v) => { showGraphQV = v; });
+    bindToggle("btnGraphTime", () => showGraphTime, (v) => { showGraphTime = v; });
+
+    ["vSlider", "areaSlider", "distSlider", "epsSlider", "breakSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", syncSliders);
+    });
+
+    V_eff = getVTarget();
+    syncBreakdownButtons();
+    window.addEventListener("resize", drawScene);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(drawScene).observe(canvasWrap);
+    function loop() { drawScene(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

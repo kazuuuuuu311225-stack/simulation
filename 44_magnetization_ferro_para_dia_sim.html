@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>24章 電流と磁場 — 磁化ラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8;
+      --panel: rgba(8, 12, 28, 0.92);
+      --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --gold: #fde047;
+      --h-blue: #38bdf8;
+      --m-yellow: #fde047;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255,107,107,0.45), rgba(56,189,248,0.4));
+      border: 1px solid rgba(253,224,71,0.4); font-size: 1.6rem;
+      box-shadow: 0 0 32px rgba(253,224,71,0.2);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c7d2fe; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #a5b4fc; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+
+    .formula-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+      padding: 12px 14px; border-radius: 12px;
+      background: rgba(20,20,30,0.85);
+      border: 1px solid rgba(129,140,248,0.25);
+      font-size: 0.88rem; color: #e2e8f0;
+    }
+    .formula-bar span {
+      padding: 6px 12px; border-radius: 8px;
+      background: rgba(49,46,129,0.35);
+      border: 1px solid rgba(129,140,248,0.2);
+      white-space: nowrap;
+    }
+    .formula-bar .hl-m { color: var(--m-yellow); font-weight: 700; }
+    .formula-bar .hl-h { color: var(--h-blue); font-weight: 700; }
+    .formula-bar .hl-chi { color: #a5b4fc; font-weight: 700; }
+
+    .sim-layout { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+    .canvas-wrap {
+      position: relative; width: 100%;
+      aspect-ratio: 900 / 500;
+      border-radius: 16px; overflow: hidden;
+      background: #1a1a22;
+      border: 2px solid rgba(253,224,71,0.2);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    .canvas-wrap canvas {
+      position: absolute; inset: 0;
+      display: block; width: 100%; height: 100%;
+    }
+
+    .mode-cards { display: grid; gap: 10px; }
+    @media (min-width: 600px) { .mode-cards { grid-template-columns: repeat(3, 1fr); } }
+    .mode-card {
+      padding: 14px 16px; border-radius: 14px; text-align: left;
+      border: 2px solid rgba(148,163,184,0.2);
+      background: rgba(20,20,28,0.8); color: #cbd5e1;
+      font: inherit; cursor: pointer; transition: border-color .2s, transform .15s, box-shadow .2s;
+    }
+    .mode-card:hover { transform: translateY(-2px); }
+    .mode-card.is-active {
+      border-color: rgba(129,140,248,0.7);
+      background: rgba(49,46,129,0.35);
+      box-shadow: 0 0 24px rgba(129,140,248,0.2);
+    }
+    .mode-card[data-mode="ferro"].is-active { border-color: rgba(255,107,107,0.65); box-shadow: 0 0 24px rgba(255,107,107,0.2); }
+    .mode-card[data-mode="para"].is-active { border-color: rgba(74,222,128,0.55); box-shadow: 0 0 24px rgba(74,222,128,0.15); }
+    .mode-card[data-mode="dia"].is-active { border-color: rgba(56,189,248,0.55); box-shadow: 0 0 24px rgba(56,189,248,0.15); }
+    .mode-card .mode-icon { font-size: 1.5rem; margin-bottom: 4px; }
+    .mode-card strong { display: block; font-size: 0.95rem; color: #e0e7ff; margin-bottom: 2px; }
+    .mode-card span { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+    .param-grid { display: grid; gap: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: 1fr 1fr; } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c7d2fe; }
+
+    .mission-box {
+      padding: 14px 16px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(49,46,129,0.5), rgba(30,27,75,0.4));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .mission-box .mission-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      color: #c4b5fd; margin-bottom: 6px;
+    }
+    .mission-box p { margin: 0; font-size: 0.92rem; color: #ede9fe; line-height: 1.65; }
+    .mission-box .mission-reward { margin-top: 8px; font-size: 0.78rem; color: #fde68a; font-weight: 600; }
+
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 12px; border-radius: 12px;
+      background: rgba(30,30,36,0.7); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .readout dt { margin: 0; font-size: 0.7rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.95rem; font-weight: 700; color: #f8fafc; }
+    .readout dd.big { font-size: 1.2rem; color: #fde68a; }
+    .readout dd.h { color: #7dd3fc; }
+    .readout dd.chi-pos { color: #4ade80; }
+    .readout dd.chi-neg { color: #38bdf8; }
+
+    .link-prev {
+      display: inline-block; margin-top: 6px; font-size: 0.82rem;
+      color: #a5b4fc; text-decoration: none;
+    }
+    .link-prev:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚛️</div>
+      <p class="chapter-label">第24章 — 電流と磁場</p>
+      <h2>磁化ラボ</h2>
+      <p class="tagline">電子スピンが整列する！ 強磁性・常磁性・反磁性を体感！</p>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-24">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>物質の中では電子の<strong>スピン</strong>が小さな磁石のように働きます。
+        左の矢印はスピンの向き（<strong>色が鮮やか＝整列、グレー＝バラバラ</strong>）、右の太い矢印は<strong>磁化 M</strong>と<strong>外部磁場 H</strong>。
+        3つのモードを切り替えて、<strong>自発磁化</strong>と <strong>M = χH</strong> の違いを観察しましょう。
+        <a class="link-prev" href="42_magnetic_field_vector_force_sim.html">← 前のシミュ（F = mH）へ</a>
+      </p>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="sim-layout">
+        <div class="formula-bar" aria-label="公式">
+          <span>磁化：<span class="hl-m">M</span></span>
+          <span>磁場：<span class="hl-h">H</span></span>
+          <span>磁極が受ける力：<span class="hl-m">F</span> = <span class="hl-m">m</span><span class="hl-h">H</span></span>
+          <span>磁化率：<span class="hl-m">M</span> = <span class="hl-chi">χ</span><span class="hl-h">H</span></span>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="simCanvas" width="900" height="500" aria-label="磁化シミュレーション"></canvas>
+        </div>
+
+        <div class="mode-cards">
+          <button type="button" class="mode-card is-active" data-mode="ferro">
+            <div class="mode-icon">🔥</div>
+            <strong>強磁性体</strong>
+            <span>H=0 でも M≠0！ 鉄・ニッケル。スピンが自発的に整列</span>
+          </button>
+          <button type="button" class="mode-card" data-mode="para">
+            <div class="mode-icon">🌿</div>
+            <strong>常磁性体</strong>
+            <span>アルミ・酸素。H に弱く整列（χ &gt; 0）</span>
+          </button>
+          <button type="button" class="mode-card" data-mode="dia">
+            <div class="mode-icon">💧</div>
+            <strong>反磁性体</strong>
+            <span>銅・水。H と<strong>逆向き</strong>に弱く磁化（χ &lt; 0 → M = χH &lt; 0）</span>
+          </button>
+        </div>
+
+        <div class="param-grid">
+          <div>
+            <label for="hSlider">外部磁場 H <span class="slider-val" id="hVal">0.0</span></label>
+            <input type="range" id="hSlider" min="0" max="100" value="0" step="1">
+          </div>
+          <div>
+            <label for="nSlider">スピン数（格子） <span class="slider-val" id="nVal">20 × 10</span></label>
+            <input type="range" id="nSlider" min="8" max="24" value="20" step="1">
+          </div>
+        </div>
+
+        <div class="mission-box">
+          <div class="mission-label">🔬 ミッション</div>
+          <p id="missionText">まず「強磁性体」で H=0 のとき、スピンが揃っているのを確認しよう！</p>
+          <div class="mission-reward" id="missionReward"></div>
+        </div>
+
+        <div class="readout-grid">
+          <dl class="readout"><dt>モード</dt><dd id="readMode">強磁性体</dd></dl>
+          <dl class="readout"><dt>磁化率 χ</dt><dd id="readChi" class="chi-pos">—</dd></dl>
+          <dl class="readout"><dt>外部磁場 H</dt><dd id="readH" class="h big">0.00</dd></dl>
+          <dl class="readout"><dt>磁化 M</dt><dd id="readM" class="big">0.00</dd></dl>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const CW = 900, CH = 500;
+      const LEFT = { x0: 16, y0: 56, w: 448, h: 400 };
+      const RIGHT = { x0: 500, y0: 56, w: 384, h: 400 };
+      const H_DIR = 0;
+
+      const MODE = {
+        ferro: {
+          name: "強磁性体", chiLabel: "（自発磁化＋飽和）", chiDisplay: "Ms + 飽和", chiCls: "chi-pos", Ms: 0.72,
+          tint: "rgba(255,107,107,", spinAlign: "#ff6b6b", spinGlow: "#fde047", panelBorder: "rgba(255,107,107,0.5)",
+          mColor: "#fde047", mGlow: "#fde68a",
+        },
+        para: {
+          name: "常磁性体", chi: 0.18, chiLabel: "χ = +0.18", chiCls: "chi-pos",
+          tint: "rgba(74,222,128,", spinAlign: "#4ade80", spinGlow: "#86efac", panelBorder: "rgba(74,222,128,0.45)",
+          mColor: "#fde047", mGlow: "#fde68a",
+        },
+        dia: {
+          name: "反磁性体", chi: -0.04, chiLabel: "χ = −0.04（負）", chiCls: "chi-neg",
+          tint: "rgba(56,189,248,", spinAlign: "#38bdf8", spinGlow: "#7dd3fc", panelBorder: "rgba(56,189,248,0.45)",
+          mColor: "#38bdf8", mGlow: "#7dd3fc",
+        },
+      };
+
+      const MISSIONS = [
+        { id: "ferro0", text: "「強磁性体」で H=0 のとき、スピンが揃っているのを確認しよう！", check: (s) => s.mode === "ferro" && s.H < 0.3 },
+        { id: "ferroH", text: "強磁性体で H を最大に！ スピンが完全に整列するのを見よう", check: (s) => s.mode === "ferro" && s.H > 8 },
+        { id: "para", text: "「常磁性体」に切り替えて、H を上げると少しだけ整列するのを観察", check: (s) => s.mode === "para" && s.H > 5 },
+        { id: "dia", text: "「反磁性体」で H を上げると、スピンが H と逆向きに傾く！", check: (s) => s.mode === "dia" && s.H > 5 },
+        { id: "zero", text: "常磁性体で H=0 に戻すと、スピンがランダムに戻るのを確認", check: (s) => s.mode === "para" && s.H < 0.5 },
+      ];
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+
+      let mode = "ferro", H = 0, prevH = 0;
+      let cols = 20, rows = 10;
+      let spins = [];
+      let M = 0.72, M_smooth = 0.72;
+      let ferroState = 0.72;
+      let missionIdx = 0, completed = new Set();
+      let phase = 0, fieldPhase = 0;
+      let alignPct = 0, alignPctSmooth = 0;
+      let hLenSmooth = 30, mLenSmooth = 40;
+
+      function initSpins() {
+        spins = [];
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            let angle;
+            if (mode === "ferro") {
+              angle = H_DIR + (Math.random() - 0.5) * 0.35;
+            } else {
+              angle = Math.random() * Math.PI * 2;
+            }
+            const disorder = Math.random() * Math.PI * 2;
+            spins.push({
+              col: c, row: r,
+              angle,
+              target: angle,
+              jitter: (Math.random() - 0.5) * 0.4,
+              disorder,
+            });
+          }
+        }
+      }
+
+      function calcM() {
+        if (mode === "ferro") {
+          const Ms = MODE.ferro.Ms;
+          const sign = H >= 0 ? 1 : -1;
+          const hAbs = Math.abs(H);
+          const sat = (1 - Ms) * Math.tanh(hAbs * 0.55);
+          const target = sign * (Ms + sat);
+          const dH = H - prevH;
+          const rate = Math.abs(dH) > 0.05 ? 0.12 : 0.04;
+          ferroState += (target - ferroState) * rate;
+          if (hAbs < 0.08 && Math.abs(dH) < 0.02) {
+            ferroState += (Ms * sign - ferroState) * 0.02;
+          }
+          return ferroState;
+        }
+        const chi = MODE[mode].chi;
+        return chi * H;
+      }
+
+      function alignmentStrength() {
+        const mAbs = Math.abs(M_smooth);
+        if (mode === "ferro") return Math.min(1, 0.55 + mAbs * 0.45);
+        if (mode === "para") return Math.min(0.85, Math.abs(MODE.para.chi * H) * 1.2);
+        return Math.min(0.5, Math.abs(MODE.dia.chi * H) * 2.5);
+      }
+
+      function lerpAngle(from, to, t) {
+        let da = to - from;
+        while (da > Math.PI) da -= Math.PI * 2;
+        while (da < -Math.PI) da += Math.PI * 2;
+        return from + da * t;
+      }
+
+      function updateSpinTargets() {
+        const align = alignmentStrength();
+        const mSign = M_smooth >= 0 ? 1 : -1;
+        const mAngle = mSign >= 0 ? H_DIR : H_DIR + Math.PI;
+        const opposeDir = H_DIR + Math.PI;
+
+        spins.forEach((s) => {
+          let target;
+          if (mode === "ferro") {
+            target = mAngle + s.jitter * (1 - align) * 1.8;
+          } else if (mode === "para") {
+            const hAlign = Math.min(0.92, Math.abs(H) * 0.09);
+            target = lerpAngle(s.disorder, H_DIR, hAlign);
+          } else {
+            const hAlign = Math.min(0.8, Math.abs(H) * 0.08);
+            target = lerpAngle(s.disorder, opposeDir, hAlign);
+          }
+          s.target = target;
+        });
+      }
+
+      function refAlignAngle() {
+        if (mode === "ferro") return M_smooth >= 0 ? H_DIR : H_DIR + Math.PI;
+        if (mode === "para") return H_DIR;
+        return H_DIR + Math.PI;
+      }
+
+      function spinAlignScore(s) {
+        if ((mode === "para" || mode === "dia") && H < 0.05) return 0;
+        const ref = refAlignAngle();
+        const cosA = Math.cos(s.angle - ref);
+        if (mode === "para" || mode === "dia") {
+          const directed = Math.max(0, cosA);
+          return directed * Math.min(1, H / 8);
+        }
+        return (cosA + 1) / 2;
+      }
+
+      function avgAlignment() {
+        if (!spins.length) return 0;
+        let sum = 0;
+        spins.forEach((s) => { sum += spinAlignScore(s); });
+        return sum / spins.length;
+      }
+
+      function spinColor(s) {
+        const t = spinAlignScore(s);
+        const m = MODE[mode];
+        const r = Math.round(100 + t * (parseInt(m.spinAlign.slice(1, 3), 16) - 100));
+        const g = Math.round(116 + t * (parseInt(m.spinAlign.slice(3, 5), 16) - 116));
+        const b = Math.round(139 + t * (parseInt(m.spinAlign.slice(5, 7), 16) - 139));
+        return `rgb(${r},${g},${b})`;
+      }
+
+      function updatePhysics() {
+        M = calcM();
+        M_smooth += (M - M_smooth) * 0.14;
+        updateSpinTargets();
+        const rotSpeed = 0.08 + Math.min(0.22, Math.abs(H - prevH) * 2.5);
+        spins.forEach((s) => {
+          let da = s.target - s.angle;
+          while (da > Math.PI) da -= Math.PI * 2;
+          while (da < -Math.PI) da += Math.PI * 2;
+          s.angle += da * rotSpeed;
+        });
+        alignPct = avgAlignment();
+        alignPctSmooth += (alignPct - alignPctSmooth) * 0.12;
+        hLenSmooth += ((30 + H * 14) - hLenSmooth) * 0.15;
+        const mVis = mode === "dia" ? Math.abs(M_smooth) * 130 : Math.abs(M_smooth) * 55;
+        mLenSmooth += ((16 + mVis) - mLenSmooth) * 0.12;
+        prevH = H;
+      }
+
+      function drawArrowGlow(cx, cy, angle, len, color, lw, head, glowColor, glowBlur) {
+        ctx.save();
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = glowBlur;
+        drawArrow(cx, cy, angle, len, color, lw, head);
+        ctx.restore();
+      }
+
+      function drawArrow(cx, cy, angle, len, color, lw, head) {
+        const ex = cx + Math.cos(angle) * len;
+        const ey = cy + Math.sin(angle) * len;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        const wing = Math.PI / 7;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - head * Math.cos(angle - wing), ey - head * Math.sin(angle - wing));
+        ctx.lineTo(ex - head * 0.55 * Math.cos(angle), ey - head * 0.55 * Math.sin(angle));
+        ctx.lineTo(ex - head * Math.cos(angle + wing), ey - head * Math.sin(angle + wing));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawPanelBg(x, y, w, h, title, sub, borderColor) {
+        const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+        grad.addColorStop(0, "rgba(30,32,48,0.98)");
+        grad.addColorStop(1, "rgba(18,18,28,0.98)");
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = borderColor || "rgba(100,110,140,0.35)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "700 15px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(title, x + 14, y + 26);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(sub, x + 14, y + 44);
+      }
+
+      function drawHFieldWaves(ox, oy, gw, gh) {
+        if (H < 0.05) return;
+        const strength = Math.min(1, H / 10);
+        const lines = 6;
+        ctx.save();
+        for (let i = 0; i < lines; i++) {
+          const ly = oy + (i + 0.5) / lines * gh;
+          const alpha = 0.12 + strength * 0.35;
+          ctx.strokeStyle = `rgba(56,189,248,${alpha})`;
+          ctx.lineWidth = 1.5 + strength * 2;
+          ctx.setLineDash([10, 14]);
+          ctx.lineDashOffset = -fieldPhase * (2 + strength * 4) - i * 18;
+          ctx.beginPath();
+          ctx.moveTo(ox - 8, ly);
+          ctx.lineTo(ox + gw + 8, ly);
+          ctx.stroke();
+          const dotX = ox + ((fieldPhase * 3 + i * 40) % (gw + 16)) - 8;
+          const g = ctx.createRadialGradient(dotX, ly, 0, dotX, ly, 8);
+          g.addColorStop(0, `rgba(125,211,252,${0.5 + strength * 0.4})`);
+          g.addColorStop(1, "rgba(56,189,248,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(dotX, ly, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+        ctx.fillStyle = `rgba(56,189,248,${0.5 + strength * 0.3})`;
+        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText("H →", ox + gw - 4, oy + 14);
+        ctx.textAlign = "left";
+      }
+
+      function drawAlignHeat(ox, oy, gw, gh) {
+        const m = MODE[mode];
+        const t = alignPctSmooth;
+        const g = ctx.createRadialGradient(ox + gw / 2, oy + gh / 2, 0, ox + gw / 2, oy + gh / 2, Math.max(gw, gh) * 0.55);
+        g.addColorStop(0, m.tint + (0.08 + t * 0.18) + ")");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(ox, oy, gw, gh);
+      }
+
+      function drawAlignMeter(ox, oy, gw) {
+        const barW = gw - 20, barH = 10;
+        const bx = ox + 10, by = oy - 6;
+        ctx.fillStyle = "rgba(30,30,40,0.9)";
+        ctx.strokeStyle = "rgba(148,163,184,0.3)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, barW, barH, 5);
+        ctx.fill();
+        ctx.stroke();
+        const pct = alignPctSmooth;
+        const m = MODE[mode];
+        const fg = ctx.createLinearGradient(bx, 0, bx + barW, 0);
+        fg.addColorStop(0, m.spinAlign);
+        fg.addColorStop(1, m.spinGlow);
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, barW * pct, barH, 5);
+        ctx.fill();
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("整列度 " + Math.round(pct * 100) + "%", bx, by - 4);
+      }
+
+      function drawSpins() {
+        const padX = 28, padY = 20;
+        const gw = LEFT.w - padX * 2;
+        const gh = LEFT.h - padY * 2 - 36;
+        const stepX = gw / Math.max(cols - 1, 1);
+        const stepY = gh / Math.max(rows - 1, 1);
+        const ox = LEFT.x0 + padX;
+        const oy = LEFT.y0 + padY + 20;
+
+        drawAlignHeat(ox, oy, gw, gh);
+        drawHFieldWaves(ox, oy, gw, gh);
+        drawAlignMeter(ox, oy + gh + 22, gw);
+
+        const m = MODE[mode];
+        spins.forEach((s) => {
+          const x = ox + s.col * stepX;
+          const y = oy + s.row * stepY;
+          const t = spinAlignScore(s);
+          const len = 9 + t * 5;
+          const color = spinColor(s);
+          if (t > 0.55) {
+            const gr = ctx.createRadialGradient(x, y, 0, x, y, 14);
+            gr.addColorStop(0, m.tint + (t * 0.35) + ")");
+            gr.addColorStop(1, m.tint + "0)");
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            ctx.arc(x, y, 14, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawArrowGlow(x, y, s.angle, len, color, 2 + t * 1.5, 3.5 + t * 1.5, m.spinGlow, 4 + t * 10);
+        });
+
+        if (mode === "ferro" && H < 0.5) {
+          const pulse = 0.7 + 0.3 * Math.sin(phase * 2);
+          ctx.fillStyle = `rgba(253,224,71,${pulse})`;
+          ctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("★ 自発磁化 — H=0 でもスピンが揃う！", ox, oy + gh + 38);
+        } else if (mode === "para" && H > 1) {
+          ctx.fillStyle = "rgba(74,222,128,0.9)";
+          ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("→ H と同じ向きに少しずつ傾く", ox, oy + gh + 38);
+        } else if (mode === "dia" && H > 1) {
+          ctx.fillStyle = "rgba(56,189,248,0.95)";
+          ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("← H と逆向きに弱く整列（χ < 0）", ox, oy + gh + 38);
+        }
+      }
+
+      function drawMeterBar(x, y, w, h, fill, color, label, val) {
+        ctx.fillStyle = "rgba(25,25,35,0.95)";
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w * Math.min(1, fill), h, 6);
+        ctx.fill();
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, x, y - 4);
+        ctx.textAlign = "right";
+        ctx.fillText(val, x + w, y - 4);
+        ctx.textAlign = "left";
+      }
+
+      function drawVectors() {
+        const cx = RIGHT.x0 + RIGHT.w / 2;
+        const cy = RIGHT.y0 + RIGHT.h / 2;
+        const mAngle = M_smooth >= 0 ? H_DIR : H_DIR + Math.PI;
+        const m = MODE[mode];
+
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = "rgba(148,163,184,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(RIGHT.x0 + 20, cy);
+        ctx.lineTo(RIGHT.x0 + RIGHT.w - 20, cy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const hBoxY = cy - 70;
+        drawMeterBar(RIGHT.x0 + 30, hBoxY - 18, RIGHT.w - 60, 12, H / 10, "#38bdf8", "外部磁場 H", H.toFixed(2));
+
+        if (H > 0.05) {
+          const hPulse = 1 + 0.06 * Math.sin(phase * 3);
+          drawArrowGlow(cx - 90, cy - 10, H_DIR, hLenSmooth * hPulse, "#38bdf8", 6, 16, "#7dd3fc", 18);
+          ctx.fillStyle = "#fff";
+          ctx.font = "800 18px Inter, Noto Sans JP, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("H", cx - 90 + hLenSmooth * 0.45, cy - 32);
+        } else {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("H = 0（磁場なし）", cx - 40, cy - 10);
+        }
+
+        const mBoxY = cy + 55;
+        const mFill = mode === "dia" ? Math.abs(M_smooth) / 0.5 : Math.abs(M_smooth);
+        const mBarColor = mode === "dia" ? "#38bdf8" : "#fde047";
+        const mLabel = mode === "dia" ? "磁化 M（Hと逆向き）" : "磁化 M";
+        const mValStr = M_smooth.toFixed(2);
+        drawMeterBar(RIGHT.x0 + 30, mBoxY - 18, RIGHT.w - 60, 12, mFill, mBarColor, mLabel, mValStr);
+
+        if (Math.abs(M_smooth) > 0.005) {
+          const mPulse = 1 + 0.08 * Math.sin(phase * 2.5 + 1);
+          const mCol = m.mColor || "#fde047";
+          const mGl = m.mGlow || "#fde68a";
+          drawArrowGlow(cx + 70, cy + 10, mAngle, mLenSmooth * mPulse, mCol, 7, 18, mGl, 22);
+          ctx.fillStyle = "#fff";
+          ctx.font = "800 18px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("M", cx + 70 + mLenSmooth * 0.35 * Math.cos(mAngle), cy + 10 + mLenSmooth * 0.35 * Math.sin(mAngle) - 14);
+          if (mode === "dia" && H > 0.05) {
+            ctx.fillStyle = "#7dd3fc";
+            ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+            ctx.fillText("← Hと逆向き", cx + 70, cy + 38);
+          }
+        } else {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "600 13px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("M ≈ 0", cx + 70, cy + 10);
+        }
+
+        const rel = mode === "ferro"
+          ? "🔥 強磁性：H=0 でも M が残る（自発磁化）"
+          : (mode === "para"
+            ? "🌿 常磁性：M は H と同方向（弱い）"
+            : "💧 反磁性：M = χH（χ<0）→ H と逆向きに弱く磁化");
+        ctx.fillStyle = m.spinGlow;
+        ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(rel, cx, RIGHT.y0 + RIGHT.h - 22);
+
+        if (mode !== "ferro") {
+          const sign = MODE[mode].chi > 0 ? "同方向 →" : "逆方向 ←";
+          ctx.fillStyle = "#a5b4fc";
+          ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("M = χH　χ" + (MODE[mode].chi > 0 ? ">0" : "<0") + "　" + sign, cx, RIGHT.y0 + RIGHT.h - 6);
+        }
+      }
+
+      function drawDivider() {
+        const m = MODE[mode];
+        const g = ctx.createLinearGradient(480, 40, 480, CH - 20);
+        g.addColorStop(0, m.tint + "0)");
+        g.addColorStop(0.5, m.tint + "0.6)");
+        g.addColorStop(1, m.tint + "0)");
+        ctx.strokeStyle = g;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(480, 40);
+        ctx.lineTo(480, CH - 20);
+        ctx.stroke();
+      }
+
+      function drawScene() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const bufW = Math.max(1, Math.round(rect.width * dpr));
+        const bufH = Math.max(1, Math.round(rect.height * dpr));
+        if (canvas.width !== bufW || canvas.height !== bufH) {
+          canvas.width = bufW;
+          canvas.height = bufH;
+        }
+        ctx.setTransform(bufW / CW, 0, 0, bufH / CH, 0, 0);
+
+        const bg = ctx.createLinearGradient(0, 0, CW, CH);
+        bg.addColorStop(0, "#14141c");
+        bg.addColorStop(1, "#0e0e14");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, CW, CH);
+
+        const m = MODE[mode];
+        drawPanelBg(LEFT.x0, LEFT.y0, LEFT.w, LEFT.h, "物質内部の電子スピン", "色が鮮やか＝整列　グレー＝バラバラ", m.panelBorder);
+        drawPanelBg(RIGHT.x0, RIGHT.y0, RIGHT.w, RIGHT.h, "磁化ベクトルと外部磁場", "黄＝M（磁化）　青＝H（外部磁場）", m.panelBorder);
+        drawDivider();
+        drawSpins();
+        drawVectors();
+
+        const badgeColors = { ferro: "#ff6b6b", para: "#4ade80", dia: "#38bdf8" };
+        ctx.fillStyle = "rgba(10,10,18,0.9)";
+        ctx.strokeStyle = badgeColors[mode] || "#818cf8";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(20, 8, 220, 32, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = badgeColors[mode] || "#ede9fe";
+        ctx.font = "700 13px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("● " + m.name, 32, 29);
+
+        updateUI();
+      }
+
+      function updateMissions() {
+        const state = { mode, H, M: Math.abs(M_smooth) };
+        const cur = MISSIONS[missionIdx];
+        if (cur.check(state) && !completed.has(cur.id)) {
+          completed.add(cur.id);
+          document.getElementById("missionReward").textContent = "✅ クリア！";
+          if (missionIdx < MISSIONS.length - 1) {
+            missionIdx++;
+            setTimeout(() => { document.getElementById("missionReward").textContent = ""; }, 1800);
+          }
+        }
+        document.getElementById("missionText").textContent = MISSIONS[missionIdx].text;
+      }
+
+      function updateUI() {
+        const m = MODE[mode];
+        document.getElementById("readMode").textContent = m.name;
+        const chiEl = document.getElementById("readChi");
+        chiEl.textContent = m.chiLabel || m.chiDisplay;
+        chiEl.className = m.chiCls || "";
+        document.getElementById("readH").textContent = H.toFixed(2);
+        const mEl = document.getElementById("readM");
+        mEl.textContent = M_smooth.toFixed(2);
+        mEl.className = "big" + (mode === "dia" && M_smooth < -0.005 ? " chi-neg" : mode === "para" ? " chi-pos" : "");
+        document.getElementById("hVal").textContent = H.toFixed(1);
+        document.getElementById("nVal").textContent = cols + " × " + rows;
+        updateMissions();
+      }
+
+      function setMode(m) {
+        mode = m;
+        prevH = H;
+        ferroState = m === "ferro" ? MODE.ferro.Ms : 0;
+        M = ferroState;
+        M_smooth = M;
+        alignPct = 0;
+        alignPctSmooth = 0;
+        document.querySelectorAll(".mode-card").forEach((b) => {
+          b.classList.toggle("is-active", b.dataset.mode === m);
+        });
+        initSpins();
+      }
+
+      function setCols(n) {
+        cols = n;
+        rows = Math.max(6, Math.round(n / 2));
+        initSpins();
+      }
+
+      document.querySelectorAll(".mode-card").forEach((btn) => {
+        btn.addEventListener("click", () => setMode(btn.dataset.mode));
+      });
+
+      document.getElementById("hSlider").addEventListener("input", (e) => {
+        H = +e.target.value / 10;
+      });
+
+      document.getElementById("nSlider").addEventListener("input", (e) => {
+        setCols(+e.target.value);
+      });
+
+      function loop() {
+        phase += 0.04;
+        fieldPhase += 0.06 + H * 0.04;
+        updatePhysics();
+        drawScene();
+        requestAnimationFrame(loop);
+      }
+
+      setCols(20);
+      setMode("ferro");
+      loop();
+      window.addEventListener("resize", drawScene);
+    })();
+  </script>
+</body>
+</html>

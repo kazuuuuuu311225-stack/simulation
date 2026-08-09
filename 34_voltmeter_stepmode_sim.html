@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>23章 電流 — 電圧計と倍率器（操作手順）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --panel: rgba(10, 12, 28, 0.9); --border: rgba(251, 191, 36, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1628 42%, #101820 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.45), rgba(56,189,248,0.45));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li {
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0;
+    }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.25);
+      font-size: 0.86rem; color: #ddd6fe; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(251,191,36,0.22);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #020617; border: 1px solid rgba(251,191,36,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(620px, 68dvh);
+      min-height: 420px; touch-action: none;
+    }
+    .step-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .step-btn {
+      flex: 1; min-width: 72px; padding: 10px 8px; border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
+      color: #cbd5e1; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .step-btn.is-active {
+      background: rgba(167,139,250,0.22); border-color: rgba(167,139,250,0.6); color: #ddd6fe;
+    }
+    .step-btn.is-done { border-color: rgba(34,197,94,0.45); }
+    .step-guide {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.28);
+      font-size: 0.84rem; color: #ddd6fe; line-height: 1.65;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    label.is-disabled { opacity: 0.45; }
+    input[type="range"] { width: 100%; accent-color: #a78bfa; }
+    input[type="range"]:disabled { opacity: 0.35; cursor: not-allowed; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #ddd6fe; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-row button {
+      padding: 10px 16px; border-radius: 10px; font: inherit; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(251,191,36,0.35);
+      background: rgba(251,191,36,0.12); color: #fef08a;
+    }
+    .btn-row button#startBtn {
+      border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.18); color: #bae6fd;
+    }
+    .btn-row button#startBtn.is-running {
+      border-color: rgba(251,191,36,0.5); background: rgba(251,191,36,0.18); color: #fef08a;
+    }
+    .run-status {
+      margin-top: 8px; padding: 8px 12px; border-radius: 10px; font-size: 0.78rem;
+      background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); color: #94a3b8;
+    }
+    .run-status.running { color: #bae6fd; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 820px) { .readout-grid { grid-template-columns: repeat(6, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .readout.is-hidden { display: none; }
+    .readout.is-v dd { color: #ddd6fe; }
+    .readout.is-v { background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.28); }
+    .readout.is-i dd { color: #bae6fd; }
+    .readout.is-i { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
+    .readout.is-q dd { color: #fca5a5; }
+    .readout.is-q { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.28); }
+    .readout.is-meter dd { color: #fef9c3; font-size: 1rem; }
+    .readout.is-meter {
+      grid-column: 1 / -1;
+      background: rgba(15, 23, 42, 0.75); border-color: rgba(167, 139, 250, 0.45);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #eef2ff; }
+    .legend-row {
+      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+      font-size: 0.76rem; color: var(--muted);
+    }
+    .answer-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.32);
+      font-size: 0.84rem; color: #bbf7d0; line-height: 1.65;
+    }
+    .answer-box ul { margin: 8px 0 0; padding-left: 1.2rem; color: #d1fae5; }
+    .heat-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.32);
+      font-size: 0.84rem; color: #fed7aa; line-height: 1.65;
+    }
+    .heat-box ul { margin: 8px 0 0; padding-left: 1.2rem; color: #ffedd5; }
+    .heat-live {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px; font-size: 0.84rem; line-height: 1.65;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.25); color: #cbd5e1;
+    }
+    .heat-live.is-warn { border-color: rgba(251,191,36,0.45); color: #fde68a; background: rgba(251,191,36,0.08); }
+    .heat-live.is-danger { border-color: rgba(248,113,113,0.5); color: #fecaca; background: rgba(248,113,113,0.1); }
+    .heat-live.is-safe { border-color: rgba(34,197,94,0.4); color: #bbf7d0; background: rgba(34,197,94,0.08); }
+    .btn-row button#answerBtn {
+      border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.15); color: #bbf7d0;
+    }
+    .btn-row button#answerBtn.is-match {
+      border-color: rgba(34,197,94,0.75); background: rgba(34,197,94,0.28); color: #ecfdf5;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">📐</div>
+      <p class="chapter-label">第23章 — 電流</p>
+      <h2>電圧計と倍率器（直列抵抗）</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>操作手順モードで学ぶ倍率器</h3>
+      <p>
+        電圧計（内部抵抗 <strong>R<sub>v</sub></strong>）と倍率器（<strong>R<sub>s</sub></strong>）を<strong>直列</strong>につなぎ、
+        高電圧を安全に測るしくみを Step1 から順に確認します。
+      </p>
+      <div class="formula-box">
+        R<sub>total</sub> = R<sub>v</sub> + R<sub>s</sub> · I = V/R<sub>total</sub> · V<sub>v</sub> = IR<sub>v</sub> · V<sub>s</sub> = IR<sub>s</sub> · Q = I²Rt
+      </div>
+      <div class="answer-box">
+        <strong>正解の組み合わせ</strong>：R<sub>v</sub> = <strong>10.0 kΩ</strong>　R<sub>s</sub> = <strong>900 kΩ</strong>　V = <strong>300 V</strong>
+        <ul>
+          <li><strong>理由① R<sub>s</sub> ≫ R<sub>v</sub></strong> … 直列では R が足し算。R<sub>s</sub> が十分大きいと V<sub>s</sub> = IR<sub>s</sub> が大部分の印加電圧を分担する。</li>
+          <li><strong>理由② 電圧計を守る</strong> … V<sub>v</sub> = V·R<sub>v</sub>/(R<sub>v</sub>+R<sub>s</sub>) ≈ 3.3 V（満刻度 10 V 以内）。高電圧の大部分は倍率器側にかかる。</li>
+          <li><strong>理由③ 電圧分配</strong> … V<sub>s</sub> ≈ 98.9 % · V<sub>v</sub> ≈ 1.1 %。印加電圧のほとんどが倍率器にかかる（倍率 n ≈ 91 倍）。</li>
+          <li><strong>理由④ 指示値の意味</strong> … 電圧計の読み V<sub>v</sub> は印加電圧 V ではない。倍率器と組み合わせて初めて高電圧を測れる。</li>
+        </ul>
+      </div>
+      <div class="heat-box">
+        <strong>発熱 Q = I²Rt … どれくらいでダメ？</strong>
+        <ul>
+          <li><strong>電圧計</strong>：V<sub>v</sub> &gt; <strong>10 V</strong> → 満刻度超え。P<sub>v</sub> = I²R<sub>v</sub> &gt; <strong>0.5 W</strong> → 要注意 · &gt; <strong>2 W</strong> → 危険</li>
+          <li><strong>倍率器</strong>：R<sub>s</sub> ≫ R<sub>v</sub> なら大きい V<sub>s</sub> は<strong>設計どおり</strong>（危険判定は分配比が悪いとき）</li>
+          <li><strong>分配ミス</strong>：R<sub>s</sub> ≤ R<sub>v</sub> → 電圧計に過大電圧 · 電圧計が先に壊れる</li>
+          <li><strong>正解設定</strong>：V<sub>v</sub> = 3.3 V · P<sub>v</sub> = 1.1 mW · 分配 OK → <strong>問題なし</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#38bdf8">● 青 ＝ 自由電子（左−→右+ · 逆流なし）</span>
+        <span style="color:#64748b">— 灰色 ＝ 導線</span>
+        <span style="color:#ddd6fe">左=倍率器 R<sub>s</sub> · 右=電圧計 R<sub>v</sub></span>
+        <span>Step5：抵抗の色 青→赤 = 発熱 Q</span>
+      </div>
+
+      <div class="step-row" id="stepRow">
+        <button type="button" class="step-btn is-active" data-step="1">Step1<br>電圧計</button>
+        <button type="button" class="step-btn" data-step="2">Step2<br>倍率器</button>
+        <button type="button" class="step-btn" data-step="3">Step3<br>直列</button>
+        <button type="button" class="step-btn" data-step="4">Step4<br>電圧</button>
+        <button type="button" class="step-btn" data-step="5">Step5<br>発熱</button>
+      </div>
+      <p class="step-guide" id="stepGuide">—</p>
+
+      <div class="param-grid">
+        <div>
+          <label for="rvSlider">電圧計 R<sub>v</sub> <span class="slider-val" id="rvVal">10.0 kΩ</span></label>
+          <input type="range" id="rvSlider" min="0" max="1000" value="333" step="1">
+        </div>
+        <div>
+          <label for="rsSlider" id="rsLabel" class="is-disabled">倍率器 R<sub>s</sub> <span class="slider-val" id="rsVal">0 Ω</span></label>
+          <input type="range" id="rsSlider" min="0" max="1000" value="0" step="1" disabled>
+        </div>
+        <div>
+          <label for="vSlider" id="vLabel" class="is-disabled">印加電圧 V <span class="slider-val" id="vVal">120.0 V</span></label>
+          <input type="range" id="vSlider" min="0" max="300" value="120" step="1" disabled>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" id="startBtn">一時停止</button>
+        <button type="button" id="resetBtn">リセット</button>
+        <button type="button" id="answerBtn">正解の組み合わせ</button>
+      </div>
+      <p class="run-status running" id="runStatus">—</p>
+
+      <dl class="readout is-meter is-hidden" id="readMeterBox">
+        <dt>電圧計の指示 V<sub>v</sub> と印加電圧 V の違い</dt>
+        <dd id="readMeter">—</dd>
+      </dl>
+
+      <div class="readout-grid">
+        <dl class="readout is-i" id="readIvBox"><dt>I（回路電流）</dt><dd id="readI">—</dd></dl>
+        <dl class="readout is-v is-hidden" id="readVvBox"><dt>V<sub>v</sub>（電圧計）</dt><dd id="readVv">—</dd></dl>
+        <dl class="readout is-v is-hidden" id="readVsBox"><dt>V<sub>s</sub>（倍率器）</dt><dd id="readVs">—</dd></dl>
+        <dl class="readout is-v is-hidden" id="readRtotBox"><dt>R<sub>total</sub></dt><dd id="readRtot">—</dd></dl>
+        <dl class="readout is-q is-hidden" id="readQvBox"><dt>Q<sub>v</sub></dt><dd id="readQv">—</dd></dl>
+        <dl class="readout is-q is-hidden" id="readQsBox"><dt>Q<sub>s</sub></dt><dd id="readQs">—</dd></dl>
+        <dl class="readout is-q is-hidden" id="readPvBox"><dt>P<sub>v</sub> = I²R<sub>v</sub></dt><dd id="readPv">—</dd></dl>
+        <dl class="readout is-q is-hidden" id="readPsBox"><dt>P<sub>s</sub> = I²R<sub>s</sub></dt><dd id="readPs">—</dd></dl>
+        <dl class="readout is-v is-hidden" id="readRatioBox"><dt>電圧分配 V<sub>v</sub>:V<sub>s</sub></dt><dd id="readRatio">—</dd></dl>
+      </div>
+
+      <div class="heat-live is-hidden" id="heatLive">—</div>
+
+      <div class="formula-live" id="formulaLive">—</div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const answerBtn = document.getElementById("answerBtn");
+    const runStatus = document.getElementById("runStatus");
+    const stepGuide = document.getElementById("stepGuide");
+    const rvSlider = document.getElementById("rvSlider");
+    const rsSlider = document.getElementById("rsSlider");
+    const vSlider = document.getElementById("vSlider");
+    const rsLabel = document.getElementById("rsLabel");
+    const vLabel = document.getElementById("vLabel");
+
+    const MAX_ELECTRONS = 60;
+    const DRIFT_K = 70000;   // 高抵抗直列回路（mA 級）向けにスケール
+    const DRIFT_MIN = 18;    // I > 0 のとき最低でも見える速度
+    const DRIFT_MAX = 280;
+    const FIXED_V = 120;
+    const REF_W = 900, REF_H = 500;
+
+    const COL = {
+      electron: "#38bdf8",
+      wire: "#64748b",
+      plus: "#f87171",
+      minus: "#38bdf8",
+    };
+
+    const STEP_GUIDES = [
+      "",
+      "Step1：電圧計 R<sub>v</sub> を動かし、I<sub>v</sub> = V/R<sub>v</sub> を確認しましょう（V = 120 V 固定）。",
+      "Step2：倍率器 R<sub>s</sub> の抵抗値を決めましょう。左側に R<sub>s</sub> が追加されます。",
+      "Step3：直列接続 R<sub>total</sub> = R<sub>v</sub> + R<sub>s</sub> を確認し、電子が直列を流れる様子を観察しましょう。",
+      "Step4：印加電圧 V を変え、V<sub>v</sub> = IR<sub>v</sub> と V<sub>s</sub> = IR<sub>s</sub> の分配を確認しましょう。",
+      "Step5：発熱 Q = I²Rt を計測し、V<sub>v</sub> ≠ V（倍率器が大部分の電圧を分担）を確認しましょう。",
+    ];
+
+    // 正解の組み合わせ：R_s ≫ R_v → 倍率器が大部分の電圧を分担
+    const ANSWER_RV_SLIDER = 333;   // 10.0 kΩ
+    const ANSWER_RS_SLIDER = 1000;  // 900 kΩ
+    const ANSWER_V_SLIDER = 300;    // 300 V
+
+    const VV_FULL_SCALE = 10;   // V  電圧計満刻度
+    const PV_WARN = 0.5;           // W  電圧計 要注意
+    const PV_DANGER = 2;           // W  電圧計 危険
+
+    let canvasW = 800, canvasH = 520, dpr = 1;
+    let currentStep = 1;
+    let running = true;
+    let simTime = 0, lastFrame = performance.now();
+    let heatQv = 0, heatQs = 0;
+    let electrons = [];
+
+    // Rv: 1 kΩ 〜 100 kΩ（対数）
+    function getRv() {
+      const t = parseFloat(rvSlider.value) / 1000;
+      return 1000 * Math.pow(10, 2 * t);
+    }
+    // Rs: 0 〜 900 kΩ（線形）
+    function getRs() {
+      return (parseFloat(rsSlider.value) / 1000) * 900000;
+    }
+    function getVolt() {
+      if (currentStep < 4) return FIXED_V;
+      return parseFloat(vSlider.value);
+    }
+
+    function isAnswerMatch() {
+      const rvOk = parseInt(rvSlider.value, 10) === ANSWER_RV_SLIDER;
+      const rsOk = parseInt(rsSlider.value, 10) === ANSWER_RS_SLIDER;
+      const vOk = currentStep < 4 || parseInt(vSlider.value, 10) === ANSWER_V_SLIDER;
+      return rvOk && rsOk && vOk;
+    }
+
+    /** 倍率器設計として適切か（発熱判定の主軸） */
+    function isGoodMultiplierDesign() {
+      const { Vv } = getCircuit();
+      const Rv = getRv(), Rs = getRs();
+      return Rs > 0 && Rv > 0 && Rs >= Rv * 9 && Vv <= VV_FULL_SCALE;
+    }
+
+    function applyAnswerPreset() {
+      rvSlider.value = ANSWER_RV_SLIDER;
+      rsSlider.value = ANSWER_RS_SLIDER;
+      vSlider.value = ANSWER_V_SLIDER;
+      electrons = [];
+      heatQv = 0;
+      heatQs = 0;
+      simTime = 0;
+      running = true;
+      if (currentStep < 5) setStep(5);
+      else {
+        syncSliders();
+        updateReadouts();
+        updateStartBtn();
+      }
+    }
+
+    function updateAnswerBtn() {
+      const match = isAnswerMatch();
+      answerBtn.classList.toggle("is-match", match);
+      answerBtn.textContent = match ? "✓ 正解の組み合わせ" : "正解の組み合わせ";
+    }
+
+    function getRtotal() {
+      return getRv() + getRs();
+    }
+
+    function getCircuit() {
+      const V = getVolt(), Rv = getRv(), Rs = getRs();
+      const Rtot = Rv + Rs;
+      let I;
+      if (currentStep === 1) {
+        I = Rv > 0 ? V / Rv : 0;
+      } else {
+        I = Rtot > 0 ? V / Rtot : 0;
+      }
+      const Vv = I * Rv;
+      const Vs = I * Rs;
+      const Pv = I * I * Rv;
+      const Ps = I * I * Rs;
+      return { V, Rv, Rs, Rtot, I, Vv, Vs, Pv, Ps };
+    }
+
+    function getLayout(cw, ch) {
+      const sx = cw / REF_W, sy = ch / REF_H;
+      const sc = (x, y) => ({ x: x * sx, y: y * sy });
+      const R_W = 120 * sx, R_H = 20 * sy;
+      return {
+        sx, sy, cw, ch,
+        Y: 250 * sy,
+        MINUS: sc(100, 250),
+        PLUS: sc(800, 250),
+        RS_X: 300 * sx, RS_X2: 420 * sx,
+        RV_X: 500 * sx, RV_X2: 620 * sx,
+        R_W, R_H,
+      };
+    }
+
+    function addSeg(list, x1, y1, x2, y2, tag) {
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (len > 0.5) list.push({ x1, y1, x2, y2, len, tag });
+    }
+
+    function finalizePath(segments) {
+      return { segments, total: segments.reduce((a, s) => a + s.len, 0) };
+    }
+
+    /** Step1：R_v のみ（R_s 部分は直線で接続） */
+    function buildStep1Path(L) {
+      const segs = [];
+      addSeg(segs, L.MINUS.x, L.Y, L.RV_X, L.Y, "wire");
+      addSeg(segs, L.RV_X, L.Y, L.RV_X2, L.Y, "rv");
+      addSeg(segs, L.RV_X2, L.Y, L.PLUS.x, L.Y, "wire");
+      return finalizePath(segs);
+    }
+
+    /** Step2：R_s 追加（直列だが Step3 まで電子は同経路） */
+    function buildStep2Path(L) {
+      const segs = [];
+      addSeg(segs, L.MINUS.x, L.Y, L.RS_X, L.Y, "wire");
+      addSeg(segs, L.RS_X, L.Y, L.RS_X2, L.Y, "rs");
+      addSeg(segs, L.RS_X2, L.Y, L.RV_X, L.Y, "wire");
+      addSeg(segs, L.RV_X, L.Y, L.RV_X2, L.Y, "rv");
+      addSeg(segs, L.RV_X2, L.Y, L.PLUS.x, L.Y, "wire");
+      return finalizePath(segs);
+    }
+
+    function buildFullPath(L) {
+      return buildStep2Path(L);
+    }
+
+    function pathFor(L) {
+      if (currentStep === 1) return buildStep1Path(L);
+      return buildFullPath(L);
+    }
+
+    function pathPointAtDist(s, path) {
+      let dist = Math.max(0, s);
+      for (let i = 0; i < path.segments.length; i++) {
+        const seg = path.segments[i];
+        if (dist <= seg.len + 1e-9) {
+          const u = seg.len > 0 ? dist / seg.len : 0;
+          return {
+            x: seg.x1 + (seg.x2 - seg.x1) * u,
+            y: seg.y1 + (seg.y2 - seg.y1) * u,
+            tag: seg.tag,
+          };
+        }
+        dist -= seg.len;
+      }
+      const last = path.segments[path.segments.length - 1];
+      return { x: last.x2, y: last.y2, tag: last.tag };
+    }
+
+    function fmtI(I) {
+      const a = Math.abs(I);
+      if (a >= 1) return I.toFixed(3) + " A";
+      if (a >= 1e-3) return (I * 1e3).toFixed(2) + " mA";
+      if (a >= 1e-6) return (I * 1e6).toFixed(2) + " μA";
+      return I.toExponential(2) + " A";
+    }
+
+    function fmtR(R) {
+      if (R >= 1e6) return (R / 1e6).toFixed(2) + " MΩ";
+      if (R >= 1000) return (R / 1000).toFixed(2) + " kΩ";
+      if (R >= 1) return R.toFixed(1) + " Ω";
+      return R.toFixed(3) + " Ω";
+    }
+
+    function fmtV(v) {
+      return v.toFixed(1) + " V";
+    }
+
+    function fmtPower(P) {
+      const a = Math.abs(P);
+      if (a >= 1000) return (P / 1000).toFixed(2) + " kW";
+      if (a >= 1) return P.toFixed(2) + " W";
+      if (a >= 1e-3) return (P * 1e3).toFixed(2) + " mW";
+      if (a >= 1e-6) return (P * 1e6).toFixed(2) + " μW";
+      return P.toExponential(2) + " W";
+    }
+
+    function evaluateHeat() {
+      const { Vv, Pv, Ps } = getCircuit();
+      const Rv = getRv(), Rs = getRs();
+      const goodDesign = isGoodMultiplierDesign();
+      const answer = isAnswerMatch();
+      const issues = [];
+      const notes = [];
+
+      if (Rs <= Rv) {
+        issues.push("R<sub>s</sub> ≤ R<sub>v</sub> … 倍率器が機能せず、電圧計に過大電圧");
+      }
+      if (Vv > VV_FULL_SCALE) {
+        issues.push("V<sub>v</sub> = " + fmtV(Vv) + " &gt; " + VV_FULL_SCALE + " V … 電圧計の満刻度超え");
+      }
+
+      if (answer && goodDesign) {
+        return {
+          issues: [],
+          notes: [
+            "✓ 正解の組み合わせ — 分配比・V<sub>v</sub>・P<sub>v</sub> ともに適切",
+            "P<sub>v</sub> = " + fmtPower(Pv) + " · 倍率器が高電圧を肩代わり（設計どおり）",
+          ],
+          level: "safe",
+          Pv, Ps, goodDesign: true,
+        };
+      }
+
+      if (goodDesign) {
+        notes.push("分配比 OK … R<sub>s</sub> ≫ R<sub>v</sub>");
+        if (Pv > PV_DANGER) {
+          issues.push("P<sub>v</sub> = " + fmtPower(Pv) + " &gt; " + PV_DANGER + " W … 電圧計コイルが危険");
+        } else if (Pv > PV_WARN) {
+          notes.push("P<sub>v</sub> = " + fmtPower(Pv) + " … やや大きい（V を下げると改善）");
+        } else {
+          notes.push("P<sub>v</sub> = " + fmtPower(Pv) + " … 電圧計の発熱は許容範囲");
+        }
+        notes.push("V<sub>s</sub> は大きいが R<sub>s</sub> ≫ R<sub>v</sub> なので分配は正常");
+      } else {
+        if (Pv > PV_DANGER) {
+          issues.push("P<sub>v</sub> = " + fmtPower(Pv) + " &gt; " + PV_DANGER + " W … 電圧計コイルが危険");
+        } else if (Pv > PV_WARN) {
+          notes.push("P<sub>v</sub> = " + fmtPower(Pv) + " … 0.5 W 超（要注意）");
+        }
+        if (Rs < Rv * 9 && Rs > Rv) {
+          notes.push("R<sub>s</sub> が小さめ … 電圧計への分担が増える");
+        }
+      }
+
+      if (currentStep >= 5 && simTime > 60 && !goodDesign) {
+        if (heatQv > 0.5) issues.push("Q<sub>v</sub> が蓄積 … 長時間通電に注意");
+        if (heatQs > 2 && Rs <= Rv * 9) issues.push("Q<sub>s</sub> が蓄積 … 倍率不良の可能性");
+      }
+
+      const level = issues.length > 0 ? "danger"
+        : (goodDesign && Pv <= PV_WARN ? "safe" : "warn");
+      return { issues, notes, level, Pv, Ps, goodDesign };
+    }
+
+    function updateHeatLive() {
+      const box = document.getElementById("heatLive");
+      const show = currentStep >= 4;
+      box.classList.toggle("is-hidden", !show);
+      if (!show) return;
+
+      const ev = evaluateHeat();
+      box.classList.remove("is-safe", "is-warn", "is-danger");
+      box.classList.add(ev.level === "danger" ? "is-danger" : ev.level === "warn" ? "is-warn" : "is-safe");
+
+      let html = "<strong>発熱チェック</strong> · P<sub>v</sub>=" + fmtPower(ev.Pv) + " · P<sub>s</sub>=" + fmtPower(ev.Ps);
+      if (ev.issues.length) {
+        html += "<br><span style='color:#fca5a5'>⚠ " + ev.issues.join(" · ") + "</span>";
+      }
+      if (ev.notes.length) {
+        html += "<br>" + ev.notes.join(" · ");
+      }
+      box.innerHTML = html;
+    }
+
+    function fmtEnergy(Q) {
+      const a = Math.abs(Q);
+      if (a >= 1000) return (Q / 1000).toFixed(2) + " kJ";
+      if (a >= 1) return Q.toFixed(2) + " J";
+      if (a >= 1e-3) return (Q * 1e3).toFixed(2) + " mJ";
+      return Q.toExponential(2) + " J";
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function heatColor(t) {
+      t = Math.max(0, Math.min(1, t));
+      let r, g, b;
+      if (t < 0.5) {
+        const u = t / 0.5;
+        r = lerp(56, 253, u); g = lerp(189, 224, u); b = lerp(248, 71, u);
+      } else {
+        const u = (t - 0.5) / 0.5;
+        r = lerp(253, 248, u); g = lerp(224, 113, u); b = lerp(71, 113, u);
+      }
+      return "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + ")";
+    }
+
+    function heatRatio(Q, R, I) {
+      if (currentStep < 5) return 0;
+      const qRef = Math.max(0.001, I * I * R * 8 + 0.002);
+      return Math.max(0, Math.min(1, Q / qRef));
+    }
+
+    function electronsEnabled() {
+      return getVolt() > 0 && currentStep >= 3;
+    }
+
+    function syncSliders() {
+      document.getElementById("rvVal").textContent = fmtR(getRv());
+      document.getElementById("rsVal").textContent = fmtR(getRs());
+      document.getElementById("vVal").textContent = getVolt().toFixed(1) + " V"
+        + (currentStep < 4 ? "（固定）" : "");
+    }
+
+    function applyStepUI() {
+      document.querySelectorAll(".step-btn").forEach((btn) => {
+        const s = parseInt(btn.dataset.step, 10);
+        btn.classList.toggle("is-active", s === currentStep);
+        btn.classList.toggle("is-done", s < currentStep);
+      });
+      stepGuide.innerHTML = STEP_GUIDES[currentStep];
+
+      rsSlider.disabled = currentStep < 2;
+      rsLabel.classList.toggle("is-disabled", currentStep < 2);
+      vSlider.disabled = currentStep < 4;
+      vLabel.classList.toggle("is-disabled", currentStep < 4);
+
+      document.getElementById("readIvBox").classList.remove("is-hidden");
+      document.querySelector("#readIvBox dt").innerHTML =
+        currentStep === 1 ? "I<sub>v</sub>（電圧計単体）" : "I（回路電流）";
+      document.getElementById("readVvBox").classList.toggle("is-hidden", currentStep < 4);
+      document.getElementById("readVsBox").classList.toggle("is-hidden", currentStep < 4);
+      document.getElementById("readRtotBox").classList.toggle("is-hidden", currentStep < 3);
+      document.getElementById("readQvBox").classList.toggle("is-hidden", currentStep < 5);
+      document.getElementById("readQsBox").classList.toggle("is-hidden", currentStep < 5);
+      document.getElementById("readPvBox").classList.toggle("is-hidden", currentStep < 4);
+      document.getElementById("readPsBox").classList.toggle("is-hidden", currentStep < 4);
+      document.getElementById("readRatioBox").classList.toggle("is-hidden", currentStep < 3);
+      document.getElementById("readMeterBox").classList.toggle("is-hidden", currentStep < 5);
+
+      if (currentStep < 4) vSlider.value = 120;
+      electrons = [];
+      if (currentStep < 5) { heatQv = 0; heatQs = 0; simTime = 0; }
+      running = true;
+      updateStartBtn();
+      syncSliders();
+      updateReadouts();
+    }
+
+    function updateReadouts() {
+      const { V, Rtot, I, Vv, Vs, Rv, Rs, Pv, Ps } = getCircuit();
+      document.getElementById("readI").textContent = fmtI(I);
+      document.getElementById("readVv").textContent = fmtV(Vv);
+      document.getElementById("readVs").textContent = fmtV(Vs);
+      document.getElementById("readRtot").textContent = fmtR(Rtot);
+      document.getElementById("readQv").textContent = fmtEnergy(heatQv);
+      document.getElementById("readQs").textContent = fmtEnergy(heatQs);
+      document.getElementById("readPv").textContent = fmtPower(Pv);
+      document.getElementById("readPs").textContent = fmtPower(Ps);
+
+      const pvPct = V > 0 ? (Vv / V * 100).toFixed(1) : "0";
+      const psPct = V > 0 ? (Vs / V * 100).toFixed(1) : "0";
+      document.getElementById("readRatio").textContent = "V_v " + pvPct + " % · V_s " + psPct + " %";
+
+      if (currentStep >= 5) {
+        document.getElementById("readMeter").textContent =
+          "指示 V_v = " + fmtV(Vv) + "  ≠  印加 V = " + fmtV(V)
+          + "  （倍率器が V_s = " + fmtV(Vs) + " を分担 · V_v + V_s = V）";
+      }
+
+      const matchMsg = isAnswerMatch()
+        ? "<br><strong style='color:#86efac'>→ 正解の組み合わせです。</strong>" : "";
+
+      if (currentStep === 1) {
+        formulaLive.innerHTML =
+          "Step1 · I<sub>v</sub> = V/R<sub>v</sub> = " + V.toFixed(0) + "/" + fmtR(Rv)
+          + " = <strong>" + fmtI(I) + "</strong>" + matchMsg;
+      } else if (currentStep === 2) {
+        formulaLive.innerHTML =
+          "Step2 · R<sub>s</sub> = <strong>" + fmtR(Rs) + "</strong>"
+          + " · 左側に倍率器を追加 · V<sub>s</sub> = IR<sub>s</sub> = <strong>" + fmtV(Vs) + "</strong>"
+          + matchMsg;
+      } else if (currentStep === 3) {
+        formulaLive.innerHTML =
+          "Step3 · R<sub>total</sub> = R<sub>v</sub> + R<sub>s</sub> = <strong>" + fmtR(Rtot) + "</strong>"
+          + " · I = V/R<sub>total</sub> = <strong>" + fmtI(I) + "</strong>"
+          + " · 分配 V_v " + pvPct + " % · V_s " + psPct + " %"
+          + matchMsg;
+      } else if (currentStep === 4) {
+        formulaLive.innerHTML =
+          "Step4 · V<sub>v</sub> = IR<sub>v</sub> = <strong>" + fmtV(Vv) + "</strong>"
+          + " · V<sub>s</sub> = IR<sub>s</sub> = <strong>" + fmtV(Vs) + "</strong>"
+          + " · V = " + fmtV(V)
+          + matchMsg;
+      } else {
+        const ev = evaluateHeat();
+        formulaLive.innerHTML =
+          "Step5 · Q<sub>v</sub> = <strong>" + fmtEnergy(heatQv) + "</strong>"
+          + " · Q<sub>s</sub> = <strong>" + fmtEnergy(heatQs) + "</strong>"
+          + " · P<sub>v</sub>=" + fmtPower(Pv) + " · P<sub>s</sub>=" + fmtPower(Ps)
+          + " · t = " + simTime.toFixed(1) + " s"
+          + "<br>V<sub>v</sub> / V = " + pvPct + " %（電圧計が読むのは一部だけ）"
+          + (isAnswerMatch()
+            ? "<br><strong style='color:#86efac'>→ 正解の組み合わせ（分配・発熱とも OK）。</strong>" : "")
+          + (ev.level === "danger" && ev.issues[0]
+            ? "<br><strong style='color:#fca5a5'>⚠ " + ev.issues[0] + "</strong>" : "");
+      }
+      updateAnswerBtn();
+      updateHeatLive();
+    }
+
+    function updateStartBtn() {
+      if (!running) {
+        startBtn.textContent = "再開";
+        runStatus.textContent = "一時停止中"
+          + (currentStep >= 5 && simTime > 0 ? " — t = " + simTime.toFixed(1) + " s" : "");
+        runStatus.classList.remove("running");
+        return;
+      }
+      startBtn.textContent = "一時停止";
+      startBtn.classList.add("is-running");
+      if (currentStep >= 5) {
+        runStatus.textContent = "Step5 — 通電中 · 発熱 Q を計測 · t = " + simTime.toFixed(1) + " s";
+      } else if (currentStep >= 3) {
+        runStatus.textContent = "Step" + currentStep + " — 通電中 · 直列回路の電子を観察";
+      } else {
+        runStatus.textContent = "Step" + currentStep + " — 通電中 · 電圧計ルートの電子を観察";
+      }
+      runStatus.classList.add("running");
+    }
+
+    function electronDriftSpeed(I) {
+      if (I <= 0) return 0;
+      return Math.min(Math.max(DRIFT_K * I, DRIFT_MIN), DRIFT_MAX);
+    }
+
+    function syncElectrons(L) {
+      if (!electronsEnabled() || !running) { electrons = []; return; }
+      const { I } = getCircuit();
+      const nTarget = Math.min(14, Math.max(5, Math.round(5 + Math.sqrt(I) * 120)));
+      while (electrons.length < nTarget && electrons.length < MAX_ELECTRONS) {
+        electrons.push({ s: Math.random() * pathFor(L).total * 0.5 });
+      }
+      while (electrons.length > MAX_ELECTRONS) electrons.pop();
+    }
+
+    function advanceElectrons(dt, L) {
+      if (!electronsEnabled() || !running) return;
+      const { I } = getCircuit();
+      const path = pathFor(L);
+      if (!path.total) return;
+      const vd = electronDriftSpeed(I);
+      electrons.forEach((e) => {
+        const dx = Math.max(vd + (Math.random() - 0.5) * vd * 0.12, 0);
+        e.s += dt * dx;
+        if (e.s >= path.total) e.s -= path.total;
+      });
+    }
+
+    function physicsStep(dt) {
+      const L = getLayout(canvasW, canvasH);
+      advanceElectrons(dt, L);
+      syncElectrons(L);
+      if (!running || currentStep < 5) return;
+      simTime += dt;
+      const { I, Rv, Rs } = getCircuit();
+      heatQv += I * I * Rv * dt;
+      heatQs += I * I * Rs * dt;
+    }
+
+    function resetSimulation() {
+      running = true;
+      simTime = 0;
+      heatQv = 0;
+      heatQs = 0;
+      electrons = [];
+      lastFrame = performance.now();
+      updateStartBtn();
+    }
+
+    function setStep(n) {
+      currentStep = n;
+      applyStepUI();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(420, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawWirePlain(x1, y1, x2, y2, alpha) {
+      ctx.strokeStyle = alpha != null ? "rgba(100,116,139," + alpha + ")" : COL.wire;
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function labelOnCanvas(text, x, y, align, fontSize, bg) {
+      fontSize = fontSize || 12;
+      ctx.font = "700 " + fontSize + "px Inter, Noto Sans JP, sans-serif";
+      const padX = 7, padY = 4;
+      const tw = ctx.measureText(text).width;
+      const w = tw + padX * 2;
+      const h = fontSize + padY * 2;
+      let lx = x;
+      if (align === "center") lx = x - w * 0.5;
+      else if (align === "right") lx = x - w;
+      const boxTop = y - h * 0.5;
+      ctx.fillStyle = bg || "rgba(255,255,255,0.92)";
+      ctx.strokeStyle = "rgba(15,23,42,0.25)";
+      ctx.lineWidth = 1;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(lx, boxTop, w, h, 4);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(lx, boxTop, w, h);
+        ctx.strokeRect(lx, boxTop, w, h);
+      }
+      ctx.fillStyle = "#0f172a";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, lx + padX, y);
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawResistor(L, x, y, Q, R, I, dim) {
+      const y0 = y - L.R_H * 0.5;
+      const t = heatRatio(Q, R, I);
+      ctx.globalAlpha = dim != null ? dim : 1;
+      ctx.fillStyle = t > 0.05 ? heatColor(t) : "#1e293b";
+      ctx.strokeStyle = t > 0.15 ? "#fff7ed" : "#fde68a";
+      ctx.lineWidth = 2;
+      ctx.fillRect(x, y0, L.R_W, L.R_H);
+      ctx.strokeRect(x, y0, L.R_W, L.R_H);
+      ctx.globalAlpha = 1;
+    }
+
+    function drawCircuit(L) {
+      const V = getVolt();
+      const live = V > 0;
+      const { I, Vv, Vs, Rv, Rs } = getCircuit();
+      const M = L.MINUS, P = L.PLUS;
+      const showRs = currentStep >= 2;
+      const showFull = currentStep >= 2;
+
+      ctx.strokeStyle = COL.minus;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(M.x - 8, M.y - 10);
+      ctx.lineTo(M.x - 8, M.y + 10);
+      ctx.stroke();
+      labelOnCanvas("−", M.x - 28, M.y, "center", 12, "rgba(219,234,254,0.95)");
+
+      ctx.strokeStyle = live ? COL.plus : "rgba(248,113,113,0.45)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(P.x + 8, P.y - 16);
+      ctx.lineTo(P.x + 8, P.y + 16);
+      ctx.stroke();
+      labelOnCanvas("+", P.x + 28, M.y, "center", 12, "rgba(254,226,226,0.95)");
+
+      if (currentStep >= 4) {
+        labelOnCanvas("V " + V.toFixed(0) + " V", M.x, M.y + 36, "center", 11);
+      }
+
+      if (currentStep === 1) {
+        drawWirePlain(M.x, L.Y, L.RV_X, L.Y);
+        drawResistor(L, L.RV_X, L.Y, heatQv, Rv, I, 1);
+        drawWirePlain(L.RV_X2, L.Y, P.x, L.Y);
+      } else {
+        drawWirePlain(M.x, L.Y, L.RS_X, L.Y, showRs ? 1 : 0.35);
+        if (showRs) {
+          drawResistor(L, L.RS_X, L.Y, heatQs, Rs, I, 1);
+          drawWirePlain(L.RS_X2, L.Y, L.RV_X, L.Y);
+        } else {
+          drawWirePlain(L.RS_X, L.Y, L.RV_X, L.Y, 0.35);
+        }
+        drawResistor(L, L.RV_X, L.Y, heatQv, Rv, I, 1);
+        drawWirePlain(L.RV_X2, L.Y, P.x, L.Y);
+      }
+
+      // 電圧計メータ表示（右側）
+      const mx = L.RV_X + L.R_W * 0.5;
+      const my = L.Y - 42;
+      ctx.fillStyle = "rgba(15,23,42,0.92)";
+      ctx.strokeStyle = "rgba(167,139,250,0.65)";
+      ctx.lineWidth = 1.5;
+      const mw = 130 * L.sx, mh = 30 * L.sy;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(mx - mw * 0.5, my - mh * 0.5, mw, mh, 6);
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ddd6fe";
+      const meterV = currentStep >= 4 ? Vv : (V > 0 && Rv > 0 ? V : 0);
+      ctx.fillText("V 指示 " + fmtV(meterV), mx, my + 4);
+      ctx.textAlign = "left";
+
+      if (showRs) {
+        labelOnCanvas("倍率器 R_s", L.RS_X + L.R_W * 0.5, L.Y + 32, "center", 11);
+        labelOnCanvas(fmtR(Rs), L.RS_X + L.R_W * 0.5, L.Y + 48, "center", 10, "rgba(255,255,255,0.88)");
+      } else if (currentStep === 1) {
+        labelOnCanvas("（Step2 で R_s 追加）", L.RS_X + L.R_W * 0.5, L.Y - 28, "center", 10, "rgba(255,255,255,0.85)");
+      }
+      labelOnCanvas("電圧計 R_v", L.RV_X + L.R_W * 0.5, L.Y + 32, "center", 11);
+      labelOnCanvas(fmtR(Rv), L.RV_X + L.R_W * 0.5, L.Y + 48, "center", 10, "rgba(255,255,255,0.88)");
+
+      ctx.fillStyle = "#e2e8f0";
+      [[M.x, M.y], [P.x, P.y], [L.RV_X, L.Y], [L.RV_X2, L.Y]]
+        .concat(showRs ? [[L.RS_X, L.Y], [L.RS_X2, L.Y]] : [])
+        .forEach(([x, y]) => {
+          ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+        });
+
+      labelOnCanvas("Step " + currentStep + " / 5", L.cw - 10, 18, "right", 11);
+    }
+
+    function drawElectrons(L) {
+      if (!electronsEnabled()) return;
+      const path = pathFor(L);
+      electrons.forEach((e) => {
+        const pt = pathPointAtDist(e.s, path);
+        ctx.fillStyle = COL.electron;
+        ctx.shadowColor = COL.electron;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.shadowBlur = 0;
+    }
+
+    function drawFrame() {
+      ctx.fillStyle = "#050810";
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      const L = getLayout(canvasW, canvasH);
+      drawCircuit(L);
+      drawElectrons(L);
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      physicsStep(dt);
+      syncSliders();
+      updateReadouts();
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+
+    document.querySelectorAll(".step-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setStep(parseInt(btn.dataset.step, 10)));
+    });
+    startBtn.addEventListener("click", () => {
+      running = !running;
+      lastFrame = performance.now();
+      updateStartBtn();
+    });
+    resetBtn.addEventListener("click", resetSimulation);
+    answerBtn.addEventListener("click", applyAnswerPreset);
+    [rvSlider, rsSlider, vSlider].forEach((el) => {
+      el.addEventListener("input", () => { syncSliders(); updateReadouts(); });
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    setStep(1);
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>20章 ヤングの実験 — 光の干渉</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #38bdf8;
+      --accent-light: #7dd3fc;
+      --panel: rgba(8, 16, 28, 0.88);
+      --border: rgba(56, 189, 248, 0.28);
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1929 45%, #0a1628 100%);
+      color: #e2e8f0;
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.45), rgba(250,204,21,0.35));
+      border: 1px solid rgba(56,189,248,0.4); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0f2fe; background: rgba(56,189,248,0.14);
+      border: 1px solid rgba(56,189,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.02rem; color: var(--accent-light); }
+    section.panel p, section.panel li { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      padding: 8px 12px; border-radius: 10px; margin-bottom: 10px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.84rem; color: #bae6fd; text-align: center; line-height: 1.6;
+    }
+    .canvas-wrap {
+      position: relative; border-radius: 12px; overflow: hidden;
+      background: #020617; border: 1px solid rgba(56,189,248,0.22);
+    }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 300px; cursor: crosshair; }
+    .canvas-hud {
+      position: absolute; left: 10px; top: 10px; right: 10px;
+      display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none;
+    }
+    .hud-chip {
+      padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+      background: rgba(0,0,0,0.65); border: 1px solid rgba(148,163,184,0.35);
+    }
+    .hud-chip.bright { color: #fde68a; border-color: rgba(250,204,21,0.5); }
+    .hud-chip.dark { color: #94a3b8; border-color: rgba(100,116,139,0.5); }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px) { .param-grid { grid-template-columns: repeat(5, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #bae6fd; }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .toggle-btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(56,189,248,0.3); background: rgba(15,30,45,0.6);
+      color: #cbd5e1; font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-active {
+      background: rgba(250,204,21,0.18); border-color: rgba(250,204,21,0.45); color: #fef9c3;
+    }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.16);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #f0f9ff; }
+    .phase-tab-wrap { margin-top: 12px; }
+    .phase-tab {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-radius: 12px;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(15,30,45,0.75);
+      color: #e2e8f0; font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      text-align: left;
+    }
+    .phase-tab.is-open {
+      border-radius: 12px 12px 0 0;
+      background: rgba(250,204,21,0.12); border-color: rgba(250,204,21,0.45); color: #fef9c3;
+    }
+    .phase-tab-chevron { font-size: 0.8rem; opacity: 0.75; transition: transform 0.2s; }
+    .phase-tab.is-open .phase-tab-chevron { transform: rotate(180deg); }
+    .phase-panel {
+      display: none; border: 1px solid rgba(250,204,21,0.35); border-top: none;
+      border-radius: 0 0 12px 12px; background: rgba(4,10,20,0.95); overflow: hidden;
+    }
+    .phase-panel.is-open { display: block; }
+    .phase-panel canvas {
+      display: block; width: 100%; height: min(300px, 42dvh); min-height: 220px;
+    }
+    .phase-caption {
+      padding: 8px 14px 12px; font-size: 0.78rem; color: var(--muted); line-height: 1.6;
+      border-top: 1px solid rgba(56,189,248,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">〰️</div>
+      <p class="chapter-label">第20章 — 光の干渉・回折</p>
+      <h2>ヤングの実験 — スリット干渉</h2>
+      <a id="back" href="00_folder_waves.html#chapter-20">← 波動フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>干渉のしくみ</h3>
+      <p>
+        2 つのスリット S₁, S₂ から出た光波がスクリーンで重なります。
+        点 P までの<strong>経路差</strong> δ = r₂ − r₁ が波長の整数倍なら<strong>強め合い（明）</strong>、
+        半整数倍なら<strong>弱め合い（暗）</strong>になります。
+      </p>
+      <div class="formula-box">
+        明線：δ = m λ &nbsp;·&nbsp; 暗線：δ = (m + ½) λ &nbsp;·&nbsp; 縞間隔 Δy = λ L / d
+      </div>
+      <ul>
+        <li>δ ≈ d sin θ ≈ d y / L（スクリーンが遠いとき）</li>
+        <li>λ を短くする · L を長くする · d を狭くする → 縞間隔 Δy は<strong>狭く</strong>なる</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3>アニメーション</h3>
+      <p>
+        黄いスキャン線が上下すると、同じ位置で<strong>明 ↔ 暗</strong>が切り替わります。
+        「干渉縞（平均）」は時間平均の縞模様、「波の重なり」は S₁（青）と S₂（桃）の波が重なる様子です。
+        スクリーン右の縞も波と同期して明滅します。
+        スクリーンをクリックすると位置を固定できます。
+        「位相ビュー（拡大）」タブで、2つの波の位相と合成を大きく確認できます。
+      </p>
+
+      <div class="canvas-wrap">
+        <canvas id="simCanvas" aria-label="ヤングの干渉アニメーション"></canvas>
+        <div class="canvas-hud">
+          <span class="hud-chip bright" id="hudVerdict">—</span>
+          <span class="hud-chip" id="hudDelta">δ/λ = —</span>
+          <span class="hud-chip" id="hudFringe">Δy = —</span>
+        </div>
+      </div>
+      <div class="legend-row">
+        <span style="color:#7dd3fc">○</span> S₁ の波（青）
+        <span style="color:#f9a8d4">○</span> S₂ の波（桃）
+        <span style="color:#fde047">■</span> 重なって明るい（強め合い）
+        <span style="color:#334155;background:#475569;padding:0 5px">■</span> 重なって暗い（弱め合い）
+        <span style="color:#fbbf24">|</span> 明線 m=0,±1…
+      </div>
+
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn" id="btnWaveMode">波の重なり（動く）</button>
+        <button type="button" class="toggle-btn is-active" id="btnFringeMode">干渉縞（平均）</button>
+        <button type="button" class="toggle-btn is-active" id="btnScan">自動スキャン</button>
+      </div>
+      <div class="phase-tab-wrap">
+        <button type="button" class="phase-tab" id="btnPhaseTab" aria-expanded="false" aria-controls="phasePanel">
+          <span>位相ビュー（拡大）</span>
+          <span class="phase-tab-chevron" aria-hidden="true">▼</span>
+        </button>
+        <div class="phase-panel" id="phasePanel" hidden>
+          <canvas id="phaseCanvas" aria-label="2つの波の位相と合成"></canvas>
+          <p class="phase-caption">
+            スクリーン上の点 P に届く S₁（青）と S₂（桃）の波を、経路長・位相・合成波として拡大表示します。
+            メイン画面のスキャン位置と同期して動きます。
+          </p>
+        </div>
+      </div>
+      <div class="param-grid">
+        <div>
+          <label for="lambdaSlider">波長 λ <span class="slider-val" id="lambdaVal">550 nm</span></label>
+          <input type="range" id="lambdaSlider" min="400" max="700" value="550" step="5">
+        </div>
+        <div>
+          <label for="dSlider">スリット間隔 d <span class="slider-val" id="dVal">75 μm</span></label>
+          <input type="range" id="dSlider" min="20" max="120" value="75" step="1">
+        </div>
+        <div>
+          <label for="lSlider">距離 L <span class="slider-val" id="lVal">0.80 m</span></label>
+          <input type="range" id="lSlider" min="50" max="200" value="80" step="1">
+        </div>
+        <div>
+          <label for="ampSlider">振幅 <span class="slider-val" id="ampVal">1.0</span></label>
+          <input type="range" id="ampSlider" min="30" max="100" value="100" step="1">
+        </div>
+        <div>
+          <label for="speedSlider">速度 <span class="slider-val" id="speedVal">1.0×</span></label>
+          <input type="range" id="speedSlider" min="20" max="200" value="100" step="5">
+        </div>
+      </div>
+      <div class="readout-grid">
+        <dl class="readout"><dt>縞間隔 Δy</dt><dd id="readFringe">—</dd></dl>
+        <dl class="readout"><dt>スキャン位置</dt><dd id="readScanY">—</dd></dl>
+        <dl class="readout"><dt>明線 m=±1</dt><dd id="readM1">—</dd></dl>
+        <dl class="readout"><dt>2波の位相差</dt><dd id="readPhaseDeg">—</dd></dl>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+      const hudVerdict = document.getElementById("hudVerdict");
+      const hudDelta = document.getElementById("hudDelta");
+      const hudFringe = document.getElementById("hudFringe");
+      const readFringe = document.getElementById("readFringe");
+      const readScanY = document.getElementById("readScanY");
+      const readM1 = document.getElementById("readM1");
+      const readPhaseDeg = document.getElementById("readPhaseDeg");
+      const phaseCanvas = document.getElementById("phaseCanvas");
+      const phaseCtx = phaseCanvas.getContext("2d");
+      const btnPhaseTab = document.getElementById("btnPhaseTab");
+      const phasePanel = document.getElementById("phasePanel");
+
+      let lambdaNm = 550, dMicron = 75, Lmeter = 0.8, amplitude = 1.0, animSpeed = 1.0;
+      let viewMode = "fringes";
+      let autoScan = true;
+      let phasePanelOpen = false;
+      let phase = 0;
+      let scanPhase = 0;
+      let probeY = null;
+      let userProbe = false;
+
+      let canvasW = 800, canvasH = 400;
+      let phaseCanvasW = 800, phaseCanvasH = 260;
+      let slitX = 140, screenX = 720, centerY = 200;
+      let cacheKey = "";
+      let fringeFieldCanvas = null;
+      let screenStripCanvas = null;
+      let waveFieldCanvas = null;
+      let waveFieldPhase = -1;
+      let waveScreenStripCanvas = null;
+      let waveScreenStripPhase = -1;
+      let frameTick = 0;
+
+      function invalidateCache() {
+        cacheKey = "";
+        waveFieldPhase = -1;
+        waveScreenStripPhase = -1;
+      }
+
+      function waveComponentsAt(x, y, g, t) {
+        const s = slits(g);
+        const k = wavePhysicsK(g);
+        const u1 = Math.sin(k * Math.hypot(x - s[0].x, y - s[0].y) - t) * amplitude;
+        const u2 = Math.sin(k * Math.hypot(x - s[1].x, y - s[1].y) - t) * amplitude;
+        return { u1, u2, sum: u1 + u2 };
+      }
+
+      function phaseAt(y, g, t) {
+        const s = slits(g);
+        const k = wavePhysicsK(g);
+        const p1 = k * Math.hypot(screenX - s[0].x, y - s[0].y) - t;
+        const p2 = k * Math.hypot(screenX - s[1].x, y - s[1].y) - t;
+        return { p1, p2, delta: p2 - p1 };
+      }
+      function fringeDeltaM() {
+        return (lambdaNm * 1e-9 * Lmeter) / (dMicron * 1e-6);
+      }
+
+      function geometry() {
+        const Lpx = screenX - slitX;
+        const fringeDeltaMVal = fringeDeltaM();
+        // 画面上は 4〜5 本の縞が見えるよう間隔を広く（細かすぎない）
+        const fringeDeltaPx = Math.max(36, canvasH / 4.2);
+        const dpx = Math.max(18, Math.min(canvasH * 0.2, fringeDeltaPx * 2.2));
+        const lambdaPx = (dpx * fringeDeltaPx) / Math.max(Lpx, 1);
+        return { Lpx, dpx, lambdaPx, fringeDeltaM: fringeDeltaMVal, fringeDeltaPx };
+      }
+
+      function slits(g) {
+        const h = g.dpx / 2;
+        return [
+          { x: slitX, y: centerY - h },
+          { x: slitX, y: centerY + h }
+        ];
+      }
+
+      function pathDiff(y, g) {
+        const s = slits(g);
+        return Math.hypot(screenX - s[1].x, y - s[1].y) - Math.hypot(screenX - s[0].x, y - s[0].y);
+      }
+
+      function darkY(m, g) {
+        return centerY + (m + 0.5) * g.fringeDeltaPx;
+      }
+
+      function brightY(m, g) { return centerY + m * g.fringeDeltaPx; }
+
+      function intensity(y, g) {
+        const d = pathDiff(y, g);
+        const phi = (2 * Math.PI * d) / g.lambdaPx;
+        const raw = 0.5 + 0.5 * Math.cos(phi);
+        // コントラストを抑えて縞をやわらかく
+        return 0.12 + Math.pow(raw, 0.7) * 0.78;
+      }
+
+      function sampleIntensity(y, g) {
+        return (intensity(y - 2, g) + intensity(y, g) + intensity(y + 2, g)) / 3;
+      }
+
+      function probeVerdict(y, g, t) {
+        const ratio = (pathDiff(y, g) * (g.fringeDeltaM / g.fringeDeltaPx)) / (lambdaNm * 1e-9);
+        if (viewMode === "waves") {
+          const { sum } = waveComponentsAt(screenX, y, g, t);
+          const ratio = pathDiff(y, g) / g.lambdaPx;
+          const spatialDark = Math.abs(Math.abs(ratio) % 1 - 0.5) < 0.12;
+          const isBright = !spatialDark && sum / Math.max(0.01, 2 * amplitude) > 0.2;
+          return { ratio, isBright, m: Math.round(ratio) };
+        }
+        const mRound = Math.round(ratio);
+        const isBright = Math.abs(ratio - mRound) < 0.15;
+        return { ratio, isBright, m: mRound };
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvasW = rect.width;
+        canvasH = rect.height;
+        slitX = canvasW * 0.15;
+        screenX = canvasW * 0.84;
+        centerY = canvasH * 0.5;
+        if (probeY === null) probeY = centerY;
+        invalidateCache();
+        resizePhaseCanvas();
+      }
+
+      function resizePhaseCanvas() {
+        if (!phasePanelOpen || !phaseCanvas) return;
+        const rect = phaseCanvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+        phaseCanvas.width = Math.round(rect.width * dpr);
+        phaseCanvas.height = Math.round(rect.height * dpr);
+        phaseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        phaseCanvasW = rect.width;
+        phaseCanvasH = rect.height;
+      }
+
+      function updateProbe(dt, g) {
+        if (autoScan && !userProbe) {
+          scanPhase += dt * 0.35 * animSpeed;
+          const t = scanPhase;
+          probeY = centerY + Math.sin(t * 0.7) * g.fringeDeltaPx * 1.35
+            + Math.sin(t * 0.23) * g.fringeDeltaPx * 0.4;
+        }
+        probeY = Math.max(28, Math.min(canvasH - 28, probeY));
+      }
+
+      function wavePhysicsK(g) {
+        return (2 * Math.PI) / g.lambdaPx;
+      }
+
+      function waveDisplayK(g) {
+        // 円弧のガイドだけ見やすく拡大（干渉の位置計算には使わない）
+        const waveLambdaPx = Math.max(34, g.lambdaPx * 2.8);
+        return (2 * Math.PI) / waveLambdaPx;
+      }
+
+      function waveOverlapRgb(u1, u2) {
+        const w1 = 0.5 + 0.5 * u1;
+        const w2 = 0.5 + 0.5 * u2;
+        const sum = u1 + u2;
+        const boost = Math.max(0, sum) * 0.55;
+        const dip = Math.max(0, -sum) * 0.35;
+        const r = Math.round(18 + w2 * 110 + boost * 200 - dip * 8);
+        const gch = Math.round(22 + w1 * 70 + w2 * 130 + boost * 180 - dip * 12);
+        const bch = Math.round(40 + w1 * 210 + w2 * 35 + boost * 40 - dip * 18);
+        return [
+          Math.min(255, Math.max(0, r)),
+          Math.min(255, Math.max(0, gch)),
+          Math.min(255, Math.max(0, bch)),
+        ];
+      }
+
+      function fieldBounds() {
+        return {
+          x0: slitX + 4,
+          y0: 24,
+          w: Math.floor(screenX - slitX - 10),
+          h: Math.floor(canvasH - 48),
+        };
+      }
+
+      function makeCacheKey(g) {
+        return [viewMode, lambdaNm, dMicron, Lmeter, canvasW, canvasH, g.fringeDeltaPx.toFixed(1)].join("|");
+      }
+
+      function rebuildFringeField(g) {
+        const b = fieldBounds();
+        if (b.w <= 0 || b.h <= 0) return;
+        const step = 6;
+        const iw = Math.ceil(b.w / step);
+        const ih = Math.ceil(b.h / step);
+        if (!fringeFieldCanvas) fringeFieldCanvas = document.createElement("canvas");
+        fringeFieldCanvas.width = iw;
+        fringeFieldCanvas.height = ih;
+        const fctx = fringeFieldCanvas.getContext("2d");
+        const img = fctx.createImageData(iw, ih);
+        for (let j = 0; j < ih; j += 1) {
+          const y = b.y0 + j * step;
+          const I = sampleIntensity(y, g);
+          const r = Math.round(14 + I * 210);
+          const gch = Math.round(10 + I * 185);
+          const bch = Math.round(8 + I * 42);
+          for (let i = 0; i < iw; i += 1) {
+            const idx = (j * iw + i) * 4;
+            img.data[idx] = r;
+            img.data[idx + 1] = gch;
+            img.data[idx + 2] = bch;
+            img.data[idx + 3] = 255;
+          }
+        }
+        fctx.putImageData(img, 0, 0);
+      }
+
+      function rebuildScreenStrip(g) {
+        const sw = 40;
+        const h = canvasH - 40;
+        if (!screenStripCanvas) screenStripCanvas = document.createElement("canvas");
+        screenStripCanvas.width = sw;
+        screenStripCanvas.height = h;
+        const sctx = screenStripCanvas.getContext("2d");
+        const img = sctx.createImageData(sw, h);
+        for (let j = 0; j < h; j += 1) {
+          const I = sampleIntensity(20 + j, g);
+          const v = Math.round(Math.pow(I, 0.92) * 230);
+          for (let i = 0; i < sw; i += 1) {
+            const idx = (j * sw + i) * 4;
+            img.data[idx] = v;
+            img.data[idx + 1] = Math.round(v * 0.95);
+            img.data[idx + 2] = Math.round(v * 0.3);
+            img.data[idx + 3] = 255;
+          }
+        }
+        sctx.putImageData(img, 0, 0);
+      }
+
+      function rebuildWaveScreenStrip(t, g) {
+        const sw = 40;
+        const h = canvasH - 40;
+        if (!waveScreenStripCanvas) waveScreenStripCanvas = document.createElement("canvas");
+        waveScreenStripCanvas.width = sw;
+        waveScreenStripCanvas.height = h;
+        const sctx = waveScreenStripCanvas.getContext("2d");
+        const img = sctx.createImageData(sw, h);
+        for (let j = 0; j < h; j += 1) {
+          const y = 20 + j;
+          const { u1, u2 } = waveComponentsAt(screenX, y, g, t);
+          const rgb = waveOverlapRgb(u1, u2);
+          for (let i = 0; i < sw; i += 1) {
+            const idx = (j * sw + i) * 4;
+            img.data[idx] = rgb[0];
+            img.data[idx + 1] = rgb[1];
+            img.data[idx + 2] = rgb[2];
+            img.data[idx + 3] = 255;
+          }
+        }
+        sctx.putImageData(img, 0, 0);
+        waveScreenStripPhase = t;
+      }
+
+      function rebuildWaveField(t, g) {
+        const b = fieldBounds();
+        if (b.w <= 0 || b.h <= 0) return;
+        const step = 3;
+        const iw = Math.ceil(b.w / step);
+        const ih = Math.ceil(b.h / step);
+        if (!waveFieldCanvas) waveFieldCanvas = document.createElement("canvas");
+        waveFieldCanvas.width = iw;
+        waveFieldCanvas.height = ih;
+        const wctx = waveFieldCanvas.getContext("2d");
+        const img = wctx.createImageData(iw, ih);
+        for (let j = 0; j < ih; j += 1) {
+          const y = b.y0 + j * step;
+          for (let i = 0; i < iw; i += 1) {
+            const x = b.x0 + i * step;
+            const { u1, u2 } = waveComponentsAt(x, y, g, t);
+            const rgb = waveOverlapRgb(u1, u2);
+            const idx = (j * iw + i) * 4;
+            img.data[idx] = rgb[0];
+            img.data[idx + 1] = rgb[1];
+            img.data[idx + 2] = rgb[2];
+            img.data[idx + 3] = 255;
+          }
+        }
+        wctx.putImageData(img, 0, 0);
+        waveFieldPhase = t;
+      }
+
+      function ensureCaches(g) {
+        const key = makeCacheKey(g);
+        if (key === cacheKey) return;
+        cacheKey = key;
+        rebuildFringeField(g);
+        rebuildScreenStrip(g);
+        waveFieldPhase = -1;
+        waveScreenStripPhase = -1;
+      }
+
+      function drawCachedField(t, g) {
+        const b = fieldBounds();
+        if (viewMode === "fringes") {
+          if (fringeFieldCanvas) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(fringeFieldCanvas, 0, 0, fringeFieldCanvas.width, fringeFieldCanvas.height, b.x0, b.y0, b.w, b.h);
+          }
+          return;
+        }
+        if (viewMode === "waves") {
+          if (waveFieldPhase === -1 || Math.abs(t - waveFieldPhase) > 0.04) rebuildWaveField(t, g);
+          if (waveScreenStripPhase === -1 || Math.abs(t - waveScreenStripPhase) > 0.04) {
+            rebuildWaveScreenStrip(t, g);
+          }
+          if (waveFieldCanvas) {
+            ctx.fillStyle = "rgba(6,14,28,0.55)";
+            ctx.fillRect(b.x0, b.y0, b.w, b.h);
+            ctx.imageSmoothingEnabled = true;
+            ctx.globalAlpha = 0.92;
+            ctx.drawImage(waveFieldCanvas, 0, 0, waveFieldCanvas.width, waveFieldCanvas.height, b.x0, b.y0, b.w, b.h);
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      function drawRipples(t, g) {
+        if (viewMode !== "waves") return;
+        const s = slits(g);
+        const k = waveDisplayK(g);
+        const waveLambdaPx = (2 * Math.PI) / k;
+        const styles = [
+          { label: "S₁", color: "56,189,248", sl: s[0] },
+          { label: "S₂", color: "244,114,182", sl: s[1] },
+        ];
+        styles.forEach(({ label, color, sl }) => {
+          const maxR = Math.min(Math.hypot(canvasW - sl.x, canvasH * 0.5), waveLambdaPx * 7.5);
+          let count = 0;
+          for (let r = waveLambdaPx * 0.55; r < maxR && count < 7; r += waveLambdaPx * 0.92, count += 1) {
+            const crest = 0.5 + 0.5 * Math.cos(k * r - t);
+            if (crest < 0.42) continue;
+            ctx.strokeStyle = "rgba(" + color + "," + (0.35 + crest * 0.5).toFixed(2) + ")";
+            ctx.lineWidth = crest > 0.85 ? 2.4 : 1.8;
+            ctx.beginPath();
+            ctx.arc(sl.x, sl.y, r, -Math.PI * 0.55, Math.PI * 0.55);
+            ctx.stroke();
+          }
+          ctx.fillStyle = label === "S₁" ? "#7dd3fc" : "#f9a8d4";
+          ctx.font = "700 12px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.fillText(label, sl.x - 10, sl.y + 4);
+        });
+      }
+
+      function drawApparatus(g) {
+        const s = slits(g);
+        ctx.fillStyle = "rgba(30,41,59,0.92)";
+        ctx.fillRect(slitX - 7, 20, 14, canvasH - 40);
+        ctx.fillStyle = "#020617";
+        const gap = Math.max(6, g.dpx * 0.32);
+        ctx.fillRect(slitX - 4, 20, 8, s[0].y - gap / 2 - 20);
+        ctx.fillRect(slitX - 4, s[0].y + gap / 2, 8, s[1].y - gap / 2 - (s[0].y + gap / 2));
+        ctx.fillRect(slitX - 4, s[1].y + gap / 2, 8, canvasH - 20 - (s[1].y + gap / 2));
+        ctx.fillStyle = "#475569";
+        ctx.fillRect(screenX - 5, 20, 10, canvasH - 40);
+      }
+
+      function drawScreenStrip(t, g) {
+        if (viewMode === "waves") {
+          if (waveScreenStripCanvas) {
+            ctx.drawImage(waveScreenStripCanvas, screenX - 4, 20);
+          }
+        } else if (screenStripCanvas) {
+          ctx.drawImage(screenStripCanvas, screenX - 4, 20);
+        }
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(viewMode === "waves" ? "干渉縞（瞬間）" : "干渉縞", screenX + 18, 12);
+      }
+
+      function drawFringeLabels(g) {
+        const maxM = Math.min(2, Math.floor((centerY - 40) / g.fringeDeltaPx));
+        ctx.font = "700 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        for (let m = -maxM; m <= maxM; m += 1) {
+          const y = brightY(m, g);
+          ctx.strokeStyle = "rgba(251,191,36,0.85)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(screenX + 6, y);
+          ctx.lineTo(screenX + 22, y);
+          ctx.stroke();
+          ctx.fillStyle = "#fde68a";
+          ctx.fillText("明 m=" + m, screenX + 24, y + 4);
+        }
+        for (let m = -maxM; m < maxM; m += 1) {
+          const y = darkY(m, g);
+          ctx.fillStyle = "#64748b";
+          ctx.fillText("暗", screenX + 24, y + 4);
+        }
+      }
+
+      function drawScanLine(g, t) {
+        const v = probeVerdict(probeY, g, t);
+
+        ctx.strokeStyle = v.isBright ? "rgba(250,204,21,0.9)" : "rgba(100,116,139,0.85)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(slitX, probeY);
+        ctx.lineTo(screenX + 50, probeY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const s = slits(g);
+        ctx.strokeStyle = "rgba(196,181,253,0.75)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(s[0].x, s[0].y);
+        ctx.lineTo(screenX, probeY);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(244,114,182,0.75)";
+        ctx.beginPath();
+        ctx.moveTo(s[1].x, s[1].y);
+        ctx.lineTo(screenX, probeY);
+        ctx.stroke();
+      }
+
+      function wrapPhase(a) {
+        const tau = Math.PI * 2;
+        return ((a % tau) + tau) % tau;
+      }
+
+      function drawWaveLane(c, x, y, w, h, p, color, label, sub, markerPhase) {
+        c.fillStyle = "rgba(8,16,30,0.92)";
+        c.strokeStyle = "rgba(56,189,248,0.2)";
+        c.lineWidth = 1;
+        c.beginPath();
+        c.roundRect(x, y, w, h, 10);
+        c.fill();
+        c.stroke();
+
+        const midY = y + h * 0.58;
+        const amp = h * 0.28 * amplitude;
+        c.strokeStyle = "rgba(148,163,184,0.35)";
+        c.lineWidth = 1;
+        c.setLineDash([4, 5]);
+        c.beginPath();
+        c.moveTo(x + 12, midY);
+        c.lineTo(x + w - 12, midY);
+        c.stroke();
+        c.setLineDash([]);
+
+        c.font = "700 12px Noto Sans JP, sans-serif";
+        c.fillStyle = color;
+        c.textAlign = "left";
+        c.fillText(label, x + 14, y + 22);
+        c.font = "500 10px Inter, sans-serif";
+        c.fillStyle = "#94a3b8";
+        c.fillText(sub, x + 14, y + 38);
+
+        c.strokeStyle = color;
+        c.lineWidth = 2.5;
+        c.shadowColor = color;
+        c.shadowBlur = 8;
+        c.beginPath();
+        const steps = Math.max(120, Math.floor(w * 1.2));
+        for (let i = 0; i <= steps; i += 1) {
+          const t = i / steps;
+          const px = x + 12 + t * (w - 24);
+          const py = midY - Math.sin(p + t * Math.PI * 4) * amp;
+          if (i === 0) c.moveTo(px, py);
+          else c.lineTo(px, py);
+        }
+        c.stroke();
+        c.shadowBlur = 0;
+
+        const mx = x + 12 + 0.72 * (w - 24);
+        const my = midY - Math.sin(p + 0.72 * Math.PI * 4) * amp;
+        c.fillStyle = "#fff";
+        c.strokeStyle = color;
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(mx, my, 5, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+
+        c.font = "600 10px Inter, sans-serif";
+        c.fillStyle = "#cbd5e1";
+        c.textAlign = "right";
+        c.fillText("φ = " + ((wrapPhase(markerPhase) * 180) / Math.PI).toFixed(0) + "°", x + w - 14, y + 22);
+      }
+
+      function drawPhasorDiagram(c, cx, cy, r, p1, p2, bright) {
+        c.fillStyle = "rgba(8,16,30,0.92)";
+        c.strokeStyle = "rgba(56,189,248,0.2)";
+        c.lineWidth = 1;
+        c.beginPath();
+        c.roundRect(cx - r - 20, cy - r - 36, (r + 20) * 2, (r + 36) * 2, 10);
+        c.fill();
+        c.stroke();
+
+        c.font = "700 12px Noto Sans JP, sans-serif";
+        c.fillStyle = "#bae6fd";
+        c.textAlign = "center";
+        c.fillText("位相ベクトル", cx, cy - r - 14);
+
+        c.strokeStyle = "rgba(100,116,139,0.4)";
+        c.lineWidth = 1;
+        c.beginPath();
+        c.arc(cx, cy, r, 0, Math.PI * 2);
+        c.stroke();
+        c.beginPath();
+        c.moveTo(cx - r - 6, cy);
+        c.lineTo(cx + r + 6, cy);
+        c.moveTo(cx, cy - r - 6);
+        c.lineTo(cx, cy + r + 6);
+        c.stroke();
+
+        const x1 = cx + Math.cos(p1 - Math.PI / 2) * r * amplitude;
+        const y1 = cy + Math.sin(p1 - Math.PI / 2) * r * amplitude;
+        const x2 = cx + Math.cos(p2 - Math.PI / 2) * r * amplitude;
+        const y2 = cy + Math.sin(p2 - Math.PI / 2) * r * amplitude;
+
+        c.strokeStyle = "#7dd3fc";
+        c.lineWidth = 2.5;
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(x1, y1);
+        c.stroke();
+        c.fillStyle = "#7dd3fc";
+        c.beginPath();
+        c.arc(x1, y1, 5, 0, Math.PI * 2);
+        c.fill();
+
+        c.strokeStyle = "#f9a8d4";
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(x2, y2);
+        c.stroke();
+        c.fillStyle = "#f9a8d4";
+        c.beginPath();
+        c.arc(x2, y2, 5, 0, Math.PI * 2);
+        c.fill();
+
+        const delta = wrapPhase(p2 - p1);
+        c.strokeStyle = "rgba(250,204,21,0.55)";
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(cx, cy, r * 0.42, -Math.PI / 2 + p1, -Math.PI / 2 + p1 + delta, delta > Math.PI);
+        c.stroke();
+
+        c.strokeStyle = bright ? "#fde68a" : "#64748b";
+        c.lineWidth = 2;
+        c.setLineDash([5, 4]);
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(x1 + x2 - cx, y1 + y2 - cy);
+        c.stroke();
+        c.setLineDash([]);
+
+        c.font = "600 10px Noto Sans JP, sans-serif";
+        c.fillStyle = "#7dd3fc";
+        c.textAlign = "left";
+        c.fillText("S₁", cx + r + 8, cy - 8);
+        c.fillStyle = "#f9a8d4";
+        c.fillText("S₂", cx + r + 8, cy + 10);
+        c.fillStyle = "#fde68a";
+        c.fillText("Δφ = " + ((delta * 180) / Math.PI).toFixed(0) + "°", cx - 36, cy + r + 18);
+      }
+
+      function drawCompositeLane(c, x, y, w, h, p1, p2, bright) {
+        c.fillStyle = "rgba(8,16,30,0.92)";
+        c.strokeStyle = bright ? "rgba(250,204,21,0.35)" : "rgba(100,116,139,0.35)";
+        c.lineWidth = 1;
+        c.beginPath();
+        c.roundRect(x, y, w, h, 10);
+        c.fill();
+        c.stroke();
+
+        const midY = y + h * 0.58;
+        const amp = h * 0.28 * amplitude;
+        c.strokeStyle = "rgba(148,163,184,0.35)";
+        c.setLineDash([4, 5]);
+        c.beginPath();
+        c.moveTo(x + 12, midY);
+        c.lineTo(x + w - 12, midY);
+        c.stroke();
+        c.setLineDash([]);
+
+        c.font = "700 12px Noto Sans JP, sans-serif";
+        c.fillStyle = bright ? "#fde68a" : "#94a3b8";
+        c.textAlign = "left";
+        c.fillText("P での合成波 E₁ + E₂", x + 14, y + 22);
+        c.font = "600 11px Noto Sans JP, sans-serif";
+        c.fillText(bright ? "同相付近 → 強め合い（明）" : "逆相付近 → 弱め合い（暗）", x + 14, y + 40);
+
+        const sumColor = bright ? "#fde68a" : "#64748b";
+        c.strokeStyle = sumColor;
+        c.lineWidth = 3;
+        c.shadowColor = sumColor;
+        c.shadowBlur = 10;
+        c.beginPath();
+        const steps = Math.max(120, Math.floor(w * 1.2));
+        for (let i = 0; i <= steps; i += 1) {
+          const t = i / steps;
+          const px = x + 12 + t * (w - 24);
+          const u = (Math.sin(p1 + t * Math.PI * 4) + Math.sin(p2 + t * Math.PI * 4)) * amplitude;
+          const py = midY - u * amp * 0.5;
+          if (i === 0) c.moveTo(px, py);
+          else c.lineTo(px, py);
+        }
+        c.stroke();
+        c.shadowBlur = 0;
+
+        const uNow = (Math.sin(p1 + 0.72 * Math.PI * 4) + Math.sin(p2 + 0.72 * Math.PI * 4)) * amplitude;
+        const mx = x + 12 + 0.72 * (w - 24);
+        const my = midY - uNow * amp * 0.5;
+        c.fillStyle = "#fff";
+        c.strokeStyle = sumColor;
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(mx, my, 5, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      }
+
+      function drawPhasePanel(g, t) {
+        if (!phasePanelOpen) return;
+        const w = phaseCanvasW;
+        const h = phaseCanvasH;
+        const v = probeVerdict(probeY, g, t);
+        const ph = phaseAt(probeY, g, t);
+        const s = slits(g);
+        const r1 = Math.hypot(screenX - s[0].x, probeY - s[0].y);
+        const r2 = Math.hypot(screenX - s[1].x, probeY - s[1].y);
+        const delta = pathDiff(probeY, g);
+        const deltaNm = (delta * (g.fringeDeltaM / g.fringeDeltaPx) * 1e9).toFixed(0);
+
+        phaseCtx.fillStyle = "#030712";
+        phaseCtx.fillRect(0, 0, w, h);
+
+        const pad = 12;
+        const gap = 10;
+        const topH = Math.floor(h * 0.46);
+        const botY = pad + topH + gap;
+        const botH = h - botY - pad;
+        const colW = Math.floor((w - pad * 2 - gap * 2) / 3);
+
+        drawWaveLane(
+          phaseCtx, pad, pad, colW, topH, ph.p1, "#7dd3fc",
+          "S₁ から P へ", "r₁ = " + (r1 / 10).toFixed(1) + " cm（画面上）", ph.p1
+        );
+        drawWaveLane(
+          phaseCtx, pad + colW + gap, pad, colW, topH, ph.p2, "#f9a8d4",
+          "S₂ から P へ", "r₂ = " + (r2 / 10).toFixed(1) + " cm（画面上）", ph.p2
+        );
+        drawCompositeLane(
+          phaseCtx, pad + (colW + gap) * 2, pad, colW, topH, ph.p1, ph.p2, v.isBright
+        );
+
+        const phR = Math.min(52, botH * 0.38);
+        const phCx = pad + phR + 20;
+        const phCy = botY + botH * 0.55;
+        drawPhasorDiagram(phaseCtx, phCx, phCy, phR, ph.p1, ph.p2, v.isBright);
+
+        const infoX = pad + (phR + 20) * 2 + 24;
+        const infoW = w - infoX - pad;
+        phaseCtx.fillStyle = "rgba(8,16,30,0.92)";
+        phaseCtx.strokeStyle = "rgba(56,189,248,0.2)";
+        phaseCtx.beginPath();
+        phaseCtx.roundRect(infoX, botY, infoW, botH, 10);
+        phaseCtx.fill();
+        phaseCtx.stroke();
+
+        phaseCtx.textAlign = "left";
+        phaseCtx.font = "700 13px Noto Sans JP, sans-serif";
+        phaseCtx.fillStyle = v.isBright ? "#fde68a" : "#94a3b8";
+        phaseCtx.fillText(v.isBright ? "● 強め合い（明）" : "○ 弱め合い（暗）", infoX + 16, botY + 28);
+        phaseCtx.font = "500 12px Inter, Noto Sans JP, sans-serif";
+        phaseCtx.fillStyle = "#cbd5e1";
+        phaseCtx.fillText("経路差 δ ≈ " + deltaNm + " nm", infoX + 16, botY + 52);
+        phaseCtx.fillText("δ / λ = " + v.ratio.toFixed(2), infoX + 16, botY + 72);
+        phaseCtx.fillText("位相差 Δφ = " + ((wrapPhase(ph.delta) * 180) / Math.PI).toFixed(0) + "°", infoX + 16, botY + 92);
+        phaseCtx.fillStyle = "#64748b";
+        phaseCtx.font = "500 11px Noto Sans JP, sans-serif";
+        phaseCtx.fillText("Δφ ≈ 0°・360° → 同相（明）", infoX + 16, botY + botH - 38);
+        phaseCtx.fillText("Δφ ≈ 180° → 逆相（暗）", infoX + 16, botY + botH - 18);
+      }
+
+      function drawTravelingDots(t, g) {
+        if (viewMode !== "waves") return;
+        const s = slits(g);
+        const colors = ["#7dd3fc", "#f9a8d4"];
+        s.forEach((sl, idx) => {
+          const dx = screenX - sl.x;
+          const dy = probeY - sl.y;
+          for (let n = 0; n < 3; n += 1) {
+            const u = ((t * 0.28 * animSpeed + n * 0.33 + idx * 0.08) % 1);
+            const px = sl.x + dx * u;
+            const py = sl.y + dy * u;
+            ctx.fillStyle = colors[idx];
+            ctx.strokeStyle = "rgba(255,255,255,0.55)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+        });
+      }
+
+      function updateHud(g, t) {
+        const v = probeVerdict(probeY, g, t);
+        const ph = phaseAt(probeY, g, t);
+        const deg = Math.abs(((ph.delta * 180) / Math.PI) % 360);
+        const deltaYmm = (g.fringeDeltaM * 1000).toFixed(2);
+
+        hudVerdict.textContent = v.isBright ? "● 明（強め合い）" : "○ 暗（弱め合い）";
+        hudVerdict.className = "hud-chip " + (v.isBright ? "bright" : "dark");
+        hudDelta.textContent = "δ/λ = " + v.ratio.toFixed(2);
+        hudFringe.textContent = "Δy = " + deltaYmm + " mm";
+
+        readFringe.textContent = deltaYmm + " mm";
+        readM1.textContent = "±" + deltaYmm + " mm";
+        readScanY.textContent = ((probeY - centerY) / g.fringeDeltaPx).toFixed(2) + " 縞分";
+        readPhaseDeg.textContent = deg.toFixed(0) + "°";
+      }
+
+      let lastTs = 0;
+      function frame(ts) {
+        if (!lastTs) lastTs = ts;
+        const dt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+        phase += dt * 5 * animSpeed;
+        frameTick += 1;
+        const g = geometry();
+        ensureCaches(g);
+        updateProbe(dt, g);
+
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        drawCachedField(phase, g);
+        drawRipples(phase, g);
+        drawApparatus(g);
+        drawScreenStrip(phase, g);
+        drawFringeLabels(g);
+        drawTravelingDots(phase, g);
+        drawScanLine(g, phase);
+        updateHud(g, phase);
+        drawPhasePanel(g, phase);
+
+        requestAnimationFrame(frame);
+      }
+
+      document.getElementById("btnWaveMode").addEventListener("click", () => {
+        viewMode = "waves";
+        invalidateCache();
+        document.getElementById("btnWaveMode").classList.add("is-active");
+        document.getElementById("btnFringeMode").classList.remove("is-active");
+      });
+      document.getElementById("btnFringeMode").addEventListener("click", () => {
+        viewMode = "fringes";
+        invalidateCache();
+        document.getElementById("btnFringeMode").classList.add("is-active");
+        document.getElementById("btnWaveMode").classList.remove("is-active");
+      });
+      document.getElementById("btnScan").addEventListener("click", () => {
+        autoScan = !autoScan;
+        userProbe = !autoScan;
+        document.getElementById("btnScan").classList.toggle("is-active", autoScan);
+      });
+      btnPhaseTab.addEventListener("click", () => {
+        phasePanelOpen = !phasePanelOpen;
+        btnPhaseTab.classList.toggle("is-open", phasePanelOpen);
+        btnPhaseTab.setAttribute("aria-expanded", phasePanelOpen ? "true" : "false");
+        phasePanel.classList.toggle("is-open", phasePanelOpen);
+        phasePanel.hidden = !phasePanelOpen;
+        if (phasePanelOpen) {
+          requestAnimationFrame(resizePhaseCanvas);
+        }
+      });
+
+      canvas.addEventListener("pointerdown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        probeY = e.clientY - rect.top;
+        userProbe = true;
+        autoScan = false;
+        document.getElementById("btnScan").classList.remove("is-active");
+      });
+
+      function bindSlider(id, fn) {
+        const el = document.getElementById(id);
+        el.addEventListener("input", () => { fn(el); invalidateCache(); });
+      }
+
+      bindSlider("lambdaSlider", (el) => {
+        lambdaNm = +el.value;
+        document.getElementById("lambdaVal").textContent = lambdaNm + " nm";
+      });
+      bindSlider("dSlider", (el) => {
+        dMicron = +el.value;
+        document.getElementById("dVal").textContent = dMicron + " μm";
+      });
+      bindSlider("lSlider", (el) => {
+        Lmeter = +el.value / 100;
+        document.getElementById("lVal").textContent = Lmeter.toFixed(2) + " m";
+      });
+      bindSlider("ampSlider", (el) => {
+        amplitude = +el.value / 100;
+        document.getElementById("ampVal").textContent = amplitude.toFixed(1);
+      });
+      bindSlider("speedSlider", (el) => {
+        animSpeed = +el.value / 100;
+        document.getElementById("speedVal").textContent = animSpeed.toFixed(1) + "×";
+      });
+
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        resizePhaseCanvas();
+      });
+      resizeCanvas();
+      probeY = centerY;
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

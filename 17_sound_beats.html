@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>17章 うなり — 拍音 · 周波数差</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --slate-bg: rgba(12, 18, 32, 0.82); --slate-border: rgba(251, 191, 36, 0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+      --w1: #38bdf8; --w2: #f87171; --sum: #4ade80;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #050810 0%, #12100a 45%, #0a1220 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.28), rgba(74,222,128,0.2));
+      border: 1px solid rgba(253,230,138,0.35); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #fef3c7;
+      background: rgba(251,191,36,0.14); border: 1px solid rgba(253,230,138,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li { font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 12px; border-radius: 12px; text-align: center;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);
+      color: #fde68a; font-variant-numeric: tabular-nums; font-size: 0.9rem;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #070b14; border: 1px solid rgba(251,191,36,0.2);
+    }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(200px, 28dvh); min-height: 170px; }
+    .canvas-wrap--tall canvas { height: min(260px, 34dvh); min-height: 220px; }
+    .canvas-caption { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 0.78rem; color: #cbd5e1;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+    .legend .w1 { background: var(--w1); }
+    .legend .w2 { background: var(--w2); }
+    .legend .ws { background: var(--sum); }
+    label { display: block; font-size: 0.86rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.8rem; font-weight: 600; color: #fde68a; }
+    .param-grid { display: grid; gap: 12px; margin-top: 10px; }
+    @media (min-width:640px) { .param-grid { grid-template-columns: 1fr 1fr; } }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+    @media (min-width:640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.18);
+    }
+    .readout .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .readout .val { font-size: 0.95rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+    .readout .val.hl { color: #86efac; }
+    .readout .val.beat { color: #fde68a; font-size: 1.1rem; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .btn-row button {
+      flex: 1 1 calc(50% - 4px); min-height: 42px; padding: 8px 12px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .btn-row button.active { background: rgba(251,191,36,0.22); color: #fef3c7; }
+    .btn-row.instrument-row button { flex: 1 1 calc(33.33% - 6px); min-width: 96px; font-size: 0.78rem; }
+    @media (min-width:640px) { .btn-row.instrument-row button { flex: 1 1 calc(16.66% - 7px); } }
+    .inst-label { margin: 12px 0 6px; font-size: 0.84rem; font-weight: 600; color: #cbd5e1; }
+    .inst-label--f1 { color: var(--w1); }
+    .inst-label--f2 { color: var(--w2); margin-top: 14px; }
+    .btn-play { background: rgba(74,222,128,0.15) !important; border-color: rgba(74,222,128,0.4) !important; }
+    .btn-play.active { background: rgba(74,222,128,0.3) !important; color: #bbf7d0 !important; }
+    .btn-stop { background: rgba(248,113,113,0.12) !important; border-color: rgba(248,113,113,0.35) !important; }
+    .example-grid { display: grid; gap: 10px; margin-top: 10px; }
+    @media (min-width:640px) { .example-grid { grid-template-columns: 1fr 1fr; } }
+    .example-card {
+      padding: 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.18);
+      font-size: 0.86rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .example-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--accent-light); }
+    .insight-box {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.86rem; line-height: 1.7; color: #bae6fd;
+    }
+    .summary-box {
+      padding: 14px; border-radius: 12px;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.22);
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .summary-box ol { margin: 8px 0 0; padding-left: 1.2rem; }
+    #runStatus {
+      margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem;
+      text-align: center; background: rgba(251,191,36,0.1); color: #fde68a;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">∿</div>
+      <h2>17章 うなり</h2>
+      <p class="chapter-label">拍音 · |f₁ − f₂| · 波の合成</p>
+      <a id="back" href="00_folder_waves.html#chapter-17">← メニューに戻る</a>
+      <p id="runStatus">読み込み中…</p>
+    </header>
+
+    <section class="panel">
+      <h3>1. うなりとは何か</h3>
+      <p><strong>うなり（拍）</strong>は、<strong>近い周波数</strong>の2つの音を重ねたとき、大きさが周期的に変化する現象です。</p>
+      <ul>
+        <li>2つの音波を合成（基本波＋倍音）。合成波の<strong>振幅の変化</strong>（うなり）の回数 = <strong>|f₁ − f₂|</strong> ［Hz］</li>
+        <li>1秒間に |f₁ − f₂| 回、強くなったり弱くなったりする</li>
+      </ul>
+      <div class="formula-box">うなりの回数 ［Hz］ ＝ |f₁ − f₂|</div>
+    </section>
+
+    <section class="panel">
+      <h3>2. 2つの波（f₁ · f₂）</h3>
+      <p>青が<strong>波1</strong>（f₁）、赤が<strong>波2</strong>（f₂）。横軸は時間 t［s］です。</p>
+      <div class="two-canvas" style="display:grid;gap:10px;">
+        <div class="canvas-wrap"><canvas id="wave1Canvas"></canvas></div>
+        <div class="canvas-wrap"><canvas id="wave2Canvas"></canvas></div>
+      </div>
+      <p class="canvas-caption">y = Σ Aₙ sin(2π n f t) の倍音合成 — <span id="visHint">Canvas 1/50 時間スケール</span></p>
+      <div class="legend">
+        <span><i class="w1"></i> 波1（青）f₁</span>
+        <span><i class="w2"></i> 波2（赤）f₂</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>3. 合成波（うなり）の描画</h3>
+      <p>緑の<strong>合成波</strong> y = y₁ + y₂。振幅が大きくなったり小さくなったりする<strong>うなり</strong>が見えます。</p>
+      <div class="canvas-wrap canvas-wrap--tall"><canvas id="sumCanvas"></canvas></div>
+      <p class="canvas-caption">合成波 — 包絡線（点線）がうなりの周期を示す</p>
+      <div class="legend">
+        <span><i class="ws"></i> 合成波（緑）</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>4. うなりの回数 ＝ |f₁ − f₂|</h3>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">f₁</span><span class="val" id="outF1">440 Hz</span></div>
+        <div class="readout"><span class="lbl">f₂</span><span class="val" id="outF2">446 Hz</span></div>
+        <div class="readout"><span class="lbl">|f₁ − f₂|</span><span class="val beat" id="outBeat">6 Hz</span></div>
+        <div class="readout"><span class="lbl">うなりの周期</span><span class="val hl" id="outBeatT">0.17 s</span></div>
+      </div>
+      <div class="formula-box" id="beatFormula">|440 − 446| = 6 Hz → 1秒間に 6 回うなる</div>
+    </section>
+
+    <section class="panel">
+      <h3>5. 周波数スライダー（f₁ · f₂）</h3>
+      <div class="param-grid">
+        <label>周波数 f₁
+          <input id="f1Slider" type="range" min="200" max="600" step="1" value="440">
+          <span class="slider-val" id="f1Val">440 Hz</span>
+        </label>
+        <label>周波数 f₂
+          <input id="f2Slider" type="range" min="200" max="600" step="1" value="446">
+          <span class="slider-val" id="f2Val">446 Hz</span>
+        </label>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="modeSlowBtn" class="active">見やすい Canvas（1/50）</button>
+        <button type="button" id="modeRealBtn">実際の波（等倍）</button>
+      </div>
+      <p style="margin:14px 0 6px;font-size:0.86rem;color:#cbd5e1;">楽器モード（音色）— f₁ と f₂ で別々に選べます。うなりの回数 |f₁−f₂| は同じ。</p>
+      <p class="inst-label inst-label--f1">音1（f₁ · 青）の楽器</p>
+      <div class="btn-row instrument-row">
+        <button type="button" id="inst1Piano" class="active">🎹 ピアノ</button>
+        <button type="button" id="inst1Guitar">🎸 ギター</button>
+        <button type="button" id="inst1Trumpet">🎺 トランペット</button>
+        <button type="button" id="inst1Sax">🎷 サックス</button>
+        <button type="button" id="inst1Clarinet">🎵 クラリネット</button>
+        <button type="button" id="inst1Violin">🎻 バイオリン</button>
+      </div>
+      <p class="inst-label inst-label--f2">音2（f₂ · 赤）の楽器</p>
+      <div class="btn-row instrument-row">
+        <button type="button" id="inst2Piano" class="active">🎹 ピアノ</button>
+        <button type="button" id="inst2Guitar">🎸 ギター</button>
+        <button type="button" id="inst2Trumpet">🎺 トランペット</button>
+        <button type="button" id="inst2Sax">🎷 サックス</button>
+        <button type="button" id="inst2Clarinet">🎵 クラリネット</button>
+        <button type="button" id="inst2Violin">🎻 バイオリン</button>
+      </div>
+      <div class="readout-grid" style="margin-top:8px;">
+        <div class="readout"><span class="lbl">f₁ 楽器</span><span class="val hl" id="outInstrument1">ピアノ</span></div>
+        <div class="readout"><span class="lbl">f₂ 楽器</span><span class="val hl" id="outInstrument2">ピアノ</span></div>
+      </div>
+      <div class="insight-box" id="visNote">Canvas はうなりの形を見やすくするため、時間方向を <strong>1/50</strong> に縮小して表示。音の再生は実際の f₁, f₂ です。</div>
+    </section>
+
+    <section class="panel">
+      <h3>6. 音の再生（Web Audio API）</h3>
+      <p>f₁ と f₂ の音を<strong>同時に</strong>鳴らして、実際のうなりを聞けます。</p>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">再生</span><span class="val" id="playState">停止</span></div>
+        <div class="readout"><span class="lbl">f₁</span><span class="val" id="playInstrument1">ピアノ</span></div>
+        <div class="readout"><span class="lbl">f₂</span><span class="val" id="playInstrument2">ピアノ</span></div>
+        <div class="readout"><span class="lbl">音量</span><span class="val" id="playGain">25%</span></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="playBtn" class="btn-play">▶ 再生（f₁ + f₂）</button>
+        <button type="button" id="stopBtn" class="btn-stop">■ 停止</button>
+      </div>
+      <div class="insight-box">Web Audio API：PeriodicWave（倍音）× 2 ＋ GainNode。f₁ と f₂ で<strong>別々の楽器</strong>を同時再生できる。</div>
+    </section>
+
+    <section class="panel">
+      <h3>7. 身の周りのうなりの例</h3>
+      <div class="example-grid">
+        <div class="example-card">
+          <h4>🎹 ピアノの調律</h4>
+          基準音と弦の音の周波数差が小さいとき、うなりが聞こえる。うなりが消える＝同じ高さに調律できたサイン。
+        </div>
+        <div class="example-card">
+          <h4>🔔 チューニングフォーク</h4>
+          2本の音叉（わずかに f が違う）を同時に鳴らすと、1秒間に |f₁−f₂| 回のうなりが聞こえる。
+        </div>
+        <div class="example-card">
+          <h4>🎸 弦楽器</h4>
+          2つの弦を少しずらした高さで鳴らすとビートが生じ、和音の豊かさや調律の目安になる。
+        </div>
+        <div class="example-card">
+          <h4>📡 電波（ビート現象）</h4>
+          近い周波数の電磁波を混ぜても同様に、低い周波数のうなり（ビート信号）が現れる。
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>8. 高校生向けまとめ</h3>
+      <div class="summary-box">
+        <ol>
+          <li>近い周波数 f₁, f₂ の音を重ねると<strong>うなり</strong>が生じる。</li>
+          <li>うなりの回数 ［Hz］ ＝ <strong>|f₁ − f₂|</strong>。1秒間にこの回数だけ強弱が繰り返す。</li>
+          <li>うなりの周期 T<sub>拍</sub> ＝ 1 / |f₁ − f₂|。</li>
+          <li>合成は<strong>波の重ね合わせ</strong> y = y₁ + y₂。強め合いと弱め合いが交互に起きる。</li>
+          <li>Canvas で形を、Web Audio で実際の音を確認できる。楽器モードで<strong>音色</strong>も比較できる。</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // ── パラメータ ──
+      var CANVAS_TIME_SCALE = 50;  // Canvas：うなりを見やすくする時間スケール（1/50）
+      var A = 0.45;
+      var GAIN = 0.18;
+      var f1 = 440;
+      var f2 = 446;
+      var visualMode = "slow";     // "slow" | "real"
+      var instrumentMode1 = "piano";
+      var instrumentMode2 = "piano";
+      var animT = 0;
+      var lastTs = 0;
+      var isPlaying = false;
+
+      // 楽器ごとの倍音強度（1倍音＝基本波、0＝その倍音なし）
+      var INSTRUMENTS = {
+        piano: {
+          name: "ピアノ",
+          hint: "1〜8 倍音（豊かな響き）",
+          harmonics: [1, 0.55, 0.38, 0.28, 0.2, 0.15, 0.11, 0.08]
+        },
+        guitar: {
+          name: "ギター",
+          hint: "奇数倍音が強い（弦の叩き音）",
+          harmonics: [1, 0.18, 0.52, 0.12, 0.28, 0.08, 0.14, 0.06]
+        },
+        trumpet: {
+          name: "トランペット",
+          hint: "高次倍音が強い（金管の明るさ）",
+          harmonics: [1, 0.42, 0.72, 0.55, 0.38, 0.26, 0.18]
+        },
+        sax: {
+          name: "サックス",
+          hint: "中〜高次倍音が豊か（リード管）",
+          harmonics: [1, 0.35, 0.58, 0.42, 0.28, 0.2, 0.14]
+        },
+        clarinet: {
+          name: "クラリネット",
+          hint: "奇数倍音のみ（管の共鳴）",
+          harmonics: [1, 0, 0.72, 0, 0.48, 0, 0.28, 0, 0.16]
+        },
+        violin: {
+          name: "バイオリン",
+          hint: "1〜9 倍音（弓の摩擦）",
+          harmonics: [1, 0.88, 0.72, 0.58, 0.48, 0.4, 0.33, 0.27, 0.22]
+        }
+      };
+
+      var INST1_BTN_IDS = {
+        piano: "inst1Piano",
+        guitar: "inst1Guitar",
+        trumpet: "inst1Trumpet",
+        sax: "inst1Sax",
+        clarinet: "inst1Clarinet",
+        violin: "inst1Violin"
+      };
+      var INST2_BTN_IDS = {
+        piano: "inst2Piano",
+        guitar: "inst2Guitar",
+        trumpet: "inst2Trumpet",
+        sax: "inst2Sax",
+        clarinet: "inst2Clarinet",
+        violin: "inst2Violin"
+      };
+
+      var normHarmonics1 = normalizeHarmonics(INSTRUMENTS.piano.harmonics);
+      var normHarmonics2 = normalizeHarmonics(INSTRUMENTS.piano.harmonics);
+      var periodicWaveCache = {};
+
+      var wave1Canvas = document.getElementById("wave1Canvas");
+      var wave2Canvas = document.getElementById("wave2Canvas");
+      var sumCanvas = document.getElementById("sumCanvas");
+
+      // ── Web Audio API ──
+      var audioCtx = null;
+      var osc1 = null;
+      var osc2 = null;
+      var gainNode = null;
+
+      function normalizeHarmonics(harmonics) {
+        var sum = 0;
+        for (var i = 0; i < harmonics.length; i++) sum += harmonics[i];
+        if (sum <= 0) return [1];
+        var out = [];
+        for (var j = 0; j < harmonics.length; j++) out.push(harmonics[j] / sum);
+        return out;
+      }
+
+      function getInstrument(slot) {
+        var mode = slot === 2 ? instrumentMode2 : instrumentMode1;
+        return INSTRUMENTS[mode] || INSTRUMENTS.piano;
+      }
+
+      function refreshHarmonics() {
+        normHarmonics1 = normalizeHarmonics(getInstrument(1).harmonics);
+        normHarmonics2 = normalizeHarmonics(getInstrument(2).harmonics);
+      }
+
+      // 倍音合成：y = A × Σ aₙ sin(2π n f t)
+      function sampleInstrumentTone(f, t, harmonics) {
+        var y = 0;
+        for (var i = 0; i < harmonics.length; i++) {
+          var n = i + 1;
+          if (harmonics[i] <= 0) continue;
+          y += harmonics[i] * Math.sin(2 * Math.PI * n * f * t);
+        }
+        return A * y;
+      }
+
+      function getTimeScale() {
+        return visualMode === "real" ? 1 : CANVAS_TIME_SCALE;
+      }
+
+      function canvasF1() { return f1 / getTimeScale(); }
+      function canvasF2() { return f2 / getTimeScale(); }
+
+      function beatFreq() { return Math.abs(f1 - f2); }
+      function canvasBeatFreq() { return Math.abs(canvasF1() - canvasF2()); }
+
+      function wave1(t) { return sampleInstrumentTone(canvasF1(), t, normHarmonics1); }
+      function wave2(t) { return sampleInstrumentTone(canvasF2(), t, normHarmonics2); }
+      function waveSum(t) { return wave1(t) + wave2(t); }
+
+      function fitCanvas(canvas) {
+        var wrap = canvas.parentElement;
+        var w = wrap.clientWidth;
+        var isTall = wrap.classList.contains("canvas-wrap--tall");
+        var h = isTall ? Math.max(220, 260) : Math.max(170, 200);
+        var dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.height = h + "px";
+        var ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx: ctx, w: w, h: h };
+      }
+
+      // ── 時間軸波形の描画 ──
+      function drawTimeWave(view, fn, color, label, showEnvelope) {
+        var ctx = view.ctx;
+        var w = view.w, h = view.h;
+        var midY = h / 2;
+        var bf = canvasBeatFreq();
+        var win = bf > 0.05 ? Math.min(3 / bf, 4) : 2;
+        var t0 = animT - win;
+
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.3)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, midY);
+        ctx.lineTo(w, midY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // うなりの包絡線（合成波用）
+        if (showEnvelope && bf > 0) {
+          ctx.strokeStyle = "rgba(253,230,138,0.45)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          for (var px = 0; px <= w; px += 2) {
+            var t = t0 + (px / w) * win;
+            var env = 2 * A * Math.abs(Math.cos(Math.PI * (f1 - f2) * t / getTimeScale()));
+            var py = midY - env * (h * 0.38);
+            if (px === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.beginPath();
+        for (var px2 = 0; px2 <= w; px2 += 2) {
+          var t2 = t0 + (px2 / w) * win;
+          var y = fn(t2);
+          var py2 = midY - y * (h * 0.38);
+          if (px2 === 0) ctx.moveTo(px2, py2);
+          else ctx.lineTo(px2, py2);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("t", 6, h - 4);
+        if (label) {
+          ctx.fillStyle = color;
+          ctx.font = "10px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText(label, 8, 14);
+        }
+      }
+
+      function updateReadouts() {
+        f1 = Number(document.getElementById("f1Slider").value);
+        f2 = Number(document.getElementById("f2Slider").value);
+        var bf = beatFreq();
+        var bt = bf > 0 ? 1 / bf : Infinity;
+
+        document.getElementById("f1Val").textContent = f1 + " Hz";
+        document.getElementById("f2Val").textContent = f2 + " Hz";
+        document.getElementById("outF1").textContent = f1 + " Hz";
+        document.getElementById("outF2").textContent = f2 + " Hz";
+        document.getElementById("outBeat").textContent = bf.toFixed(1) + " Hz";
+        document.getElementById("outBeatT").textContent =
+          bf > 0 ? (bt >= 0.1 ? bt.toFixed(2) + " s" : (bt * 1000).toFixed(0) + " ms") : "—";
+        document.getElementById("beatFormula").textContent =
+          "|" + f1 + " − " + f2 + "| = " + bf.toFixed(1) + " Hz → 1秒間に " + bf.toFixed(1) + " 回うなる";
+
+        var inst1 = getInstrument(1);
+        var inst2 = getInstrument(2);
+        document.getElementById("outInstrument1").textContent = inst1.name;
+        document.getElementById("outInstrument2").textContent = inst2.name;
+        document.getElementById("playInstrument1").textContent = inst1.name;
+        document.getElementById("playInstrument2").textContent = inst2.name;
+
+        var visLabel = visualMode === "real"
+          ? "Canvas 等倍（実際の f · うなりは速い）"
+          : "Canvas 1/" + CANVAS_TIME_SCALE + " 時間スケール（うなりを見やすく）";
+        document.getElementById("visHint").textContent = visLabel;
+        document.getElementById("visNote").innerHTML =
+          visualMode === "real"
+            ? "等倍モード … 実際の f で描画。うなりは速く、波形は密に見える。"
+            : "Canvas はうなりの形を見やすくするため、時間方向を <strong>1/" + CANVAS_TIME_SCALE + "</strong> に縮小。音の再生は実際の f₁, f₂。";
+
+        if (isPlaying && osc1 && osc2 && gainNode) {
+          osc1.frequency.setTargetAtTime(f1, audioCtx.currentTime, 0.02);
+          osc2.frequency.setTargetAtTime(f2, audioCtx.currentTime, 0.02);
+        }
+      }
+
+      // PeriodicWave を楽器モードから生成（Web Audio 音色）
+      function buildPeriodicWave(mode) {
+        initAudio();
+        if (periodicWaveCache[mode]) return periodicWaveCache[mode];
+        var h = normalizeHarmonics(INSTRUMENTS[mode].harmonics);
+        var len = h.length + 1;
+        var real = new Float32Array(len);
+        var imag = new Float32Array(len);
+        for (var i = 0; i < h.length; i++) {
+          if (h[i] > 0) imag[i + 1] = h[i];
+        }
+        periodicWaveCache[mode] = audioCtx.createPeriodicWave(real, imag);
+        return periodicWaveCache[mode];
+      }
+
+      // ── Web Audio APIの設定 ──
+      function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+
+      function startSound() {
+        initAudio();
+        stopSound(false);
+        var wave1Audio = buildPeriodicWave(instrumentMode1);
+        var wave2Audio = buildPeriodicWave(instrumentMode2);
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = GAIN;
+        osc1 = audioCtx.createOscillator();
+        osc2 = audioCtx.createOscillator();
+        osc1.setPeriodicWave(wave1Audio);
+        osc2.setPeriodicWave(wave2Audio);
+        osc1.frequency.value = f1;
+        osc2.frequency.value = f2;
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc1.start();
+        osc2.start();
+        isPlaying = true;
+        document.getElementById("playBtn").classList.add("active");
+        document.getElementById("playState").textContent = "再生中";
+        document.getElementById("runStatus").textContent =
+          "再生中 — " + getInstrument(1).name + " + " + getInstrument(2).name +
+          " · f₁=" + f1 + " Hz · f₂=" + f2 + " Hz · うなり " + beatFreq().toFixed(1) + " Hz";
+      }
+
+      function stopSound(update) {
+        [osc1, osc2].forEach(function (o) {
+          if (o) { try { o.stop(); } catch (e) {} o.disconnect(); }
+        });
+        if (gainNode) gainNode.disconnect();
+        osc1 = osc2 = gainNode = null;
+        isPlaying = false;
+        document.getElementById("playBtn").classList.remove("active");
+        document.getElementById("playState").textContent = "停止";
+        if (update !== false) {
+          document.getElementById("runStatus").textContent =
+            "停止中 — f₁, f₂ を変えて「再生」でうなりを聴く";
+        }
+      }
+
+      function setVisualMode(mode) {
+        visualMode = mode;
+        document.getElementById("modeSlowBtn").classList.toggle("active", mode === "slow");
+        document.getElementById("modeRealBtn").classList.toggle("active", mode === "real");
+        updateReadouts();
+      }
+
+      function setInstrument(slot, mode) {
+        if (!INSTRUMENTS[mode]) return;
+        var btnMap = slot === 2 ? INST2_BTN_IDS : INST1_BTN_IDS;
+        if (slot === 2) instrumentMode2 = mode;
+        else instrumentMode1 = mode;
+        Object.keys(btnMap).forEach(function (key) {
+          document.getElementById(btnMap[key]).classList.toggle("active", key === mode);
+        });
+        refreshHarmonics();
+        updateReadouts();
+        if (isPlaying) startSound();
+      }
+
+      function bindInstrumentButtons(slot, btnMap) {
+        Object.keys(btnMap).forEach(function (mode) {
+          document.getElementById(btnMap[mode]).addEventListener("click", function () {
+            setInstrument(slot, mode);
+          });
+        });
+      }
+
+      document.getElementById("f1Slider").addEventListener("input", updateReadouts);
+      document.getElementById("f2Slider").addEventListener("input", updateReadouts);
+      document.getElementById("modeSlowBtn").addEventListener("click", function () { setVisualMode("slow"); });
+      document.getElementById("modeRealBtn").addEventListener("click", function () { setVisualMode("real"); });
+      bindInstrumentButtons(1, INST1_BTN_IDS);
+      bindInstrumentButtons(2, INST2_BTN_IDS);
+      document.getElementById("playBtn").addEventListener("click", startSound);
+      document.getElementById("stopBtn").addEventListener("click", function () { stopSound(true); });
+
+      function frame(ts) {
+        if (!lastTs) lastTs = ts;
+        animT += Math.min((ts - lastTs) / 1000, 0.05);
+        lastTs = ts;
+
+        drawTimeWave(fitCanvas(wave1Canvas), wave1, "#38bdf8",
+          "f₁=" + f1 + " Hz · " + getInstrument(1).name, false);
+        drawTimeWave(fitCanvas(wave2Canvas), wave2, "#f87171",
+          "f₂=" + f2 + " Hz · " + getInstrument(2).name, false);
+        drawTimeWave(fitCanvas(sumCanvas), waveSum, "#4ade80", "y₁+y₂", true);
+
+        requestAnimationFrame(frame);
+      }
+
+      document.getElementById("playGain").textContent = Math.round(GAIN * 100) + "%";
+      refreshHarmonics();
+      updateReadouts();
+      document.getElementById("runStatus").textContent =
+        "準備完了 — 楽器を選び f₁, f₂ を変えてうなりを確認";
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

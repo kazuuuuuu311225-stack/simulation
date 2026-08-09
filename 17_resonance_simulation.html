@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>17章 共振シミュレーション — 外力周波数スライダー付き</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --slate-bg: rgba(12, 18, 32, 0.82); --slate-border: rgba(251, 191, 36, 0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+      --wave: #38bdf8; --res: #4ade80; --drv: #f87171;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #050810 0%, #12100a 45%, #0a1220 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.28), rgba(74,222,128,0.2));
+      border: 1px solid rgba(253,230,138,0.35); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #fef3c7;
+      background: rgba(251,191,36,0.14); border: 1px solid rgba(253,230,138,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li { font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 12px; border-radius: 12px; text-align: center;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);
+      color: #fde68a; font-variant-numeric: tabular-nums; font-size: 0.9rem; line-height: 1.6;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #070b14; border: 1px solid rgba(251,191,36,0.2);
+    }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(220px, 30dvh); min-height: 180px; }
+    .canvas-wrap--tall canvas { height: min(280px, 36dvh); min-height: 240px; }
+    .canvas-wrap--swing canvas { height: min(200px, 28dvh); min-height: 170px; }
+    .canvas-caption { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+    label { display: block; font-size: 0.86rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    input[type="number"] {
+      width: 100%; padding: 8px 10px; border-radius: 8px; font-family: inherit;
+      font-size: 0.9rem; color: #fff; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(148,163,184,0.3);
+    }
+    .slider-val { font-size: 0.8rem; font-weight: 600; color: #fde68a; }
+    .param-grid { display: grid; gap: 12px; margin-top: 10px; }
+    @media (min-width:640px) { .param-grid { grid-template-columns: 1fr 1fr; } }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+    @media (min-width:640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.18);
+    }
+    .readout .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .readout .val { font-size: 0.95rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+    .readout .val.hl { color: #86efac; }
+    .readout .val.warn { color: #fde68a; }
+    .readout .val.drv { color: #fca5a5; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .btn-row button {
+      flex: 1 1 calc(50% - 4px); min-height: 42px; padding: 8px 12px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .btn-row button.active { background: rgba(251,191,36,0.22); color: #fef3c7; }
+    .example-grid { display: grid; gap: 10px; margin-top: 10px; }
+    @media (min-width:640px) { .example-grid { grid-template-columns: 1fr 1fr; } }
+    .example-card {
+      padding: 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.18);
+      font-size: 0.86rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .example-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--accent-light); }
+    .insight-box {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.86rem; line-height: 1.7; color: #bae6fd;
+    }
+    .insight-box.res {
+      background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.22); color: #bbf7d0;
+    }
+    .insight-box.warn {
+      background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.22); color: #fde68a;
+    }
+    .summary-box {
+      padding: 14px; border-radius: 12px;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.22);
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .summary-box ol { margin: 8px 0 0; padding-left: 1.2rem; }
+    #runStatus {
+      margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem;
+      text-align: center; background: rgba(251,191,36,0.1); color: #fde68a;
+    }
+    .amp-bar-wrap {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.18);
+    }
+    .amp-bar-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+    .amp-bar-track {
+      height: 22px; border-radius: 999px; background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.2); overflow: hidden;
+    }
+    .amp-bar-fill {
+      height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #4ade80);
+      transition: width 0.15s ease-out;
+    }
+    .amp-bar-fill.hot { background: linear-gradient(90deg, #fde68a, #fbbf24); }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">〰</div>
+      <h2>17章 共振シミュレーション</h2>
+      <p class="chapter-label">外力周波数 f<sub>ext</sub> · 固有振動数 f₀ · 減衰付き強制振動</p>
+      <a id="back" href="00_folder_waves.html#chapter-17">← メニューに戻る</a>
+      <p id="runStatus">読み込み中…</p>
+    </header>
+
+    <section class="panel">
+      <h3>1. 共振・共鳴とは何か</h3>
+      <p>周期外力の<strong>振動数</strong>が物体の<strong>固有振動数</strong>と一致すると、振幅が大きくなる現象を<strong>共振</strong>（共鳴）といいます。</p>
+      <ul>
+        <li>一致度が高いほど振幅が大きくなる</li>
+        <li>一致から外れると振幅は急速に小さくなる</li>
+        <li>ブランコを同じタイミングで押すと振れ幅が増える — 身近な例</li>
+      </ul>
+      <div class="formula-box">共振条件：f<sub>ext</sub> ≈ f₀</div>
+    </section>
+
+    <section class="panel">
+      <h3>2. ブランコでの共振イメージ</h3>
+      <p>左：周期に合わせて押す → 振れ幅が増える（<strong>共振</strong>）。右：周期がズレる → 振れ幅は増えない。</p>
+      <div class="canvas-wrap canvas-wrap--swing"><canvas id="swingCanvas"></canvas></div>
+      <p class="canvas-caption">左＝f<sub>ext</sub> ≈ f₀（共振） · 右＝f<sub>ext</sub> ≠ f₀（非共振）</p>
+    </section>
+
+    <section class="panel">
+      <h3>3. 固有振動数と外力周波数の関係</h3>
+      <p>物体には固有振動数 <strong>f₀</strong> があり、外力の周波数 <strong>f<sub>ext</sub></strong> を変えると振幅の大きさが変わります。</p>
+      <div class="formula-box">
+        x″ + 2β x′ + ω₀² x = F cos(ω<sub>ext</sub> t)<br>
+        ω₀ = 2π f₀　　ω<sub>ext</sub> = 2π f<sub>ext</sub>
+      </div>
+      <div class="insight-box res" id="matchHint">f<sub>ext</sub> を f₀ に近づけると振幅が最大になります（§4〜7 で操作）。</div>
+    </section>
+
+    <section class="panel">
+      <h3>表示モード切り替え（Canvas のみ）</h3>
+      <p>Canvas 上の波の進行速度を切り替えます。<strong>物理的な振幅の大きさ</strong>はどちらのモードでも同じです。</p>
+      <div class="btn-row">
+        <button type="button" id="modeSlowBtn" class="active">見やすい速度（1/600）</button>
+        <button type="button" id="modeRealBtn">実際の波（等倍）</button>
+      </div>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">Canvas 表示</span><span class="val hl" id="outVisMode">1/600 倍速</span></div>
+        <div class="readout"><span class="lbl">表示上の1周期</span><span class="val" id="outVisPeriod">約600 s</span></div>
+        <div class="readout"><span class="lbl">共振振幅</span><span class="val warn" id="outVisAmpNote">モード非依存</span></div>
+      </div>
+      <div class="insight-box" id="visSlowNote">見やすい速度 … 440 Hz なら 1 周期 ≈ 1.4 s。f<sub>ext</sub> = 1 Hz なら 1 周期 ≈ 600 s と非常にゆっくり。</div>
+      <div class="insight-box warn" id="visRealNote" style="display:none;">等倍モード … 440 Hz なら 1 周期 ≈ 2.3 ms と速く<strong>ほとんど見えない</strong>。f₀ ≈ 1 Hz の強制振動は等倍でも追いやすい。</div>
+    </section>
+
+    <section class="panel">
+      <h3>4. 共振シミュレーション（Canvas）</h3>
+      <p>減衰付き強制振動 <strong>x″ + 2β x′ + ω₀² x = F cos(ω<sub>ext</sub> t)</strong> を数値計算し、振幅の時間変化を表示します。</p>
+      <div class="canvas-wrap canvas-wrap--tall"><canvas id="simCanvas"></canvas></div>
+      <p class="canvas-caption">上：時間波形 · 下：共振曲線（相対振幅） — <span id="visCaptionHint">Canvas 1/600 倍速</span></p>
+    </section>
+
+    <section class="panel">
+      <h3>5. 外力周波数スライダー（f<sub>ext</sub>）</h3>
+      <label>外力周波数 f<sub>ext</sub>（0〜3 Hz）
+        <input id="fextSlider" type="range" min="0" max="3" step="0.01" value="1">
+        <span class="slider-val" id="fextVal">1.00 Hz</span>
+      </label>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">f<sub>ext</sub></span><span class="val drv" id="outFext">1.00 Hz</span></div>
+        <div class="readout"><span class="lbl">f₀（固有）</span><span class="val hl" id="outF0ro">1.00 Hz</span></div>
+        <div class="readout"><span class="lbl">|f<sub>ext</sub>−f₀|</span><span class="val" id="outDelta">0.00 Hz</span></div>
+        <div class="readout"><span class="lbl">相対振幅</span><span class="val warn" id="outRelAmp">100%</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>6. 固有振動数 f₀ の設定</h3>
+      <div class="param-grid">
+        <label>固有振動数 f₀［Hz］
+          <input id="f0Input" type="number" min="0.2" max="3" step="0.05" value="1">
+        </label>
+        <label>減衰係数 β（表示用・小さめ）
+          <input id="betaSlider" type="range" min="0.02" max="0.2" step="0.01" value="0.06">
+          <span class="slider-val" id="betaVal">0.06</span>
+        </label>
+      </div>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">f₀</span><span class="val hl" id="outF0">1.00 Hz</span></div>
+        <div class="readout"><span class="lbl">ω₀</span><span class="val" id="outW0">6.28 rad/s</span></div>
+        <div class="readout"><span class="lbl">β</span><span class="val" id="outBeta">0.06</span></div>
+        <div class="readout"><span class="lbl">定常振幅 A</span><span class="val warn" id="outSteadyA">—</span></div>
+      </div>
+      <div class="formula-box" id="resFormula">f<sub>ext</sub> = f₀ → 共振！ 振幅最大</div>
+    </section>
+
+    <section class="panel">
+      <h3>7. 振幅が増大する様子の可視化</h3>
+      <p>シミュレーションから求めた<strong>現在の振幅</strong>と、時間波形を表示します。f<sub>ext</sub> ≈ f₀ のときバーが最大になります。</p>
+      <div class="amp-bar-wrap">
+        <div class="amp-bar-label">振幅の最大値（定常状態に対する比）</div>
+        <div class="amp-bar-track"><div class="amp-bar-fill" id="ampBarFill"></div></div>
+      </div>
+      <div class="canvas-wrap"><canvas id="waveCanvas"></canvas></div>
+      <p class="canvas-caption">強制振動の波形 — 振幅は f<sub>ext</sub> と f₀ の差で決まる（表示速度のみモード依存）</p>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">瞬時振幅 |x|</span><span class="val" id="outInstAmp">0.00</span></div>
+        <div class="readout"><span class="lbl">定常振幅 A</span><span class="val hl" id="outAmpMax">—</span></div>
+        <div class="readout"><span class="lbl">共振度</span><span class="val warn" id="outResLevel">—</span></div>
+        <div class="readout"><span class="lbl">シミュレーション時間</span><span class="val" id="outSimT">0.0 s</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>8. 共振の例</h3>
+      <div class="example-grid">
+        <div class="example-card">
+          <h4>🥂 ガラスが割れる</h4>
+          特定の音の周波数がガラスの<strong>固有振動数</strong>と一致すると、微小な力でも振幅が増大し、割れることがある。
+        </div>
+        <div class="example-card">
+          <h4>🏢 建物の揺れ</h4>
+          地震の周期が建物の固有周期と一致すると<strong>共振</strong>し、想定以上に大きく揺れる。
+        </div>
+        <div class="example-card">
+          <h4>🎻 楽器の胴の共鳴</h4>
+          弦やリードの音が胴（空気・板）の固有振動数と一致すると、音が<strong>大きく響く</strong>。
+        </div>
+        <div class="example-card">
+          <h4>🎠 ブランコ</h4>
+          固有周期に合わせて押すと振幅が増える。ずれたタイミングでは増えない — 本ページ §2 の図。
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>9. 高校生向けまとめ</h3>
+      <div class="summary-box">
+        <ol>
+          <li><strong>共振</strong> … 外力の振動数 f<sub>ext</sub> が固有振動数 f₀ と一致すると振幅が大きくなる。</li>
+          <li>減衰付き強制振動：x″ + 2β x′ + ω₀² x = F cos(ω<sub>ext</sub> t)。β が小さいほど共振が鋭い。</li>
+          <li>f<sub>ext</sub> ≈ f₀ のとき定常振幅 A が最大。離れると A は急速に小さくなる。</li>
+          <li>ブランコ · ガラス · 建物 · 楽器など、身の回りに共振の例がある。</li>
+          <li>f<sub>ext</sub> は 0〜3 Hz（ブランコ・建物など）— Canvas の表示速度（1/600 / 等倍）は<strong>見やすさのため</strong>に変えているだけ。</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // ── 定数・状態 ──
+      var VISUAL_SPEED_DIVISOR = 600;
+      var visualMode = "slow";       // "slow" | "real"
+      var F_DRIVE = 1.0;             // 外力の大きさ
+      var f0 = 1.0;
+      var fExt = 1.0;
+      var beta = 0.06;
+      var simT = 0;
+      var x = 0;
+      var v = 0;
+      var animT = 0;
+      var lastTs = 0;
+      var history = [];
+      var maxHistory = 600;
+
+      // ブランコ用（左＝共振・右＝非共振）
+      var swingResAmp = 0.12;
+      var swingOffAmp = 0.12;
+      var swingResPhase = 0;
+      var swingOffPhase = 0;
+
+      var swingCanvas = document.getElementById("swingCanvas");
+      var simCanvas = document.getElementById("simCanvas");
+      var waveCanvas = document.getElementById("waveCanvas");
+
+      function getVisualDivisor() {
+        return visualMode === "real" ? 1 : VISUAL_SPEED_DIVISOR;
+      }
+
+      function displayModeLabel() {
+        return visualMode === "real" ? "等倍（実際の波）" : "1/" + VISUAL_SPEED_DIVISOR + " 倍速";
+      }
+
+      function formatPeriod(sec) {
+        if (sec >= 10) return "約" + sec.toFixed(0) + " s";
+        if (sec >= 0.1) return "約" + sec.toFixed(1) + " s";
+        if (sec >= 0.001) return "約" + (sec * 1000).toFixed(2) + " ms";
+        return "約" + (sec * 1000000).toFixed(0) + " μs";
+      }
+
+      function visualPeriodSec(f) {
+        if (f <= 0) return Infinity;
+        return (1 / f) * getVisualDivisor();
+      }
+
+      // 定常振幅（周波数応答）
+      function steadyAmplitude(f0Val, fExtVal, betaVal) {
+        if (fExtVal <= 0.001) return 0;
+        var w0 = 2 * Math.PI * f0Val;
+        var w = 2 * Math.PI * fExtVal;
+        var denom = Math.sqrt(Math.pow(w0 * w0 - w * w, 2) + Math.pow(2 * betaVal * w, 2));
+        return F_DRIVE / denom;
+      }
+
+      // 相対振幅（共振曲線用 · f₀ で正規化）
+      function resonanceGain(fExtVal, fNat, betaVal) {
+        if (fExtVal <= 0.001) return 0;
+        var aMax = steadyAmplitude(fNat, fNat, betaVal);
+        var aNow = steadyAmplitude(fNat, fExtVal, betaVal);
+        if (aMax <= 0) return 0;
+        return aNow / aMax;
+      }
+
+      function fitCanvas(canvas, tall) {
+        var wrap = canvas.parentElement;
+        var w = wrap.clientWidth;
+        var h = tall ? Math.max(240, 280) : Math.max(180, 220);
+        if (canvas === swingCanvas) h = Math.max(170, 200);
+        var dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.height = h + "px";
+        var ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx: ctx, w: w, h: h };
+      }
+
+      // ── 数値積分（減衰付き強制振動） ──
+      function resetSim() {
+        x = 0;
+        v = 0;
+        simT = 0;
+        history.length = 0;
+      }
+
+      function stepSim(dt) {
+        if (fExt <= 0.001) {
+          // 外力なし — 自由減衰
+          var w0 = 2 * Math.PI * f0;
+          var a0 = -2 * beta * v - w0 * w0 * x;
+          v += a0 * dt;
+          x += v * dt;
+        } else {
+          var w0b = 2 * Math.PI * f0;
+          var wb = 2 * Math.PI * fExt;
+          var tMid = simT + dt * 0.5;
+          // RK4
+          function accel(t, pos, vel) {
+            return F_DRIVE * Math.cos(wb * t) - 2 * beta * vel - w0b * w0b * pos;
+          }
+          var k1v = accel(simT, x, v);
+          var k1x = v;
+          var k2v = accel(tMid, x + k1x * dt * 0.5, v + k1v * dt * 0.5);
+          var k2x = v + k1v * dt * 0.5;
+          var k3v = accel(tMid, x + k2x * dt * 0.5, v + k2v * dt * 0.5);
+          var k3x = v + k2v * dt * 0.5;
+          var k4v = accel(simT + dt, x + k3x * dt, v + k3v * dt);
+          var k4x = v + k3v * dt;
+          v += (k1v + 2 * k2v + 2 * k3v + k4v) * dt / 6;
+          x += (k1x + 2 * k2x + 2 * k3x + k4x) * dt / 6;
+        }
+        simT += dt;
+        history.push({ t: simT, x: x });
+        if (history.length > maxHistory) history.shift();
+      }
+
+      // ── §2 ブランコ ──
+      function drawSwing(view) {
+        var ctx = view.ctx;
+        var w = view.w, h = view.h;
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+
+        function drawOne(cx, label, amp, phase, inSync, color) {
+          var pivotY = 28;
+          var ropeLen = h * 0.52;
+          var angle = amp * Math.sin(phase);
+          var seatX = cx + ropeLen * Math.sin(angle);
+          var seatY = pivotY + ropeLen * Math.cos(angle);
+
+          ctx.strokeStyle = "rgba(148,163,184,0.35)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx - 20, pivotY);
+          ctx.lineTo(cx + 20, pivotY);
+          ctx.stroke();
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, pivotY);
+          ctx.lineTo(seatX, seatY);
+          ctx.stroke();
+
+          ctx.fillStyle = inSync ? "#fde68a" : "#64748b";
+          ctx.beginPath();
+          ctx.arc(seatX, seatY + 8, 14, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = inSync ? "#86efac" : "#94a3b8";
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(label, cx, h - 10);
+          ctx.textAlign = "left";
+        }
+
+        drawOne(w * 0.28, "周期に合わせて押す → 増幅", swingResAmp, swingResPhase, true, "#4ade80");
+        drawOne(w * 0.72, "周期がズレる → 増えない", swingOffAmp, swingOffPhase, false, "#64748b");
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("f_ext ≈ f₀", w * 0.28, 14);
+        ctx.fillText("f_ext ≠ f₀", w * 0.72, 14);
+        ctx.textAlign = "left";
+      }
+
+      function updateSwing(dt) {
+        var fSwing = f0;
+        var omega = 2 * Math.PI * fSwing;
+        swingResPhase += omega * dt;
+        swingOffPhase += omega * 1.37 * dt; // 非共振：ずれた周期
+
+        // 共振側：押すタイミングが合う → 振幅増大（上限付き）
+        if (Math.abs(fExt - f0) < 0.08) {
+          swingResAmp = Math.min(0.55, swingResAmp + 0.015 * resonanceGain(fExt, f0, beta));
+        } else {
+          swingResAmp = Math.max(0.12, swingResAmp * 0.998);
+        }
+        swingOffAmp = Math.max(0.12, Math.min(0.18, swingOffAmp + (Math.random() - 0.5) * 0.002));
+      }
+
+      // ── §4 シミュレーション Canvas（波形 + 共振曲線） ──
+      function drawSim(view) {
+        var ctx = view.ctx;
+        var w = view.w, h = view.h;
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+
+        var split = w * 0.42;
+        var gain = resonanceGain(fExt, f0, beta);
+        var aSteady = steadyAmplitude(f0, fExt, beta);
+        var aMax = steadyAmplitude(f0, f0, beta);
+
+        // 左：時間波形（履歴）
+        var pad = { l: 12, r: 8, t: 22, b: 28 };
+        var gw = split - pad.l - pad.r;
+        var gh = h - pad.t - pad.b;
+        var midY = pad.t + gh / 2;
+        var yScale = gh * 0.38 / Math.max(aMax * 1.1, 0.01);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(pad.l, midY);
+        ctx.lineTo(pad.l + gw, midY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (history.length > 1) {
+          ctx.beginPath();
+          for (var i = 0; i < history.length; i++) {
+            var px = pad.l + (i / (history.length - 1)) * gw;
+            var py = midY - history[i].x * yScale;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.strokeStyle = gain > 0.85 ? "#fde68a" : "#38bdf8";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("時間波形 x(t)", pad.l, 14);
+        ctx.fillText("A = " + aSteady.toFixed(3), pad.l, h - 8);
+
+        // 右：共振曲線
+        var gPad = { l: split + 16, r: 12, t: 20, b: 32 };
+        var gW = w - gPad.l - gPad.r;
+        var gH = h - gPad.t - gPad.b;
+        var fMin = 0, fMax = 3;
+
+        ctx.strokeStyle = "rgba(148,163,184,0.3)";
+        ctx.beginPath();
+        ctx.moveTo(gPad.l, gPad.t + gH);
+        ctx.lineTo(gPad.l + gW, gPad.t + gH);
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (var px = 0; px <= gW; px += 2) {
+          var fVal = fMin + (px / gW) * (fMax - fMin);
+          var gVal = resonanceGain(fVal, f0, beta);
+          var py2 = gPad.t + gH - gVal * gH * 0.92;
+          if (px === 0) ctx.moveTo(gPad.l + px, py2);
+          else ctx.lineTo(gPad.l + px, py2);
+        }
+        ctx.strokeStyle = "#4ade80";
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        var mx = gPad.l + ((Math.min(fMax, Math.max(fMin, fExt)) - fMin) / (fMax - fMin)) * gW;
+        ctx.strokeStyle = "#f87171";
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(mx, gPad.t);
+        ctx.lineTo(mx, gPad.t + gH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#f87171";
+        ctx.beginPath();
+        ctx.arc(mx, gPad.t + gH - gain * gH * 0.92, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("f_ext [Hz]", gPad.l + gW - 36, h - 8);
+        ctx.fillStyle = "#86efac";
+        ctx.fillText("共振曲線", gPad.l, gPad.t - 4);
+
+        // f₀ マーカー
+        var f0x = gPad.l + ((f0 - fMin) / (fMax - fMin)) * gW;
+        ctx.strokeStyle = "#fde68a";
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath();
+        ctx.moveTo(f0x, gPad.t);
+        ctx.lineTo(f0x, gPad.t + gH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#fde68a";
+        ctx.fillText("f₀", f0x + 3, gPad.t + 10);
+      }
+
+      // ── §7 波形 Canvas（表示速度はモード依存 · 振幅は物理値） ──
+      function drawWave(view) {
+        var ctx = view.ctx;
+        var w = view.w, h = view.h;
+        var midY = h / 2;
+        var gain = resonanceGain(fExt, f0, beta);
+        var aSteady = steadyAmplitude(f0, fExt, beta);
+        var visDiv = getVisualDivisor();
+        var omegaVis = fExt > 0.001 ? (2 * Math.PI * fExt) / visDiv : 0;
+        var win = visualMode === "real" && fExt > 5 ? 0.05 : 4;
+
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.3)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, midY);
+        ctx.lineTo(w, midY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 実際の x(t) 履歴（物理時間）を薄く重ねる
+        if (history.length > 2) {
+          ctx.beginPath();
+          var tEnd = history[history.length - 1].t;
+          var tStart = Math.max(0, tEnd - win);
+          for (var i = 0; i < history.length; i++) {
+            var pt = history[i];
+            if (pt.t < tStart) continue;
+            var px = ((pt.t - tStart) / win) * w;
+            var py = midY - pt.x * (h * 0.35 / Math.max(steadyAmplitude(f0, f0, beta), 0.01));
+            if (i === 0 || pt.t === tStart) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.strokeStyle = "rgba(56,189,248,0.35)";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // 定常振幅 A · 表示用角速度 ω_vis
+        ctx.beginPath();
+        for (var px2 = 0; px2 <= w; px2 += 2) {
+          var tVis = animT - win + (px2 / w) * win;
+          var y = aSteady * Math.sin(omegaVis * tVis);
+          var py3 = midY - y * (h * 0.35 / Math.max(steadyAmplitude(f0, f0, beta), 0.01));
+          if (px2 === 0) ctx.moveTo(px2, py3);
+          else ctx.lineTo(px2, py3);
+        }
+        ctx.strokeStyle = gain > 0.85 ? "#fde68a" : "#38bdf8";
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        ctx.fillStyle = gain > 0.85 ? "#fde68a" : "#38bdf8";
+        ctx.font = "10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("A=" + aSteady.toFixed(3) + " · " + displayModeLabel(), 8, 14);
+      }
+
+      function updateReadouts() {
+        fExt = Number(document.getElementById("fextSlider").value);
+        f0 = Math.max(0.2, Math.min(3, Number(document.getElementById("f0Input").value) || 1));
+        beta = Number(document.getElementById("betaSlider").value);
+
+        document.getElementById("f0Input").value = f0.toFixed(2);
+        document.getElementById("fextVal").textContent = fExt.toFixed(2) + " Hz";
+        document.getElementById("betaVal").textContent = beta.toFixed(2);
+
+        var delta = Math.abs(fExt - f0);
+        var gain = resonanceGain(fExt, f0, beta);
+        var aSteady = steadyAmplitude(f0, fExt, beta);
+        var aMax = steadyAmplitude(f0, f0, beta);
+        var w0 = 2 * Math.PI * f0;
+
+        document.getElementById("outFext").textContent = fExt.toFixed(2) + " Hz";
+        document.getElementById("outF0").textContent = f0.toFixed(2) + " Hz";
+        document.getElementById("outF0ro").textContent = f0.toFixed(2) + " Hz";
+        document.getElementById("outDelta").textContent = delta.toFixed(2) + " Hz";
+        document.getElementById("outRelAmp").textContent = Math.round(gain * 100) + "%";
+        document.getElementById("outW0").textContent = w0.toFixed(2) + " rad/s";
+        document.getElementById("outBeta").textContent = beta.toFixed(2);
+        document.getElementById("outSteadyA").textContent = aSteady.toFixed(3);
+        document.getElementById("outInstAmp").textContent = Math.abs(x).toFixed(3);
+        document.getElementById("outAmpMax").textContent = aSteady.toFixed(3);
+        document.getElementById("outSimT").textContent = simT.toFixed(1) + " s";
+
+        var level = gain > 0.9 ? "強い共振" : gain > 0.5 ? "やや共振" : "非共振";
+        document.getElementById("outResLevel").textContent = level;
+
+        var bar = document.getElementById("ampBarFill");
+        bar.style.width = Math.round(gain * 100) + "%";
+        bar.classList.toggle("hot", gain > 0.85);
+
+        document.getElementById("outVisMode").textContent = displayModeLabel();
+        document.getElementById("outVisPeriod").textContent = formatPeriod(visualPeriodSec(Math.max(fExt, f0)));
+        document.getElementById("outVisAmpNote").textContent = Math.round(gain * 100) + "%";
+        document.getElementById("visCaptionHint").textContent = "Canvas " + displayModeLabel();
+
+        document.getElementById("modeSlowBtn").classList.toggle("active", visualMode === "slow");
+        document.getElementById("modeRealBtn").classList.toggle("active", visualMode === "real");
+        document.getElementById("visSlowNote").style.display = visualMode === "slow" ? "block" : "none";
+        document.getElementById("visRealNote").style.display = visualMode === "real" ? "block" : "none";
+
+        var formula = document.getElementById("resFormula");
+        if (delta < 0.05) {
+          formula.textContent = "f_ext ≈ f₀ → 共振！ 振幅最大（A = " + aMax.toFixed(3) + "）";
+          document.getElementById("matchHint").textContent = "f_ext ≈ f₀ — 共振状態です。振幅が最大付近です。";
+        } else {
+          formula.textContent = "|f_ext − f₀| = " + delta.toFixed(2) + " Hz → 相対振幅 " + Math.round(gain * 100) + "%";
+          document.getElementById("matchHint").textContent = "f_ext を f₀ = " + f0.toFixed(2) + " Hz に近づけると振幅が増大します。";
+        }
+      }
+
+      // ── イベント ──
+      var resetTimer = null;
+      function scheduleReset() {
+        if (resetTimer) clearTimeout(resetTimer);
+        resetTimer = setTimeout(function () {
+          resetSim();
+          resetTimer = null;
+        }, 120);
+      }
+
+      document.getElementById("fextSlider").addEventListener("input", function () {
+        updateReadouts();
+        scheduleReset();
+      });
+      document.getElementById("f0Input").addEventListener("input", function () {
+        updateReadouts();
+        scheduleReset();
+      });
+      document.getElementById("betaSlider").addEventListener("input", function () {
+        updateReadouts();
+        scheduleReset();
+      });
+
+      document.getElementById("modeSlowBtn").addEventListener("click", function () {
+        visualMode = "slow";
+        updateReadouts();
+      });
+      document.getElementById("modeRealBtn").addEventListener("click", function () {
+        visualMode = "real";
+        updateReadouts();
+      });
+
+      window.addEventListener("resize", function () {
+        fitCanvas(swingCanvas, false);
+        fitCanvas(simCanvas, true);
+        fitCanvas(waveCanvas, false);
+      });
+
+      // ── メインループ ──
+      function frame(ts) {
+        if (!lastTs) lastTs = ts;
+        var dt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+        animT += dt;
+
+        // 物理シミュレーション（実時間）
+        for (var s = 0; s < 2; s++) stepSim(dt * 0.5);
+        updateSwing(dt);
+
+        drawSwing(fitCanvas(swingCanvas, false));
+        drawSim(fitCanvas(simCanvas, true));
+        drawWave(fitCanvas(waveCanvas, false));
+        updateReadouts();
+
+        requestAnimationFrame(frame);
+      }
+
+      document.getElementById("runStatus").textContent =
+        "共振シミュレーション — f_ext スライダーで共振を確認 · " + displayModeLabel();
+      updateReadouts();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>23章 電流 — ジュール熱と電子の衝突</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --panel: rgba(10, 12, 28, 0.9); --border: rgba(251, 191, 36, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1628 42%, #1a0a08 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.45), rgba(248,113,113,0.45));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li {
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0;
+    }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25);
+      font-size: 0.86rem; color: #fecaca; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(251,191,36,0.22);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #020617; border: 1px solid rgba(251,191,36,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(640px, 70dvh);
+      min-height: 440px; touch-action: none;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px) { .param-grid { grid-template-columns: repeat(5, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-row button {
+      padding: 10px 16px; border-radius: 10px; font: inherit; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(251,191,36,0.35);
+      background: rgba(251,191,36,0.12); color: #fef08a;
+    }
+    .btn-row button#startBtn {
+      border-color: rgba(56,189,248,0.5);
+      background: rgba(56,189,248,0.18); color: #bae6fd;
+    }
+    .btn-row button#startBtn.is-running {
+      border-color: rgba(251,191,36,0.5);
+      background: rgba(251,191,36,0.18); color: #fef08a;
+    }
+    .run-status {
+      margin-top: 8px; padding: 8px 12px; border-radius: 10px; font-size: 0.78rem;
+      background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); color: #94a3b8;
+    }
+    .run-status.running { color: #bae6fd; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); }
+    .run-status.paused { color: #fde68a; border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.08); }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .readout.is-i { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.32); }
+    .readout.is-i dd { color: #fef08a; }
+    .readout.is-q { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.28); }
+    .readout.is-q dd { color: #fca5a5; }
+    .readout.is-col { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
+    .readout.is-col dd { color: #7dd3fc; }
+    .readout.is-p { background: rgba(251,146,60,0.08); border-color: rgba(251,146,60,0.28); }
+    .readout.is-p dd { color: #fdba74; }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #eef2ff; }
+    .legend-row {
+      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+      font-size: 0.76rem; color: var(--muted);
+    }
+    .hint { margin-top: 8px; font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚡</div>
+      <p class="chapter-label">第23章 — 電流</p>
+      <h2>ジュール熱 — 電子が格子に衝突すると</h2>
+      <a id="back" href="00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>発熱の正体は「電子と原子の衝突」</h3>
+      <p>
+        金属の導線では自由電子が電場の方向へ<strong>ドリフト</strong>しながら、
+        同時にランダムな<strong>熱運動</strong>もしています。
+        電子が格子（原子）にぶつかるたびに運動エネルギーを失い、それが<strong>ジュール熱</strong>として導線にたまります。
+      </p>
+      <ul>
+        <li>電流 I が大きい → 電子の流れが激しい → 衝突が増える</li>
+        <li>抵抗 R が大きい → 同じ I でも衝突で失うエネルギーが多い</li>
+        <li>結果として発熱量は <strong>Q = I²Rt</strong> に比例して急増する</li>
+        <li>電流の大きさは <strong>I = n e v S</strong>（電子の量 × 速さ × 太さ）でも表せる</li>
+      </ul>
+      <div class="formula-box">I = n e v S · P = IV · Q = I²Rt</div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#38bdf8">● 青 ＝ 自由電子（熱運動＋ドリフト）</span>
+        <span style="color:#fde047">● 黄 ＝ 注目電子（軌跡・速度矢印）</span>
+        <span style="color:#94a3b8">● 灰 ＝ 格子（原子）</span>
+        <span style="color:#fde047">✦ ＝ 衝突（運動エネルギー → 熱）</span>
+        <span>導線の色 青→黄→赤 ＝ たまった Q</span>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="nSlider">電子密度 n <span class="slider-val" id="nVal">—</span></label>
+          <input type="range" id="nSlider" min="0" max="400" value="200" step="1">
+        </div>
+        <div>
+          <label for="vSlider">ドリフト速度 v <span class="slider-val" id="vVal">—</span></label>
+          <input type="range" id="vSlider" min="0" max="1000" value="100" step="1">
+        </div>
+        <div>
+          <label for="sSlider">断面積 S <span class="slider-val" id="sVal">—</span></label>
+          <input type="range" id="sSlider" min="0" max="300" value="100" step="1">
+        </div>
+        <div>
+          <label for="rSlider">抵抗 R <span class="slider-val" id="rVal">10 Ω</span></label>
+          <input type="range" id="rSlider" min="1" max="100" value="10" step="1">
+        </div>
+        <div>
+          <label for="voltSlider">電圧 V <span class="slider-val" id="voltVal">12.0 V</span></label>
+          <input type="range" id="voltSlider" min="0" max="240" value="120" step="1">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" id="startBtn">スタート</button>
+        <button type="button" id="resetBtn">リセット</button>
+      </div>
+      <p class="run-status" id="runStatus">停止中 — スタートで通電・シミュレーション開始</p>
+
+      <div class="readout-grid">
+        <dl class="readout is-i"><dt>電流 I = V/R</dt><dd id="readI">—</dd></dl>
+        <dl class="readout is-q"><dt>ジュール熱 Q</dt><dd id="readQ">—</dd></dl>
+        <dl class="readout is-col"><dt>衝突回数</dt><dd id="readCol">— /s</dd></dl>
+        <dl class="readout is-p"><dt>電力 P = IV</dt><dd id="readP">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">I = n e v S · Q = I²Rt</div>
+      <p class="hint">スタートで通電 · V↑ · n↑ · v↑ で衝突増 → Q が I² で急増 · 黄色＝注目電子（分子運動論と同様の vx, vy モデル）</p>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const runStatus = document.getElementById("runStatus");
+
+    const E_CHARGE = 1.602176634e-19;
+    const MAX_ELECTRONS = 90;
+    const TRAIL_LEN = 24;
+    const HISTORY_LEN = 200;
+    const GRAPH_RATIO = 0.32;
+    const WINDOW_SEC = 30;
+
+    const COL = {
+      electron: "#38bdf8",
+      track: "#fde047",
+      lattice: "#94a3b8",
+      current: "#fde047",
+      plus: "#f87171",
+      minus: "#38bdf8",
+      graphQ: "#f87171",
+    };
+
+    let canvasW = 800, canvasH = 540, dpr = 1;
+    let simTime = 0, lastFrame = performance.now();
+    let heatQ = 0;
+    let running = false;
+    let electrons = [];
+    let lattice = [];
+    let flashes = [];
+    let histQ = [];
+    let collisionRing = [];
+    let collisionRate = 0;
+    let trackIdx = 0;
+
+    function randNormal() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function sliderToN(val) {
+      return Math.pow(10, 20 + (val / 400) * 4);
+    }
+
+    function sliderToDrift(val) {
+      return (val / 1000) * 1e-3;
+    }
+
+    function sliderToS(val) {
+      return Math.pow(10, -6 + (val / 300) * 3);
+    }
+
+    function getN() { return sliderToN(parseFloat(document.getElementById("nSlider").value)); }
+    function getDrift() { return sliderToDrift(parseFloat(document.getElementById("vSlider").value)); }
+    function getS() { return sliderToS(parseFloat(document.getElementById("sSlider").value)); }
+    function getR() { return parseFloat(document.getElementById("rSlider").value); }
+    function getVolt() { return parseFloat(document.getElementById("voltSlider").value) / 10; }
+
+    function getI() {
+      const R = getR();
+      return R > 0 ? getVolt() / R : 0;
+    }
+
+    function getINe() {
+      return getN() * E_CHARGE * getDrift() * getS();
+    }
+
+    function getP() {
+      return getI() * getVolt();
+    }
+
+    // 分子運動論と同様：熱運動の強さとドリフト成分
+    function motionScales() {
+      const I = getI();
+      const driftNorm = getDrift() / 1e-3;
+      const Iboost = Math.min(1, I / 2.4);
+      const thermal = 0.55 + driftNorm * 0.85 + Iboost * 1.6;
+      const driftVx = 0.08 + driftNorm * 0.22 + Iboost * 0.35;
+      const brown = thermal * 0.022;
+      const move = 0.85 + driftNorm * 0.5 + Iboost * 0.8;
+      return { thermal, driftVx, brown, move, Iboost };
+    }
+
+    function fmtSci(x, digits) {
+      if (!Number.isFinite(x) || x === 0) return "0";
+      const exp = Math.floor(Math.log10(Math.abs(x)));
+      const mant = x / Math.pow(10, exp);
+      return mant.toFixed(digits) + "×10^" + exp;
+    }
+
+    function fmtI(I) {
+      const a = Math.abs(I);
+      if (a >= 1) return I.toFixed(3) + " A";
+      if (a >= 1e-3) return (I * 1e3).toFixed(2) + " mA";
+      if (a >= 1e-6) return (I * 1e6).toFixed(2) + " μA";
+      if (a >= 1e-9) return (I * 1e9).toFixed(2) + " nA";
+      return fmtSci(I, 2) + " A";
+    }
+
+    function fmtEnergy(Q) {
+      const a = Math.abs(Q);
+      if (a >= 1000) return (Q / 1000).toFixed(2) + " kJ";
+      if (a >= 1) return Q.toFixed(2) + " J";
+      if (a >= 1e-3) return (Q * 1e3).toFixed(2) + " mJ";
+      return fmtSci(Q, 2) + " J";
+    }
+
+    function fmtP(P) {
+      const a = Math.abs(P);
+      if (a >= 1000) return (P / 1000).toFixed(2) + " kW";
+      if (a >= 1) return P.toFixed(2) + " W";
+      if (a >= 1e-3) return (P * 1e3).toFixed(2) + " mW";
+      return fmtSci(P, 2) + " W";
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function heatColor(t) {
+      t = Math.max(0, Math.min(1, t));
+      let r, g, b;
+      if (t < 0.5) {
+        const u = t / 0.5;
+        r = lerp(56, 253, u);
+        g = lerp(189, 224, u);
+        b = lerp(248, 71, u);
+      } else {
+        const u = (t - 0.5) / 0.5;
+        r = lerp(253, 248, u);
+        g = lerp(224, 113, u);
+        b = lerp(71, 113, u);
+      }
+      return "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + ")";
+    }
+
+    function heatRatio() {
+      const P = getP();
+      const qRef = Math.max(8, P * 6 + 12);
+      return Math.max(0, Math.min(1, heatQ / qRef));
+    }
+
+    function setRunStatus(text, cls) {
+      runStatus.textContent = text;
+      runStatus.classList.remove("running", "paused");
+      if (cls) runStatus.classList.add(cls);
+    }
+
+    function updateStartBtn() {
+      if (running) {
+        startBtn.textContent = "一時停止";
+        startBtn.classList.add("is-running");
+        setRunStatus("通電中 — 電子が格子に衝突して Q が増加中", "running");
+      } else if (simTime > 0) {
+        startBtn.textContent = "再開";
+        startBtn.classList.remove("is-running");
+        setRunStatus("一時停止中 — t = " + simTime.toFixed(1) + " s", "paused");
+      } else {
+        startBtn.textContent = "スタート";
+        startBtn.classList.remove("is-running");
+        setRunStatus("停止中 — スタートで通電・シミュレーション開始", "");
+      }
+    }
+
+    function syncSliders() {
+      document.getElementById("nVal").textContent = fmtSci(getN(), 2) + " /m³";
+      document.getElementById("vVal").textContent = fmtSci(getDrift(), 2) + " m/s";
+      document.getElementById("sVal").textContent = fmtSci(getS(), 2) + " m²";
+      document.getElementById("rVal").textContent = getR().toFixed(0) + " Ω";
+      document.getElementById("voltVal").textContent = getVolt().toFixed(1) + " V";
+    }
+
+    function updateReadouts() {
+      const I = getI(), Q = heatQ, P = getP();
+      const I_ne = getINe();
+      document.getElementById("readI").textContent = fmtI(I);
+      document.getElementById("readQ").textContent = fmtEnergy(Q);
+      document.getElementById("readCol").textContent = Math.round(collisionRate) + " /s";
+      document.getElementById("readP").textContent = fmtP(P);
+      formulaLive.innerHTML =
+        "I = V/R = <strong>" + fmtI(I) + "</strong>"
+        + " · I<sub>ne</sub> = n e v S = " + fmtI(I_ne)
+        + "<br>Q = I²Rt = <strong>" + fmtEnergy(Q) + "</strong>"
+        + " · P = IV = " + fmtP(P)
+        + " · t = " + simTime.toFixed(1) + " s";
+    }
+
+    function getWireLayout(cw, ch) {
+      const graphH = ch * GRAPH_RATIO;
+      const topH = ch - graphH;
+      const padX = Math.max(20, cw * 0.04);
+      const cy = topH * 0.52;
+      const batW = Math.min(56, cw * 0.08);
+      const wireL = padX + batW + 24;
+      const wireR = cw - padX - 70;
+      const logS = (Math.log10(getS()) + 6) / 3;
+      const wireH = 28 + logS * 56;
+      return { graphH, topH, padX, cy, batW, wireL, wireR, wireH, wireW: wireR - wireL };
+    }
+
+    function buildLattice(L) {
+      lattice = [];
+      const spacing = Math.max(16, Math.min(28, L.wireH * 0.55));
+      const cols = Math.ceil(L.wireW / spacing) + 1;
+      const rows = Math.max(2, Math.ceil((L.wireH * 0.82) / spacing));
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const ox = (row % 2) * spacing * 0.5;
+          const x = L.wireL + col * spacing + ox;
+          const y = L.cy + (row - (rows - 1) * 0.5) * spacing * 0.92;
+          if (x >= L.wireL + 6 && x <= L.wireR - 6
+              && y >= L.cy - L.wireH * 0.42 && y <= L.cy + L.wireH * 0.42) {
+            lattice.push({ x, y, r: 3.2 + L.wireH * 0.018, flash: 0 });
+          }
+        }
+      }
+    }
+
+    function sampleElectronVel(scales) {
+      return {
+        vx: scales.driftVx + randNormal() * scales.thermal,
+        vy: randNormal() * scales.thermal,
+      };
+    }
+
+    function initElectron(scales, withTrail) {
+      const v = sampleElectronVel(scales);
+      return {
+        px: 0.06 + Math.random() * 0.88,
+        py: 0.08 + Math.random() * 0.84,
+        vx: v.vx,
+        vy: v.vy,
+        cd: 0,
+        trail: withTrail ? [] : null,
+      };
+    }
+
+    function syncElectrons(n) {
+      const logN = (Math.log10(n) - 20) / 4;
+      const target = Math.min(MAX_ELECTRONS, Math.max(6, Math.round(8 + logN * 78)));
+      const scales = motionScales();
+      while (electrons.length < target) {
+        const idx = electrons.length;
+        electrons.push(initElectron(scales, idx === trackIdx));
+      }
+      while (electrons.length > target) electrons.pop();
+      if (trackIdx >= electrons.length) trackIdx = 0;
+      electrons.forEach((e, i) => {
+        e.trail = (i === trackIdx) ? (e.trail || []) : null;
+      });
+    }
+
+    function pushHistory() {
+      histQ.push({ t: simTime, Q: heatQ });
+      if (histQ.length > HISTORY_LEN) histQ.shift();
+    }
+
+    function physicsStep(dt) {
+      if (!running) return;
+
+      simTime += dt;
+      const I = getI();
+      const R = getR();
+      const n = getN();
+      const scales = motionScales();
+
+      if (I > 0 && R > 0) {
+        heatQ += I * I * R * dt;
+      }
+
+      syncElectrons(n);
+      const L = getWireLayout(canvasW, canvasH);
+      if (lattice.length === 0) buildLattice(L);
+
+      const eR = 3 + L.wireH * 0.035;
+      let frameHits = 0;
+
+      electrons.forEach((e, idx) => {
+        e.cd = Math.max(0, e.cd - dt);
+
+        // 分子運動論と同様：ブラウン運動＋位置更新
+        e.vx += randNormal() * scales.brown * Math.sqrt(dt);
+        e.vy += randNormal() * scales.brown * Math.sqrt(dt);
+        e.vx += (scales.driftVx - e.vx) * Math.min(1, dt * 2.5);
+        e.px += e.vx * dt * scales.move;
+        e.py += e.vy * dt * scales.move;
+
+        if (e.px > 1.02) e.px -= 1.04;
+        if (e.px < -0.02) e.px += 1.04;
+        if (e.py < 0.06) { e.py = 0.06; e.vy = Math.abs(e.vy) || 0.01; }
+        if (e.py > 0.94) { e.py = 0.94; e.vy = -Math.abs(e.vy) || -0.01; }
+
+        const ex = L.wireL + e.px * L.wireW;
+        const ey = L.cy + (e.py - 0.5) * L.wireH * 0.78;
+
+        if (e.trail) {
+          e.trail.push({ x: ex, y: ey });
+          if (e.trail.length > TRAIL_LEN) e.trail.shift();
+        }
+
+        for (let i = 0; i < lattice.length; i++) {
+          const lat = lattice[i];
+          const dx = ex - lat.x;
+          const dy = ey - lat.y;
+          const dist = Math.hypot(dx, dy);
+          const hitDist = eR + lat.r + 1.2;
+          if (dist < hitDist && dist > 0.001 && e.cd <= 0) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const vdn = e.vx * nx + e.vy * ny;
+            if (vdn < 0) {
+              frameHits++;
+              e.cd = 0.05;
+              e.vx -= 2 * vdn * nx;
+              e.vy -= 2 * vdn * ny;
+              const pushNx = (hitDist - dist) / Math.max(L.wireW, 1);
+              const pushNy = (hitDist - dist) / Math.max(L.wireH, 1);
+              e.px += pushNx * nx;
+              e.py += pushNy * ny;
+              lat.flash = 0.35;
+              flashes.push({ x: lat.x, y: lat.y, life: 0.35, max: 0.35 });
+              if (idx === trackIdx) recordTrackHit(lat, e);
+              break;
+            }
+          }
+        }
+      });
+
+      lattice.forEach((lat) => {
+        lat.flash = Math.max(0, lat.flash - dt);
+      });
+
+      collisionRing.push({ t: simTime, count: frameHits });
+      const cutoff = simTime - 1;
+      while (collisionRing.length && collisionRing[0].t < cutoff) collisionRing.shift();
+      let sum = 0;
+      collisionRing.forEach((c) => { sum += c.count; });
+      collisionRate = sum;
+
+      flashes = flashes.filter((f) => {
+        f.life -= dt;
+        return f.life > 0;
+      });
+
+      if (Math.random() < 0.12) pushHistory();
+    }
+
+    let lastTrackHit = "—";
+    function recordTrackHit(lat, e) {
+      const spd = Math.hypot(e.vx, e.vy);
+      lastTrackHit = "格子衝突 · |v|≈" + spd.toFixed(2);
+    }
+
+    function resetSimulation() {
+      running = false;
+      heatQ = 0;
+      simTime = 0;
+      histQ = [];
+      collisionRing = [];
+      collisionRate = 0;
+      flashes = [];
+      electrons = [];
+      lattice = [];
+      lastTrackHit = "—";
+      lastFrame = performance.now();
+      syncElectrons(getN());
+      updateStartBtn();
+    }
+
+    function toggleRunning() {
+      running = !running;
+      lastFrame = performance.now();
+      updateStartBtn();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(420, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      lattice = [];
+    }
+
+    function drawBackground(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#050810");
+      bg.addColorStop(1, "#120a08");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawBattery(L, V) {
+      const { padX, cy, batW } = L;
+      const bx = padX + batW * 0.5;
+      const longH = 26, shortH = 14;
+      const plusX = bx - 8, minusX = bx + 8;
+
+      ctx.strokeStyle = running && V > 0 ? COL.plus : "rgba(248,113,113,0.45)";
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(plusX, cy - longH * 0.5);
+      ctx.lineTo(plusX, cy + longH * 0.5);
+      ctx.stroke();
+
+      ctx.strokeStyle = COL.minus;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(minusX, cy - shortH * 0.5);
+      ctx.lineTo(minusX, cy + shortH * 0.5);
+      ctx.stroke();
+
+      ctx.font = "700 12px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = COL.plus;
+      ctx.fillText("+", plusX - 14, cy - longH * 0.5 - 4);
+      ctx.fillStyle = COL.minus;
+      ctx.fillText("−", minusX + 14, cy - shortH * 0.5 - 4);
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = running ? "#bae6fd" : "#64748b";
+      ctx.fillText("V = " + V.toFixed(1), bx, cy + longH * 0.5 + 16);
+      ctx.textAlign = "left";
+
+      ctx.strokeStyle = running ? "#64748b" : "#334155";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(minusX + 6, cy);
+      ctx.lineTo(L.wireL, cy);
+      ctx.stroke();
+    }
+
+    function drawWire(L) {
+      const { wireL, wireR, cy, wireH } = L;
+      const r = wireH * 0.35;
+      const heatT = heatRatio();
+      const fill = heatColor(heatT);
+      const stroke = heatColor(Math.min(1, heatT + 0.12));
+
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(wireL + r, cy - wireH * 0.5);
+      ctx.lineTo(wireR - r, cy - wireH * 0.5);
+      ctx.quadraticCurveTo(wireR, cy - wireH * 0.5, wireR, cy - wireH * 0.5 + r);
+      ctx.lineTo(wireR, cy + wireH * 0.5 - r);
+      ctx.quadraticCurveTo(wireR, cy + wireH * 0.5, wireR - r, cy + wireH * 0.5);
+      ctx.lineTo(wireL + r, cy + wireH * 0.5);
+      ctx.quadraticCurveTo(wireL, cy + wireH * 0.5, wireL, cy + wireH * 0.5 - r);
+      ctx.lineTo(wireL, cy - wireH * 0.5 + r);
+      ctx.quadraticCurveTo(wireL, cy - wireH * 0.5, wireL + r, cy - wireH * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(15,23,42,0.35)";
+      ctx.beginPath();
+      ctx.ellipse(wireR, cy, wireH * 0.22, wireH * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#e2e8f0";
+      ctx.textAlign = "center";
+      ctx.fillText("導線（発熱 Q で色変化）", (wireL + wireR) * 0.5, cy + wireH * 0.5 + 18);
+      ctx.textAlign = "left";
+    }
+
+    function drawLattice() {
+      lattice.forEach((lat) => {
+        const glow = lat.flash / 0.35;
+        ctx.fillStyle = glow > 0
+          ? "rgba(253,224,71," + (0.35 + glow * 0.55) + ")"
+          : "rgba(148,163,184,0.55)";
+        ctx.beginPath();
+        ctx.arc(lat.x, lat.y, lat.r + glow * 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawElectronTrail(trail) {
+      if (!trail || trail.length < 2) return;
+      ctx.strokeStyle = "rgba(253,224,71,0.45)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      trail.forEach((pt, i) => {
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      });
+      ctx.stroke();
+    }
+
+    function drawVelocityArrow(x, y, vx, vy, color) {
+      const len = Math.hypot(vx, vy);
+      if (len < 0.02) return;
+      const scale = 18 / Math.max(len, 0.15);
+      const ex = x + vx * scale;
+      const ey = y + vy * scale;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      const ang = Math.atan2(ey - y, ex - x);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 6 * Math.cos(ang - 0.45), ey - 6 * Math.sin(ang - 0.45));
+      ctx.lineTo(ex - 6 * Math.cos(ang + 0.45), ey - 6 * Math.sin(ang + 0.45));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawElectrons(L) {
+      const { wireL, wireW, cy, wireH } = L;
+      const eR = 3 + wireH * 0.035;
+
+      electrons.forEach((e, idx) => {
+        const x = wireL + e.px * wireW;
+        const y = cy + (e.py - 0.5) * wireH * 0.78;
+        const isTrack = idx === trackIdx;
+
+        if (isTrack) drawElectronTrail(e.trail);
+
+        ctx.fillStyle = isTrack ? COL.track : COL.electron;
+        ctx.shadowColor = isTrack ? COL.track : COL.electron;
+        ctx.shadowBlur = isTrack ? 10 : 7;
+        ctx.beginPath();
+        ctx.arc(x, y, isTrack ? eR + 1 : eR, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isTrack) {
+          drawVelocityArrow(x, y, e.vx, e.vy, "rgba(253,224,71,0.85)");
+          ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
+          ctx.fillStyle = "#fde68a";
+          ctx.fillText("注目電子", x + 10, y - 10);
+          ctx.fillStyle = "#94a3b8";
+          ctx.fillText(lastTrackHit, x + 10, y + 14);
+        }
+      });
+      ctx.shadowBlur = 0;
+
+      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#7dd3fc";
+      ctx.fillText("電子 →（ドリフト＋熱運動）", L.wireL + 8, L.cy - L.wireH * 0.5 - 8);
+    }
+
+    function drawFlashes() {
+      flashes.forEach((f) => {
+        const a = f.life / f.max;
+        const rad = 6 + (1 - a) * 14;
+        ctx.fillStyle = "rgba(253,224,71," + (a * 0.85) + ")";
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, rad, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(248,113,113," + (a * 0.7) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, rad * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+
+    function drawCurrentArrow(L, I) {
+      const { wireR, cy, wireH } = L;
+      const ax = wireR + 38;
+      const t = Math.min(1, I / 2.4);
+      const lw = 2 + t * 7;
+      const len = 34 + t * 26;
+      const alpha = running ? (0.35 + t * 0.65) : 0.2;
+
+      ctx.strokeStyle = "rgba(253,224,71," + alpha + ")";
+      ctx.fillStyle = "rgba(253,224,71," + alpha + ")";
+      ctx.lineWidth = lw;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ax + len * 0.5, cy);
+      ctx.lineTo(ax - len * 0.5, cy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ax - len * 0.5, cy);
+      ctx.lineTo(ax - len * 0.5 + 10, cy - 7);
+      ctx.lineTo(ax - len * 0.5 + 10, cy + 7);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#fde68a";
+      ctx.textAlign = "center";
+      ctx.fillText("I ←", ax, cy - wireH * 0.5 - 10);
+      ctx.fillText(fmtI(I), ax, cy + wireH * 0.5 + 22);
+      ctx.textAlign = "left";
+    }
+
+    function drawQGraph(cw, ch) {
+      const graphH = ch * GRAPH_RATIO;
+      const gy = ch - graphH;
+      const gx = 12, gw = cw - 24, gh = graphH - 8;
+      const ml = 44, mr = 10, mt = 20, mb = 22;
+      const plotX = gx + ml, plotY = gy + mt;
+      const plotW = gw - ml - mr, plotH = gh - mt - mb;
+
+      ctx.fillStyle = "rgba(8,12,24,0.92)";
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.strokeStyle = "rgba(148,163,184,0.2)";
+      ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.35)";
+      ctx.beginPath();
+      ctx.moveTo(plotX, plotY);
+      ctx.lineTo(plotX, plotY + plotH);
+      ctx.lineTo(plotX + plotW, plotY + plotH);
+      ctx.stroke();
+
+      ctx.fillStyle = COL.graphQ;
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("Q(t) — ジュール熱のたまり方（自動スケール）", gx + 8, gy + 14);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "9px Inter, sans-serif";
+      ctx.fillText("Q [J]", plotX - 4, plotY - 4);
+
+      const tMin = Math.max(0, simTime - WINDOW_SEC);
+      const tMax = Math.max(tMin + 1, simTime);
+      let qMax = Math.max(heatQ, 1);
+      histQ.forEach((h) => {
+        if (h.t >= tMin) qMax = Math.max(qMax, h.Q);
+      });
+      qMax *= 1.12;
+
+      ctx.strokeStyle = "rgba(248,113,113,0.85)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let started = false;
+      histQ.forEach((h) => {
+        if (h.t < tMin) return;
+        const px = plotX + ((h.t - tMin) / (tMax - tMin)) * plotW;
+        const py = plotY + plotH - (h.Q / qMax) * plotH;
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      });
+      if (started) ctx.stroke();
+
+      if (heatQ > 0 && running) {
+        const px = plotX + ((simTime - tMin) / (tMax - tMin)) * plotW;
+        const py = plotY + plotH - (heatQ / qMax) * plotH;
+        ctx.fillStyle = COL.graphQ;
+        ctx.beginPath();
+        ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "8px Inter, sans-serif";
+      ctx.fillText("0", plotX - 8, plotY + plotH + 10);
+      ctx.fillText(fmtEnergy(qMax), plotX - 8, plotY + 4);
+      ctx.fillText("t [s]", plotX + plotW - 16, plotY + plotH + 14);
+    }
+
+    function drawPausedOverlay(L) {
+      if (running || simTime > 0) return;
+      ctx.fillStyle = "rgba(2,6,23,0.42)";
+      ctx.fillRect(0, 0, canvasW, L.topH);
+      ctx.font = "700 14px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#e2e8f0";
+      ctx.textAlign = "center";
+      ctx.fillText("▶ スタートで通電開始", canvasW * 0.5, L.cy - 6);
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("電子の熱運動と格子衝突を観察", canvasW * 0.5, L.cy + 16);
+      ctx.textAlign = "left";
+    }
+
+    function drawFrame() {
+      drawBackground(canvasW, canvasH);
+      const L = getWireLayout(canvasW, canvasH);
+      if (lattice.length === 0) buildLattice(L);
+
+      drawBattery(L, getVolt());
+      drawWire(L);
+      drawLattice();
+      drawElectrons(L);
+      drawFlashes();
+      drawCurrentArrow(L, getI());
+      drawPausedOverlay(L);
+      drawQGraph(canvasW, canvasH);
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      physicsStep(dt);
+      syncSliders();
+      updateReadouts();
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+
+    ["nSlider", "vSlider", "sSlider", "rSlider", "voltSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        updateReadouts();
+      });
+    });
+
+    startBtn.addEventListener("click", toggleRunning);
+    resetBtn.addEventListener("click", resetSimulation);
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    resetSimulation();
+    syncSliders();
+    updateReadouts();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

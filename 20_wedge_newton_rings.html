@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>20章 — くさび型空気層とニュートンリング</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #1a1508 42%, #0a1628 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(245,158,11,0.45), rgba(56,189,248,0.35));
+      border: 1px solid rgba(245,158,11,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbbf24; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #7dd3fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(245,158,11,0.14);
+      border: 1px solid rgba(245,158,11,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbbf24; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(56,189,248,0.1));
+      border: 1px solid rgba(245,158,11,0.32);
+    }
+    .formula-main { font-size: 0.9rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .guide-callout {
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 10px; text-align: center;
+      background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(56,189,248,0.08));
+      border: 2px solid rgba(245,158,11,0.45);
+      font-size: 0.82rem; font-weight: 700; color: #fef3c7; line-height: 1.55;
+    }
+    .guide-bar { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; justify-content: center; }
+    .guide-step {
+      flex: 1; min-width: 68px; padding: 7px 5px; border-radius: 9px; text-align: center;
+      background: rgba(15,23,42,0.6); border: 1px solid rgba(148,163,184,0.25);
+      font-size: 0.58rem; font-weight: 700; color: #64748b; transition: all 0.35s;
+    }
+    .guide-step .gs-num { display: block; font-size: 0.95rem; font-weight: 800; margin-bottom: 2px; }
+    .guide-step.active { color: #fef3c7; border-color: rgba(245,158,11,0.7); background: rgba(120,53,15,0.35); }
+    .guide-step.done { color: #86efac; border-color: rgba(74,222,128,0.5); background: rgba(20,83,45,0.2); }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #020617; border: 1px solid rgba(245,158,11,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fde68a; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #simCanvasWrap { position: relative; background: #020617; }
+    .canvas-hud {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px;
+      background: rgba(2, 6, 23, 0.96); border-bottom: 1px solid rgba(245,158,11,0.22);
+    }
+    .hud-chip {
+      padding: 6px 12px; border-radius: 999px; font-size: 0.76rem; font-weight: 700;
+      background: rgba(0,0,0,0.55); border: 1px solid rgba(148,163,184,0.35); color: #e2e8f0;
+    }
+    #simCanvas { display: block; width: 100%; height: min(680px, 62dvh); min-height: 520px; }
+    .concept-box {
+      margin-bottom: 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(56,189,248,0.25);
+      font-size: 0.82rem; line-height: 1.7; color: #cbd5e1;
+    }
+    .concept-box strong { color: #fde68a; }
+    .concept-box .flow {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center;
+      font-size: 0.76rem; font-weight: 700; color: #94a3b8;
+    }
+    .concept-box .flow span {
+      padding: 4px 10px; border-radius: 999px; background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.35); color: #fef3c7;
+    }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(2,6,23,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #animPhase {
+      padding: 8px 12px; border-radius: 10px; background: rgba(2,6,23,0.8);
+      border: 1px solid rgba(245,158,11,0.45); font-size: 0.8rem; font-weight: 700; color: #fde68a; line-height: 1.5;
+    }
+    #animPhase .phase-num {
+      display: inline-block; background: #f59e0b; color: #1c1917; border-radius: 6px;
+      padding: 2px 8px; margin-right: 6px; font-size: 0.72rem; font-weight: 800;
+    }
+    #eqBanner { padding: 8px 12px; border-radius: 10px; text-align: center; background: rgba(0,0,0,0.35); border: 1px solid rgba(56,189,248,0.3); }
+    #eqBanner .eq { font-size: 0.92rem; font-weight: 800; color: #fff; }
+    #eqBanner .eq .hl { color: #fde047; }
+    #eqBanner .sub { font-size: 0.72rem; color: #7dd3fc; margin-top: 4px; font-weight: 600; }
+    #hintBox { font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(245,158,11,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(245,158,11,0.25); color: #fef3c7; border-color: rgba(245,158,11,0.55); font-weight: 800; }
+    .act-btn.guided { background: linear-gradient(135deg, rgba(245,158,11,0.35), rgba(251,191,36,0.2)); color: #fff; border-color: #fbbf24; font-weight: 800; }
+    .act-btn.active, .act-btn.is-active { background: rgba(56,189,248,0.22); color: #e0f2fe; border-color: rgba(56,189,248,0.55); }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(245,158,11,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fbbf24; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(245,158,11,0.45); background: rgba(120,53,15,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1rem; color: #fde68a; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #f59e0b; }
+    .lambda-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.35); vertical-align: middle; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">◯</div>
+      <p class="chapter-label">第20章 ④ — 光の干渉</p>
+      <h2>くさび型空気層とニュートンリング</h2>
+      <p class="tagline">空気層の光路差 2t · π反転 · 干渉縞と同心円</p>
+      <a id="back" href="00_folder_waves.html#chapter-20">← 波動フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">空気層を往復する光の<strong>光路差 2t</strong>で干渉 · 下界面反射で<strong>π 反転</strong></div>
+        <div class="formula-sub">くさび：2t=(m+½)λ（明）· ニュートン：r²=(m+½)λR（明）</div>
+      </div>
+      <div class="concept-box" id="conceptWedge">
+        <strong>くさび型空気層</strong>：2枚のガラス板の左端が接触し、右に行くほどすき間（空気層）が広がる。
+        <strong>① 側面図</strong>の横位置 x と、<strong>③ 上から見た縞</strong>の横位置は同じ板に対応する（左＝薄い、右＝厚い）。
+        <div class="flow"><span>① 側面 t(x)</span>→<span>真上から見る</span>→<span>③ 横縞</span></div>
+      </div>
+      <div class="concept-box" id="conceptNewton" style="display:none">
+        <strong>ニュートンリング</strong>：凸レンズを平面ガラスの上に載せたとき、<strong>レンズとガラスの間</strong>に薄い空気層ができる。
+        中心はほぼ接触（t≈0）、外側ほど空気層が厚い（t≈r²/2R）。同じ距離 r では t が同じ → <strong>同心円の明暗</strong>が上から見える。
+        <div class="flow"><span>凸レンズ＋平板</span>→<span>空気層 2t</span>→<span>同心円のリング</span></div>
+      </div>
+      <div class="guide-callout" id="guideCallout">👇 まず <strong>「はじめから体験する」</strong> — くさび型→ニュートンリングを順番に見よう</div>
+      <div class="guide-bar" id="guideBar">
+        <div class="guide-step active" data-step="1"><span class="gs-num">①</span>くさび</div>
+        <div class="guide-step" data-step="2"><span class="gs-num">②</span>光路差</div>
+        <div class="guide-step" data-step="3"><span class="gs-num">③</span>干渉縞</div>
+        <div class="guide-step" data-step="4"><span class="gs-num">④</span>ニュートン</div>
+        <div class="guide-step" data-step="5"><span class="gs-num">⑤</span>リング</div>
+        <div class="guide-step" data-step="6"><span class="gs-num">⑥</span>まとめ</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label" id="vizTitle">上：装置のしくみ · 下：干渉の模様</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>ガラス</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>空気層</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>明線</span>
+              <span><i class="color-chip" style="background:#334155;color:#334155"></i>暗線</span>
+              <span><i class="color-chip" style="background:#f472b6;color:#f472b6"></i>π反転</span>
+            </div>
+            <div id="simCanvasWrap">
+              <div class="canvas-hud" aria-hidden="true">
+                <span class="hud-chip" id="hudStory">—</span>
+                <span class="hud-chip" id="hudFormula">—</span>
+              </div>
+              <canvas id="simCanvas" aria-label="くさび型干渉とニュートンリング"></canvas>
+            </div>
+            <div class="explain-panel">
+              <div id="animPhase"><span class="phase-num">START</span>「はじめから体験する」で始めよう</div>
+              <div id="eqBanner">
+                <div class="eq" id="eqText">光路差 ΔL = <span class="hl">2t</span></div>
+                <div class="sub" id="eqSub">空気層の厚さ t が場所によって違う → 干渉</div>
+              </div>
+              <div id="hintBox">2枚のガラス板のすき間が左で薄く、右で厚い「くさび」になると、横方向に縞模様が現れます。</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn guided" id="btnGuided">▶ はじめから体験する</button>
+              <button type="button" class="act-btn primary is-active" id="btnWedge">① くさび型</button>
+              <button type="button" class="act-btn primary" id="btnNewton">② ニュートンリング</button>
+              <button type="button" class="act-btn active" id="btnMarkers">次数 m 表示</button>
+              <button type="button" class="act-btn active" id="btnScan">走査線 ON</button>
+              <button type="button" id="btnReset">初期化</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">干渉 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">モード</div>
+              <div class="val big" id="hudMode">くさび型</div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">波長 λ</div><div class="val" id="hudLambda">550 nm</div></div>
+              <div class="hud-card"><div class="lbl">次数 m</div><div class="val big" id="hudM">3</div></div>
+              <div class="hud-card"><div class="lbl">厚さ t</div><div class="val" id="hudT">—</div></div>
+              <div class="hud-card"><div class="lbl">半径 r</div><div class="val" id="hudR">—</div></div>
+            </div>
+            <div class="hud-card highlight"><div class="lbl">明線の条件</div><div class="val" id="hudBright">2t = (m+½)λ</div></div>
+            <div class="hud-card"><div class="lbl">暗線の条件</div><div class="val" id="hudDark">2t = mλ</div></div>
+            <p class="hud-title" style="margin-top:4px">コントロール</p>
+            <div class="slider-row">
+              <label>波長 λ <span><i class="lambda-swatch" id="lambdaSwatch"></i> <span id="lblLambda">550 nm</span></span></label>
+              <input type="range" id="slLambda" min="400" max="700" value="550" step="5">
+            </div>
+            <div class="slider-row" id="rowWedge">
+              <label>くさび右端の厚さ t<sub>max</sub> <span id="lblWedge">8.0 μm</span></label>
+              <input type="range" id="slWedge" min="20" max="120" value="80" step="5">
+            </div>
+            <div class="slider-row" id="rowNewton" style="display:none">
+              <label>曲率半径 R <span id="lblR">5.0 m</span></label>
+              <input type="range" id="slR" min="100" max="3000" value="500" step="50">
+            </div>
+            <div class="slider-row">
+              <label>強調する次数 m <span id="lblM">3</span></label>
+              <input type="range" id="slM" min="0" max="8" value="3" step="1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li><strong>くさび型</strong>：板のすき間が左→右に広がる → 横方向に等間隔の縞（t が x に比例）</li>
+        <li><strong>ニュートンリング</strong>：凸レンズ＋平面ガラスの空気層 → 中心 t≈0、外側 t≈r²/(2R) → 上から見ると<strong>同心円</strong></li>
+        <li>どちらも空気層の往復 <strong>光路差 2t</strong> + 下界面の <strong>π 反転</strong>で干渉</li>
+        <li>明 <strong>2t=(m+½)λ</strong> · 暗 <strong>2t=mλ</strong>（くさび）/ 暗 <strong>r²=mλR</strong> · 明 <strong>r²=(m+½)λR</strong>（ニュートン）</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+
+      let mode = "wedge";
+      let lambdaNm = 550, wedgeMaxUm = 8, radiusM = 5, orderM = 3;
+      let showMarkers = true, showScan = true, animT = 0;
+      let guidedTimers = [], guidedActive = false;
+
+      let cw = 800, ch = 480;
+
+      function setGuideStep(n) {
+        document.querySelectorAll(".guide-step").forEach((el) => {
+          const s = +el.dataset.step;
+          el.classList.remove("active", "done");
+          if (s < n) el.classList.add("done");
+          else if (s === n) el.classList.add("active");
+        });
+      }
+      function setPhase(n, t) {
+        document.getElementById("animPhase").innerHTML = '<span class="phase-num">' + n + '</span>' + t;
+      }
+      function setEq(eq, sub) {
+        document.getElementById("eqText").innerHTML = eq;
+        document.getElementById("eqSub").textContent = sub;
+      }
+      function setHint(t) { document.getElementById("hintBox").textContent = t; }
+
+      function nmToRgb(nm) {
+        let r = 0, g = 0, b = 0;
+        if (nm >= 380 && nm < 440) { r = -(nm - 440) / 60; b = 1; }
+        else if (nm >= 440 && nm < 490) { g = (nm - 440) / 50; b = 1; }
+        else if (nm >= 490 && nm < 510) { g = 1; b = -(nm - 510) / 20; }
+        else if (nm >= 510 && nm < 580) { r = (nm - 510) / 70; g = 1; }
+        else if (nm >= 580 && nm < 645) { r = 1; g = -(nm - 645) / 65; }
+        else if (nm >= 645 && nm <= 780) { r = 1; }
+        const fade = nm < 420 ? 0.3 + 0.7 * (nm - 380) / 40 : nm > 700 ? 0.3 + 0.7 * (780 - nm) / 80 : 1;
+        return [Math.round(255 * r * fade), Math.round(255 * g * fade), Math.round(255 * b * fade)];
+      }
+      function rgbCss(rgb, a) {
+        return a == null ? "rgb(" + rgb.join(",") + ")" : "rgba(" + rgb.join(",") + "," + a + ")";
+      }
+
+      function intensityFromT(tM) {
+        const dphi = (4 * Math.PI * tM) / (lambdaNm * 1e-9) + Math.PI;
+        const I = 0.5 + 0.5 * Math.cos(dphi);
+        return I * I;
+      }
+      function wedgeTM(x) { return x * wedgeMaxUm * 1e-6; }
+      function newtonTM(r) { return (r * r) / (2 * radiusM); }
+      function wedgeXBright(m) { return ((m + 0.5) * lambdaNm * 1e-9 / 2) / (wedgeMaxUm * 1e-6); }
+      function wedgeXDark(m) { return (m * lambdaNm * 1e-9 / 2) / (wedgeMaxUm * 1e-6); }
+      function newtonRBright(m) { return Math.sqrt((m + 0.5) * lambdaNm * 1e-9 * radiusM); }
+      function newtonRDark(m) { return Math.sqrt(Math.max(0, m * lambdaNm * 1e-9 * radiusM)); }
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = Math.min(devicePixelRatio, 2);
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cw = rect.width;
+        ch = rect.height;
+      }
+
+      function drawReadableText(x, y, text, color, align, size) {
+        const fs = size || 12;
+        ctx.font = "700 " + fs + "px Noto Sans JP, sans-serif";
+        ctx.textAlign = align || "left";
+        ctx.textBaseline = "middle";
+        const tw = ctx.measureText(text).width;
+        const padX = 8, padY = 6;
+        const th = fs + padY * 2;
+        let bx = x;
+        if (align === "center") bx = x - tw / 2 - padX;
+        else if (align === "right") bx = x - tw - padX * 2;
+        ctx.fillStyle = "rgba(2, 6, 23, 0.96)";
+        ctx.strokeStyle = "rgba(226,232,240,0.4)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(bx, y - th / 2, tw + padX * 2, th, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = color || "#fff";
+        ctx.fillText(text, bx + padX, y);
+        ctx.textBaseline = "alphabetic";
+      }
+
+      function drawZoneHeader(x, y, w, title) {
+        const h = 24;
+        ctx.fillStyle = "rgba(2, 6, 23, 0.94)";
+        ctx.strokeStyle = "rgba(245,158,11,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fef3c7";
+        ctx.font = "700 12px Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(title, x + 10, y + h / 2);
+        ctx.textBaseline = "alphabetic";
+        return y + h;
+      }
+
+      function layout() {
+        const pad = 10;
+        const top = 6;
+        const w = cw - pad * 2;
+        const left = pad;
+        if (mode === "wedge") {
+          const h1 = 26;
+          const diagramTop = top + h1 + 6;
+          const diagramH = Math.max(140, ch * 0.38);
+          const connectorH = Math.max(44, ch * 0.08);
+          const patternTop = diagramTop + diagramH + connectorH + 6;
+          const patternH = ch - patternTop - pad;
+          return { pad, left, w, top, diagramTop, diagramH, connectorH, patternTop, patternH };
+        }
+        const h1 = 26;
+        const setupTop = top + h1 + 6;
+        const setupH = Math.max(118, ch * 0.26);
+        const conceptTop = setupTop + setupH + 10;
+        const conceptH = Math.max(108, ch * 0.22);
+        const patternTop = conceptTop + conceptH + 10;
+        const patternH = ch - patternTop - pad;
+        return { pad, left, w, top, setupTop, setupH, conceptTop, conceptH, patternTop, patternH };
+      }
+
+      function drawPanel(x, y, w, h, title) {
+        ctx.fillStyle = "rgba(15,23,42,0.72)";
+        ctx.strokeStyle = "rgba(56,189,248,0.28)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 8);
+        ctx.fill();
+        ctx.stroke();
+        if (title) {
+          ctx.fillStyle = "rgba(2,6,23,0.88)";
+          ctx.fillRect(x + 1, y + 1, w - 2, 22);
+          ctx.fillStyle = "#cbd5e1";
+          ctx.font = "700 11px Noto Sans JP, sans-serif";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(title, x + 10, y + 12);
+          ctx.textBaseline = "alphabetic";
+        }
+        return {
+          x: x + 10,
+          y: y + (title ? 28 : 10),
+          w: w - 20,
+          h: h - (title ? 38 : 20),
+        };
+      }
+
+      function drawDiagramText(x, y, text, color, align, size) {
+        ctx.fillStyle = color || "#e2e8f0";
+        ctx.font = (size || 11) + "px Noto Sans JP, sans-serif";
+        ctx.textAlign = align || "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x, y);
+        ctx.textBaseline = "alphabetic";
+      }
+
+      function drawLegendList(x, y, w, rows) {
+        const rowH = 22;
+        rows.forEach((row, i) => {
+          const ry = y + i * rowH + rowH / 2;
+          ctx.fillStyle = row.color;
+          ctx.beginPath();
+          ctx.arc(x + 6, ry, 4, 0, Math.PI * 2);
+          ctx.fill();
+          drawDiagramText(x + 16, ry, row.text, "#e2e8f0", "left", 11);
+        });
+        return y + rows.length * rowH;
+      }
+
+      function drawPiMark(x, y) {
+        ctx.fillStyle = "#f472b6";
+        ctx.beginPath();
+        ctx.arc(x, y, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "700 12px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("π", x, y + 1);
+        ctx.textBaseline = "alphabetic";
+      }
+
+      function drawWedgeDiagram(L) {
+        const panel = drawPanel(L.left, L.diagramTop, L.w, L.diagramH, "① 側面図 — 板のすき間（くさび）");
+        const c = { x: panel.x, w: panel.w, right: panel.x + panel.w };
+        const top = panel.y + 4;
+        const bot = panel.y + panel.h - 28;
+        const gapL = top + (bot - top) * 0.34;
+        const gapR = gapL + Math.max(16, wedgeMaxUm * 3.2);
+        const pulse = 0.5 + 0.5 * Math.sin(animT * 3);
+
+        ctx.fillStyle = "rgba(148,163,184,0.35)";
+        ctx.fillRect(c.x, top, c.w, gapL - top);
+        drawDiagramText(c.x + 8, top + 14, "上ガラス板", "#ffffff", "left", 11);
+
+        const ag = ctx.createLinearGradient(c.x, 0, c.right, 0);
+        ag.addColorStop(0, "rgba(56,189,248,0.25)");
+        ag.addColorStop(1, "rgba(56,189,248,0.6)");
+        ctx.fillStyle = ag;
+        ctx.beginPath();
+        ctx.moveTo(c.x, gapL);
+        ctx.lineTo(c.right, gapR);
+        ctx.lineTo(c.right, gapL + 4);
+        ctx.lineTo(c.x, gapL + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(56,189,248,0.85)";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(100,116,139,0.45)";
+        ctx.beginPath();
+        ctx.moveTo(c.x, gapR);
+        ctx.lineTo(c.right, gapR);
+        ctx.lineTo(c.right, bot);
+        ctx.lineTo(c.x, bot);
+        ctx.fill();
+        drawDiagramText(c.x + 8, gapR + 18, "下ガラス板", "#e2e8f0", "left", 11);
+
+        const lx = c.x + c.w * 0.36;
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = "rgba(253,224,71," + (0.6 + pulse * 0.35) + ")";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(lx, top + 8);
+        ctx.lineTo(lx, gapL);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(125,211,252," + (0.6 + pulse * 0.35) + ")";
+        ctx.beginPath();
+        ctx.moveTo(lx + 32, top + 8);
+        ctx.lineTo(lx + 32, gapL);
+        ctx.lineTo(lx + 32, gapR);
+        ctx.lineTo(lx + 64, top + 14);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawPiMark(lx + 38, gapR - 8);
+
+        const ax = c.right - 24;
+        ctx.strokeStyle = "#fde047";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ax, gapL + 6);
+        ctx.lineTo(ax, gapR - 6);
+        ctx.stroke();
+
+        const miniY = top + 6;
+        const miniH = 22;
+        const miniW = 72;
+        const miniX = c.right - miniW - 6;
+        ctx.fillStyle = "rgba(2,6,23,0.9)";
+        ctx.strokeStyle = "rgba(245,158,11,0.45)";
+        ctx.beginPath();
+        ctx.roundRect(miniX, miniY, miniW, miniH + 16, 6);
+        ctx.fill();
+        ctx.stroke();
+        drawDiagramText(miniX + miniW / 2, miniY + 8, "上から見る ↓", "#fde68a", "center", 9);
+        const rgb = nmToRgb(lambdaNm);
+        for (let i = 0; i < miniW - 8; i++) {
+          const I = intensityFromT(wedgeTM(i / (miniW - 8)));
+          ctx.fillStyle = "rgb(" + Math.round(rgb[0] * I) + "," + Math.round(rgb[1] * I) + "," + Math.round(rgb[2] * I) + ")";
+          ctx.fillRect(miniX + 4 + i, miniY + 14, 1, miniH);
+        }
+
+        const boxW = 120;
+        ctx.fillStyle = "rgba(2,6,23,0.94)";
+        ctx.strokeStyle = "rgba(245,158,11,0.4)";
+        ctx.beginPath();
+        ctx.roundRect(c.x + 6, top + 6, boxW, 58, 6);
+        ctx.fill();
+        ctx.stroke();
+        drawDiagramText(c.x + 14, top + 20, "光1  上面反射", "#fde68a", "left", 10);
+        drawDiagramText(c.x + 14, top + 40, "光2  下面反射", "#7dd3fc", "left", 10);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(c.x, bot + 10);
+        ctx.lineTo(c.right, bot + 10);
+        ctx.stroke();
+        drawDiagramText(c.x, bot + 22, "← 左端（接触 t≈0）", "#94a3b8", "left", 10);
+        drawDiagramText(c.right, bot + 22, "右端（t 最大）→", "#94a3b8", "right", 10);
+        L._wedgeAxis = { x: c.x, w: c.w, yBottom: bot + 10 };
+      }
+
+      function drawWedgeConnector(L) {
+        if (!L._wedgeAxis) return;
+        const ax = L._wedgeAxis;
+        const yTop = L.diagramTop + L.diagramH;
+        const yBot = L.patternTop;
+        const midY = (yTop + yBot) / 2;
+
+        ctx.fillStyle = "rgba(245,158,11,0.06)";
+        ctx.fillRect(ax.x, yTop, ax.w, yBot - yTop);
+        ctx.strokeStyle = "rgba(245,158,11,0.25)";
+        ctx.strokeRect(ax.x + 0.5, yTop + 0.5, ax.w - 1, yBot - yTop - 1);
+
+        [0, 0.5, 1].forEach((f) => {
+          const px = ax.x + ax.w * f;
+          ctx.strokeStyle = "rgba(148,163,184,0.35)";
+          ctx.setLineDash([3, 4]);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(px, ax.yBottom);
+          ctx.lineTo(px, yBot);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+
+        ctx.fillStyle = "#fef3c7";
+        ctx.font = "700 11px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("↓ この板を真上から見ると、下の横縞になる", ax.x + ax.w / 2, midY - 8);
+        ctx.font = "600 10px Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("同じ横位置 x → 同じ厚さ t → 同じ明暗", ax.x + ax.w / 2, midY + 10);
+        ctx.textBaseline = "alphabetic";
+
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ax.x + 12, midY + 22);
+        ctx.lineTo(ax.x + 12, yBot - 4);
+        ctx.moveTo(ax.x + ax.w - 12, midY + 22);
+        ctx.lineTo(ax.x + ax.w - 12, yBot - 4);
+        ctx.stroke();
+      }
+
+      function drawWedgePattern(L) {
+        const panel = drawPanel(L.left, L.patternTop, L.w, L.patternH, "③ ①と同じ板を真上から見た干渉縞");
+        const c = { x: panel.x, w: panel.w };
+        const barY = panel.y + 2;
+        const barH = 16;
+        const y0 = panel.y + 26;
+        const h = Math.max(36, panel.h - 52);
+        const rgb = nmToRgb(lambdaNm);
+
+        for (let i = 0; i < Math.floor(c.w); i++) {
+          const tNorm = i / c.w;
+          ctx.fillStyle = "rgba(56,189,248," + (0.15 + tNorm * 0.55) + ")";
+          ctx.fillRect(c.x + i, barY, 1, barH);
+        }
+        ctx.strokeStyle = "rgba(56,189,248,0.5)";
+        ctx.strokeRect(c.x + 0.5, barY + 0.5, c.w - 1, barH - 1);
+        drawDiagramText(c.x + 6, barY + barH / 2, "空気層 t(x)", "#7dd3fc", "left", 10);
+        drawDiagramText(c.x + c.w, barY + barH / 2, "右ほど厚い →", "#94a3b8", "right", 10);
+
+        const img = ctx.createImageData(Math.floor(c.w), Math.floor(h));
+        for (let j = 0; j < img.height; j++) {
+          for (let i = 0; i < img.width; i++) {
+            const I = intensityFromT(wedgeTM(i / img.width));
+            const idx = (j * img.width + i) * 4;
+            img.data[idx] = Math.round(rgb[0] * I + 18 * (1 - I));
+            img.data[idx + 1] = Math.round(rgb[1] * I + 18 * (1 - I));
+            img.data[idx + 2] = Math.round(rgb[2] * I + 22 * (1 - I));
+            img.data[idx + 3] = 255;
+          }
+        }
+        ctx.fillStyle = "rgba(15,23,42,0.5)";
+        ctx.fillRect(c.x, y0, c.w, h);
+        ctx.putImageData(img, c.x, y0);
+        ctx.strokeStyle = "rgba(245,158,11,0.45)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(c.x + 0.5, y0 + 0.5, c.w - 1, h - 1);
+
+        drawDiagramText(c.x + 4, y0 + h / 2 - 6, "← 左端", "#cbd5e1", "left", 10);
+        drawDiagramText(c.x + c.w - 4, y0 + h / 2 - 6, "右端 →", "#cbd5e1", "right", 10);
+
+        if (showMarkers) {
+          for (let m = 0; m <= 8; m++) {
+            const xb = wedgeXBright(m);
+            if (xb >= 0 && xb <= 1) {
+              const px = c.x + xb * c.w;
+              const hl = m === orderM;
+              ctx.strokeStyle = hl ? "#fbbf24" : "rgba(251,191,36,0.45)";
+              ctx.lineWidth = hl ? 2.5 : 1;
+              ctx.beginPath();
+              ctx.moveTo(px, barY);
+              ctx.lineTo(px, y0 + h);
+              ctx.stroke();
+              if (m <= 4) drawDiagramText(px, y0 + h + 12, "明 m=" + m, hl ? "#fde047" : "#cbd5e1", "center", 9);
+            }
+            const xd = wedgeXDark(m);
+            if (m > 0 && xd >= 0 && xd <= 1) {
+              ctx.strokeStyle = "rgba(71,85,105,0.75)";
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.moveTo(c.x + xd * c.w, barY);
+              ctx.lineTo(c.x + xd * c.w, y0 + h);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+          }
+        }
+        if (showScan && mode === "wedge") {
+          const scanFrac = (animT * 0.08) % 1;
+          const scanX = c.x + scanFrac * c.w;
+          const tAt = wedgeTM(scanFrac);
+          ctx.strokeStyle = "rgba(255,255,255,0.85)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(scanX, barY);
+          ctx.lineTo(scanX, y0 + h);
+          ctx.stroke();
+          drawReadableText(scanX, y0 + h + 28, "x=" + (scanFrac * 100).toFixed(0) + "% · t≈" + (tAt * 1e6).toFixed(2) + " μm", "#ffffff", "center", 10);
+        }
+      }
+
+      function drawNewtonSetup(L) {
+        const panel = drawPanel(L.left, L.setupTop, L.w, L.setupH, "装置（側面図）");
+        const splitX = panel.x + panel.w * 0.58;
+        const dia = {
+          left: panel.x,
+          right: splitX - 12,
+          top: panel.y,
+          bot: panel.y + panel.h,
+        };
+        const info = {
+          left: splitX,
+          right: panel.x + panel.w,
+          top: panel.y,
+          bot: panel.y + panel.h,
+        };
+
+        const baseY = dia.bot - 16;
+        const cx = (dia.left + dia.right) / 2;
+        const span = dia.right - dia.left;
+        const sagM = Math.min(0.00012, span * span / (8 * radiusM));
+        const sagPx = Math.min(panel.h * 0.34, Math.max(10, sagM * 1e6 * 0.018));
+        const pulse = 0.5 + 0.5 * Math.sin(animT * 3);
+
+        ctx.fillStyle = "rgba(100,116,139,0.55)";
+        ctx.fillRect(dia.left, baseY, span, dia.bot - baseY);
+
+        ctx.strokeStyle = "rgba(203,213,225,0.95)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(dia.left, baseY - sagPx * 0.1);
+        ctx.quadraticCurveTo(cx, baseY - sagPx - 10, dia.right, baseY - sagPx * 0.1);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(148,163,184,0.22)";
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(56,189,248,0.42)";
+        ctx.beginPath();
+        ctx.moveTo(dia.left, baseY - sagPx * 0.1);
+        ctx.quadraticCurveTo(cx, baseY - sagPx, dia.right, baseY - sagPx * 0.1);
+        ctx.lineTo(dia.right, baseY);
+        ctx.lineTo(dia.left, baseY);
+        ctx.closePath();
+        ctx.fill();
+
+        drawDiagramText(cx, dia.top + 12, "凸レンズ", "#ffffff", "center", 11);
+        drawDiagramText(cx, baseY + 14, "平面ガラス", "#cbd5e1", "center", 11);
+        drawDiagramText(cx, baseY - sagPx - 18, "中心 t ≈ 0", "#fde68a", "center", 11);
+        drawPiMark(dia.left + 26, baseY - 6);
+
+        ctx.strokeStyle = "rgba(253,224,71," + (0.65 + pulse * 0.3) + ")";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, dia.top + 4);
+        ctx.lineTo(cx, baseY - sagPx);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.beginPath();
+        ctx.moveTo(info.left, info.top);
+        ctx.lineTo(info.left, info.bot);
+        ctx.stroke();
+
+        drawDiagramText(info.left + 10, info.top + 14, "パラメータ", "#94a3b8", "left", 10);
+        drawDiagramText(info.left + 10, info.top + 36, "R = " + radiusM.toFixed(1) + " m", "#fde68a", "left", 12);
+        drawDiagramText(info.left + 10, info.top + 58, "λ = " + lambdaNm + " nm", rgbCss(nmToRgb(lambdaNm)), "left", 12);
+        drawLegendList(info.left + 4, info.top + 78, info.right - info.left - 8, [
+          { color: "#fde68a", text: "光1  レンズ下面で反射" },
+          { color: "#7dd3fc", text: "光2  ガラス上面で反射" },
+          { color: "#f472b6", text: "下面で π 反転" },
+        ]);
+        drawDiagramText(info.left + 10, info.bot - 10, "単色光を上から照射", "#94a3b8", "left", 10);
+      }
+
+      function drawNewtonConcept(L) {
+        const panel = drawPanel(L.left, L.conceptTop, L.w, L.conceptH, "② なぜ同心円の縞になる？");
+        const colW = (panel.w - 10) / 2;
+        const col1 = { x: panel.x, y: panel.y, w: colW, h: panel.h };
+        const col2 = { x: panel.x + colW + 10, y: panel.y, w: colW, h: panel.h };
+
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.beginPath();
+        ctx.moveTo(col1.x + col1.w + 5, col1.y);
+        ctx.lineTo(col1.x + col1.w + 5, col1.y + col1.h);
+        ctx.stroke();
+
+        const cx1 = col1.x + col1.w / 2;
+        const cy1 = col1.y + col1.h * 0.52;
+        const r1 = Math.min(col1.w * 0.32, col1.h * 0.34);
+        drawDiagramText(cx1, col1.y + 10, "上から見る", "#94a3b8", "center", 10);
+        ctx.strokeStyle = "rgba(148,163,184,0.65)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx1, cy1, r1, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.arc(cx1, cy1, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx1, cy1);
+        ctx.lineTo(cx1 + r1, cy1);
+        ctx.stroke();
+        drawDiagramText(cx1 + r1 / 2, cy1 - 12, "r", "#fde68a", "center", 12);
+        drawDiagramText(cx1, col1.y + col1.h - 12, "同じ r → 同じ t", "#99f6e4", "center", 11);
+
+        const cx2 = col2.x + col2.w / 2;
+        const baseY = col2.y + col2.h * 0.72;
+        const gapTop = baseY - Math.min(26, col2.h * 0.28);
+        const halfW = Math.min(46, col2.w * 0.38);
+        drawDiagramText(cx2, col2.y + 10, "側面（距離 r の位置）", "#94a3b8", "center", 10);
+        ctx.strokeStyle = "rgba(203,213,225,0.9)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx2 - halfW, gapTop - 6);
+        ctx.quadraticCurveTo(cx2, gapTop - 28, cx2 + halfW, gapTop - 6);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(100,116,139,0.55)";
+        ctx.fillRect(cx2 - halfW, baseY, halfW * 2, 8);
+        ctx.fillStyle = "rgba(56,189,248,0.45)";
+        ctx.fillRect(cx2 - halfW, baseY - 8, halfW * 2, 8);
+        const dimX = cx2 + halfW + 10;
+        ctx.strokeStyle = "#fde047";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(dimX, gapTop);
+        ctx.lineTo(dimX, baseY);
+        ctx.stroke();
+        drawDiagramText(dimX + 8, (gapTop + baseY) / 2, "t", "#fde68a", "left", 12);
+        drawDiagramText(cx2, col2.y + col2.h - 28, "t ≈ r² / (2R)", "#fde68a", "center", 12);
+        drawDiagramText(cx2, col2.y + col2.h - 12, "外側ほど空気層が厚い", "#cbd5e1", "center", 10);
+
+        drawDiagramText(L.left + L.w / 2, L.conceptTop + L.conceptH - 10,
+          "→ 干渉条件が r だけで決まる → 同心円のニュートンリング",
+          "#fef3c7", "center", 10);
+      }
+
+      function drawNewtonPattern(L) {
+        const panel = drawPanel(L.left, L.patternTop, L.w, L.patternH, "④ 上から見たニュートンリング");
+        const patW = panel.w * 0.56;
+        const legendX = panel.x + patW + 18;
+        const legendW = panel.w - patW - 18;
+        const cx = panel.x + patW / 2;
+        const cy = panel.y + panel.h / 2;
+        const maxR = Math.min(patW / 2 - 14, panel.h * 0.42);
+        const rgb = nmToRgb(lambdaNm);
+        const rMaxM = newtonRBright(8);
+
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(cx, cy, maxR + 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        const step = 2;
+        const dim = Math.ceil(maxR * 2 / step);
+        const img = ctx.createImageData(dim, dim);
+        for (let j = 0; j < dim; j++) {
+          for (let i = 0; i < dim; i++) {
+            const dx = i * step + step / 2 - maxR;
+            const dy = j * step + step / 2 - maxR;
+            const rPx = Math.hypot(dx, dy);
+            let I = 0.06;
+            if (rPx <= maxR) I = intensityFromT(newtonTM((rPx / maxR) * rMaxM));
+            const idx = (j * dim + i) * 4;
+            img.data[idx] = Math.round(rgb[0] * I + 14 * (1 - I));
+            img.data[idx + 1] = Math.round(rgb[1] * I + 14 * (1 - I));
+            img.data[idx + 2] = Math.round(rgb[2] * I + 18 * (1 - I));
+            img.data[idx + 3] = 255;
+          }
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.putImageData(img, cx - maxR, cy - maxR);
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(148,163,184,0.5)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+        ctx.stroke();
+        drawDiagramText(cx, cy + 3, "中心", "rgba(255,255,255,0.75)", "center", 10);
+
+        if (showMarkers) {
+          const scale = maxR / Math.max(rMaxM, 1e-9);
+          for (let m = 0; m <= 8; m++) {
+            const rb = newtonRBright(m) * scale;
+            const rd = newtonRDark(m) * scale;
+            if (rb <= maxR) {
+              const hl = m === orderM;
+              ctx.strokeStyle = hl ? "#fbbf24" : "rgba(251,191,36,0.4)";
+              ctx.lineWidth = hl ? 2.5 : 1;
+              ctx.beginPath();
+              ctx.arc(cx, cy, rb, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+            if (m > 0 && rd <= maxR) {
+              ctx.strokeStyle = "rgba(71,85,105,0.6)";
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.arc(cx, cy, rd, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+          }
+        }
+
+        drawDiagramText(legendX, panel.y + 8, "リング一覧", "#94a3b8", "left", 10);
+        const colM = legendX;
+        const colBright = legendX + 34;
+        const colDark = legendX + 96;
+        drawDiagramText(colM, panel.y + 26, "m", "#64748b", "left", 9);
+        drawDiagramText(colBright, panel.y + 26, "明 r", "#64748b", "left", 9);
+        drawDiagramText(colDark, panel.y + 26, "暗 r", "#64748b", "left", 9);
+
+        let rowY = panel.y + 42;
+        const rowH = 17;
+        for (let m = 0; m <= 5; m++) {
+          const rb = newtonRBright(m);
+          const rd = m > 0 ? newtonRDark(m) : null;
+          const hl = m === orderM;
+          if (hl) {
+            ctx.fillStyle = "rgba(245,158,11,0.15)";
+            ctx.fillRect(legendX - 4, rowY - 9, legendW, rowH);
+          }
+          drawDiagramText(colM, rowY, String(m), hl ? "#fde68a" : "#cbd5e1", "left", 10);
+          drawDiagramText(
+            colBright, rowY,
+            m === 0 ? "中心" : (rb * 1000).toFixed(2) + " mm",
+            hl ? "#fde68a" : "#94a3b8", "left", 10
+          );
+          drawDiagramText(
+            colDark, rowY,
+            rd == null ? "—" : (rd * 1000).toFixed(2) + " mm",
+            hl ? "#cbd5e1" : "#64748b", "left", 10
+          );
+          rowY += rowH;
+        }
+        drawDiagramText(legendX, panel.y + panel.h - 10, "明 r²=(m+½)λR · 暗 r²=mλR", "#7dd3fc", "left", 9);
+      }
+
+      function updateCanvasHud() {
+        const elStory = document.getElementById("hudStory");
+        const elFormula = document.getElementById("hudFormula");
+        if (mode === "wedge") {
+          elStory.textContent = "① すき間 t(x) → ③ 同じ板を上から見た横縞";
+          elFormula.textContent = "左 t≈0 · 右 t 最大 · 同じ x = 同じ明暗";
+        } else {
+          elStory.textContent = "① 凸レンズ＋平板 → ② t≈r²/2R → ④ 同心円";
+          elFormula.textContent = "明 r²=(m+½)λR · 暗 r²=mλR";
+        }
+      }
+
+      function updateHud() {
+        const rgb = nmToRgb(lambdaNm);
+        document.getElementById("hudMode").textContent = mode === "wedge" ? "くさび型" : "ニュートンリング";
+        document.getElementById("hudLambda").textContent = lambdaNm + " nm";
+        document.getElementById("hudLambda").style.color = rgbCss(rgb);
+        document.getElementById("hudM").textContent = String(orderM);
+        document.getElementById("lambdaSwatch").style.background = rgbCss(rgb);
+        document.getElementById("lblLambda").textContent = lambdaNm + " nm";
+        document.getElementById("lblWedge").textContent = wedgeMaxUm.toFixed(1) + " μm";
+        document.getElementById("lblR").textContent = radiusM.toFixed(1) + " m";
+        document.getElementById("lblM").textContent = String(orderM);
+
+        if (mode === "wedge") {
+          const tM = wedgeTM(wedgeXBright(orderM));
+          document.getElementById("hudT").textContent = "0 〜 " + wedgeMaxUm.toFixed(1) + " μm";
+          document.getElementById("hudR").textContent = "—";
+          document.getElementById("hudBright").textContent = "2t = (m+½)λ";
+          document.getElementById("hudDark").textContent = "2t = mλ";
+          setEq("明線：<span class='hl'>2t = (m+½)λ</span>", "m=" + orderM + " の位置 x/L ≈ " + (wedgeXBright(orderM) * 100).toFixed(1) + "% · t ≈ " + (tM * 1e6).toFixed(2) + " μm");
+        } else {
+          const rb = newtonRBright(orderM), rd = newtonRDark(orderM);
+          document.getElementById("hudT").textContent = "t = r²/(2R)";
+          document.getElementById("hudR").textContent = "暗 " + (rd * 1000).toFixed(2) + " mm";
+          document.getElementById("hudBright").textContent = "r² = (m+½)λR";
+          document.getElementById("hudDark").textContent = "r² = mλR";
+          setEq("明リング：<span class='hl'>r² = (m+½)λR</span>", "m=" + orderM + " · 明 r≈" + (rb * 1000).toFixed(2) + "mm · 暗 r≈" + (rd * 1000).toFixed(2) + "mm");
+        }
+      }
+
+      function setMode(m) {
+        mode = m;
+        document.getElementById("btnWedge").classList.toggle("is-active", m === "wedge");
+        document.getElementById("btnNewton").classList.toggle("is-active", m === "newton");
+        document.getElementById("rowWedge").style.display = m === "wedge" ? "" : "none";
+        document.getElementById("rowNewton").style.display = m === "newton" ? "" : "none";
+        document.getElementById("conceptWedge").style.display = m === "wedge" ? "" : "none";
+        document.getElementById("conceptNewton").style.display = m === "newton" ? "" : "none";
+        document.getElementById("vizTitle").textContent = m === "wedge"
+          ? "① 側面図 → ③ 同じ板を上から見た干渉縞"
+          : "① 装置 → ② なぜ同心円？ → ④ ニュートンリング";
+        updateHud();
+        updateCanvasHud();
+      }
+
+      function draw() {
+        if (cw < 10) return;
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(0, 0, cw, ch);
+        const L = layout();
+        if (mode === "wedge") {
+          drawZoneHeader(L.left, L.top, L.w, "くさび型 — ① 側面図と ③ 上から見た縞は同じ板");
+          drawWedgeDiagram(L);
+          drawWedgeConnector(L);
+          drawWedgePattern(L);
+        } else {
+          drawZoneHeader(L.left, L.top, L.w, "① ニュートンリング — 凸レンズ＋平面ガラス");
+          drawNewtonSetup(L);
+          drawNewtonConcept(L);
+          drawNewtonPattern(L);
+        }
+        updateHud();
+        updateCanvasHud();
+      }
+
+      function clearGuided() {
+        guidedTimers.forEach(clearTimeout);
+        guidedTimers = [];
+        guidedActive = false;
+        document.getElementById("btnGuided").classList.remove("active");
+        document.getElementById("guideCallout").style.display = "";
+      }
+
+      function schedule(ms, fn) { guidedTimers.push(setTimeout(fn, ms)); }
+
+      function startGuided() {
+        clearGuided();
+        guidedActive = true;
+        document.getElementById("btnGuided").classList.add("active");
+        document.getElementById("guideCallout").style.display = "none";
+        setMode("wedge");
+        orderM = 0;
+        document.getElementById("slM").value = 0;
+        wedgeMaxUm = 8;
+        document.getElementById("slWedge").value = 80;
+
+        setGuideStep(1);
+        setPhase("①", "くさび型空気層 — 左で薄く、右で厚くなるすき間");
+        setHint("2枚のガラス板の間に、くさび状の空気が入っています。");
+        setEq("くさび型空気層", "左端 t≈0（接触）· 右端が最も厚い");
+
+        schedule(3500, () => {
+          setGuideStep(2);
+          setPhase("②", "2本の反射光 — 光路差は空気層の往復 2t");
+          setHint("光①は上のガラスで反射。光②は空気を通って下で反射し、πだけ位相がずれます。");
+          setEq("光路差 <span class='hl'>ΔL = 2t</span>", "下界面で π 反転 → 明暗の条件が決まる");
+        });
+        schedule(7000, () => {
+          setGuideStep(3);
+          orderM = 2;
+          document.getElementById("slM").value = 2;
+          setPhase("③", "干渉縞 — 厚さ t が変わるので横に縞が並ぶ");
+          setHint("黄色の縦線＝明線（m=次数）。スライダーで t_max や λ を変えてみよう。");
+          setEq("明線 <span class='hl'>2t = (m+½)λ</span>", "暗線 2t = mλ");
+        });
+        schedule(11000, () => {
+          setGuideStep(4);
+          setMode("newton");
+          orderM = 0;
+          document.getElementById("slM").value = 0;
+          setPhase("④", "ニュートンリング — 凸レンズと平面ガラスのすき間");
+          setHint("中心はレンズがほぼ接触（t≈0）。外側ほど空気層が厚くなります。");
+          setEq("t(r) ≈ <span class='hl'>r²/(2R)</span>", "曲率半径 R が大きいほど縞は細かい");
+        });
+        schedule(15000, () => {
+          setGuideStep(5);
+          orderM = 3;
+          document.getElementById("slM").value = 3;
+          setPhase("⑤", "同心円のリング — 上から見ると円状の縞");
+          setHint("中心付近が明るい（m=0 の明リング）。外側に暗・明が交互に並びます。");
+          setEq("暗リング <span class='hl'>r² = mλR</span>", "明リング r² = (m+½)λR");
+        });
+        schedule(19000, () => {
+          setGuideStep(6);
+          setPhase("⑥", "まとめ — どちらも「空気層の 2t」で干渉している");
+          setHint("くさび＝横縞 · ニュートン＝同心円。ボタンで切り替えて、λ や m を自由に変えてみよう。");
+          setEq("共通：<span class='hl'>光路差 2t</span> + π反転", "体験完了！ スライダーで自由に探索しよう");
+        });
+        schedule(23000, () => {
+          clearGuided();
+          setPhase("OK", "体験完了 — スライダーやボタンで自由に試そう");
+        });
+      }
+
+      document.getElementById("btnGuided").addEventListener("click", startGuided);
+      document.getElementById("btnWedge").addEventListener("click", () => {
+        clearGuided();
+        setMode("wedge");
+        setPhase("①", "くさび型モード — 左で薄い・右で厚い空気層");
+        setHint("上：2枚のガラス板とくさび状の空気層。真ん中の帯で①→③の対応。下：①と同じ板を上から見た横縞。");
+      });
+      document.getElementById("btnNewton").addEventListener("click", () => {
+        clearGuided();
+        setMode("newton");
+        setPhase("④", "ニュートンリング — 凸レンズ＋平面ガラス");
+        setHint("①装置 → ②「同じ r なら同じ t」だから同心円 → ④上から見たリング模様。");
+      });
+      document.getElementById("btnMarkers").addEventListener("click", () => {
+        showMarkers = !showMarkers;
+        const b = document.getElementById("btnMarkers");
+        b.classList.toggle("active", showMarkers);
+        b.textContent = showMarkers ? "次数 m 表示" : "m 非表示";
+      });
+      document.getElementById("btnScan").addEventListener("click", () => {
+        showScan = !showScan;
+        const b = document.getElementById("btnScan");
+        b.classList.toggle("active", showScan);
+        b.textContent = showScan ? "走査線 ON" : "走査線 OFF";
+      });
+      document.getElementById("btnReset").addEventListener("click", () => {
+        clearGuided();
+        lambdaNm = 550; wedgeMaxUm = 8; radiusM = 5; orderM = 3;
+        document.getElementById("slLambda").value = 550;
+        document.getElementById("slWedge").value = 80;
+        document.getElementById("slR").value = 500;
+        document.getElementById("slM").value = 3;
+        setMode("wedge");
+        setGuideStep(1);
+        setPhase("START", "「はじめから体験する」で始めよう");
+        setEq("光路差 ΔL = <span class='hl'>2t</span>", "空気層の厚さ t が場所によって違う → 干渉");
+        setHint("2枚のガラス板のすき間が左で薄く、右で厚い「くさび」になると、横方向に縞模様が現れます。");
+      });
+      document.getElementById("slLambda").addEventListener("input", (e) => { lambdaNm = +e.target.value; });
+      document.getElementById("slWedge").addEventListener("input", (e) => { wedgeMaxUm = +e.target.value / 10; });
+      document.getElementById("slR").addEventListener("input", (e) => { radiusM = +e.target.value / 100; });
+      document.getElementById("slM").addEventListener("input", (e) => { orderM = +e.target.value; });
+
+      window.addEventListener("resize", resize);
+      resize();
+      setMode("wedge");
+      function loop() {
+        animT += 0.016;
+        draw();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
