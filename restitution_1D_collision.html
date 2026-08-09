@@ -6,315 +6,200 @@
   <title>1次元衝突と反発係数 e</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
-      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
-      background: linear-gradient(160deg, #0c1018 0%, #151b28 45%, #1a2030 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #e8edf5;
-      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #180c10 45%, #1a1014 100%);
+      color: #e2e8f0;
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
       touch-action: manipulation;
       -webkit-text-size-adjust: 100%;
-      min-height: 100dvh;
     }
-
-    h2 {
-      margin-top: 16px;
-      font-weight: 600;
-      color: #ffe4e6;
-      text-shadow: 0 0 20px rgba(251, 113, 133, 0.4);
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(244, 63, 94,0.4), rgba(244, 63, 94,0.25));
+      border: 1px solid rgba(244, 63, 94,0.45); font-size: 1.6rem;
     }
-
-    .chapter-label {
-      margin: 4px 0 0;
-      font-size: 0.82rem;
-      color: #9aa8bc;
-    }
-
-    .page-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fda4af; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fecdd3; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
     #back {
-      margin-top: 10px;
-      padding: 10px 16px;
-      background: rgba(251, 113, 133, 0.2);
-      color: #ffe4e6;
-      border: 1px solid rgba(251, 113, 133, 0.42);
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 600;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fecdd3; background: rgba(244, 63, 94,0.14);
+      border: 1px solid rgba(244, 63, 94,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
       -webkit-tap-highlight-color: transparent;
     }
-
-    #ui {
-      width: min(520px, 92vw);
-      margin: 10px;
-      padding: 15px;
-      border-radius: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(18, 24, 36, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 63, 94, 0.28);
     }
-
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: #b8c4d4;
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fda4af; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "controls" "viz";
     }
-
-    input[type="range"] {
-      width: 100%;
-      height: 28px;
-      accent-color: #fb7185;
-    }
-
-    .param-group {
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-    }
-
-    .param-group.a { border-left: 4px solid #38bdf8; }
-    .param-group.b { border-left: 4px solid #fb7185; }
-
-    .param-title {
-      margin: 0 0 8px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #e8edf5;
-    }
-
-    .formula-box {
-      margin: 0;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: rgba(251, 113, 133, 0.1);
-      font-size: 0.84rem;
-      font-weight: 600;
-      color: #fecdd3;
-      text-align: center;
-      line-height: 1.55;
-    }
-
-    .hint {
-      margin: 0;
-      font-size: 0.82rem;
-      color: #9aa8bc;
-      line-height: 1.55;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-row button {
-      flex: 1;
-      padding: 14px 10px;
-      min-height: 48px;
-      font-size: 0.95rem;
-      font-family: inherit;
-      font-weight: 600;
-      border-radius: 10px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    #startBtn {
-      background: linear-gradient(135deg, #e11d48, #fb7185);
-      color: white;
-      border: none;
-      box-shadow: 0 0 16px rgba(251, 113, 133, 0.4);
-    }
-
-    #resetBtn {
-      background: rgba(255, 255, 255, 0.06);
-      color: #e2e8f0;
-      border: 2px solid rgba(148, 163, 184, 0.28);
-    }
-
-    #statusPanel { display: none; }
-
-    .sim-layout {
-      width: min(960px, 95vw);
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    @media (min-width: 760px) {
-      .sim-layout { flex-direction: row; align-items: stretch; }
-      #calcPanel {
-        flex: 0 0 min(360px, 40vw);
-        max-height: min(520px, 62dvh);
-        overflow-y: auto;
+    @media (min-width: 820px) {
+      .sim-grid {
+        grid-template-columns: min(320px, 34%) 1fr;
+        grid-template-areas: "controls viz";
+        align-items: start;
       }
-      .canvas-section { flex: 1; }
     }
-
-    @media (max-width: 759px) {
-      .canvas-section { order: -1; }
+    .area-controls { grid-area: controls; display: flex; flex-direction: column; gap: 10px; }
+    .area-viz { grid-area: viz; display: flex; flex-direction: column; gap: 10px; }
+    #ui {
+      padding: 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(244, 63, 94,0.2);
+      display: flex; flex-direction: column; gap: 12px;
     }
-
-    #calcPanel {
-      padding: 16px;
-      border-radius: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(18, 24, 36, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-      line-height: 1.6;
+    label { display: block; font-size: 0.88rem; font-weight: 500; color: #cbd5e1; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #f43f5e; }
+    .hint { margin: 0; font-size: 0.8rem; color: #94a3b8; line-height: 1.55; }
+    .formula-box {
+      margin: 0; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244, 63, 94,0.1); border: 1px solid rgba(244, 63, 94,0.28);
+      font-size: 0.86rem; font-weight: 600; color: #fecdd3; text-align: center; line-height: 1.55;
     }
-
-    #calcPanel h3 {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
-      color: #ffe4e6;
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-row button {
+      flex: 1; min-width: 72px; min-height: 42px; padding: 10px 8px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244, 63, 94,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
     }
-
-    .run-status {
-      margin: 0 0 10px;
-      padding: 7px 10px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #fecdd3;
-      background: rgba(251, 113, 133, 0.1);
-      border: 1px solid rgba(251, 113, 133, 0.22);
-      text-align: center;
+    #startBtn, #releaseBtn, #dropBtn {
+      background: linear-gradient(135deg, rgba(244, 63, 94,0.45), rgba(244, 63, 94,0.25));
+      color: #fff; border-color: #f43f5e; font-weight: 800;
     }
-
-    .run-status.running {
-      color: #67e8f9;
-      border-color: rgba(34, 211, 238, 0.35);
-      background: rgba(34, 211, 238, 0.08);
+    #statusPanel {
+      padding: 12px 14px; border-radius: 12px; text-align: center; font-weight: 600; font-size: 0.85rem;
+      background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(244, 63, 94, 0.25); color: #fecdd3; line-height: 1.5;
     }
-
-    .run-status.danger {
-      color: #fb7185;
-      border-color: rgba(251, 113, 133, 0.4);
-      background: rgba(251, 113, 133, 0.12);
+    #statusPanel.zero-work { color: #fbbf24; border-color: rgba(251,191,36,0.35); }
+    #statusPanel.pos-work { color: #38bdf8; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.neg-work { color: #f87171; border-color: rgba(248,113,113,0.35); }
+    #statusPanel.p-low { color: #38bdf8; }
+    #statusPanel.p-mid { color: #34d399; }
+    #statusPanel.p-high { color: #f87171; }
+    #statusPanel.motion, #statusPanel.swinging { color: #38bdf8; }
+    #statusPanel.ready { color: #34d399; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(244, 63, 94,0.32);
     }
-
-    .run-status.collided {
-      color: #6ee7b7;
-      border-color: rgba(110, 231, 183, 0.35);
-      background: rgba(110, 231, 183, 0.08);
+    .canvas-label, .viz-label {
+      margin: 0; padding: 10px 14px 0; font-size: 0.82rem; font-weight: 700; color: #fda4af;
     }
-
-    .concept {
-      margin: 0 0 12px;
-      font-size: 0.88rem;
-      color: #9aa8bc;
+    .canvas-wrap, #canvasWrap { width: 100%; position: relative; background: #0a0e14; }
+    .canvas-wrap.motion { height: min(360px, 44dvh); min-height: 260px; }
+    .canvas-wrap.graph { height: min(240px, 28dvh); min-height: 200px; }
+    .canvas-section .canvas-wrap { height: min(420px, 52dvh); min-height: 280px; }
+    canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; }
+    .legend, .graph-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px;
+      padding: 8px 14px 12px; font-size: 0.76rem; color: #94a3b8;
     }
-
-    .calc-block {
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(148, 163, 184, 0.12);
+    .legend span, .graph-legend span { font-weight: 600; }
+    .lg-f, .lg-before, .lg-area-pos, .num-before, .num-a { color: #38bdf8; }
+    .lg-fx, .lg-dp, .lg-e, .num-dp, .num-ok { color: #a78bfa; }
+    .lg-w-pos, .lg-v, .lg-k, .lg-p-mid, .lg-u, .num-after, .num-b, .lg-after { color: #f87171; }
+    .lg-w-neg, .lg-area-neg, .lg-p-high { color: #fb7185; }
+    .lg-fd-line { color: #c4b5fd; }
+    .lg-p-low { color: #38bdf8; }
+    #formulaPanel, #calcPanel {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(244, 63, 94,0.2);
+      line-height: 1.65;
     }
-
-    .calc-block:last-child { margin-bottom: 0; }
-
-    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #38bdf8; }
-    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #818cf8; }
-    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #fb7185; }
-    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #6ee7b7; }
-    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #a78bfa; }
-
-    .calc-label {
-      margin: 0 0 4px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #fecdd3;
+    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 1.02rem; color: #fda4af; }
+    .concept { margin: 0 0 12px; font-size: 0.86rem; color: #94a3b8; }
+    .formula-block, .calc-block {
+      margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.6); border: 1px solid rgba(244, 63, 94,0.15);
     }
-
-    .calc-line {
-      margin: 3px 0;
-      font-size: 0.82rem;
-      color: #e8edf5;
+    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
+    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.78rem; font-weight: 600; color: #f43f5e; }
+    .formula-line, .calc-line { margin: 3px 0; font-size: 0.84rem; color: #e2e8f0; }
+    .formula-line.sub, .calc-line.sub { margin-left: 0.4rem; font-size: 0.8rem; color: #94a3b8; }
+    .formula-line .note { display: block; margin-top: 2px; font-size: 0.76rem; color: #64748b; }
+    .formula-line .num, .calc-line .num, .num { color: #f43f5e; font-weight: 600; }
+    .sim-layout {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
     }
-
-    .calc-line.sub {
-      margin-left: 0.4rem;
-      font-size: 0.78rem;
-      color: #9aa8bc;
+    @media (min-width: 820px) {
+      .sim-layout { grid-template-columns: min(340px, 38%) 1fr; align-items: start; }
     }
-
-    .num-a { font-weight: 600; color: #38bdf8; }
-    .num-b { font-weight: 600; color: #fb7185; }
-    .num-g { font-weight: 600; color: #6ee7b7; }
-    .num-ok { font-weight: 600; color: #a78bfa; }
-
+    .slider-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .slider-grid { grid-template-columns: 1fr; } }
+    .param-group {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.5); border: 1px solid rgba(244, 63, 94,0.15);
+    }
+    .param-group.a { border-left: 4px solid #38bdf8; }
+    .param-group.b { border-left: 4px solid #f87171; }
+    .param-title { margin: 0 0 8px; font-size: 0.86rem; font-weight: 600; color: #fda4af; }
+    .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .view-tabs { display: flex; gap: 8px; margin-bottom: 4px; }
+    .view-tab {
+      flex: 1; padding: 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(244, 63, 94,0.25); background: rgba(15,23,42,0.6); color: #94a3b8;
+    }
+    .view-tab.is-active { color: #fecdd3; border-color: rgba(244, 63, 94,0.6); background: rgba(244, 63, 94,0.15); }
+    .tab-count {
+      display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 8px;
+      background: rgba(244, 63, 94,0.3); font-size: 0.72rem;
+    }
+    .is-hidden { display: none !important; }
+    #recordPanel {
+      padding: 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(244, 63, 94,0.2);
+    }
+    #recordPanel h3 { margin: 0 0 8px; color: #fda4af; }
+    .record-desc { font-size: 0.82rem; color: #94a3b8; margin: 0 0 12px; }
+    .record-meta { font-size: 0.82rem; color: #cbd5e1; margin-bottom: 12px; line-height: 1.7; }
+    .record-table-wrap { overflow-x: auto; }
+    .record-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .record-table th, .record-table td {
+      padding: 6px 8px; border: 1px solid rgba(244, 63, 94,0.15); text-align: center; color: #cbd5e1;
+    }
+    .record-table th { background: rgba(244, 63, 94,0.12); color: #fda4af; }
+    #canvasCaption {
+      padding: 8px 14px; font-size: 0.8rem; color: #94a3b8;
+      border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+    }
     .canvas-section { width: 100%; }
 
-    .canvas-wrap {
-      width: 100%;
-      height: min(320px, 42dvh);
-      min-height: 220px;
-    }
-
-    canvas {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
-      border-radius: 14px;
-      background: transparent;
-      touch-action: none;
-      box-shadow: 0 0 32px rgba(251, 113, 133, 0.15);
-    }
-
-    .legend {
-      width: min(960px, 95vw);
-      margin: 8px 0 16px;
-      padding: 10px 14px;
-      border-radius: 14px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(18, 24, 36, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      font-size: 0.82rem;
-      line-height: 1.8;
-      color: #9aa8bc;
-    }
-
-    .legend span { font-weight: 600; }
-    .legend-cyan { color: #38bdf8; }
-    .legend-rose { color: #fb7185; }
-    .legend-green { color: #6ee7b7; }
+    .vel-readout { margin: 6px 0 0; font-size: 0.78rem; color: #94a3b8; }
+    .mode-row { display: flex; flex-direction: column; gap: 8px; font-size: 0.84rem; color: #cbd5e1; }
+    .mode-row label { display: flex; align-items: center; gap: 8px; margin: 0; }
+    .canvas-caption { margin: 0; padding: 8px 14px; font-size: 0.78rem; color: #94a3b8;
+      border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98)); }
   </style>
 </head>
 <body>
-  <div class="page-header">
-    <h2>1次元衝突と反発係数 e</h2>
-    <p class="chapter-label">7章　運動量保存の法則と反発係数 — 直線衝突</p>
-    <a id="back" href="index.html">← ホームへ戻る</a>
-  </div>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">💥</div>
+      <p class="chapter-label">第7章 — 運動量保存の法則と反発係数 — 直線衝突</p>
+      <h2>1次元衝突と反発係数 e</h2>
+      <p class="tagline">直線衝突</p>
+      <a id="back" href="00_folder_classical.html#chapter-7">← 古典力学フォルダへ戻る</a>
+    </header>
 
-  <div id="ui">
-    <label>
+    <section class="panel">
+      <div class="sim-grid">
+        <aside class="area-controls">
+          <div id="ui">
+<label>
       反発係数 e (0〜1):
       <input id="eSlider" type="range" min="0" max="1" step="0.01" value="0.85">
       <span id="eValue">0.85</span>
@@ -334,21 +219,30 @@
       <label>初速度 v<sub>B</sub> (m/s): <input id="vBSlider" type="range" min="-15" max="15" step="0.5" value="-2"><span id="vBValue">-2.0</span></label>
     </div>
 
-    <p class="formula-box">v′<sub>rel</sub> = −e v<sub>rel</sub>　　p = m<sub>A</sub>v<sub>A</sub> + m<sub>B</sub>v<sub>B</sub></p>
-    <p class="hint">A・B を直線上に配置し「スタート」。|x<sub>B</sub>−x<sub>A</sub>| ≤ 直径で衝突（1回）。</p>
-
+    <p class="formula-box">v′<sub>rel</sub> = −e v<sub>rel</sub>　　p 保存</p>
+    <p class="hint">2物体を一直線上に配置し、「スタート」で衝突させます。</p>
     <div class="btn-row">
       <button id="startBtn" type="button">スタート</button>
       <button id="resetBtn" type="button">リセット</button>
     </div>
-  </div>
 
-  <div id="statusPanel">位置・速度・e を設定して「スタート」</div>
-
-  <div class="sim-layout">
-    <section id="calcPanel" aria-label="計算過程">
+<div id="statusPanel">位置・速度・e を設定して「スタート」</div>
+          </div>
+        </aside>
+        <div class="area-viz">
+          <div class="viz-block">
+            <p class="canvas-label">1次元衝突</p>
+            <div class="canvas-wrap motion" id="canvasWrap">
+              <canvas id="canvas"></canvas>
+            </div>
+            <div class="legend">
+<span style="color:#0088dd">■ 青：A の v / v′</span>　
+    <span style="color:#cc5566">■ 赤系：B の v / v′</span>　
+    矢印＝向き（仕事シミュと同じ形）・ラベルが実際の速度 (m/s)
+</div>
+          </div>
+          <section id="calcPanel" aria-label="計算過程">
       <h3>計算過程</h3>
-      <p id="runStatus" class="run-status">位置・速度・e を設定して「スタート」</p>
       <p class="concept">1次元衝突では相対速度が e 倍に反転し、運動量は保存します。</p>
 
       <div class="calc-block">
@@ -384,43 +278,60 @@
         <p class="calc-line sub">現在 |x<sub>B</sub>−x<sub>A</sub>| = <span id="cDist" class="num-a">—</span> m、直径 = <span id="cDiam" class="num-a">—</span> m</p>
       </div>
     </section>
-
-    <div class="canvas-section">
-      <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="canvas"></canvas>
+        </div>
       </div>
-    </div>
-  </div>
-
-  <div class="legend">
-    <span class="legend-cyan">■ シアン：衝突前 v</span>　
-    <span class="legend-rose">■ ローズ：A の v′</span>　
-    <span class="legend-green">■ 緑：B の v′</span>
+    </section>
   </div>
 
   <script>
+    const canvasLayout = { w: 0, h: 0, dpr: 1 };
+
+    function resizeOneHiDPI(targetCanvas, wrap, layout, minH) {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(minH, Math.round(rect.height));
+      const pw = Math.round(w * dpr);
+      const ph = Math.round(h * dpr);
+      if (targetCanvas.width !== pw || targetCanvas.height !== ph) {
+        targetCanvas.width = pw;
+        targetCanvas.height = ph;
+      }
+      if (layout) {
+        layout.w = w; layout.h = h; layout.dpr = dpr;
+        const c = targetCanvas.getContext("2d");
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        c.imageSmoothingEnabled = true;
+      }
+      return { w, h, dpr };
+    }
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#121824");
+      bg.addColorStop(1, "#181e2c");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.55);
+      glow.addColorStop(0, "rgba(30, 41, 59, 0.35)");
+      glow.addColorStop(1, "rgba(10, 14, 20, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+    }
+
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const canvasWrap = document.getElementById("canvasWrap");
     const statusPanel = document.getElementById("statusPanel");
-    const runStatus = document.getElementById("runStatus");
-
-    const COL = {
-      cyan: "#38bdf8",
-      rose: "#fb7185",
-      green: "#6ee7b7",
-      purple: "#a78bfa",
-      grid: "rgba(148, 163, 184, 0.12)",
-      axis: "rgba(148, 163, 184, 0.45)",
-      axisText: "#94a3b8",
-      track: "rgba(18, 24, 36, 0.55)",
-    };
 
     const BALL_R = 0.2;
     const PLOT_W = 10;
-    const MARGIN = { left: 44, right: 20, top: 36, bottom: 44 };
+    const TRACK_Y = 0;
+    const MARGIN = { left: 44, right: 20, top: 36, bottom: 40 };
     const MAX_DT = 1 / 30;
-    const V_ARROW_SCALE = 10;
+    const VEL_REF_SPEED = 8;
+    const V_ARROW_PHYS = 0.85;
 
     const DEFAULTS = {
       e: 0.85,
@@ -431,17 +342,10 @@
     let phase = "idle";
     let ballA = { x: DEFAULTS.xA, vx: 0 };
     let ballB = { x: DEFAULTS.xB, vx: 0 };
-    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0, plotW: 0, dpr: 1 };
+    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0, plotW: 0 };
     let frozen = null;
 
     function fmt(n, d) { return Number(n).toFixed(d); }
-
-    function setRunStatus(text, state) {
-      runStatus.textContent = text;
-      statusPanel.textContent = text;
-      runStatus.classList.remove("running", "danger", "collided");
-      if (state) runStatus.classList.add(state);
-    }
 
     function getE() { return parseFloat(document.getElementById("eSlider").value); }
     function getMA() { return parseFloat(document.getElementById("mASlider").value); }
@@ -514,7 +418,7 @@
       setControlsDisabled(false);
       syncSliders();
       updateCalcPanel(previewData());
-      setRunStatus("位置・速度・e を設定して「スタート」");
+      statusPanel.textContent = "位置・速度・e を設定して「スタート」";
     }
 
     function applyDefaults() {
@@ -527,31 +431,35 @@
       document.getElementById("vBSlider").value = DEFAULTS.vB;
     }
 
+    function canCloseDistance(xA, xB, vA, vB) {
+      if (Math.abs(xA - xB) <= 1e-6) return Math.abs(vA - vB) > 0.05;
+      if (xA < xB) return vA > vB + 0.02;
+      return vA < vB - 0.02;
+    }
+
     function startSimulation() {
       if (phase === "running") return;
-      const dist = Math.abs(getXB() - getXA());
-      if (dist <= 2 * BALL_R + 0.01) {
-        setRunStatus("物体が重なっています — 位置をずらしてください", "danger");
-        return;
-      }
+      const xA = getXA();
+      const xB = getXB();
       const vA = getVA();
       const vB = getVB();
-      if (ballA.x < ballB.x && vA <= vB) {
-        setRunStatus("A が B に追いつきません — 速度を確認してください", "danger");
+      const dist = Math.abs(xB - xA);
+      if (dist <= 2 * BALL_R + 0.01) {
+        statusPanel.textContent = "物体が重なっています — 位置をずらしてください";
         return;
       }
-      if (ballA.x > ballB.x && vA >= vB) {
-        setRunStatus("A が B に追いつきません — 位置・速度を確認してください", "danger");
+      if (!canCloseDistance(xA, xB, vA, vB)) {
+        statusPanel.textContent = "接近しません — 位置と速度を確認してください";
         return;
       }
       phase = "running";
-      ballA.x = getXA();
-      ballB.x = getXB();
+      ballA.x = xA;
+      ballB.x = xB;
       ballA.vx = vA;
       ballB.vx = vB;
       frozen = null;
       setControlsDisabled(true);
-      setRunStatus("運動中 — 衝突を待っています", "running");
+      statusPanel.textContent = "運動中 — 衝突を待っています";
     }
 
     function tryCollision() {
@@ -582,17 +490,17 @@
 
       phase = "collided";
       updateCalcPanel(frozen);
-      setRunStatus(`衝突 — e=${fmt(getE(), 2)}、|Δp|≈${fmt(Math.abs(frozen.err), 4)} kg·m/s`, "collided");
+      statusPanel.textContent = `衝突 — e=${fmt(getE(), 2)}、|Δp|≈${fmt(Math.abs(frozen.err), 4)} kg·m/s`;
     }
 
     function update(dt) {
       if (phase !== "running" && phase !== "collided") return;
       const steps = phase === "running" ? 5 : 1;
-      const sub = dt / steps;
+      const stepDt = dt / steps;
       const halfW = PLOT_W / 2 - BALL_R;
       for (let i = 0; i < steps; i += 1) {
-        ballA.x += ballA.vx * sub;
-        ballB.x += ballB.vx * sub;
+        ballA.x += ballA.vx * stepDt;
+        ballB.x += ballB.vx * stepDt;
         ballA.x = Math.max(-halfW, Math.min(halfW, ballA.x));
         ballB.x = Math.max(-halfW, Math.min(halfW, ballB.x));
         if (phase === "running") {
@@ -602,14 +510,14 @@
       }
     }
 
-    function updateLayout(w, h, dpr) {
+    function updateLayout(w, h) {
       const plotW = w - MARGIN.left - MARGIN.right;
       const plotH = h - MARGIN.top - MARGIN.bottom;
       layout = {
         ox: MARGIN.left,
         oy: MARGIN.top + plotH * 0.55,
         scale: plotW / PLOT_W,
-        w, h, plotW, plotH, dpr,
+        w, h, plotW, plotH,
       };
     }
 
@@ -617,99 +525,91 @@
       return layout.ox + (x + PLOT_W / 2) * layout.scale;
     }
 
+    let layoutDirty = true;
+    function markLayoutDirty() { layoutDirty = true; }
+
     function resizeCanvas() {
       const rect = canvasWrap.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       const w = Math.max(280, Math.round(rect.width));
-      const ht = Math.max(200, Math.round(rect.height));
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(ht * dpr)) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(ht * dpr);
-      }
-      updateLayout(w, ht, dpr);
+      const h = Math.max(220, Math.round(rect.height));
+      if (!layoutDirty && layout.w === w && layout.h === h) return;
+      layoutDirty = false;
+      resizeOneHiDPI(canvas, canvasWrap, canvasLayout, 220);
+      updateLayout(w, h);
     }
 
-    function setupCtx() {
-      const { w, h, dpr } = layout;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.clearRect(0, 0, w, h);
-    }
-
-    function drawDarkBg(w, h) {
-      const bg = ctx.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, "#0a0e14");
-      bg.addColorStop(0.55, "#121824");
-      bg.addColorStop(1, "#181e2c");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, w, h);
-
-      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.55);
-      glow.addColorStop(0, "rgba(251, 113, 133, 0.07)");
-      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.06)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i < w; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, h);
-        ctx.stroke();
-      }
-      for (let j = 0; j < h; j += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, j);
-        ctx.lineTo(w, j);
-        ctx.stroke();
-      }
-    }
-
-    function drawHArrow(sx, sy, v, color, label) {
-      const ex = sx + v * V_ARROW_SCALE;
-      const dx = ex - sx;
-      if (Math.abs(dx) < 6) return;
-      ctx.save();
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "rgba(255,255,255,0.92)";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(ex, sy);
-      ctx.stroke();
+    function drawArrowFrom(x0, y0, dx, dy, color, lw, dashed) {
+      const segLen = Math.hypot(dx, dy);
+      if (segLen < 3) return;
       ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(ex, sy);
-      ctx.stroke();
-      const head = 10;
-      const ang = dx > 0 ? 0 : Math.PI;
       ctx.fillStyle = color;
+      ctx.lineWidth = lw;
+      ctx.lineCap = "round";
+      ctx.setLineDash(dashed ? [6, 5] : []);
       ctx.beginPath();
-      ctx.moveTo(ex, sy);
-      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 7), sy - head * Math.sin(ang - Math.PI / 7));
-      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), sy - head * Math.sin(ang + Math.PI / 7));
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0 + dx, y0 + dy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(12, segLen * 0.28);
+      const tx = x0 + dx;
+      const ty = y0 + dy;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
       ctx.closePath();
       ctx.fill();
-      if (label) {
-        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
-        ctx.fillStyle = color;
-        const lx = dx > 0 ? ex + 4 : ex - ctx.measureText(label).width - 4;
-        ctx.fillText(label, lx, sy - 6);
+    }
+
+    function velocityArrowPixels(v) {
+      const maxPx = Math.min(layout.plotW * 0.24, 72);
+      const minPx = 24;
+      const t = Math.min(1, Math.abs(v) / VEL_REF_SPEED);
+      return Math.sign(v || 1) * (minPx + (maxPx - minPx) * t);
+    }
+
+    function drawHVelocityIndicator(sx, sy, v, color, symbol, opts) {
+      if (Math.abs(v) < 0.05) return;
+      const len = velocityArrowPixels(v);
+      const ex = sx + len;
+      const truePx = v * layout.scale * V_ARROW_PHYS;
+      const clipped = Math.abs(truePx) > Math.abs(len) + 4;
+
+      drawArrowFrom(sx, sy, len, 0, color, 3.5, false);
+
+      if (clipped) {
+        const extra = Math.sign(len || 1) * Math.abs(len) * 0.18;
+        drawArrowFrom(ex, sy, extra, 0, color, 1.8, true);
       }
-      ctx.restore();
+
+      const pill = `${symbol} = ${fmt(v, 2)} m/s`;
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+      const tw = ctx.measureText(pill).width + 12;
+      const above = !(opts && opts.below);
+      const pillY = sy + (above ? -22 : 10);
+      let pillX = ex + (len >= 0 ? 8 : -tw - 8);
+      pillX = Math.max(layout.ox + 4, Math.min(layout.ox + layout.plotW - tw - 4, pillX));
+      ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, tw, 18, 5);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(pillX, pillY, tw, 18);
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(pill, pillX + 6, pillY + 13);
     }
 
     function drawBall(x, fill, stroke, label) {
       const sx = toScreen(x);
       const sy = layout.oy;
       const r = BALL_R * layout.scale;
-      ctx.save();
-      ctx.shadowBlur = 16;
-      ctx.shadowColor = fill;
       const grad = ctx.createRadialGradient(sx - r * 0.3, sy - r * 0.3, r * 0.1, sx, sy, r);
       grad.addColorStop(0, "#ffffff");
       grad.addColorStop(0.5, fill);
@@ -718,82 +618,65 @@
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.strokeStyle = stroke;
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.fillStyle = "#0c1018";
+      ctx.fillStyle = "#223344";
       ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, sx, sy);
+      ctx.fillText(label, sx, sy + 4);
       ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
-      ctx.restore();
       return { x: sx, y: sy, r };
     }
 
-    function drawTrack() {
-      const { w, h } = layout;
-      drawDarkBg(w, h);
-
-      ctx.fillStyle = COL.track;
+    function draw() {
+      resizeCanvas();
+      drawDarkBg(ctx, layout.w, layout.h);
+      ctx.fillStyle = "rgba(10, 14, 20, 0.9)";
       ctx.fillRect(layout.ox, MARGIN.top, layout.plotW, layout.h - MARGIN.top - MARGIN.bottom);
 
       const y0 = layout.oy;
-      ctx.strokeStyle = COL.axis;
+      ctx.strokeStyle = "rgba(0,100,180,0.35)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(layout.ox, y0);
       ctx.lineTo(layout.ox + layout.plotW, y0);
       ctx.stroke();
 
-      ctx.strokeStyle = COL.grid;
-      ctx.lineWidth = 1;
       for (let i = 0; i <= PLOT_W; i += 2) {
         const x = -PLOT_W / 2 + i;
         const sx = toScreen(x);
+        ctx.strokeStyle = "rgba(0,100,180,0.1)";
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(sx, MARGIN.top);
         ctx.lineTo(sx, layout.h - MARGIN.bottom);
         ctx.stroke();
-        ctx.fillStyle = COL.axisText;
+        ctx.fillStyle = "#94a3b8";
         ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(`${fmt(x, 0)}`, sx, layout.h - MARGIN.bottom + 16);
+        ctx.fillText(`${fmt(x, 0)}`, sx - 6, layout.h - MARGIN.bottom + 14);
       }
-      ctx.textAlign = "left";
 
-      ctx.fillStyle = COL.axisText;
-      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText("x (m)", layout.ox + layout.plotW - 36, layout.h - 8);
-    }
-
-    function drawFrame() {
-      resizeCanvas();
-      setupCtx();
-      drawTrack();
-
+      const mA = getMA();
+      const mB = getMB();
       const preview = previewData();
-      const pA = drawBall(ballA.x, COL.cyan, "#0284c7", "A");
-      const pB = drawBall(ballB.x, COL.rose, "#e11d48", "B");
-
-      const arrowY = layout.oy - BALL_R * layout.scale - 22;
+      const pA = drawBall(ballA.x, "#66bbff", "#0088dd", "A");
+      const pB = drawBall(ballB.x, "#ff8899", "#cc3344", "B");
 
       if (phase === "idle" || phase === "running") {
         const vA = phase === "running" ? ballA.vx : getVA();
         const vB = phase === "running" ? ballB.vx : getVB();
-        if (Math.abs(vA) > 0.05) drawHArrow(pA.x, arrowY, vA, COL.cyan, "v_A");
-        if (Math.abs(vB) > 0.05) drawHArrow(pB.x, arrowY, vB, COL.cyan, "v_B");
+        drawHVelocityIndicator(pA.x, pA.y - pA.r - 16, vA, "#0088dd", "v_A");
+        drawHVelocityIndicator(pB.x, pB.y + pB.r + 16, vB, "#cc5566", "v_B", { below: true });
       } else if (phase === "collided" && frozen) {
-        if (Math.abs(frozen.vAp) > 0.05) drawHArrow(pA.x, arrowY, frozen.vAp, COL.rose, "v′_A");
-        if (Math.abs(frozen.vBp) > 0.05) drawHArrow(pB.x, arrowY, frozen.vBp, COL.green, "v′_B");
+        drawHVelocityIndicator(pA.x, pA.y - pA.r - 16, frozen.vAp, "#cc1133", "v'_A");
+        drawHVelocityIndicator(pB.x, pB.y + pB.r + 16, frozen.vBp, "#228844", "v'_B", { below: true });
       }
 
       if (phase === "idle") {
         updateCalcPanel(preview);
         if (preview.dist <= preview.diam) {
-          setRunStatus("物体が近すぎます — 位置をずらしてください", "danger");
+          statusPanel.textContent = "物体が近すぎます — 位置をずらしてください";
         }
       }
     }
@@ -819,21 +702,28 @@
       resetSimulation();
     });
 
-    window.addEventListener("resize", resizeCanvas);
-    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", markLayoutDirty);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", markLayoutDirty);
     if (typeof ResizeObserver !== "undefined") {
-      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+      new ResizeObserver(markLayoutDirty).observe(canvasWrap);
     }
 
     applyDefaults();
     resetSimulation();
+    markLayoutDirty();
+    resizeCanvas();
 
     let lastTime = 0;
     function loop(t) {
-      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
-      lastTime = t;
-      if (dt > 0) update(dt);
-      drawFrame();
+      try {
+        const dt = lastTime > 0 ? Math.min((t - lastTime) / 1000, MAX_DT) : 0;
+        lastTime = t;
+        if (dt > 0) update(dt);
+        draw();
+      } catch (err) {
+        console.error(err);
+        statusPanel.textContent = "描画エラー — リセットを押してください";
+      }
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);

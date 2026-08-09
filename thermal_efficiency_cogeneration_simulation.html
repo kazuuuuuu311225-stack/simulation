@@ -165,8 +165,8 @@
       border: 1px solid rgba(56,189,248,0.32);
       box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 0 28px rgba(34,211,238,0.06);
     }
-    .canvas-wrap.engine-h { height: min(300px, 38dvh); min-height: 260px; }
-    .canvas-wrap.cogen-h { height: min(220px, 28dvh); min-height: 190px; }
+    .canvas-wrap.engine-h { height: min(420px, 52dvh); min-height: 360px; }
+    .canvas-wrap.cogen-h { height: min(280px, 32dvh); min-height: 240px; }
     canvas { display: block; width: 100%; height: 100%; }
 
     .canvas-hud {
@@ -237,7 +237,7 @@
       <div class="hero-icon" aria-hidden="true">⚡</div>
       <h2>熱効率とコジェネレーション</h2>
       <p class="chapter-label">高温 → 低温への熱の流れで仕事をし、廃熱を回収して総合効率を高める</p>
-      <a id="back" href="index.html">← メニューに戻る</a>
+      <a id="back" href="00_folder_thermo.html#chapter-12">← メニューに戻る</a>
     </header>
 
     <section class="hero-panel">
@@ -378,6 +378,8 @@
       const EXHAUST_DUR = 1.0;
       const RETURN_DUR = 1.2;
       const COGEN_DUR = 1.8;
+      const PISTON_H = 36;
+      const PISTON_HEAD = 14;
 
       const engineCanvas = document.getElementById("engineCanvas");
       const cogenCanvas = document.getElementById("cogenCanvas");
@@ -487,18 +489,171 @@
 
       function engineLayout() {
         const w = engineCanvas.getBoundingClientRect().width || 500;
-        const h = engineCanvas.getBoundingClientRect().height || 280;
-        const hotBox = { x: w * 0.04, y: h * 0.06, w: w * 0.22, h: h * 0.38 };
-        const coldBox = { x: w * 0.04, y: h * 0.54, w: w * 0.22, h: h * 0.38 };
-        const cx = w * 0.56;
-        const cylW = Math.min(w * 0.22, 110);
+        const h = engineCanvas.getBoundingClientRect().height || 360;
+        const padT = 34;
+        const padB = 38;
+        const padL = 8;
+        const padR = 8;
+        const innerW = w - padL - padR;
+        const innerH = h - padT - padB;
+        const hotBox = {
+          x: padL + innerW * 0.02,
+          y: padT + innerH * 0.05,
+          w: innerW * 0.26,
+          h: innerH * 0.38,
+        };
+        const coldBox = {
+          x: hotBox.x,
+          y: padT + innerH * 0.55,
+          w: hotBox.w,
+          h: innerH * 0.38,
+        };
+        const cx = padL + innerW * 0.62;
+        const cylW = Math.min(Math.max(innerW * 0.32, 96), 138);
         const x0 = cx - cylW / 2;
-        const headY = h * 0.08;
-        const footY = h * 0.88;
-        const stroke = footY - headY - 40;
+        const headY = padT + innerH * 0.06;
+        const footY = padT + innerH * 0.68;
+        const crankY = footY + Math.min(24, padB - 12);
+        const stroke = Math.max(40, footY - headY - PISTON_H - 28);
         const frac = (state.Vdisp - V0) / (V_MAX - V0);
-        const pistonY = headY + 32 + frac * stroke;
-        return { w, h, hotBox, coldBox, cx, cylW, x0, headY, footY, pistonY, frac, stroke };
+        const pistonMinY = headY + PISTON_H;
+        const pistonY = pistonMinY + frac * stroke;
+        const pistonMaxY = pistonMinY + stroke;
+        return {
+          w, h, hotBox, coldBox, cx, cylW, x0, headY, footY,
+          pistonY, pistonMinY, pistonMaxY, frac, stroke, crankY,
+        };
+      }
+
+      function drawPistonMotionHint(cx, y, dir, color, label) {
+        const pulse = 0.65 + (state.workPulse || 0.35) * 0.35;
+        eCtx.save();
+        eCtx.globalAlpha = pulse;
+        eCtx.fillStyle = color;
+        eCtx.strokeStyle = color;
+        eCtx.lineWidth = 2.5;
+        eCtx.lineCap = "round";
+        eCtx.lineJoin = "round";
+        const dy = dir === "down" ? 1 : -1;
+        for (let i = 0; i < 2; i += 1) {
+          const oy = i * 9 * dy;
+          eCtx.beginPath();
+          eCtx.moveTo(cx - 7, y + oy - 4 * dy);
+          eCtx.lineTo(cx, y + oy);
+          eCtx.lineTo(cx + 7, y + oy - 4 * dy);
+          eCtx.stroke();
+        }
+        eCtx.font = "700 10px Noto Sans JP, sans-serif";
+        eCtx.fillText(label, cx - 18, y - 14 * dy);
+        eCtx.restore();
+      }
+
+      function drawPistonAssembly(L) {
+        const { x0, cylW, pistonY, pistonMinY, pistonMaxY, cx, crankY } = L;
+        const px = x0 + 1;
+        const pw = cylW - 2;
+        const rodTop = pistonY + PISTON_H;
+        const crankR = Math.min(16, L.stroke * 0.09);
+
+        // 行程ガイド（上死点・下死点）
+        eCtx.setLineDash([4, 5]);
+        eCtx.strokeStyle = "rgba(148,163,184,0.28)";
+        eCtx.lineWidth = 1;
+        eCtx.beginPath();
+        eCtx.moveTo(x0 - 3, pistonMinY + PISTON_H * 0.5);
+        eCtx.lineTo(x0 - 16, pistonMinY + PISTON_H * 0.5);
+        eCtx.moveTo(x0 - 3, pistonMaxY + PISTON_H * 0.5);
+        eCtx.lineTo(x0 - 16, pistonMaxY + PISTON_H * 0.5);
+        eCtx.stroke();
+        eCtx.setLineDash([]);
+        eCtx.font = "500 9px Noto Sans JP, sans-serif";
+        eCtx.fillStyle = "rgba(148,163,184,0.55)";
+        eCtx.fillText("上", x0 - 28, pistonMinY + 5);
+        eCtx.fillText("下", x0 - 28, pistonMaxY + 5);
+
+        // コネクティングロッド + クランク（ピストン背面）
+        state.crankAngle = L.frac * Math.PI * 1.8;
+        const crankX = cx + Math.cos(state.crankAngle) * crankR;
+        const crankPinY = crankY + Math.sin(state.crankAngle) * crankR * 0.45;
+        eCtx.strokeStyle = "#475569";
+        eCtx.lineWidth = 5;
+        eCtx.lineCap = "round";
+        eCtx.beginPath();
+        eCtx.moveTo(cx, rodTop);
+        eCtx.lineTo(crankX, crankPinY);
+        eCtx.stroke();
+        eCtx.strokeStyle = "#94a3b8";
+        eCtx.lineWidth = 2;
+        eCtx.beginPath();
+        eCtx.moveTo(cx, rodTop);
+        eCtx.lineTo(crankX, crankPinY);
+        eCtx.stroke();
+        eCtx.strokeStyle = "rgba(148,163,184,0.55)";
+        eCtx.lineWidth = 2;
+        eCtx.beginPath();
+        eCtx.arc(cx, crankY, crankR, 0, Math.PI * 2);
+        eCtx.stroke();
+        eCtx.fillStyle = "#64748b";
+        eCtx.beginPath();
+        eCtx.arc(crankX, crankPinY, 5, 0, Math.PI * 2);
+        eCtx.fill();
+
+        // ピストン本体（金属・リング付き）
+        eCtx.save();
+        eCtx.shadowColor = "rgba(186,230,253,0.45)";
+        eCtx.shadowBlur = 12;
+        const headGrad = eCtx.createLinearGradient(0, pistonY, 0, pistonY + PISTON_HEAD);
+        headGrad.addColorStop(0, "#f8fafc");
+        headGrad.addColorStop(1, "#cbd5e1");
+        eCtx.fillStyle = headGrad;
+        eCtx.fillRect(px, pistonY, pw, PISTON_HEAD);
+        const bodyGrad = eCtx.createLinearGradient(0, pistonY + PISTON_HEAD, 0, pistonY + PISTON_H);
+        bodyGrad.addColorStop(0, "#94a3b8");
+        bodyGrad.addColorStop(0.55, "#64748b");
+        bodyGrad.addColorStop(1, "#334155");
+        eCtx.fillStyle = bodyGrad;
+        eCtx.fillRect(px, pistonY + PISTON_HEAD, pw, PISTON_H - PISTON_HEAD);
+        eCtx.shadowBlur = 0;
+        eCtx.strokeStyle = "#e2e8f0";
+        eCtx.lineWidth = 2.5;
+        eCtx.strokeRect(px, pistonY, pw, PISTON_H);
+        eCtx.strokeStyle = "#1e293b";
+        eCtx.lineWidth = 2;
+        [PISTON_HEAD + 6, PISTON_HEAD + 14].forEach((off) => {
+          eCtx.beginPath();
+          eCtx.moveTo(px + 5, pistonY + off);
+          eCtx.lineTo(px + pw - 5, pistonY + off);
+          eCtx.stroke();
+        });
+        eCtx.restore();
+
+        // 気体側の境界線（ピストン上面）
+        const hotFace = state.phase === "heat" || state.phase === "expand" || state.heatFlow > 0.08;
+        eCtx.strokeStyle = hotFace ? `rgba(251,146,60,${0.75 + state.workPulse * 0.25})` : "rgba(56,189,248,0.65)";
+        eCtx.lineWidth = hotFace ? 3 : 2;
+        eCtx.beginPath();
+        eCtx.moveTo(px + 2, pistonY + 1);
+        eCtx.lineTo(px + pw - 2, pistonY + 1);
+        eCtx.stroke();
+
+        // ピストンピン（ロッド接続）
+        eCtx.fillStyle = "#fbbf24";
+        eCtx.strokeStyle = "#d97706";
+        eCtx.lineWidth = 1.5;
+        eCtx.beginPath();
+        eCtx.arc(cx, rodTop, 6, 0, Math.PI * 2);
+        eCtx.fill();
+        eCtx.stroke();
+
+        eCtx.font = "700 11px Noto Sans JP, sans-serif";
+        eCtx.fillStyle = "#e2e8f0";
+        eCtx.fillText("ピストン", x0 + cylW + 6, pistonY + PISTON_H * 0.5 + 3);
+
+        if (state.phase === "expand") {
+          drawPistonMotionHint(cx, pistonY - 4, "down", "#c4b5fd", "↓ 膨張");
+        } else if (state.phase === "return") {
+          drawPistonMotionHint(cx, pistonY + PISTON_H + 4, "up", "#7dd3fc", "↑ 復帰");
+        }
       }
 
       function spawnFlowParticle(x1, y1, x2, y2, color) {
@@ -626,18 +781,21 @@
       }
 
       function drawEngineCylinder(L) {
-        const { x0, cylW, headY, footY, pistonY, cx } = L;
+        const { x0, cylW, headY, footY, pistonY } = L;
         const wallGrad = eCtx.createLinearGradient(x0 - 8, 0, x0 + cylW + 8, 0);
         wallGrad.addColorStop(0, "#475569");
         wallGrad.addColorStop(0.5, "#64748b");
         wallGrad.addColorStop(1, "#475569");
         eCtx.fillStyle = wallGrad;
-        eCtx.fillRect(x0 - 8, headY - 14, cylW + 16, footY - headY + 22);
+        eCtx.fillRect(x0 - 8, headY - 8, cylW + 16, footY - headY + 10);
 
         eCtx.fillStyle = "#080e18";
         eCtx.fillRect(x0, headY, cylW, footY - headY);
+        eCtx.fillStyle = "rgba(30,41,59,0.85)";
+        eCtx.fillRect(x0, headY, 4, footY - headY);
+        eCtx.fillRect(x0 + cylW - 4, headY, 4, footY - headY);
 
-        const gasTop = pistonY + 16;
+        const gasTop = pistonY + PISTON_H;
         const gasH = Math.max(4, footY - gasTop);
         const tNorm = Math.min(1, (state.Tgas - state.Tc) / Math.max(1, state.Th - state.Tc));
         const gg = eCtx.createLinearGradient(0, gasTop, 0, footY);
@@ -669,57 +827,50 @@
           eCtx.fill();
         });
 
-        // ピストン
-        const pistGrad = eCtx.createLinearGradient(0, pistonY, 0, pistonY + 18);
-        pistGrad.addColorStop(0, "#cbd5e1");
-        pistGrad.addColorStop(1, "#64748b");
-        eCtx.fillStyle = pistGrad;
-        eCtx.fillRect(x0 + 2, pistonY, cylW - 4, 16);
-        eCtx.strokeStyle = "#94a3b8";
-        eCtx.lineWidth = 1;
-        eCtx.strokeRect(x0 + 2, pistonY, cylW - 4, 16);
-
-        // コネクティングロッド + クランク（ピストン位置と連動）
-        const rodTop = pistonY + 16;
-        const crankY = headY - 6;
-        const crankR = 20;
-        state.crankAngle = L.frac * Math.PI * 1.8;
-        const crankX = cx + Math.cos(state.crankAngle) * crankR;
-        const crankPinY = crankY + Math.sin(state.crankAngle) * crankR * 0.45;
-        eCtx.strokeStyle = "#64748b";
-        eCtx.lineWidth = 4;
-        eCtx.beginPath();
-        eCtx.moveTo(x0 + cylW / 2, rodTop);
-        eCtx.lineTo(crankX, crankPinY);
-        eCtx.stroke();
-        eCtx.fillStyle = "#475569";
-        eCtx.beginPath();
-        eCtx.arc(cx, crankY, crankR, 0, Math.PI * 2);
-        eCtx.stroke();
-        eCtx.beginPath();
-        eCtx.arc(crankX, crankPinY, 5, 0, Math.PI * 2);
-        eCtx.fill();
+        drawPistonAssembly(L);
 
         if (state.phase === "expand" || state.workPulse > 0.05) {
+          const wOutX = Math.min(L.w - 8, x0 + cylW + 48);
+          const py = pistonY + PISTON_H * 0.5;
           eCtx.strokeStyle = `rgba(167,139,250,${0.55 + state.workPulse * 0.45})`;
+          eCtx.fillStyle = `rgba(167,139,250,${0.55 + state.workPulse * 0.45})`;
           eCtx.lineWidth = 3;
           eCtx.shadowColor = "rgba(167,139,250,0.6)";
           eCtx.shadowBlur = 8;
           eCtx.beginPath();
-          eCtx.moveTo(x0 + cylW + 10, pistonY + 8);
-          eCtx.lineTo(x0 + cylW + 52, pistonY + 8);
+          eCtx.moveTo(x0 + cylW + 6, py);
+          eCtx.lineTo(wOutX, py);
+          eCtx.lineTo(wOutX - 10, py - 6);
+          eCtx.moveTo(wOutX, py);
+          eCtx.lineTo(wOutX - 10, py + 6);
           eCtx.stroke();
           eCtx.shadowBlur = 0;
-          eCtx.fillStyle = "#c4b5fd";
-          eCtx.font = "700 12px Noto Sans JP, sans-serif";
-          eCtx.fillText("W_out →", x0 + cylW + 56, pistonY + 12);
+          eCtx.font = "700 11px Noto Sans JP, sans-serif";
+          eCtx.fillText("W_out →", Math.min(L.w - 72, wOutX - 8), py - 8);
         }
 
-        eCtx.font = "600 11px sans-serif";
-        eCtx.fillStyle = "#7dd3fc";
-        eCtx.fillText(`P = ${fmt(pressurePa() / 1000, 0)} kPa`, x0, headY - 20);
-        eCtx.fillStyle = "#94a3b8";
-        eCtx.fillText(`V = ${fmt(state.V, 2)} L`, x0 + cylW - 55, headY - 20);
+        const pText = `P = ${fmt(pressurePa() / 1000, 0)} kPa`;
+        const vText = `V = ${fmt(state.V, 2)} L`;
+        eCtx.font = "600 10px sans-serif";
+        const pW = eCtx.measureText(pText).width;
+        const vW = eCtx.measureText(vText).width;
+        const labelPad = 6;
+        const canRow = pW + labelPad + vW <= cylW - 8;
+        if (canRow) {
+          eCtx.textAlign = "left";
+          eCtx.fillStyle = "#7dd3fc";
+          eCtx.fillText(pText, x0 + 4, headY - 8);
+          eCtx.textAlign = "right";
+          eCtx.fillStyle = "#94a3b8";
+          eCtx.fillText(vText, x0 + cylW - 4, headY - 8);
+        } else {
+          eCtx.textAlign = "left";
+          eCtx.fillStyle = "#7dd3fc";
+          eCtx.fillText(pText, x0 + 4, headY - 20);
+          eCtx.fillStyle = "#94a3b8";
+          eCtx.fillText(vText, x0 + 4, headY - 8);
+        }
+        eCtx.textAlign = "left";
       }
 
       function drawEngineScene() {
@@ -891,7 +1042,7 @@
         state.tankBubbles = state.tankBubbles.filter((b) => b.a > 0 && b.y > tank.y);
 
         // 効率比較バー
-        const barY = h * 0.88;
+        const barY = h - 28;
         const barW = w * 0.88;
         const barX = w * 0.06;
         cCtx.fillStyle = "rgba(255,255,255,0.06)";
@@ -1130,7 +1281,7 @@
       function updateGasParticles(dt, L) {
         const left = L.x0 + 10;
         const right = L.x0 + L.cylW - 10;
-        const top = L.pistonY + 22;
+        const top = L.pistonY + PISTON_H;
         const ih = Math.max(8, L.footY - top - 10);
         state.gasParticles.forEach((p) => {
           p.nx += (p.vx * dt * 16) / (right - left);

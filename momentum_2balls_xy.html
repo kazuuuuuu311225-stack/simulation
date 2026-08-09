@@ -6,319 +6,200 @@
   <title>2球衝突と運動量保存（x–y）</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
-      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
-      background: linear-gradient(160deg, #0c1018 0%, #151b28 45%, #1a2030 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #e8edf5;
-      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #180c10 45%, #1a1014 100%);
+      color: #e2e8f0;
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
       touch-action: manipulation;
       -webkit-text-size-adjust: 100%;
-      min-height: 100dvh;
     }
-
-    h2 {
-      margin-top: 16px;
-      font-weight: 600;
-      color: #ffe4e6;
-      text-shadow: 0 0 20px rgba(251, 113, 133, 0.4);
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(244, 63, 94,0.4), rgba(244, 63, 94,0.25));
+      border: 1px solid rgba(244, 63, 94,0.45); font-size: 1.6rem;
     }
-
-    .chapter-label {
-      margin: 4px 0 0;
-      font-size: 0.82rem;
-      color: #9aa8bc;
-    }
-
-    .page-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fda4af; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fecdd3; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
     #back {
-      margin-top: 10px;
-      padding: 10px 16px;
-      background: rgba(251, 113, 133, 0.2);
-      color: #ffe4e6;
-      border: 1px solid rgba(251, 113, 133, 0.42);
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 600;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fecdd3; background: rgba(244, 63, 94,0.14);
+      border: 1px solid rgba(244, 63, 94,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
       -webkit-tap-highlight-color: transparent;
     }
-
-    #ui {
-      width: min(520px, 92vw);
-      margin: 10px;
-      padding: 15px;
-      border-radius: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(18, 24, 36, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 63, 94, 0.28);
     }
-
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: #b8c4d4;
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fda4af; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "controls" "viz";
     }
-
-    input[type="range"] {
-      width: 100%;
-      height: 28px;
-      accent-color: #fb7185;
-    }
-
-    .vel-group {
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-    }
-
-    .vel-group.a { border-left: 4px solid #38bdf8; }
-    .vel-group.b { border-left: 4px solid #fb7185; }
-
-    .vel-title {
-      margin: 0 0 8px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #e8edf5;
-    }
-
-    .vel-readout {
-      margin: 6px 0 0;
-      font-size: 0.82rem;
-      color: #9aa8bc;
-    }
-
-    .formula-box {
-      margin: 0;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: rgba(251, 113, 133, 0.1);
-      font-size: 0.86rem;
-      font-weight: 600;
-      color: #fecdd3;
-      text-align: center;
-      line-height: 1.55;
-    }
-
-    .hint {
-      margin: 0;
-      font-size: 0.82rem;
-      color: #9aa8bc;
-      line-height: 1.55;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-row button {
-      flex: 1;
-      padding: 14px 10px;
-      min-height: 48px;
-      font-size: 0.95rem;
-      font-family: inherit;
-      font-weight: 600;
-      border-radius: 10px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    #startBtn {
-      background: linear-gradient(135deg, #e11d48, #fb7185);
-      color: white;
-      border: none;
-      box-shadow: 0 0 16px rgba(251, 113, 133, 0.4);
-    }
-
-    #resetBtn {
-      background: rgba(255, 255, 255, 0.06);
-      color: #e2e8f0;
-      border: 2px solid rgba(148, 163, 184, 0.28);
-    }
-
-    #statusPanel { display: none; }
-
-    .sim-layout {
-      width: min(960px, 95vw);
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    @media (min-width: 760px) {
-      .sim-layout { flex-direction: row; align-items: stretch; }
-      #calcPanel {
-        flex: 0 0 min(360px, 40vw);
-        max-height: min(480px, 58dvh);
-        overflow-y: auto;
+    @media (min-width: 820px) {
+      .sim-grid {
+        grid-template-columns: min(320px, 34%) 1fr;
+        grid-template-areas: "controls viz";
+        align-items: start;
       }
-      .canvas-section { flex: 1; }
     }
-
-    @media (max-width: 759px) {
-      .canvas-section { order: -1; }
+    .area-controls { grid-area: controls; display: flex; flex-direction: column; gap: 10px; }
+    .area-viz { grid-area: viz; display: flex; flex-direction: column; gap: 10px; }
+    #ui {
+      padding: 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(244, 63, 94,0.2);
+      display: flex; flex-direction: column; gap: 12px;
     }
-
-    #calcPanel {
-      padding: 16px;
-      border-radius: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(18, 24, 36, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-      line-height: 1.6;
+    label { display: block; font-size: 0.88rem; font-weight: 500; color: #cbd5e1; }
+    input[type="range"] { width: 100%; height: 28px; accent-color: #f43f5e; }
+    .hint { margin: 0; font-size: 0.8rem; color: #94a3b8; line-height: 1.55; }
+    .formula-box {
+      margin: 0; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244, 63, 94,0.1); border: 1px solid rgba(244, 63, 94,0.28);
+      font-size: 0.86rem; font-weight: 600; color: #fecdd3; text-align: center; line-height: 1.55;
     }
-
-    #calcPanel h3 {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
-      color: #ffe4e6;
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-row button {
+      flex: 1; min-width: 72px; min-height: 42px; padding: 10px 8px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244, 63, 94,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
     }
-
-    .run-status {
-      margin: 0 0 10px;
-      padding: 7px 10px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #fecdd3;
-      background: rgba(251, 113, 133, 0.1);
-      border: 1px solid rgba(251, 113, 133, 0.22);
-      text-align: center;
+    #startBtn, #releaseBtn, #dropBtn {
+      background: linear-gradient(135deg, rgba(244, 63, 94,0.45), rgba(244, 63, 94,0.25));
+      color: #fff; border-color: #f43f5e; font-weight: 800;
     }
-
-    .run-status.running {
-      color: #67e8f9;
-      border-color: rgba(34, 211, 238, 0.35);
-      background: rgba(34, 211, 238, 0.08);
+    #statusPanel {
+      padding: 12px 14px; border-radius: 12px; text-align: center; font-weight: 600; font-size: 0.85rem;
+      background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(244, 63, 94, 0.25); color: #fecdd3; line-height: 1.5;
     }
-
-    .run-status.danger {
-      color: #fb7185;
-      border-color: rgba(251, 113, 133, 0.4);
-      background: rgba(251, 113, 133, 0.12);
+    #statusPanel.zero-work { color: #fbbf24; border-color: rgba(251,191,36,0.35); }
+    #statusPanel.pos-work { color: #38bdf8; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.neg-work { color: #f87171; border-color: rgba(248,113,113,0.35); }
+    #statusPanel.p-low { color: #38bdf8; }
+    #statusPanel.p-mid { color: #34d399; }
+    #statusPanel.p-high { color: #f87171; }
+    #statusPanel.motion, #statusPanel.swinging { color: #38bdf8; }
+    #statusPanel.ready { color: #34d399; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(244, 63, 94,0.32);
     }
-
-    .concept {
-      margin: 0 0 12px;
-      font-size: 0.88rem;
-      color: #9aa8bc;
+    .canvas-label, .viz-label {
+      margin: 0; padding: 10px 14px 0; font-size: 0.82rem; font-weight: 700; color: #fda4af;
     }
-
-    .calc-block {
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(148, 163, 184, 0.12);
+    .canvas-wrap, #canvasWrap { width: 100%; position: relative; background: #0a0e14; }
+    .canvas-wrap.motion { height: min(360px, 44dvh); min-height: 260px; }
+    .canvas-wrap.graph { height: min(240px, 28dvh); min-height: 200px; }
+    .canvas-section .canvas-wrap { height: min(420px, 52dvh); min-height: 280px; }
+    canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; }
+    .legend, .graph-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px;
+      padding: 8px 14px 12px; font-size: 0.76rem; color: #94a3b8;
     }
-
-    .calc-block:last-child { margin-bottom: 0; }
-
-    #calcPanel .calc-block:nth-of-type(1) { border-left: 3px solid #38bdf8; }
-    #calcPanel .calc-block:nth-of-type(2) { border-left: 3px solid #818cf8; }
-    #calcPanel .calc-block:nth-of-type(3) { border-left: 3px solid #fb7185; }
-    #calcPanel .calc-block:nth-of-type(4) { border-left: 3px solid #6ee7b7; }
-    #calcPanel .calc-block:nth-of-type(5) { border-left: 3px solid #a78bfa; }
-
-    .calc-label {
-      margin: 0 0 4px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #fecdd3;
+    .legend span, .graph-legend span { font-weight: 600; }
+    .lg-f, .lg-before, .lg-area-pos, .num-before, .num-a { color: #38bdf8; }
+    .lg-fx, .lg-dp, .lg-e, .num-dp, .num-ok { color: #a78bfa; }
+    .lg-w-pos, .lg-v, .lg-k, .lg-p-mid, .lg-u, .num-after, .num-b, .lg-after { color: #f87171; }
+    .lg-w-neg, .lg-area-neg, .lg-p-high { color: #fb7185; }
+    .lg-fd-line { color: #c4b5fd; }
+    .lg-p-low { color: #38bdf8; }
+    #formulaPanel, #calcPanel {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(244, 63, 94,0.2);
+      line-height: 1.65;
     }
-
-    .calc-line {
-      margin: 3px 0;
-      font-size: 0.84rem;
-      color: #e8edf5;
+    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 1.02rem; color: #fda4af; }
+    .concept { margin: 0 0 12px; font-size: 0.86rem; color: #94a3b8; }
+    .formula-block, .calc-block {
+      margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.6); border: 1px solid rgba(244, 63, 94,0.15);
     }
-
-    .calc-line.sub {
-      margin-left: 0.4rem;
-      font-size: 0.8rem;
-      color: #9aa8bc;
+    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
+    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.78rem; font-weight: 600; color: #f43f5e; }
+    .formula-line, .calc-line { margin: 3px 0; font-size: 0.84rem; color: #e2e8f0; }
+    .formula-line.sub, .calc-line.sub { margin-left: 0.4rem; font-size: 0.8rem; color: #94a3b8; }
+    .formula-line .note { display: block; margin-top: 2px; font-size: 0.76rem; color: #64748b; }
+    .formula-line .num, .calc-line .num, .num { color: #f43f5e; font-weight: 600; }
+    .sim-layout {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
     }
-
-    .num-a { font-weight: 600; color: #38bdf8; }
-    .num-b { font-weight: 600; color: #fb7185; }
-    .num-g { font-weight: 600; color: #6ee7b7; }
-    .num-ok { font-weight: 600; color: #a78bfa; }
-
+    @media (min-width: 820px) {
+      .sim-layout { grid-template-columns: min(340px, 38%) 1fr; align-items: start; }
+    }
+    .slider-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .slider-grid { grid-template-columns: 1fr; } }
+    .param-group {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.5); border: 1px solid rgba(244, 63, 94,0.15);
+    }
+    .param-group.a { border-left: 4px solid #38bdf8; }
+    .param-group.b { border-left: 4px solid #f87171; }
+    .param-title { margin: 0 0 8px; font-size: 0.86rem; font-weight: 600; color: #fda4af; }
+    .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .view-tabs { display: flex; gap: 8px; margin-bottom: 4px; }
+    .view-tab {
+      flex: 1; padding: 10px; border-radius: 10px; font-family: inherit; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(244, 63, 94,0.25); background: rgba(15,23,42,0.6); color: #94a3b8;
+    }
+    .view-tab.is-active { color: #fecdd3; border-color: rgba(244, 63, 94,0.6); background: rgba(244, 63, 94,0.15); }
+    .tab-count {
+      display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 8px;
+      background: rgba(244, 63, 94,0.3); font-size: 0.72rem;
+    }
+    .is-hidden { display: none !important; }
+    #recordPanel {
+      padding: 16px; border-radius: 14px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(244, 63, 94,0.2);
+    }
+    #recordPanel h3 { margin: 0 0 8px; color: #fda4af; }
+    .record-desc { font-size: 0.82rem; color: #94a3b8; margin: 0 0 12px; }
+    .record-meta { font-size: 0.82rem; color: #cbd5e1; margin-bottom: 12px; line-height: 1.7; }
+    .record-table-wrap { overflow-x: auto; }
+    .record-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .record-table th, .record-table td {
+      padding: 6px 8px; border: 1px solid rgba(244, 63, 94,0.15); text-align: center; color: #cbd5e1;
+    }
+    .record-table th { background: rgba(244, 63, 94,0.12); color: #fda4af; }
+    #canvasCaption {
+      padding: 8px 14px; font-size: 0.8rem; color: #94a3b8;
+      border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+    }
     .canvas-section { width: 100%; }
 
-    .canvas-wrap {
-      width: 100%;
-      height: min(440px, 54dvh);
-      min-height: 280px;
-    }
-
-    canvas {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
-      border-radius: 14px;
-      background: transparent;
-      touch-action: none;
-      box-shadow: 0 0 32px rgba(251, 113, 133, 0.15);
-      cursor: grab;
-    }
-
-    canvas.dragging { cursor: grabbing; }
-
-    .legend {
-      width: min(960px, 95vw);
-      margin: 8px 0 16px;
-      padding: 10px 14px;
-      border-radius: 14px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      background: rgba(18, 24, 36, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      font-size: 0.82rem;
-      line-height: 1.8;
-      color: #9aa8bc;
-    }
-
-    .legend span { font-weight: 600; }
-    .legend-cyan { color: #38bdf8; }
-    .legend-rose { color: #fb7185; }
-    .legend-green { color: #6ee7b7; }
-    .legend-nt { color: #94a3b8; }
+    .vel-readout { margin: 6px 0 0; font-size: 0.78rem; color: #94a3b8; }
+    .mode-row { display: flex; flex-direction: column; gap: 8px; font-size: 0.84rem; color: #cbd5e1; }
+    .mode-row label { display: flex; align-items: center; gap: 8px; margin: 0; }
+    .canvas-caption { margin: 0; padding: 8px 14px; font-size: 0.78rem; color: #94a3b8;
+      border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98)); }
   </style>
 </head>
 <body>
-  <div class="page-header">
-    <h2>2球衝突と運動量保存</h2>
-    <p class="chapter-label">7章　運動量保存の法則と反発係数 — x–y 平面</p>
-    <a id="back" href="index.html">← ホームへ戻る</a>
-  </div>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">💥</div>
+      <p class="chapter-label">第7章 — 運動量保存の法則と反発係数 — x–y 平面</p>
+      <h2>2球衝突と運動量保存</h2>
+      <p class="tagline">x–y 平面</p>
+      <a id="back" href="00_folder_classical.html#chapter-7">← 古典力学フォルダへ戻る</a>
+    </header>
 
-  <div id="ui">
-    <label>
+    <section class="panel">
+      <div class="sim-grid">
+        <aside class="area-controls">
+          <div id="ui">
+<label>
       質量 m<sub>A</sub> (kg):
       <input id="mASlider" type="range" min="0.1" max="2" step="0.05" value="1">
       <span id="mAValue">1.00</span>
@@ -343,9 +224,8 @@
       </label>
       <p class="vel-readout">→ v<sub>Ax</sub> = <span id="vAxValue">5.0</span>、v<sub>Ay</sub> = <span id="vAyValue">2.0</span> m/s</p>
     </div>
-
-    <div class="vel-group b">
-      <p class="vel-title">球B の初速度</p>
+    <div class="param-group b">
+      <p class="param-title">球B の初速度</p>
       <label>
         速さ |v<sub>B</sub>| (m/s):
         <input id="vBSpeedSlider" type="range" min="0" max="15" step="0.5" value="0">
@@ -359,22 +239,31 @@
       <p class="vel-readout">→ v<sub>Bx</sub> = <span id="vBxValue">0.0</span>、v<sub>By</sub> = <span id="vByValue">0.0</span> m/s</p>
     </div>
 
-    <p class="formula-box">n = (B−A)/|B−A|　　p = m v　　弾性衝突で p は保存</p>
-
-    <p class="hint">球A・Bをドラッグで配置し、速さと向き（θ）で進路を設定して「スタート」。衝突1回のみ計算します。</p>
-
+    <p class="formula-box">p = m v　　x,y 各方向で運動量保存</p>
+    <p class="hint">2球をドラッグで配置し、初速度を設定して「スタート」。</p>
     <div class="btn-row">
       <button id="startBtn" type="button">スタート</button>
       <button id="resetBtn" type="button">リセット</button>
     </div>
-  </div>
 
-  <div id="statusPanel">球を配置して「スタート」</div>
-
-  <div class="sim-layout">
-    <section id="calcPanel" aria-label="計算過程">
+<div id="statusPanel">球を配置して「スタート」</div>
+          </div>
+        </aside>
+        <div class="area-viz">
+          <div class="viz-block">
+            <p class="canvas-label">2球衝突（x–y 平面）</p>
+            <div class="canvas-wrap motion" id="canvasWrap">
+              <canvas id="canvas"></canvas>
+            </div>
+            <div class="legend">
+<span style="color:#0088dd">■ 青：衝突前 p</span>　
+    <span style="color:#cc1133">■ 赤：衝突後 p′<sub>A</sub></span>　
+    <span style="color:#228844">■ 緑：衝突後 p′<sub>B</sub></span>　
+    点線：進行方向 v（θ）　薄灰：n（法線）・t（接線）
+</div>
+          </div>
+          <section id="calcPanel" aria-label="計算過程">
       <h3>計算過程</h3>
-      <p id="runStatus" class="run-status">球を配置して「スタート」</p>
       <p class="concept">x・y 各方向で運動量が保存されます。式 (1)(2) と完全弾性衝突の条件から v′ の x,y 成分を求めます。</p>
 
       <div class="calc-block">
@@ -424,39 +313,52 @@
         <p class="calc-line sub" id="liveMomLine">現在 |Δp| = <span id="cLiveErr" class="num-ok">—</span> kg·m/s</p>
       </div>
     </section>
-
-    <div class="canvas-section">
-      <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="canvas"></canvas>
+        </div>
       </div>
-    </div>
-  </div>
-
-  <div class="legend">
-    <span class="legend-cyan">■ シアン：衝突前 p</span>　
-    <span class="legend-rose">■ ローズ：衝突後 p′<sub>A</sub></span>　
-    <span class="legend-green">■ 緑：衝突後 p′<sub>B</sub></span>　
-    点線：進行方向 v（θ）　<span class="legend-nt">破線 n（法線）・ t（接線）</span>
+    </section>
   </div>
 
   <script>
+    const canvasLayout = { w: 0, h: 0, dpr: 1 };
+
+    function resizeOneHiDPI(targetCanvas, wrap, layout, minH) {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(minH, Math.round(rect.height));
+      const pw = Math.round(w * dpr);
+      const ph = Math.round(h * dpr);
+      if (targetCanvas.width !== pw || targetCanvas.height !== ph) {
+        targetCanvas.width = pw;
+        targetCanvas.height = ph;
+      }
+      if (layout) {
+        layout.w = w; layout.h = h; layout.dpr = dpr;
+        const c = targetCanvas.getContext("2d");
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        c.imageSmoothingEnabled = true;
+      }
+      return { w, h, dpr };
+    }
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#121824");
+      bg.addColorStop(1, "#181e2c");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.55);
+      glow.addColorStop(0, "rgba(30, 41, 59, 0.35)");
+      glow.addColorStop(1, "rgba(10, 14, 20, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+    }
+
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const canvasWrap = document.getElementById("canvasWrap");
     const statusPanel = document.getElementById("statusPanel");
-    const runStatus = document.getElementById("runStatus");
-
-    const COL = {
-      cyan: "#38bdf8",
-      rose: "#fb7185",
-      green: "#6ee7b7",
-      purple: "#a78bfa",
-      nVec: "rgba(56, 189, 248, 0.75)",
-      tVec: "rgba(251, 191, 36, 0.65)",
-      grid: "rgba(148, 163, 184, 0.12)",
-      axis: "rgba(148, 163, 184, 0.45)",
-      axisText: "#94a3b8",
-    };
 
     const BALL_R = 0.12;
     const PLOT_W = 4;
@@ -479,20 +381,13 @@
     let phase = "idle";
     let ballA = { x: DEFAULTS.aX, y: DEFAULTS.aY, vx: 0, vy: 0 };
     let ballB = { x: DEFAULTS.bX, y: DEFAULTS.bY, vx: 0, vy: 0 };
-    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0, dpr: 1 };
+    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0 };
     let dragging = -1;
     let frozen = null;
     let pRef = null;
     let collisionPt = null;
 
     function fmt(n, d) { return Number(n).toFixed(d); }
-
-    function setRunStatus(text, state) {
-      runStatus.textContent = text;
-      statusPanel.textContent = text;
-      runStatus.classList.remove("running", "danger");
-      if (state) runStatus.classList.add(state);
-    }
 
     function getMA() { return parseFloat(document.getElementById("mASlider").value); }
     function getMB() { return parseFloat(document.getElementById("mBSlider").value); }
@@ -649,7 +544,7 @@
       document.getElementById("thetaBSlider").value = DEFAULTS.thetaB;
       syncSliders();
       updateCalcPanel(previewCollision());
-      setRunStatus("球を配置して「スタート」");
+      statusPanel.textContent = "球を配置して「スタート」";
     }
 
     function startSimulation() {
@@ -657,11 +552,11 @@
       const vA = getV0A();
       const vB = getV0B();
       if (len(vA) < 0.01 && len(vB) < 0.01) {
-        setRunStatus("少なくとも一方の球に速度を設定してください", "danger");
+        statusPanel.textContent = "少なくとも一方の球に速度を設定してください";
         return;
       }
       if (len(sub({ x: ballB.x, y: ballB.y }, { x: ballA.x, y: ballA.y })) <= 2 * BALL_R + 0.01) {
-        setRunStatus("球が重なっています — 位置をずらしてください", "danger");
+        statusPanel.textContent = "球が重なっています — 位置をずらしてください";
         return;
       }
       phase = "running";
@@ -673,7 +568,7 @@
       collisionPt = null;
       pRef = add(scale(vA, getMA()), scale(vB, getMB()));
       setControlsDisabled(true);
-      setRunStatus("運動中 — 衝突を待っています", "running");
+      statusPanel.textContent = "運動中 — 衝突を待っています";
     }
 
     function tryCollision() {
@@ -713,18 +608,18 @@
       };
       phase = "collided";
       updateCalcPanel(frozen);
-      setRunStatus("衝突 — 運動量保存を確認（|Δp| ≈ 0）", "running");
+      statusPanel.textContent = "衝突 — 運動量保存を確認（|Δp| ≈ 0）";
     }
 
     function update(dt) {
       if (phase !== "running" && phase !== "collided") return;
       const steps = phase === "running" ? 5 : 1;
-      const subDt = dt / steps;
+      const sub = dt / steps;
       for (let i = 0; i < steps; i += 1) {
-        ballA.x += ballA.vx * subDt;
-        ballA.y += ballA.vy * subDt;
-        ballB.x += ballB.vx * subDt;
-        ballB.y += ballB.vy * subDt;
+        ballA.x += ballA.vx * sub;
+        ballA.y += ballA.vy * sub;
+        ballB.x += ballB.vx * sub;
+        ballB.y += ballB.vy * sub;
         if (phase === "running") {
           tryCollision();
           if (phase === "collided") break;
@@ -732,14 +627,14 @@
       }
     }
 
-    function updateLayout(w, h, dpr) {
+    function updateLayout(w, h) {
       const plotW = w - MARGIN.left - MARGIN.right;
       const plotH = h - MARGIN.top - MARGIN.bottom;
       layout = {
         ox: MARGIN.left,
         oy: h - MARGIN.bottom,
         scale: Math.min(plotW / PLOT_W, plotH / PLOT_H),
-        w, h, plotW, plotH, dpr,
+        w, h, plotW, plotH,
       };
     }
 
@@ -758,53 +653,8 @@
     }
 
     function resizeCanvas() {
-      const rect = canvasWrap.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-      const w = Math.max(280, Math.round(rect.width));
-      const ht = Math.max(240, Math.round(rect.height));
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(ht * dpr)) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(ht * dpr);
-      }
-      updateLayout(w, ht, dpr);
-    }
-
-    function setupCtx() {
-      const { w, h, dpr } = layout;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.clearRect(0, 0, w, h);
-    }
-
-    function drawDarkBg(w, h) {
-      const bg = ctx.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, "#0a0e14");
-      bg.addColorStop(0.55, "#121824");
-      bg.addColorStop(1, "#181e2c");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, w, h);
-
-      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.55);
-      glow.addColorStop(0, "rgba(251, 113, 133, 0.07)");
-      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.06)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i < w; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, h);
-        ctx.stroke();
-      }
-      for (let j = 0; j < h; j += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, j);
-        ctx.lineTo(w, j);
-        ctx.stroke();
-      }
+      const { w, h: ht } = resizeOneHiDPI(canvas, canvasWrap, canvasLayout, 220);
+      updateLayout(w, ht);
     }
 
     function pointerPos(e) {
@@ -812,8 +662,8 @@
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
       return {
-        x: (cx - rect.left) * (layout.w / rect.width),
-        y: (cy - rect.top) * (layout.h / rect.height),
+        x: (cx - rect.left) * (canvas.width / rect.width),
+        y: (cy - rect.top) * (canvas.height / rect.height),
       };
     }
 
@@ -886,21 +736,6 @@
       new ResizeObserver(resizeCanvas).observe(canvasWrap);
     }
 
-    function labelAlongArrow(ex, ey, dx, dy, text, color, along, perp) {
-      const L = Math.hypot(dx, dy);
-      if (L < 5 || !text) return;
-      const ang = Math.atan2(dy, dx);
-      const lx = ex + Math.cos(ang) * along + Math.cos(ang + Math.PI / 2) * perp;
-      const ly = ey + Math.sin(ang) * along + Math.sin(ang + Math.PI / 2) * perp;
-      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
-      ctx.fillStyle = color;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, lx, ly);
-      ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
-    }
-
     function drawArrow(sx, sy, px, py, color, label, opts) {
       const options = opts || {};
       const ex = sx + px * P_SCALE;
@@ -909,11 +744,9 @@
       const dy = ey - sy;
       const L = Math.hypot(dx, dy);
       if (L < 5) return;
-
-      ctx.save();
       if (options.dashed) ctx.setLineDash([5, 4]);
       ctx.lineCap = "round";
-      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
       ctx.lineWidth = options.dashed ? 4 : 5;
       ctx.beginPath();
       ctx.moveTo(sx, sy);
@@ -926,7 +759,6 @@
       ctx.lineTo(ex, ey);
       ctx.stroke();
       ctx.setLineDash([]);
-
       const head = Math.min(12, L * 0.2);
       const ang = Math.atan2(dy, dx);
       ctx.fillStyle = color;
@@ -936,31 +768,27 @@
       ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), ey - head * Math.sin(ang + Math.PI / 7));
       ctx.closePath();
       ctx.fill();
-      ctx.restore();
-
       if (label) {
-        labelAlongArrow(ex, ey, dx, dy, label, color, 10, options.labelPerp || 0);
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 5, ey - 4);
       }
     }
 
-    function drawVelocityArrow(sx, sy, vx, vy, color, label, perp) {
+    function drawVelocityArrow(sx, sy, vx, vy, color, label) {
       const ex = sx + vx * VEL_ARROW_SCALE;
       const ey = sy - vy * VEL_ARROW_SCALE;
       const dx = ex - sx;
       const dy = ey - sy;
       if (Math.hypot(dx, dy) < 8) return;
-
-      ctx.save();
       ctx.setLineDash([6, 5]);
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.85;
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.lineTo(ex, ey);
       ctx.stroke();
       ctx.setLineDash([]);
-
       const ang = Math.atan2(dy, dx);
       const head = 9;
       ctx.fillStyle = color;
@@ -970,21 +798,17 @@
       ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), ey - head * Math.sin(ang + Math.PI / 7));
       ctx.closePath();
       ctx.fill();
-      ctx.restore();
-
-      if (label) {
-        labelAlongArrow(ex, ey, dx, dy, label, color, 8, perp || 0);
-      }
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = color;
+      ctx.fillText(label, ex + 4, ey + 12);
     }
 
     function drawAxisGrid() {
-      const { w, h } = layout;
-      drawDarkBg(w, h);
-
-      ctx.fillStyle = "rgba(18, 24, 36, 0.55)";
+      drawDarkBg(ctx, layout.w, layout.h);
+      ctx.fillStyle = "rgba(10, 14, 20, 0.9)";
       ctx.fillRect(layout.ox, MARGIN.top, layout.plotW, layout.plotH);
 
-      ctx.strokeStyle = COL.grid;
+      ctx.strokeStyle = "rgba(0,100,180,0.1)";
       ctx.lineWidth = 1;
       for (let i = 0; i <= PLOT_W; i += 1) {
         const s = toScreen(-PLOT_W / 2 + i, 0);
@@ -1002,7 +826,7 @@
       }
 
       const o = toScreen(0, 0);
-      ctx.strokeStyle = COL.axis;
+      ctx.strokeStyle = "rgba(0,100,180,0.35)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(layout.ox, o.y);
@@ -1010,21 +834,16 @@
       ctx.moveTo(o.x, MARGIN.top);
       ctx.lineTo(o.x, layout.oy);
       ctx.stroke();
-
-      ctx.fillStyle = COL.axisText;
-      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText("x", layout.ox + layout.plotW - 10, o.y - 6);
-      ctx.fillText("y", o.x + 8, MARGIN.top + 12);
-      ctx.fillText("O", o.x - 16, o.y + 14);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("x", layout.ox + layout.plotW - 8, o.y + 14);
+      ctx.fillText("y", o.x + 6, MARGIN.top + 10);
+      ctx.fillText("O", o.x - 12, o.y + 12);
     }
 
     function drawBall(b, fill, stroke, label) {
       const p = toScreen(b.x, b.y);
       const r = BALL_R * layout.scale;
-
-      ctx.save();
-      ctx.shadowBlur = 16;
-      ctx.shadowColor = fill;
       const grad = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.1, p.x, p.y, r);
       grad.addColorStop(0, "#ffffff");
       grad.addColorStop(0.5, fill);
@@ -1033,18 +852,14 @@
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.strokeStyle = stroke;
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.fillStyle = "#0c1018";
+      ctx.fillStyle = "#223344";
       ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, p.x, p.y);
+      ctx.fillText(label, p.x, p.y + 4);
       ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
-      ctx.restore();
       return p;
     }
 
@@ -1053,37 +868,28 @@
       const ps = toScreen(mid.x, mid.y);
       const nEnd = toScreen(mid.x + data.n.x * lenM, mid.y + data.n.y * lenM);
       const tEnd = toScreen(mid.x + data.t.x * lenM, mid.y + data.t.y * lenM);
-
-      ctx.save();
-      ctx.setLineDash([5, 5]);
-      ctx.lineCap = "round";
-
-      ctx.strokeStyle = COL.nVec;
-      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "rgba(100,110,130,0.55)";
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(ps.x, ps.y);
       ctx.lineTo(nEnd.x, nEnd.y);
       ctx.stroke();
-
-      ctx.strokeStyle = COL.tVec;
+      ctx.strokeStyle = "rgba(160,120,80,0.55)";
       ctx.beginPath();
       ctx.moveTo(ps.x, ps.y);
       ctx.lineTo(tEnd.x, tEnd.y);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.restore();
-
-      const ndx = nEnd.x - ps.x;
-      const ndy = nEnd.y - ps.y;
-      const tdx = tEnd.x - ps.x;
-      const tdy = tEnd.y - ps.y;
-      labelAlongArrow(nEnd.x, nEnd.y, ndx, ndy, "n", COL.nVec, 12, -10);
-      labelAlongArrow(tEnd.x, tEnd.y, tdx, tdy, "t", COL.tVec, 12, 10);
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#667788";
+      ctx.fillText("n", nEnd.x + 4, nEnd.y);
+      ctx.fillStyle = "#997755";
+      ctx.fillText("t", tEnd.x + 4, tEnd.y);
     }
 
     function drawFrame() {
       resizeCanvas();
-      setupCtx();
       syncSliders();
       drawAxisGrid();
 
@@ -1097,8 +903,8 @@
 
       drawNT(mid, preview, 0.35);
 
-      const pA = drawBall(ballA, COL.cyan, "#0284c7", "A");
-      const pB = drawBall(ballB, COL.rose, "#e11d48", "B");
+      const pA = drawBall(ballA, "#d8ecff", "#0088dd", "A");
+      const pB = drawBall(ballB, "#ffe0e4", "#cc3344", "B");
 
       const mA = getMA();
       const mB = getMB();
@@ -1107,30 +913,25 @@
         const vA = getV0A();
         const vB = getV0B();
         if (len(vA) > 0.01) {
-          drawVelocityArrow(pA.x, pA.y, vA.x, vA.y, COL.cyan, `θ=${fmt(getThetaA(), 0)}°`, -14);
-          drawArrow(pA.x, pA.y, vA.x * mA, vA.y * mA, COL.cyan, "p_A", { labelPerp: -12 });
+          drawVelocityArrow(pA.x, pA.y, vA.x, vA.y, "#0088dd", `θ=${fmt(getThetaA(), 0)}°`);
+          drawArrow(pA.x, pA.y, vA.x * mA, vA.y * mA, "#0088dd", "p_A");
         }
         if (len(vB) > 0.01) {
-          drawVelocityArrow(pB.x, pB.y, vB.x, vB.y, COL.rose, `θ=${fmt(getThetaB(), 0)}°`, 14);
-          drawArrow(pB.x, pB.y, vB.x * mB, vB.y * mB, COL.cyan, "p_B", { labelPerp: 12 });
+          drawVelocityArrow(pB.x, pB.y, vB.x, vB.y, "#cc3344", `θ=${fmt(getThetaB(), 0)}°`);
+          drawArrow(pB.x, pB.y, vB.x * mB, vB.y * mB, "#0088dd", "p_B");
         }
       }
 
       if (frozen && collisionPt) {
         const cp = toScreen(collisionPt.x, collisionPt.y);
-        drawArrow(cp.x, cp.y, frozen.vA.x * mA, frozen.vA.y * mA, COL.cyan, "p_A", { labelPerp: -14 });
-        drawArrow(cp.x, cp.y, frozen.vB.x * mB, frozen.vB.y * mB, COL.cyan, "p_B", { labelPerp: 14 });
-        drawArrow(cp.x, cp.y, frozen.vAp.x * mA, frozen.vAp.y * mA, COL.rose, "p′_A", { labelPerp: -14 });
-        drawArrow(cp.x, cp.y, frozen.vBp.x * mB, frozen.vBp.y * mB, COL.green, "p′_B", { labelPerp: 14 });
-
-        ctx.save();
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = COL.purple;
-        ctx.fillStyle = COL.purple;
+        drawArrow(cp.x, cp.y, frozen.vA.x * mA, frozen.vA.y * mA, "#0088dd", "p_A");
+        drawArrow(cp.x, cp.y, frozen.vB.x * mB, frozen.vB.y * mB, "#0088dd", "p_B");
+        drawArrow(cp.x, cp.y, frozen.vAp.x * mA, frozen.vAp.y * mA, "#cc1133", "p′_A");
+        drawArrow(cp.x, cp.y, frozen.vBp.x * mB, frozen.vBp.y * mB, "#228844", "p′_B");
+        ctx.fillStyle = "#8844cc";
         ctx.beginPath();
         ctx.arc(cp.x, cp.y, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
 
       if (phase === "collided" && pRef) {
