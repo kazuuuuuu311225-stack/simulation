@@ -1,5 +1,5 @@
 /**
- * physLabo — スマホ・タブレットでも PC と同じ画面幅・レイアウトで表示
+ * physLabo — タッチ端末でも PC と同じ画面幅・レイアウトで表示
  */
 (function () {
   "use strict";
@@ -24,12 +24,9 @@
         "content",
         "width=device-width, initial-scale=1.0, viewport-fit=cover"
       );
-      document.documentElement.style.removeProperty("--physlabo-scale");
       return;
     }
-
     var scale = Math.min(1, vw / DESIGN_W);
-    document.documentElement.style.setProperty("--physlabo-scale", scale.toFixed(4));
     meta.setAttribute(
       "content",
       "width=" +
