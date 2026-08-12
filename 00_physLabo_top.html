@@ -1,971 +1,57 @@
 ﻿<!DOCTYPE html>
-<html lang="ja" class="hero-landing">
+<html lang="ja" data-vp="device">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script>(function(){var D=1180,m=document.querySelector('meta[name=viewport]');if(!m)return;document.documentElement.classList.add('physlabo-unified-layout');var vw=window.visualViewport&&window.visualViewport.width>0?window.visualViewport.width:window.innerWidth||D;if(vw<D){var s=Math.min(1,vw/D);m.setAttribute('content','width='+D+',initial-scale='+s.toFixed(4)+',minimum-scale='+Math.max(0.2,s*0.45).toFixed(4)+',maximum-scale=5,user-scalable=yes,viewport-fit=cover');}})();</script>
+  <script>(function(){var D=1180,m=document.querySelector('meta[name=viewport]');if(!m)return;var h=document.documentElement;h.classList.add('physlabo-unified-layout');if('scrollRestoration' in history)history.scrollRestoration='manual';if(h.classList.contains('hero-landing')||h.classList.contains('hero-transition-active')||h.getAttribute('data-vp')==='device')return;var vw=window.innerWidth||document.documentElement.clientWidth||D;if(vw>=D)return;var s=Math.min(1,vw/D);m.setAttribute('content','width='+D+',initial-scale='+s.toFixed(4)+',minimum-scale='+Math.max(0.2,s*0.45).toFixed(4)+',maximum-scale=5,user-scalable=yes,viewport-fit=cover');})();</script>
   <title>physLabo — 物理を“見える化”するインタラクティブ教材</title>
+  <meta name="description" content="高校物理のインタラクティブシミュレーション約200本。力学・熱・波動・電磁気・原子・EX章を Canvas / Three.js で見える化。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-    * { box-sizing: border-box; }
-
-    :root {
-      --blue-deep: #0a1628;
-      --blue-mid: #1e3a8a;
-      --purple-mid: #6d28d9;
-      --magenta: #d946ef;
-      --grad-main: linear-gradient(135deg, #0a1628 0%, #1e3a8a 38%, #4c1d95 72%, #701a75 100%);
-    }
-
-    html { scroll-behavior: auto; }
-
-    html.hero-landing,
-    html.hero-landing body {
-      height: 100%;
-      overflow: hidden;
-    }
-
-    html.hero-landing .page-wrap,
-    html.hero-landing footer {
-      display: none;
-    }
-
-    html:not(.chapters-mode) footer {
-      display: none;
-    }
-
-    html.chapters-mode footer {
-      display: block;
-    }
-
-    html.hero-transition-active {
-      overflow: hidden;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100dvh;
-      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
-      color: #f1f5f9;
-      overflow-x: hidden;
-      background: var(--blue-deep);
-    }
-
-    /* ── グラデーション背景（10〜20 秒周期で subtle に変化） ── */
-    .bg-gradient {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background: linear-gradient(145deg,
-        #070d1a 0%, #0f1f4d 30%, #312e81 55%, #581c87 78%, #701a75 100%);
-      animation: bgShift 16s ease-in-out infinite alternate;
-      opacity: 1;
-    }
-
-    @keyframes bgShift {
-      0% {
-        background: linear-gradient(145deg,
-          #070d1a 0%, #0f1f4d 28%, #312e81 52%, #581c87 75%, #6b21a8 100%);
-      }
-      100% {
-        background: linear-gradient(155deg,
-          #0a1628 0%, #1e40af 35%, #5b21b6 58%, #86198f 82%, #701a75 100%);
-      }
-    }
-
-    /* ── 背景 Canvas（光点 + パララックス波形） ── */
-    #bgCanvas {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 1s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
-    html.hero-transition-active #bgCanvas,
-    html.chapters-mode #bgCanvas {
-      opacity: 0.55;
-    }
-
-    .hero-transition-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 40;
-      pointer-events: none;
-      opacity: 0;
-    }
-
-    html.hero-transition-active .hero-transition-overlay {
-      animation: transitionPulse 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-
-    @keyframes transitionPulse {
-      0% {
-        opacity: 0;
-        transform: scale(0.75);
-        background: radial-gradient(circle at 50% 44%, rgba(56, 189, 248, 0.32) 0%, transparent 48%);
-      }
-      38% { opacity: 1; }
-      100% {
-        opacity: 0;
-        transform: scale(1.65);
-        background: radial-gradient(circle at 50% 38%, rgba(167, 139, 250, 0.18) 0%, transparent 62%);
-      }
-    }
-
-    .page-wrap {
-      position: relative;
-      z-index: 2;
-      width: min(1100px, 94vw);
-      margin: 0 auto;
-      padding: clamp(2rem, 5vw, 3rem) 0 max(32px, env(safe-area-inset-bottom));
-    }
-
-    html.hero-transition-active .hero {
-      animation: heroPanelExit 1.05s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      z-index: 34;
-    }
-
-    @keyframes heroPanelExit {
-      0% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
-      100% { transform: translateY(-22%) scale(0.96); opacity: 0; filter: blur(8px); }
-    }
-
-    html.hero-transition-active .page-wrap {
-      display: block;
-      position: fixed;
-      inset: 0;
-      z-index: 38;
-      width: 100%;
-      max-width: none;
-      margin: 0;
-      padding:
-        max(1.75rem, env(safe-area-inset-top))
-        max(3vw, env(safe-area-inset-right))
-        max(1.5rem, env(safe-area-inset-bottom))
-        max(3vw, env(safe-area-inset-left));
-      overflow-x: hidden;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      transform: translateY(100%);
-      opacity: 0;
-      animation: chaptersPanelEnter 1.15s cubic-bezier(0.22, 1, 0.36, 1) 0.18s forwards;
-    }
-
-    html.hero-transition-active .intro-bar,
-    html.hero-transition-active .wave-divider,
-    html.hero-transition-active .section-title,
-    html.hero-transition-active .card-grid,
-    html.hero-transition-active .chapters-brand,
-    html.hero-transition-active .page-wrap > .wave-divider:last-child {
-      width: min(1100px, 94vw);
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    @keyframes chaptersPanelEnter {
-      0% {
-        transform: translateY(100%);
-        opacity: 0;
-        box-shadow: 0 -24px 80px rgba(0, 0, 0, 0);
-      }
-      45% {
-        opacity: 1;
-        box-shadow: 0 -32px 100px rgba(0, 0, 0, 0.35);
-      }
-      100% {
-        transform: translateY(0);
-        opacity: 1;
-        box-shadow: 0 -8px 48px rgba(0, 0, 0, 0.12);
-      }
-    }
-
-    html.chapters-mode .hero {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      min-height: 0;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-      pointer-events: none;
-    }
-
-    html.chapters-mode .page-wrap {
-      display: block;
-      position: relative;
-      inset: auto;
-      width: min(1100px, 94vw);
-      margin: 0 auto;
-      padding: clamp(2rem, 5vw, 3rem) 0 max(32px, env(safe-area-inset-bottom));
-      overflow: visible;
-      transform: none;
-      opacity: 1;
-      box-shadow: none;
-      animation: none;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── §1 フルスクリーン Hero ── */
-    .hero {
-      position: fixed;
-      inset: 0;
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100dvh;
-      width: 100%;
-      overflow: hidden;
-      text-align: center;
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      height: 28%;
-      z-index: 1;
-      pointer-events: none;
-      background: linear-gradient(to bottom,
-        transparent 0%,
-        rgba(7, 13, 26, 0.35) 70%,
-        rgba(7, 13, 26, 0.65) 100%);
-    }
-
-    #heroCanvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      cursor: default;
-    }
-
-    html.hero-transition-active #heroCanvas {
-      animation: heroCanvasExit 1.05s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    @keyframes heroCanvasExit {
-      0% { opacity: 1; transform: scale(1); filter: blur(0); }
-      100% { opacity: 0; transform: scale(1.06) translateY(-8%); filter: blur(6px); }
-    }
-
-    .hero-inner {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: clamp(0.75rem, 2.5vw, 1.25rem);
-      padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem max(5rem, env(safe-area-inset-bottom));
-      max-width: min(720px, 92vw);
-    }
-
-    html.hero-transition-active .hero-inner {
-      animation: heroContentExit 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    @keyframes heroContentExit {
-      0% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      20% { opacity: 1; transform: translateY(-8px) scale(1.03); filter: blur(0); }
-      100% { opacity: 0; transform: translateY(-40px) scale(0.9); filter: blur(10px); }
-    }
-
-    html.hero-transition-active .scroll-indicator {
-      animation: indicatorFade 0.35s ease forwards;
-    }
-
-    @keyframes indicatorFade {
-      to { opacity: 0; transform: translateX(-50%) translateY(8px); }
-    }
-
-    html.hero-transition-active .logo-wrap {
-      animation: logoHide 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    @keyframes logoHide {
-      to {
-        opacity: 0;
-        transform: translateY(-20px) scale(0.92);
-        visibility: hidden;
-        max-height: 0;
-        margin: 0;
-        overflow: hidden;
-      }
-    }
-
-    .logo-wrap {
-      position: relative;
-      display: inline-block;
-      margin: 0;
-      line-height: 0;
-      opacity: 0;
-      transform: translateY(18px);
-      animation: logoEnter 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.15s,
-                 logoBreathe 5s ease-in-out infinite 1.8s;
-    }
-
-    @keyframes logoEnter {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes logoBreathe {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.018); }
-    }
-
-    .logo-wrap img.logo-main {
-      width: min(380px, 78vw);
-      height: auto;
-      display: block;
-      mix-blend-mode: lighten;
-      filter: drop-shadow(0 0 32px rgba(56, 189, 248, 0.22))
-              drop-shadow(0 0 64px rgba(129, 140, 248, 0.12));
-    }
-
-    .hero-tagline {
-      margin: 0;
-      font-size: clamp(1.15rem, 3.8vw, 1.65rem);
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      color: #f8fafc;
-      opacity: 0;
-      transform: translateY(12px);
-      animation: fadeIn 1s ease forwards 0.55s;
-      text-shadow: 0 0 40px rgba(129, 140, 248, 0.25);
-    }
-
-    .hero-subtitle {
-      margin: -0.25rem 0 0;
-      font-size: clamp(0.78rem, 2.2vw, 0.92rem);
-      font-weight: 500;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: rgba(148, 163, 184, 0.85);
-      opacity: 0;
-      animation: fadeIn 1s ease forwards 0.75s;
-    }
-
-    .hero-cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: clamp(0.5rem, 2vw, 1rem);
-      padding: 14px 32px;
-      border-radius: 14px;
-      font-size: 0.92rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      color: #f1f5f9;
-      text-decoration: none;
-      font-family: inherit;
-      cursor: pointer;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(129, 140, 248, 0.28);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      box-shadow:
-        0 4px 24px rgba(0, 0, 0, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      opacity: 0;
-      transform: translateY(10px);
-      animation: fadeIn 1s ease forwards 0.95s;
-      transition:
-        transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1),
-        box-shadow 0.35s ease,
-        border-color 0.35s ease,
-        background 0.35s ease;
-    }
-
-    .hero-cta:hover,
-    .hero-cta:focus-visible {
-      transform: translateY(-3px);
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(56, 189, 248, 0.45);
-      box-shadow:
-        0 8px 32px rgba(56, 189, 248, 0.18),
-        0 0 48px rgba(129, 140, 248, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    }
-
-    .scroll-indicator {
-      position: absolute;
-      bottom: max(1.5rem, env(safe-area-inset-bottom));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      opacity: 0;
-      color: rgba(148, 163, 184, 0.7);
-      font-size: 0.68rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      pointer-events: none;
-      animation: fadeIn 1s ease forwards 1.4s;
-    }
-
-    .scroll-arrow {
-      font-size: 1rem;
-      line-height: 1;
-      animation: scrollBounce 2.2s ease-in-out infinite;
-    }
-
-    @keyframes scrollBounce {
-      0%, 100% { transform: translateY(0); opacity: 0.5; }
-      50% { transform: translateY(6px); opacity: 1; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .logo-wrap {
-        animation: logoEnter 1.4s ease forwards 0.15s;
-      }
-      .scroll-arrow { animation: none; opacity: 0.7; }
-      .hero-transition-overlay { display: none; }
-    }
-
-    @keyframes contentRise {
-      from { opacity: 0; transform: translateY(36px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .page-wrap.is-entering:not(.content-show) .intro-bar,
-    .page-wrap.is-entering:not(.content-show) .wave-divider {
-      opacity: 0;
-      transform: translateY(36px);
-    }
-
-    .page-wrap.is-entering:not(.content-show) .chapters-brand {
-      opacity: 0;
-      transform: translateY(24px) scale(0.96);
-    }
-
-    .page-wrap.is-entering:not(.content-show) .section-title {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-
-    .page-wrap.is-entering.content-show .chapters-brand.is-shown {
-      animation: contentRise 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      animation-delay: 0s;
-    }
-
-    .page-wrap.is-entering.content-show .intro-bar {
-      animation: contentRise 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      animation-delay: 0.18s;
-    }
-
-    .page-wrap.is-entering.content-show .wave-divider {
-      animation: contentRise 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      animation-delay: 0.3s;
-    }
-
-    .page-wrap.is-entering.content-show .section-title {
-      animation: contentRise 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      animation-delay: 0.42s;
-    }
-
-    .chapters-brand.is-shown,
-    html.chapters-mode .chapters-brand,
-    .page-wrap.content-visible .chapters-brand {
-      display: block !important;
-      opacity: 1 !important;
-      transform: none !important;
-      visibility: visible !important;
-    }
-
-    .section-title.is-shown,
-    .page-wrap.content-visible .section-title,
-    html.chapters-mode .section-title {
-      opacity: 1 !important;
-      transform: none !important;
-      visibility: visible !important;
-    }
-
-    .page-wrap.content-visible .intro-bar,
-    .page-wrap.content-visible .wave-divider {
-      opacity: 1;
-      transform: none;
-    }
-
-    /* ── コンテンツエリア ── */
-    .chapters-brand {
-      display: none;
-      text-align: center;
-      margin: 0 auto 1.25rem;
-      line-height: 0;
-    }
-
-    .chapters-brand img {
-      width: min(380px, 78vw);
-      height: auto;
-      display: inline-block;
-      mix-blend-mode: lighten;
-      filter: drop-shadow(0 0 32px rgba(56, 189, 248, 0.22))
-              drop-shadow(0 0 64px rgba(129, 140, 248, 0.12));
-    }
-
-    .intro-bar {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .sim-total {
-      margin: 0 auto 0.75rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
-      padding: 7px 20px;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      color: #cbd5e1;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(129, 140, 248, 0.28);
-      box-shadow: 0 0 20px rgba(129, 140, 248, 0.12);
-      white-space: nowrap;
-    }
-
-    .sim-total-label {
-      font-weight: 600;
-      letter-spacing: 0.03em;
-    }
-
-    .sim-total strong {
-      font-size: 1.08rem;
-      font-weight: 800;
-      color: #7dd3fc;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .page-intro {
-      margin: 0 auto;
-      max-width: 36em;
-      font-size: 0.88rem;
-      line-height: 1.7;
-      color: #94a3b8;
-      text-align: center;
-    }
-
-    /* ── §4 波形区切り線 ── */
-    .wave-divider {
-      width: 100%;
-      height: 48px;
-      margin: 2rem 0;
-    }
-
-    .wave-divider canvas {
-      width: 100%;
-      height: 48px;
-      display: block;
-    }
-
-    /* ── §3 章一覧カード ── */
-    .section-title {
-      text-align: center;
-      font-size: clamp(1.1rem, 3vw, 1.35rem);
-      font-weight: 600;
-      color: #e2e8f0;
-      margin: 0 0 1.25rem;
-      letter-spacing: 0.12em;
-      text-shadow: 0 0 20px rgba(129, 140, 248, 0.35);
-      opacity: 1;
-      transform: none;
-      visibility: visible;
-    }
-
-    html.chapters-mode .section-title {
-      margin-top: 0.25rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-    }
-
-    @media (min-width: 640px) {
-      .card-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (min-width: 960px) {
-      .card-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    .chapter-card {
-      --glow: 0;
-      --card-inten: 0;
-      --reveal-i: 0;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding: 1.35rem 1.25rem 1.2rem;
-      border-radius: 18px;
-      background: #ffffff;
-      color: #1e293b;
-      text-decoration: none;
-      overflow: hidden;
-      transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.35s ease;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-grid.is-entering .chapter-card {
-      opacity: 0;
-      transform: translateY(44px) scale(0.95);
-      transition:
-        opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-        box-shadow 0.35s ease;
-    }
-
-    .card-grid.is-entering .chapter-card.is-revealed,
-    .chapter-card.is-revealed {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    .card-fx {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.85;
-      border-radius: 18px;
-    }
-
-    .chapter-card > *:not(.card-fx) {
-      position: relative;
-      z-index: 1;
-    }
-
-    .chapter-card[data-physics="classical"]:hover,
-    .chapter-card[data-physics="classical"]:focus-visible {
-      transform: translateY(-6px) translateX(6px);
-      box-shadow: 0 20px 44px rgba(37, 99, 235, 0.28);
-    }
-
-    .chapter-card[data-physics="thermo"]:hover,
-    .chapter-card[data-physics="thermo"]:focus-visible {
-      transform: translateY(-5px) scale(1.01);
-      box-shadow: 0 18px 42px rgba(251, 191, 36, 0.22);
-    }
-
-    .chapter-card[data-physics="waves"]:hover,
-    .chapter-card[data-physics="waves"]:focus-visible {
-      animation: cardWaveRock 0.8s ease-in-out infinite;
-      box-shadow: 0 18px 40px rgba(56, 189, 248, 0.28);
-    }
-
-    @keyframes cardWaveRock {
-      0%, 100% { transform: translateY(-5px) rotate(0deg); }
-      25% { transform: translateY(-7px) rotate(-0.6deg); }
-      75% { transform: translateY(-3px) rotate(0.6deg); }
-    }
-
-    .chapter-card[data-physics="em"]:hover,
-    .chapter-card[data-physics="em"]:focus-visible {
-      transform: translateY(-5px);
-      box-shadow: 0 18px 44px rgba(129, 140, 248, 0.32), 0 0 24px rgba(129, 140, 248, 0.15);
-    }
-
-    .chapter-card[data-physics="atom"]:hover,
-    .chapter-card[data-physics="atom"]:focus-visible {
-      transform: translateY(-5px);
-      box-shadow: 0 18px 40px rgba(244, 114, 182, 0.28), 0 0 20px rgba(232, 121, 249, 0.15);
-    }
-
-    .chapter-card[data-physics="ex"]:hover,
-    .chapter-card[data-physics="ex"]:focus-visible {
-      transform: translateY(-5px);
-      box-shadow: 0 18px 40px rgba(6, 182, 212, 0.25);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .chapter-card[data-physics="waves"]:hover { animation: none; transform: translateY(-4px); }
-    }
-
-    .chapter-card:hover {
-      --glow: 0.85;
-    }
-
-    /* 青→紫グラデーション枠線 */
-    .chapter-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      padding: 2px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, #2563eb, #7c3aed, #d946ef);
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-
-    /* ホバー時の光点 */
-    .chapter-card::after {
-      content: "";
-      position: absolute;
-      top: 12px;
-      right: 14px;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(167,139,250,0.6) 40%, transparent 70%);
-      opacity: var(--glow);
-      transition: opacity 0.35s ease;
-      pointer-events: none;
-    }
-
-    /* 旧ホバー（data-physics なし用フォールバック） */
-    .chapter-card:not([data-physics]):hover {
-      transform: translateY(-4px);
-      box-shadow: 0 16px 40px rgba(109, 40, 217, 0.25);
-    }
-
-    .card-icon {
-      width: 44px;
-      height: 44px;
-      flex-shrink: 0;
-    }
-
-    .card-icon svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    .card-head {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .card-title {
-      margin: 0;
-      font-size: 1.12rem;
-      font-weight: 700;
-      color: #0f172a;
-      line-height: 1.35;
-    }
-
-    .card-badge {
-      display: inline-block;
-      margin-top: 4px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.68rem;
-      font-weight: 600;
-      color: #5b21b6;
-      background: rgba(167, 139, 250, 0.15);
-    }
-
-    .card-desc {
-      margin: 0;
-      font-size: 0.84rem;
-      line-height: 1.65;
-      color: #475569;
-    }
-
-    .card-chapters {
-      margin: 4px 0 0;
-      padding: 0;
-      list-style: none;
-      font-size: 0.78rem;
-      color: #64748b;
-      line-height: 1.55;
-    }
-
-    .card-chapters li::before {
-      content: "· ";
-      color: #a78bfa;
-    }
-
-    .card-arrow {
-      margin-top: auto;
-      padding-top: 8px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #7c3aed;
-    }
-
-    /* ── §8 フッター ── */
-    footer {
-      position: relative;
-      margin-top: 3rem;
-      padding: 2.5rem 1rem 2rem;
-      background: #070d1a;
-      text-align: center;
-      overflow: hidden;
-    }
-
-    #footerCanvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .footer-text {
-      position: relative;
-      z-index: 1;
-      margin: 0;
-      font-size: 0.88rem;
-      color: rgba(255, 255, 255, 0.85);
-      letter-spacing: 0.06em;
-    }
-
-    .footer-link {
-      position: relative;
-      z-index: 1;
-      display: inline-block;
-      margin-top: 1rem;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #c4b5fd;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(167, 139, 250, 0.25);
-      text-decoration: none;
-      transition: background 0.2s;
-    }
-
-    .footer-link:hover {
-      background: rgba(167, 139, 250, 0.15);
-    }
-
-    .auth-gate {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
-        max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-      background: rgba(7, 13, 26, 0.72);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      opacity: 1;
-      transition: opacity 0.25s ease;
-    }
-
-    .auth-gate.hidden {
-      display: none;
-    }
-
-    .auth-panel {
-      width: min(380px, 100%);
-      padding: 24px 22px 20px;
-      border-radius: 18px;
-      background: linear-gradient(165deg, rgba(15, 23, 42, 0.96), rgba(30, 27, 75, 0.92));
-      border: 1px solid rgba(129, 140, 248, 0.35);
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
-    }
-
-    .auth-panel h2 {
-      margin: 0 0 8px;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #e0e7ff;
-    }
-
-    .auth-panel p {
-      margin: 0 0 16px;
-      font-size: 0.84rem;
-      line-height: 1.55;
-      color: #94a3b8;
-    }
-
-    .auth-panel input.auth-input {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid rgba(129, 140, 248, 0.35);
-      background: rgba(2, 6, 23, 0.85);
-      color: #f1f5f9;
-      font-size: 16px;
-      font-family: inherit;
-      letter-spacing: 0.14em;
-      text-align: center;
-    }
-
-    .auth-panel input.auth-input:focus {
-      outline: none;
-      border-color: rgba(56, 189, 248, 0.6);
-      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
-    }
-
-    .auth-error {
-      margin: 10px 0 0;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #fca5a5;
-    }
-
-    .auth-error.hidden { display: none; }
-
-    .auth-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-    }
-
-    .auth-actions button {
-      flex: 1;
-      min-height: 42px;
-      border-radius: 10px;
-      border: 1px solid rgba(129, 140, 248, 0.35);
-      background: rgba(255, 255, 255, 0.06);
-      color: #cbd5e1;
-      font-family: inherit;
-      font-size: 0.86rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .auth-actions button.primary {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.55), rgba(109, 40, 217, 0.45));
-      color: #fff;
-      border-color: rgba(96, 165, 250, 0.5);
-    }
-  </style>
-  <link rel="stylesheet" href="assets/css/physlabo-mobile.css?v=20260626a">
-  <script src="assets/js/physlabo-mobile.js?v=20260626a" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/physlabo-landing.css?v=20260827">
+  <link rel="stylesheet" href="assets/css/physlabo-mobile.css?v=20260813">
+  <script src="assets/js/physlabo-mobile.js?v=20260813" defer></script>
 </head>
 <body>
-  <div class="bg-gradient" aria-hidden="true"></div>
-  <canvas id="bgCanvas" aria-hidden="true"></canvas>
-  <div class="hero-transition-overlay" aria-hidden="true"></div>
+
+  <div id="loader" class="loader" aria-hidden="false">
+    <div class="loader__inner">
+      <p class="loader__text">physLabo</p>
+      <div class="loader__line"></div>
+    </div>
+  </div>
+
+  <header class="header" id="header">
+    <div class="header__inner">
+      <a href="#hero" class="header__logo" aria-label="physLabo ホーム">
+        <img class="header__logo-img" src="physLabo_logo.png?v=20260813b" alt="physLabo" width="715" height="156">
+      </a>
+      <button type="button" class="header__menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navOverlay" aria-label="メニューを開く">
+        <span class="header__menu-text">メニュー</span>
+        <span class="header__menu-icon" aria-hidden="true"><span></span><span></span></span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="nav-overlay" id="navOverlay" aria-hidden="true">
+    <div class="nav-overlay__inner">
+      <ul class="nav-overlay__list">
+        <li><a href="#hero" class="nav-overlay__link" data-nav>ホーム</a></li>
+        <li><a href="#about" class="nav-overlay__link" data-nav>このサイトについて</a></li>
+        <li><a href="#service" class="nav-overlay__link" data-nav>学習分野</a></li>
+        <li><a href="#works" class="nav-overlay__link" data-nav>シミュレーション</a></li>
+        <li><a href="#company" class="nav-overlay__link" data-nav>収録内容</a></li>
+        <li><a href="#start" class="nav-overlay__link" data-nav>はじめる</a></li>
+      </ul>
+      <p class="nav-overlay__tagline">式で理解する。<br>動きで確かめる。</p>
+    </div>
+  </nav>
 
   <div class="auth-gate hidden" id="authGate" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-hidden="true">
     <div class="auth-panel">
       <h2 id="authTitle">パスワード入力</h2>
-      <p>シミュレーションを見るにはパスワードが必要です。</p>
+      <p>学習分野を開くにはパスワードが必要です。</p>
       <input type="text" class="auth-input" id="authPassword" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="パスワード">
       <button type="button" class="auth-toggle-vis" id="authToggleVis">入力を隠す</button>
       <p class="auth-error hidden" id="authError" role="alert">パスワードが正しくありません</p>
@@ -976,208 +62,264 @@
     </div>
   </div>
 
-  <!-- §1 フルスクリーン Hero -->
-  <header class="hero" id="hero">
-    <canvas id="heroCanvas" aria-hidden="true"></canvas>
-    <div class="hero-inner">
-      <div class="logo-wrap">
-        <img class="logo-main" src="physLabo_logo.png" alt="physLabo" width="715" height="156">
+  <main id="main">
+
+    <section class="hero" id="hero" aria-label="メインビジュアル">
+      <div class="hero__visual" aria-hidden="true">
+        <div class="hero__gradient"></div>
+        <div class="hero__shape hero__shape--1"></div>
+        <div class="hero__shape hero__shape--2"></div>
+        <div class="hero__shape hero__shape--3"></div>
       </div>
-      <h1 class="hero-tagline">物理を&ldquo;見える化&rdquo;する。</h1>
-      <p class="hero-subtitle">Interactive Physics Simulation Platform</p>
-      <button type="button" class="hero-cta" id="heroCta">シミュレーションを見る</button>
+      <div class="hero__content">
+        <h1 class="hero__title hero__title--ja">
+          <span class="hero__line hero__line--1">物理を、</span>
+          <span class="hero__line hero__line--2">見える化する。</span>
+        </h1>
+        <p class="hero__copy">高校物理のインタラクティブ教材。<br>式と動きで、直感的に学ぶ physLabo。</p>
+        <div class="hero__actions">
+          <a href="#works" class="btn btn--primary hero__btn">すぐ試す</a>
+          <a href="#service" class="btn btn--outline hero__btn">分野から選ぶ</a>
+        </div>
+      </div>
+      <a href="#about" class="hero__scroll" aria-label="下へスクロール">
+        <span class="hero__scroll-text">スクロール</span>
+        <span class="hero__scroll-line"></span>
+      </a>
+    </section>
+
+    <section class="section about" id="about" aria-labelledby="about-heading">
+      <div class="container">
+        <div class="section__header reveal">
+          <span class="section__label">このサイトについて</span>
+          <h2 id="about-heading" class="section__title">物理を&ldquo;見える化&rdquo;し、<br>学びの体験をつくる。</h2>
+        </div>
+        <div class="about__body">
+          <p class="about__lead reveal reveal--delay-1">
+            physLabo は、物理を&ldquo;見える化&rdquo;し、<br>
+            学ぶ人の心を動かす体験をつくる<br>
+            教育クリエイティブです。
+          </p>
+          <div class="about__text reveal reveal--delay-2">
+            <p>公式や概念をただ説明するのではなく、&ldquo;動く&rdquo;&ldquo;触れる&rdquo;&ldquo;理解が進む&rdquo;インタラクティブな学びを設計します。</p>
+            <p>物理の抽象的な概念を、&ldquo;伝わる表現&rdquo;へ変換することで、高校生が直感的に理解できる学習体験をつくります。</p>
+            <p>physLabo は、知識を伝えるだけでなく、学びの楽しさと発見を届けるための教育デザインを追求します。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section service" id="service" aria-labelledby="service-heading">
+      <div class="container">
+        <div class="section__header reveal">
+          <span class="section__label">学習分野</span>
+          <h2 id="service-heading" class="section__title">6つの分野から、<br>学びを選ぶ。</h2>
+        </div>
+        <ul class="service__list">
+          <li class="service__item reveal">
+            <a href="00_folder_classical.html" class="service__card" data-auth-href="00_folder_classical.html">
+              <span class="service__num">01</span>
+              <span class="service__name">力学</span>
+              <span class="service__desc">1〜11章 · 運動 · 力 · エネルギー · 円運動 · 単振動 · 万有引力</span>
+            </a>
+          </li>
+          <li class="service__item reveal reveal--delay-1">
+            <a href="00_folder_thermo.html" class="service__card" data-auth-href="00_folder_thermo.html">
+              <span class="service__num">02</span>
+              <span class="service__name">熱力学</span>
+              <span class="service__desc">12〜15章 · 熱 · 比熱 · 気体 · 分子運動論 · 黒体放射</span>
+            </a>
+          </li>
+          <li class="service__item reveal reveal--delay-2">
+            <a href="00_folder_waves.html" class="service__card" data-auth-href="00_folder_waves.html">
+              <span class="service__num">03</span>
+              <span class="service__name">波動</span>
+              <span class="service__desc">16〜20章 · 音 · 光 · レンズ · 干渉 · 回折</span>
+            </a>
+          </li>
+          <li class="service__item reveal reveal--delay-3">
+            <a href="00_folder_electromagnetism.html" class="service__card" data-auth-href="00_folder_electromagnetism.html">
+              <span class="service__num">04</span>
+              <span class="service__name">電磁気</span>
+              <span class="service__desc">21〜26章 · 静電気 · コンデンサ · 電流 · 磁場 · 誘導 · 交流</span>
+            </a>
+          </li>
+          <li class="service__item reveal">
+            <a href="00_folder_atom.html" class="service__card" data-auth-href="00_folder_atom.html">
+              <span class="service__num">05</span>
+              <span class="service__name">原子</span>
+              <span class="service__desc">27〜28章 · 原子模型 · スペクトル · 光電効果 · 放射線</span>
+            </a>
+          </li>
+          <li class="service__item reveal reveal--delay-1">
+            <a href="00_folder_ex.html" class="service__card" data-auth-href="00_folder_ex.html">
+              <span class="service__num">06</span>
+              <span class="service__name">EX章</span>
+              <span class="service__desc">発展 · 物性 · 蛍光 · 半導体 · 分析化学</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section works" id="works" aria-labelledby="works-heading">
+      <div class="container">
+        <div class="section__header reveal">
+          <span class="section__label">シミュレーション</span>
+          <h2 id="works-heading" class="section__title">代表例をすぐ開く</h2>
+        </div>
+        <ul class="works__list">
+          <li class="works__item reveal">
+            <a href="simulation.html" class="works__card">
+              <div class="works__visual works__visual--classical">
+                <img src="assets/img/works/01_projectile.png?v=20260827b" alt="斜方投射シミュレーション" width="800" height="600" decoding="async">
+              </div>
+              <div class="works__info">
+                <span class="works__num">01</span>
+                <h3 class="works__title">斜方投射</h3>
+                <p class="works__category">力学 · 1章</p>
+              </div>
+            </a>
+          </li>
+          <li class="works__item reveal reveal--delay-1">
+            <a href="brownian_motion_simulation.html" class="works__card">
+              <div class="works__visual works__visual--thermo">
+                <img src="assets/img/works/02_brownian.png?v=20260827" alt="ブラウン運動シミュレーション" width="800" height="600" decoding="async">
+              </div>
+              <div class="works__info">
+                <span class="works__num">02</span>
+                <h3 class="works__title">ブラウン運動</h3>
+                <p class="works__category">熱力学 · 14章</p>
+              </div>
+            </a>
+          </li>
+          <li class="works__item reveal reveal--delay-2">
+            <a href="16_wave_interference.html" class="works__card">
+              <div class="works__visual works__visual--waves">
+                <img src="assets/img/works/03_interference.png?v=20260827e" alt="波の干渉シミュレーション" width="800" height="600" decoding="async">
+              </div>
+              <div class="works__info">
+                <span class="works__num">03</span>
+                <h3 class="works__title">波の干渉</h3>
+                <p class="works__category">波動 · 16章</p>
+              </div>
+            </a>
+          </li>
+          <li class="works__item reveal reveal--delay-1">
+            <a href="54_electromagnetic_induction_3D_sim.html" class="works__card">
+              <div class="works__visual works__visual--em">
+                <img src="assets/img/works/04_em_induction.png?v=20260827" alt="電磁誘導 3D シミュレーション" width="800" height="600" decoding="async">
+              </div>
+              <div class="works__info">
+                <span class="works__num">04</span>
+                <h3 class="works__title">電磁誘導 3D</h3>
+                <p class="works__category">電磁気 · 25章</p>
+              </div>
+            </a>
+          </li>
+          <li class="works__item reveal reveal--delay-2">
+            <a href="83_atomic_models_thomson_nagaoka_rutherford_3D.html" class="works__card">
+              <div class="works__visual works__visual--atom">
+                <img src="assets/img/works/05_atomic_models.png?v=20260827d" alt="原子模型の歴史 3D — ボーア模型" width="800" height="600" decoding="async">
+              </div>
+              <div class="works__info">
+                <span class="works__num">05</span>
+                <h3 class="works__title">原子模型の歴史 3D</h3>
+                <p class="works__category">原子 · 28章</p>
+              </div>
+            </a>
+          </li>
+          <li class="works__item reveal reveal--delay-3">
+            <a href="fluorescence_phosphorescence_simulation.html" class="works__card">
+              <div class="works__visual works__visual--ex">
+                <img src="assets/img/works/06_fluorescence.png?v=20260827" alt="蛍光と燐光シミュレーション" width="800" height="600" decoding="async">
+              </div>
+              <div class="works__info">
+                <span class="works__num">06</span>
+                <h3 class="works__title">蛍光と燐光</h3>
+                <p class="works__category">EX章</p>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="message" id="message" aria-label="メッセージ">
+      <div class="message__inner" data-parallax>
+        <p class="message__line message__line--1">式で理解する。</p>
+        <p class="message__line message__line--2">動きで、</p>
+        <p class="message__line message__line--3">確かめる。</p>
+      </div>
+    </section>
+
+    <section class="section company" id="company" aria-labelledby="company-heading">
+      <div class="container">
+        <div class="section__header reveal">
+          <span class="section__label">収録内容</span>
+          <h2 id="company-heading" class="visually-hidden">収録内容</h2>
+        </div>
+        <dl class="company__list reveal">
+          <div class="company__row">
+            <dt>名称</dt>
+            <dd>physLabo</dd>
+          </div>
+          <div class="company__row">
+            <dt>対象</dt>
+            <dd>高校物理</dd>
+          </div>
+          <div class="company__row">
+            <dt>収録数</dt>
+            <dd>約200本のシミュレーション</dd>
+          </div>
+          <div class="company__row">
+            <dt>技術</dt>
+            <dd>
+              <ul class="company__business">
+                <li>HTML / Canvas 2D</li>
+                <li>Three.js 3D</li>
+                <li>Web Audio · Chart.js</li>
+              </ul>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section contact" id="start" aria-labelledby="start-heading">
+      <div class="container">
+        <div class="contact__intro reveal">
+          <h2 id="start-heading" class="contact__title contact__title--ja">
+            <span>さあ、</span>
+            <span>動かして</span>
+            <span>確かめよう。</span>
+          </h2>
+          <a href="#service" class="btn btn--outline">学習分野から選ぶ</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <p class="footer__logo">physLabo</p>
+        <nav class="footer__nav" aria-label="フッターナビゲーション">
+          <ul>
+            <li><a href="#hero">ホーム</a></li>
+            <li><a href="#about">このサイトについて</a></li>
+            <li><a href="#service">学習分野</a></li>
+            <li><a href="#works">シミュレーション</a></li>
+            <li><a href="#company">収録内容</a></li>
+          </ul>
+        </nav>
+      </div>
+      <p class="footer__copy">&copy; 2026 physLabo · Ichishi</p>
     </div>
-    <div class="scroll-indicator" aria-hidden="true">
-      <span class="scroll-arrow">↓</span>
-      <span>Scroll</span>
-    </div>
-  </header>
-
-  <div class="page-wrap">
-    <div class="chapters-brand" id="chaptersBrand" aria-label="physLabo">
-      <img src="physLabo_logo.png" alt="physLabo" width="715" height="156">
-    </div>
-    <div class="intro-bar">
-      <p class="sim-total" id="simTotal" aria-live="polite">
-        <span class="sim-total-label">全シミュレーション数</span>
-        <strong id="simTotalNum">—</strong>
-      </p>
-      <p class="page-intro">高校物理のシミュレーションを、式と動きで直感的に学べます。Canvas · Web Audio · インタラクティブ操作。</p>
-    </div>
-
-    <!-- §4 波形区切り -->
-    <div class="wave-divider" id="divider1"><canvas class="divider-canvas"></canvas></div>
-
-    <!-- §3 章一覧 -->
-    <h2 class="section-title" id="chapters">CHAPTERS</h2>
-    <nav class="card-grid" aria-label="章一覧">
-      <a class="chapter-card" data-physics="classical" href="00_folder_classical.html">
-        <div class="card-head">
-          <div class="card-icon" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none">
-              <path d="M4 28 Q14 12 22 22 T40 16" stroke="url(#g1)" stroke-width="2.2" stroke-linecap="round"/>
-              <circle cx="8" cy="26" r="2.5" fill="#2563eb"/>
-              <circle cx="36" cy="18" r="2" fill="#d946ef"/>
-              <defs><linearGradient id="g1" x1="0" y1="0" x2="44" y2="0">
-                <stop stop-color="#2563eb"/><stop offset="1" stop-color="#d946ef"/>
-              </linearGradient></defs>
-            </svg>
-          </div>
-          <div>
-            <h3 class="card-title">力学</h3>
-            <span class="card-badge">1〜11章</span>
-          </div>
-        </div>
-        <p class="card-desc">物体の運動 · 力 · エネルギー · 円運動 · 単振動 · 万有引力</p>
-        <ul class="card-chapters">
-          <li>運動の法則 · 仕事とエネルギー</li>
-          <li>運動量 · 等速円運動 · 単振動</li>
-        </ul>
-        <span class="card-arrow">古典力学フォルダを開く →</span>
-      </a>
-
-      <a class="chapter-card" data-physics="thermo" href="00_folder_thermo.html">
-        <div class="card-head">
-          <div class="card-icon" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none">
-              <path d="M8 32 L8 18 L20 12 L36 18 L36 32" stroke="url(#g2)" stroke-width="2"/>
-              <path d="M14 32 L14 22 L30 22 L30 32" stroke="#7c3aed" stroke-width="1.5" opacity="0.7"/>
-              <circle cx="22" cy="8" r="3" fill="#fbbf24" opacity="0.9"/>
-              <defs><linearGradient id="g2" x1="8" y1="12" x2="36" y2="32">
-                <stop stop-color="#3b82f6"/><stop offset="1" stop-color="#a855f7"/>
-              </linearGradient></defs>
-            </svg>
-          </div>
-          <div>
-            <h3 class="card-title">熱力学</h3>
-            <span class="card-badge">12〜15章</span>
-          </div>
-        </div>
-        <p class="card-desc">熱 · 比熱 · 気体の法則 · 分子運動論 · 黒体放射</p>
-        <ul class="card-chapters">
-          <li>熱と比熱 · 気体の状態方程式</li>
-          <li>分子運動論 · エネルギー分布</li>
-        </ul>
-        <span class="card-arrow">熱力学フォルダを開く →</span>
-      </a>
-
-      <a class="chapter-card" data-physics="waves" href="00_folder_waves.html">
-        <div class="card-head">
-          <div class="card-icon" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none">
-              <path d="M2 22 Q11 8 22 22 T42 22" stroke="url(#g3)" stroke-width="2.2" fill="none"/>
-              <path d="M2 28 Q11 38 22 28 T42 28" stroke="url(#g3)" stroke-width="1.5" opacity="0.5"/>
-              <circle cx="22" cy="22" r="3" fill="#38bdf8"/>
-              <defs><linearGradient id="g3" x1="0" y1="0" x2="44" y2="0">
-                <stop stop-color="#38bdf8"/><stop offset="1" stop-color="#c026d3"/>
-              </linearGradient></defs>
-            </svg>
-          </div>
-          <div>
-            <h3 class="card-title">波動</h3>
-            <span class="card-badge">16〜20章</span>
-          </div>
-        </div>
-        <p class="card-desc">波の基本 · 音 · 光 · レンズ · 干渉 · 回折</p>
-        <ul class="card-chapters">
-          <li>16章 波の基本 · 17章 音 · 共振</li>
-          <li>18章 光 · 19章 レンズと像</li>
-          <li>20章 光の干渉 · 回折</li>
-        </ul>
-        <span class="card-arrow">波動フォルダを開く →</span>
-      </a>
-
-      <a class="chapter-card" data-physics="em" href="00_folder_electromagnetism.html">
-        <div class="card-head">
-          <div class="card-icon" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none">
-              <circle cx="14" cy="22" r="6" fill="#f87171" opacity="0.85"/>
-              <circle cx="30" cy="22" r="6" fill="#38bdf8" opacity="0.85"/>
-              <path d="M14 22 L30 22" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="3 3"/>
-              <path d="M8 10 L8 34 M36 10 L36 34" stroke="url(#g5)" stroke-width="1.5" opacity="0.6"/>
-              <path d="M22 6 L22 38" stroke="#a5b4fc" stroke-width="1" opacity="0.4"/>
-              <defs><linearGradient id="g5" x1="8" y1="10" x2="36" y2="34">
-                <stop stop-color="#818cf8"/><stop offset="1" stop-color="#6366f1"/>
-              </linearGradient></defs>
-            </svg>
-          </div>
-          <div>
-            <h3 class="card-title">電磁気</h3>
-            <span class="card-badge">21〜26章</span>
-          </div>
-        </div>
-        <p class="card-desc">静電気 · コンデンサ · 電流 · 磁場 · 電磁誘導 · 交流</p>
-        <ul class="card-chapters">
-          <li>21章 静電気 · 22章 コンデンサ</li>
-          <li>23章 電流 · 24章 電流と磁場</li>
-          <li>25章 電磁誘導 · 26章 コイルと交流</li>
-        </ul>
-        <span class="card-arrow">電磁気フォルダを開く →</span>
-      </a>
-
-      <a class="chapter-card" data-physics="atom" href="00_folder_atom.html">
-        <div class="card-head">
-          <div class="card-icon" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none">
-              <circle cx="22" cy="22" r="4" fill="#f472b6"/>
-              <ellipse cx="22" cy="22" rx="16" ry="7" stroke="#e879f9" stroke-width="1.5" transform="rotate(25 22 22)"/>
-              <ellipse cx="22" cy="22" rx="16" ry="7" stroke="#c084fc" stroke-width="1.5" transform="rotate(-35 22 22)"/>
-              <circle cx="36" cy="18" r="2" fill="#fda4af"/>
-              <circle cx="10" cy="28" r="2" fill="#f9a8d4"/>
-            </svg>
-          </div>
-          <div>
-            <h3 class="card-title">原子</h3>
-            <span class="card-badge">27〜28章</span>
-          </div>
-        </div>
-        <p class="card-desc">原子構造 · スペクトル · 光電効果 · 原子核 · 放射線</p>
-        <ul class="card-chapters">
-          <li>27章 原子の構造 · ボーア模型</li>
-          <li>28章 原子核と放射線 · 半減期</li>
-        </ul>
-        <span class="card-arrow">原子フォルダを開く →</span>
-      </a>
-
-      <a class="chapter-card" data-physics="ex" href="00_folder_ex.html">
-        <div class="card-head">
-          <div class="card-icon" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none">
-              <rect x="10" y="14" width="24" height="20" rx="3" stroke="url(#g4)" stroke-width="2"/>
-              <path d="M16 22 L22 28 L30 18" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="34" cy="10" r="4" fill="#d946ef" opacity="0.8"/>
-              <defs><linearGradient id="g4" x1="10" y1="14" x2="34" y2="34">
-                <stop stop-color="#06b6d4"/><stop offset="1" stop-color="#8b5cf6"/>
-              </linearGradient></defs>
-            </svg>
-          </div>
-          <div>
-            <h3 class="card-title">EX章</h3>
-            <span class="card-badge">発展</span>
-          </div>
-        </div>
-        <p class="card-desc">物性 · 生物 · 分析装置 · 蛍光 · 燐光 · 半導体</p>
-        <ul class="card-chapters">
-          <li>結晶 · 拡散 · 振動 · メスバウアー</li>
-          <li>蛍光 · 燐光 · 分析化学</li>
-        </ul>
-        <span class="card-arrow">EX章フォルダを開く →</span>
-      </a>
-    </nav>
-
-    <div class="wave-divider" id="divider2"><canvas class="divider-canvas"></canvas></div>
-  </div>
-
-  <!-- §8 フッター -->
-  <footer>
-    <canvas id="footerCanvas" aria-hidden="true"></canvas>
-    <p class="footer-text">physLabo © 2026 Ichishi</p>
-    <a class="footer-link" href="index.html">物理学習マップへ</a>
-    <a class="footer-link" href="index-full.html">章一覧（詳細）</a>
   </footer>
-<script src="assets/js/auth-gate.js?v=20260809b" defer></script>
-  <script src="assets/js/physlabo-top.js?v=20260804d" defer></script>
-  <script src="assets/js/hero-canvas.js?v=20260804d" defer></script>
-  <script src="assets/js/hero-transition.js?v=20260809b" defer></script>
+
+  <script src="assets/js/auth-gate.js?v=20260626c" defer></script>
+  <script src="assets/js/physlabo-landing.js?v=20260814" defer></script>
 </body>
 </html>
