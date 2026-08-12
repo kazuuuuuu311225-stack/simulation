@@ -10,6 +10,15 @@
   const CARD_ANIM_MS = 650;
   let transitioning = false;
 
+  function resetPageScroll(pageWrap) {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollLeft = 0;
+    if (pageWrap) pageWrap.scrollTop = 0;
+  }
+
   function showChaptersHeader(sectionTitle, chaptersBrand) {
     if (sectionTitle) sectionTitle.classList.add("is-shown");
     if (chaptersBrand) chaptersBrand.classList.add("is-shown");
@@ -26,6 +35,10 @@
   function finishTransition(hero, pageWrap, cardGrid, cards) {
     const sectionTitle = document.getElementById("chapters");
     const chaptersBrand = document.getElementById("chaptersBrand");
+
+    if (pageWrap) pageWrap.scrollTop = 0;
+    resetPageScroll(pageWrap);
+
     root.classList.remove("hero-transition-active", "hero-landing");
     root.classList.add("hero-transition-done", "chapters-mode");
     hero.classList.add("hero-dismissed");
@@ -34,8 +47,20 @@
     cardGrid.classList.remove("is-entering");
     cards.forEach((c) => c.classList.add("is-revealed"));
     showChaptersHeader(sectionTitle, chaptersBrand);
-    window.scrollTo(0, 0);
-    transitioning = false;
+
+    if (typeof window.physlaboApplyViewport === "function") {
+      window.physlaboApplyViewport();
+    } else {
+      window.dispatchEvent(new Event("physlabo-viewport-refresh"));
+    }
+
+    requestAnimationFrame(function () {
+      resetPageScroll(pageWrap);
+      requestAnimationFrame(function () {
+        resetPageScroll(pageWrap);
+        transitioning = false;
+      });
+    });
   }
 
   function revealCardsStaggered(cards) {
@@ -50,6 +75,8 @@
   function playTransition(hero, pageWrap, cardGrid, cards) {
     if (transitioning) return;
     transitioning = true;
+
+    resetPageScroll(pageWrap);
 
     if (REDUCED) {
       root.classList.remove("hero-landing");

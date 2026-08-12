@@ -28,9 +28,17 @@
     } catch (e) { /* ignore */ }
   }
 
+  function isHeroPhase() {
+    var html = document.documentElement;
+    return html.classList.contains("hero-landing") ||
+      html.classList.contains("hero-transition-active");
+  }
+
   function lockBody() {
     scrollY = window.scrollY || 0;
     document.body.classList.add("auth-gate-open");
+    /* Hero 画面は html.hero-landing で既にスクロール固定 — body.fixed はレイアウトずれの原因 */
+    if (isHeroPhase()) return;
     document.body.style.top = "-" + scrollY + "px";
     document.body.style.position = "fixed";
     document.body.style.width = "100%";
@@ -41,11 +49,16 @@
     document.body.style.top = "";
     document.body.style.position = "";
     document.body.style.width = "";
+    if (isHeroPhase()) {
+      window.scrollTo(0, 0);
+      return;
+    }
     window.scrollTo(0, scrollY);
   }
 
   function scrollPanelIntoView() {
     if (!gate) return;
+    if (document.documentElement.classList.contains("hero-landing")) return;
     var panel = gate.querySelector(".auth-panel");
     if (panel && panel.scrollIntoView) {
       panel.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
@@ -79,8 +92,9 @@
     if (!input) return;
     if (input.value === PASSWORD) {
       setAuthed();
+      var cb = onSuccess;
       hideGate();
-      if (typeof onSuccess === "function") onSuccess();
+      if (typeof cb === "function") cb();
       return;
     }
     showError();
