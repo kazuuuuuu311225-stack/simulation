@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>熱量保存と熱平衡 — Q_loss = Q_gain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --accent: #22d3ee;
+      --accent-light: #67e8f9;
+      --accent-warm: #fb923c;
+      --accent-glow: rgba(34, 211, 238, 0.42);
+      --slate-bg: rgba(12, 18, 32, 0.78);
+      --slate-border: rgba(34, 211, 238, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --color-a: #fb923c;
+      --color-b: #38bdf8;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #070a12 0%, #0c1524 38%, #101c30 72%, #0a1018 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 55% 42% at 18% 22%, rgba(251, 146, 60, 0.07), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 82% 78%, rgba(34, 211, 238, 0.08), transparent 55%);
+    }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1080px, 96vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .page-header { text-align: center; }
+
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, rgba(251, 146, 60, 0.22), rgba(34, 211, 238, 0.28));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 20px var(--accent-glow);
+      font-size: 1.3rem;
+    }
+
+    h2 {
+      margin: 6px 0 4px;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+
+    #back {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 16px;
+      color: #cffafe;
+      background: rgba(34, 211, 238, 0.14);
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .panel {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--slate-bg);
+      border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: var(--accent-light);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+      }
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: min(280px, 38dvh);
+      min-height: 220px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(10, 20, 32, 0.98), rgba(6, 12, 20, 0.99));
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      box-shadow: 0 0 32px rgba(34, 211, 238, 0.08);
+    }
+
+    #simCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-box {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(8, 12, 20, 0.78);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      font-size: 0.72rem;
+      line-height: 1.55;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-box.a { border-color: rgba(251, 146, 60, 0.45); color: #fed7aa; }
+    .hud-box.b { border-color: rgba(56, 189, 248, 0.45); color: #bae6fd; text-align: right; }
+
+    .equilibrium-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: rgba(52, 211, 153, 0.2);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.5);
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .equilibrium-badge.visible { opacity: 1; }
+
+    .object-block {
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(125, 211, 252, 0.18);
+    }
+
+    .object-block:last-of-type { margin-bottom: 0; }
+
+    .object-block.a { border-color: rgba(251, 146, 60, 0.35); }
+    .object-block.b { border-color: rgba(56, 189, 248, 0.35); }
+
+    .object-title {
+      margin: 0 0 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .object-title.a { color: #fdba74; }
+    .object-title.b { color: #7dd3fc; }
+
+    .material-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .mat-btn {
+      min-height: 40px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mat-btn.active {
+      border-color: rgba(34, 211, 238, 0.55);
+      background: rgba(34, 211, 238, 0.14);
+      color: #cffafe;
+    }
+
+    .object-block.a .mat-btn.active {
+      border-color: rgba(251, 146, 60, 0.55);
+      background: rgba(251, 146, 60, 0.14);
+      color: #fed7aa;
+    }
+
+    .object-block.b .mat-btn.active {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(56, 189, 248, 0.14);
+      color: #bae6fd;
+    }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      margin: 4px 0;
+    }
+
+    .slider-val {
+      float: right;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-row button {
+      flex: 1;
+      min-height: 44px;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(34, 211, 238, 0.45);
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(56, 189, 248, 0.12));
+      color: #cffafe;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-row button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-row button.secondary {
+      border-color: rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--muted);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .info-item {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(125, 211, 252, 0.2);
+    }
+
+    .info-item.wide { grid-column: 1 / -1; }
+
+    .info-item .label {
+      color: #cbd5e1;
+      display: block;
+      font-size: 0.72rem;
+      margin-bottom: 4px;
+    }
+
+    .info-item .val {
+      font-weight: 700;
+      font-size: 1.02rem;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+    }
+
+    .info-item .val.loss { color: #fdba74; }
+    .info-item .val.gain { color: #7dd3fc; }
+    .info-item .val.eq { color: #6ee7b7; }
+    .info-item .val.err { color: #fca5a5; font-size: 0.9rem; }
+
+    .formula-box {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: #bae6fd;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: min(280px, 38dvh);
+      min-height: 220px;
+    }
+
+    .status-msg {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      background: rgba(251, 146, 60, 0.1);
+      border: 1px solid rgba(251, 146, 60, 0.28);
+      color: #fed7aa;
+    }
+
+    .status-msg.contact {
+      background: rgba(34, 211, 238, 0.1);
+      border-color: rgba(34, 211, 238, 0.28);
+      color: #bae6fd;
+    }
+
+    .status-msg.equilibrium {
+      background: rgba(52, 211, 153, 0.12);
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #6ee7b7;
+    }
+
+    .explain-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    .explain-list li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚖️</div>
+      <h2>熱量保存と熱平衡</h2>
+      <p class="chapter-label">12章 熱と比熱 · Q_loss = Q_gain · 接触による温度変化</p>
+      <a id="back" href="../index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="main-grid">
+      <div class="col">
+        <section class="panel" aria-label="粒子運動">
+          <h3>物体 A · B の粒子運動</h3>
+          <div class="canvas-wrap">
+            <canvas id="simCanvas" aria-label="2物体の粒子運動"></canvas>
+            <div class="canvas-hud">
+              <div class="hud-box a" id="hudA">A: — ℃</div>
+              <div class="hud-box b" id="hudB">B: — ℃</div>
+            </div>
+            <div class="equilibrium-badge" id="eqBadge">熱平衡成立</div>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="物体設定">
+          <h3>物体の設定</h3>
+
+          <div class="object-block a">
+            <p class="object-title a">物体 A（左）</p>
+            <div class="material-row" id="matRowA">
+              <button type="button" class="mat-btn active" data-obj="a" data-mat="water">水 c=4.2</button>
+              <button type="button" class="mat-btn" data-obj="a" data-mat="iron">鉄 c=0.45</button>
+              <button type="button" class="mat-btn" data-obj="a" data-mat="aluminum">アルミ c=0.9</button>
+              <button type="button" class="mat-btn" data-obj="a" data-mat="air">空気 c=1.0</button>
+            </div>
+            <label>
+              質量 m<sub>A</sub>
+              <span class="slider-val" id="massAVal">500 g</span>
+              <input id="massASlider" type="range" min="100" max="2000" step="50" value="500">
+            </label>
+            <label>
+              初期温度 T<sub>A</sub>
+              <span class="slider-val" id="tempAVal">80 ℃</span>
+              <input id="tempASlider" type="range" min="-20" max="120" step="1" value="80">
+            </label>
+          </div>
+
+          <div class="object-block b">
+            <p class="object-title b">物体 B（右）</p>
+            <div class="material-row" id="matRowB">
+              <button type="button" class="mat-btn active" data-obj="b" data-mat="water">水 c=4.2</button>
+              <button type="button" class="mat-btn" data-obj="b" data-mat="iron">鉄 c=0.45</button>
+              <button type="button" class="mat-btn" data-obj="b" data-mat="aluminum">アルミ c=0.9</button>
+              <button type="button" class="mat-btn" data-obj="b" data-mat="air">空気 c=1.0</button>
+            </div>
+            <label>
+              質量 m<sub>B</sub>
+              <span class="slider-val" id="massBVal">500 g</span>
+              <input id="massBSlider" type="range" min="100" max="2000" step="50" value="500">
+            </label>
+            <label>
+              初期温度 T<sub>B</sub>
+              <span class="slider-val" id="tempBVal">20 ℃</span>
+              <input id="tempBSlider" type="range" min="-20" max="120" step="1" value="20">
+            </label>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" id="contactBtn">接触開始</button>
+            <button type="button" id="resetBtn" class="secondary">リセット</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="panel" aria-label="熱量保存">
+          <h3>熱量保存則 Q_loss = Q_gain</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Q_loss（高温側が失う熱）</span>
+              <span class="val loss" id="qLossVal">0 J</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Q_gain（低温側が得る熱）</span>
+              <span class="val gain" id="qGainVal">0 J</span>
+            </div>
+            <div class="info-item">
+              <span class="label">|Q_loss − Q_gain|（誤差）</span>
+              <span class="val err" id="qErrVal">0 J</span>
+            </div>
+            <div class="info-item">
+              <span class="label">温度差 |T<sub>A</sub> − T<sub>B</sub>|</span>
+              <span class="val" id="deltaTVal">60.0 ℃</span>
+            </div>
+            <div class="info-item wide">
+              <span class="label">平衡温度 T<sub>eq</sub>（理論値）</span>
+              <span class="val eq" id="teqVal">— ℃</span>
+            </div>
+          </div>
+          <div class="formula-box">
+            dQ = k(T<sub>A</sub> − T<sub>B</sub>) dt　（k = 12）<br>
+            T<sub>A</sub> ← T<sub>A</sub> − dQ/(m<sub>A</sub>c<sub>A</sub>) ·
+            T<sub>B</sub> ← T<sub>B</sub> + dQ/(m<sub>B</sub>c<sub>B</sub>)
+          </div>
+          <p class="status-msg" id="statusMsg">物体 A と B を設定し「接触開始」で熱の移動を開始します。</p>
+        </section>
+
+        <section class="panel" aria-label="温度グラフ">
+          <h3>温度の時間変化</h3>
+          <div class="chart-wrap">
+            <canvas id="tempChart" aria-label="温度時間グラフ"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel" aria-label="説明">
+      <h3>熱平衡と比熱</h3>
+      <ul class="explain-list">
+        <li>熱は温度の高い物体から低い物体へ移動する。</li>
+        <li>失われた熱量と得られた熱量は等しくなる（熱量保存則）。</li>
+        <li>最終的に温度が一致し、熱平衡が成立する。</li>
+        <li>温度変化は比熱と質量によって決まる。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const K_HEAT = 12;           // 熱伝達係数 k（見やすい速度になるよう調整）
+      const K_V = 0.5;             // 粒子速度スケール k_v
+      const K_OFFSET = 273.15;
+      const EQUILIB_EPS = 0.05;    // 熱平衡判定（℃）
+      const SOLID_COLS = 5;
+      const SOLID_ROWS = 4;
+      const GAS_COUNT = 20;
+      const PARTICLE_R = 4;
+      const CHART_SAMPLE_DT = 0.08;
+      const HEAT_DOT_MAX = 12;
+
+      const MATERIALS = {
+        water: { name: "水", c: 4.2, color: "#38bdf8" },
+        iron: { name: "鉄", c: 0.45, color: "#94a3b8" },
+        aluminum: { name: "アルミ", c: 0.9, color: "#e2e8f0" },
+        air: { name: "空気", c: 1.0, color: "#a5f3fc" },
+      };
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+      const contactBtn = document.getElementById("contactBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const statusMsg = document.getElementById("statusMsg");
+      const eqBadge = document.getElementById("eqBadge");
+
+      const state = {
+        matA: "water",
+        matB: "iron",
+        mA: 500,
+        mB: 500,
+        TA: 80,
+        TB: 20,
+        simTime: 0,
+        contacting: false,
+        equilibrium: false,
+        Q_loss: 0,
+        Q_gain: 0,
+        lastChartT: -1,
+      };
+
+      let particlesA = [];
+      let particlesB = [];
+      let heatDots = [];
+      let tempChart = null;
+      let controlsLocked = false;
+      let lastFrameTime = null;
+
+      function fmt(n, d) {
+        return Number(n).toFixed(d);
+      }
+
+      function cA() { return MATERIALS[state.matA].c; }
+      function cB() { return MATERIALS[state.matB].c; }
+      function isGas(matKey) { return matKey === "air"; }
+
+      // 固体用：温度が高いほど振動 amplitude / 周波数が大きい
+      function solidMotionParams(celsius) {
+        const s = speedFromTemp(celsius);
+        return {
+          amp: 1.5 + s * 0.55,
+          omega: 3 + s * 1.4,
+        };
+      }
+
+      // 平衡温度（接触前の理論値）
+      function theoreticalTeq() {
+        const num = state.mA * cA() * state.TA + state.mB * cB() * state.TB;
+        const den = state.mA * cA() + state.mB * cB();
+        return den > 0 ? num / den : state.TA;
+      }
+
+      // 温度に応じて粒子速度を変更: v = k_v * sqrt(T_K)
+      function speedFromTemp(celsius) {
+        const TK = Math.max(1, celsius + K_OFFSET);
+        return K_V * Math.sqrt(TK);
+      }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function regionBounds(side) {
+        const w = canvas.getBoundingClientRect().width;
+        const h = canvas.getBoundingClientRect().height;
+        const mid = w * 0.5;
+        const pad = 14;
+        const gap = state.contacting ? 2 : 18;
+        if (side === "a") {
+          return { x0: pad, x1: mid - gap, y0: pad, y1: h - pad };
+        }
+        return { x0: mid + gap, x1: w - pad, y0: pad, y1: h - pad };
+      }
+
+      function initParticles() {
+        particlesA = buildParticles("a", state.matA, state.TA);
+        particlesB = buildParticles("b", state.matB, state.TB);
+      }
+
+      function buildParticles(side, matKey, temp) {
+        const bounds = regionBounds(side);
+        if (isGas(matKey)) return buildGasParticles(bounds, side, temp);
+        return buildSolidParticles(bounds, side);
+      }
+
+      // 固体：格子点の周りで微振動（分子の熱振動）
+      function buildSolidParticles(bounds, side) {
+        const list = [];
+        const cols = SOLID_COLS;
+        const rows = SOLID_ROWS;
+        const innerW = Math.max(20, bounds.x1 - bounds.x0);
+        const innerH = Math.max(20, bounds.y1 - bounds.y0);
+        const cellW = innerW / (cols + 1);
+        const cellH = innerH / (rows + 1);
+        for (let row = 0; row < rows; row += 1) {
+          for (let col = 0; col < cols; col += 1) {
+            const ax = bounds.x0 + cellW * (col + 1);
+            const ay = bounds.y0 + cellH * (row + 1);
+            list.push({
+              mode: "solid",
+              side,
+              col,
+              row,
+              ax,
+              ay,
+              x: ax,
+              y: ay,
+              phase: Math.random() * Math.PI * 2,
+            });
+          }
+        }
+        return list;
+      }
+
+      // 気体：容器内を自由に運動
+      function buildGasParticles(bounds, side, temp) {
+        const list = [];
+        const r = PARTICLE_R;
+        const w = Math.max(r * 2, bounds.x1 - bounds.x0 - 2 * r);
+        const h = Math.max(r * 2, bounds.y1 - bounds.y0 - 2 * r);
+        for (let i = 0; i < GAS_COUNT; i += 1) {
+          const p = {
+            mode: "gas",
+            side,
+            x: bounds.x0 + r + Math.random() * w,
+            y: bounds.y0 + r + Math.random() * h,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+          };
+          normalizeSpeed(p, speedFromTemp(temp));
+          list.push(p);
+        }
+        return list;
+      }
+
+      function normalizeSpeed(p, target) {
+        const mag = Math.hypot(p.vx, p.vy) || 1;
+        p.vx = (p.vx / mag) * target;
+        p.vy = (p.vy / mag) * target;
+      }
+
+      function updateParticles(dt) {
+        updateParticleGroup(particlesA, regionBounds("a"), state.TA, state.matA, dt);
+        updateParticleGroup(particlesB, regionBounds("b"), state.TB, state.matB, dt);
+      }
+
+      function updateParticleGroup(list, bounds, temp, matKey, dt) {
+        if (isGas(matKey)) {
+          updateGasGroup(list, bounds, temp, dt);
+        } else {
+          updateSolidGroup(list, temp, dt);
+        }
+      }
+
+      // 温度に応じて粒子速度を変更 — 固体は格子点付近の振動
+      function updateSolidGroup(list, temp, dt) {
+        const { amp, omega } = solidMotionParams(temp);
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          p.phase += omega * dt;
+          p.x = p.ax + Math.sin(p.phase) * amp;
+          p.y = p.ay + Math.cos(p.phase * 0.93 + p.row * 0.4) * amp * 0.75;
+        }
+      }
+
+      function updateGasGroup(list, bounds, temp, dt) {
+        const target = speedFromTemp(temp);
+        const r = PARTICLE_R;
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          p.vx += (Math.random() - 0.5) * target * 0.25 * dt;
+          p.vy += (Math.random() - 0.5) * target * 0.25 * dt;
+          normalizeSpeed(p, target);
+          p.x += p.vx * dt * 28;
+          p.y += p.vy * dt * 28;
+          if (p.x < bounds.x0 + r) { p.x = bounds.x0 + r; p.vx = Math.abs(p.vx); }
+          if (p.x > bounds.x1 - r) { p.x = bounds.x1 - r; p.vx = -Math.abs(p.vx); }
+          if (p.y < bounds.y0 + r) { p.y = bounds.y0 + r; p.vy = Math.abs(p.vy); }
+          if (p.y > bounds.y1 - r) { p.y = bounds.y1 - r; p.vy = -Math.abs(p.vy); }
+        }
+      }
+
+      function spawnHeatDot(dQ) {
+        if (!state.contacting || Math.abs(dQ) < 0.001) return;
+        const w = canvas.getBoundingClientRect().width;
+        const h = canvas.getBoundingClientRect().height;
+        const fromA = dQ > 0;
+        const intensity = Math.min(1, Math.abs(dQ) / 8);
+        heatDots.push({
+          x: fromA ? w * 0.5 - 8 : w * 0.5 + 8,
+          y: h * 0.3 + Math.random() * h * 0.4,
+          vx: fromA ? 70 + intensity * 40 : -(70 + intensity * 40),
+          life: 0.45 + intensity * 0.25,
+          maxLife: 0.45 + intensity * 0.25,
+          size: 2.5 + intensity * 2,
+        });
+        if (heatDots.length > HEAT_DOT_MAX) heatDots.shift();
+      }
+
+      function updateHeatDots(dt) {
+        for (let i = heatDots.length - 1; i >= 0; i -= 1) {
+          const d = heatDots[i];
+          d.x += d.vx * dt;
+          d.life -= dt;
+          if (d.life <= 0) heatDots.splice(i, 1);
+        }
+      }
+
+      function drawScene() {
+        const w = canvas.getBoundingClientRect().width;
+        const h = canvas.getBoundingClientRect().height;
+        ctx.clearRect(0, 0, w, h);
+
+        const bA = regionBounds("a");
+        const bB = regionBounds("b");
+        const mid = w * 0.5;
+
+        // 物体領域の背景
+        ctx.fillStyle = "rgba(251, 146, 60, 0.06)";
+        ctx.fillRect(bA.x0, bA.y0, bA.x1 - bA.x0, bA.y1 - bA.y0);
+        ctx.fillStyle = "rgba(56, 189, 248, 0.06)";
+        ctx.fillRect(bB.x0, bB.y0, bB.x1 - bB.x0, bB.y1 - bB.y0);
+
+        // 接触面
+        ctx.strokeStyle = state.contacting
+          ? (state.equilibrium ? "rgba(52, 211, 153, 0.7)" : "rgba(251, 146, 60, 0.55)")
+          : "rgba(148, 163, 184, 0.35)";
+        ctx.lineWidth = state.contacting ? 2.5 : 1.5;
+        ctx.setLineDash(state.contacting ? [] : [6, 5]);
+        ctx.beginPath();
+        ctx.moveTo(mid, bA.y0);
+        ctx.lineTo(mid, bA.y1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "rgba(253, 186, 116, 0.85)";
+        ctx.fillText("物体 A", bA.x0 + 6, bA.y0 + 14);
+        ctx.fillStyle = "rgba(125, 211, 252, 0.85)";
+        ctx.fillText("物体 B", bB.x0 + 6, bB.y0 + 14);
+
+        // 熱移動の可視化
+        for (let i = 0; i < heatDots.length; i += 1) {
+          const d = heatDots[i];
+          const alpha = d.life / d.maxLife;
+          ctx.fillStyle = `rgba(251, 191, 36, ${alpha * 0.95})`;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.size || 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        drawSolidBonds(particlesA, MATERIALS[state.matA].color);
+        drawSolidBonds(particlesB, MATERIALS[state.matB].color);
+        drawGroup(particlesA, MATERIALS[state.matA].color, "#fb923c", state.matA);
+        drawGroup(particlesB, MATERIALS[state.matB].color, "#38bdf8", state.matB);
+      }
+
+      function drawSolidBonds(list, color) {
+        if (!list.length || list[0].mode !== "solid") return;
+        const byKey = new Map();
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          byKey.set(`${p.col},${p.row}`, p);
+        }
+        ctx.strokeStyle = hexToRgba(color, 0.28);
+        ctx.lineWidth = 1;
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          const right = byKey.get(`${p.col + 1},${p.row}`);
+          const down = byKey.get(`${p.col},${p.row + 1}`);
+          if (right) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(right.x, right.y);
+            ctx.stroke();
+          }
+          if (down) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(down.x, down.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      function hexToRgba(hex, alpha) {
+        const h = hex.replace("#", "");
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function drawGroup(list, fill, glow, matKey) {
+        if (!list.length) return;
+        const isSolid = !isGas(matKey);
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          ctx.shadowColor = glow;
+          ctx.shadowBlur = isSolid ? 4 : 8;
+          ctx.fillStyle = fill;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, isSolid ? PARTICLE_R - 0.5 : PARTICLE_R, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+
+      // 熱量保存則を計算 — 微小時間 dt ごとに熱移動
+      function stepPhysics(dt) {
+        if (!state.contacting || state.equilibrium) return;
+
+        const dQ = K_HEAT * (state.TA - state.TB) * dt;
+        if (Math.abs(state.TA - state.TB) < EQUILIB_EPS) {
+          state.TA = theoreticalTeq();
+          state.TB = state.TA;
+          state.equilibrium = true;
+          pushChartPoint(true);
+          return;
+        }
+
+        state.TA -= dQ / (state.mA * cA());
+        state.TB += dQ / (state.mB * cB());
+
+        // Q_loss = Q_gain（移動した熱量の累積）
+        const qStep = Math.abs(dQ);
+        state.Q_loss += qStep;
+        state.Q_gain += qStep;
+
+        spawnHeatDot(dQ);
+
+        if (Math.abs(state.TA - state.TB) < EQUILIB_EPS) {
+          state.TA = theoreticalTeq();
+          state.TB = state.TA;
+          state.equilibrium = true;
+          pushChartPoint(true);
+        }
+      }
+
+      function buildChart() {
+        const el = document.getElementById("tempChart");
+        tempChart = new Chart(el, {
+          type: "line",
+          data: {
+            datasets: [
+              {
+                label: "物体 A",
+                data: [],
+                borderColor: "#fb923c",
+                backgroundColor: "rgba(251, 146, 60, 0.12)",
+                fill: false,
+                tension: 0.15,
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+              {
+                label: "物体 B",
+                data: [],
+                borderColor: "#38bdf8",
+                backgroundColor: "rgba(56, 189, 248, 0.12)",
+                fill: false,
+                tension: 0.15,
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            parsing: false,
+            plugins: {
+              legend: { labels: { color: "#cbd5e1", font: { size: 10 }, boxWidth: 10 } },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    return `${ctx.dataset.label}: ${fmt(ctx.parsed.y, 2)} ℃ @ t=${fmt(ctx.parsed.x, 2)} s`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                type: "linear",
+                title: { display: true, text: "時間 t（秒）", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8" },
+                grid: { color: "rgba(148, 163, 184, 0.12)" },
+                min: 0,
+              },
+              y: {
+                title: { display: true, text: "温度（℃）", color: "#94a3b8", font: { size: 11 } },
+                ticks: { color: "#94a3b8" },
+                grid: { color: "rgba(148, 163, 184, 0.12)" },
+              },
+            },
+          },
+        });
+      }
+
+      function pushChartPoint(force) {
+        if (!tempChart) return;
+        if (!force && state.simTime - state.lastChartT < CHART_SAMPLE_DT) return;
+        state.lastChartT = state.simTime;
+        tempChart.data.datasets[0].data.push({ x: state.simTime, y: state.TA });
+        tempChart.data.datasets[1].data.push({ x: state.simTime, y: state.TB });
+        tempChart.update("none");
+      }
+
+      function resetChart() {
+        if (!tempChart) return;
+        tempChart.data.datasets[0].data = [{ x: 0, y: state.TA }];
+        tempChart.data.datasets[1].data = [{ x: 0, y: state.TB }];
+        state.lastChartT = 0;
+        tempChart.update("none");
+      }
+
+      function setControlsLocked(locked) {
+        controlsLocked = locked;
+        contactBtn.disabled = locked;
+        document.querySelectorAll("#matRowA .mat-btn, #matRowB .mat-btn").forEach((b) => {
+          b.disabled = locked;
+        });
+        document.getElementById("massASlider").disabled = locked;
+        document.getElementById("massBSlider").disabled = locked;
+        document.getElementById("tempASlider").disabled = locked;
+        document.getElementById("tempBSlider").disabled = locked;
+      }
+
+      function readControls() {
+        state.mA = Number(document.getElementById("massASlider").value);
+        state.mB = Number(document.getElementById("massBSlider").value);
+        state.TA = Number(document.getElementById("tempASlider").value);
+        state.TB = Number(document.getElementById("tempBSlider").value);
+        document.getElementById("massAVal").textContent = `${state.mA} g`;
+        document.getElementById("massBVal").textContent = `${state.mB} g`;
+        document.getElementById("tempAVal").textContent = `${state.TA} ℃`;
+        document.getElementById("tempBVal").textContent = `${state.TB} ℃`;
+      }
+
+      function updateUI() {
+        const teq = theoreticalTeq();
+        document.getElementById("hudA").innerHTML = `物体 A<br>${fmt(state.TA, 1)} ℃ · ${MATERIALS[state.matA].name}`;
+        document.getElementById("hudB").innerHTML = `物体 B<br>${fmt(state.TB, 1)} ℃ · ${MATERIALS[state.matB].name}`;
+        document.getElementById("qLossVal").textContent = `${fmt(state.Q_loss, 2)} J`;
+        document.getElementById("qGainVal").textContent = `${fmt(state.Q_gain, 2)} J`;
+        document.getElementById("qErrVal").textContent = `${fmt(Math.abs(state.Q_loss - state.Q_gain), 6)} J`;
+        document.getElementById("deltaTVal").textContent = `${fmt(Math.abs(state.TA - state.TB), 2)} ℃`;
+        document.getElementById("teqVal").textContent = `${fmt(teq, 2)} ℃`;
+
+        eqBadge.classList.toggle("visible", state.equilibrium);
+
+        statusMsg.className = "status-msg";
+        if (state.equilibrium) {
+          statusMsg.classList.add("equilibrium");
+          statusMsg.textContent = `熱平衡成立 — T = ${fmt(state.TA, 2)} ℃（Q_loss = Q_gain = ${fmt(state.Q_loss, 1)} J）`;
+        } else if (state.contacting) {
+          statusMsg.classList.add("contact");
+          const dir = state.TA >= state.TB ? "A → B" : "B → A";
+          statusMsg.textContent = `接触中 · 熱の流れ ${dir} · 残り温度差 ${fmt(Math.abs(state.TA - state.TB), 2)} ℃`;
+        } else {
+          statusMsg.textContent = "物体 A と B を設定し「接触開始」で熱の移動を開始します。";
+        }
+      }
+
+      function startContact() {
+        readControls();
+        state.contacting = true;
+        state.equilibrium = Math.abs(state.TA - state.TB) < EQUILIB_EPS;
+        state.simTime = 0;
+        state.Q_loss = 0;
+        state.Q_gain = 0;
+        heatDots = [];
+        setControlsLocked(true);
+        initParticles();
+        resetChart();
+        if (state.equilibrium) {
+          const teq = theoreticalTeq();
+          state.TA = teq;
+          state.TB = teq;
+          pushChartPoint(true);
+        }
+        updateUI();
+      }
+
+      function resetSim() {
+        readControls();
+        state.contacting = false;
+        state.equilibrium = false;
+        state.simTime = 0;
+        state.Q_loss = 0;
+        state.Q_gain = 0;
+        state.lastChartT = -1;
+        heatDots = [];
+        setControlsLocked(false);
+        initParticles();
+        resetChart();
+        updateUI();
+      }
+
+      function tick(now) {
+        if (lastFrameTime === null) lastFrameTime = now;
+        const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+        lastFrameTime = now;
+
+        if (state.contacting && !state.equilibrium) {
+          state.simTime += dt;
+          stepPhysics(dt);
+          pushChartPoint(false);
+        }
+        updateParticles(dt);
+        updateHeatDots(dt);
+        drawScene();
+        updateUI();
+        requestAnimationFrame(tick);
+      }
+
+      // 物質ボタン
+      document.querySelectorAll(".mat-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (controlsLocked) return;
+          const obj = btn.dataset.obj;
+          const mat = btn.dataset.mat;
+          if (obj === "a") state.matA = mat;
+          else state.matB = mat;
+          document.querySelectorAll(`.mat-btn[data-obj="${obj}"]`).forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+          initParticles();
+          updateUI();
+        });
+      });
+
+      ["massASlider", "massBSlider", "tempASlider", "tempBSlider"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", () => {
+          if (controlsLocked) return;
+          readControls();
+          initParticles();
+          resetChart();
+          updateUI();
+        });
+      });
+
+      contactBtn.addEventListener("click", startContact);
+      resetBtn.addEventListener("click", resetSim);
+
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        initParticles();
+      });
+
+      function boot() {
+        // 初期：A=水80℃、B=鉄20℃（比熱差がわかりやすい例）
+        state.matA = "water";
+        state.matB = "iron";
+        document.querySelectorAll('.mat-btn[data-obj="a"]').forEach((b) => {
+          b.classList.toggle("active", b.dataset.mat === "water");
+        });
+        document.querySelectorAll('.mat-btn[data-obj="b"]').forEach((b) => {
+          b.classList.toggle("active", b.dataset.mat === "iron");
+        });
+        readControls();
+        resizeCanvas();
+        buildChart();
+        initParticles();
+        resetChart();
+        updateUI();
+        requestAnimationFrame(tick);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(boot));
+      } else {
+        requestAnimationFrame(boot);
+      }
+    })();
+  </script>
+</body>
+</html>
