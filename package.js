@@ -28,6 +28,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var package_exports = {};
 __export(package_exports, {
+  binPath: () => binPath,
   libPath: () => libPath,
   packageJSON: () => packageJSON,
   packageRoot: () => packageRoot
@@ -36,11 +37,13 @@ module.exports = __toCommonJS(package_exports);
 var import_path = __toESM(require("path"));
 const packageRoot = import_path.default.join(__dirname, "..");
 const packageJSON = require(import_path.default.join(packageRoot, "package.json"));
+const binPath = import_path.default.join(packageRoot, "bin");
 function libPath(...parts) {
   return import_path.default.join(packageRoot, "lib", ...parts);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  binPath,
   libPath,
   packageJSON,
   packageRoot

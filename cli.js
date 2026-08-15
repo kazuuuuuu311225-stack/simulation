@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-const { program } = require('./lib/program');
+const { libCli, libCliTestStub } = require('./lib/coreBundle');
+const { program } = require('./lib/utilsBundle');
+libCli.decorateProgram(program);
+libCliTestStub.decorateProgram(program);
 program.parse(process.argv);
