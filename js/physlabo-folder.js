@@ -51,29 +51,15 @@
     });
   }
 
-  function boot() {
-    function start() {
-      initAccordion();
-      updateSimCount();
-      openFromHash();
-      window.addEventListener("hashchange", openFromHash);
-      if (window.PhysLaboBg) window.PhysLaboBg.init("bgCanvas");
-    }
-
-    if (window.PhysLaboAuth && typeof window.PhysLaboAuth.requestAuth === "function") {
-      window.PhysLaboAuth.requestAuth(start, {
-        mandatory: true,
-        message: "この分野を見るにはパスワードが必要です。"
-      });
-    } else {
-      start();
-    }
-  }
-
   var expandBtn = document.getElementById("expandAll");
   var collapseBtn = document.getElementById("collapseAll");
   if (expandBtn) expandBtn.addEventListener("click", function () { setAllChapters(true); });
   if (collapseBtn) collapseBtn.addEventListener("click", function () { setAllChapters(false); });
 
-  boot();
+  initAccordion();
+  updateSimCount();
+  openFromHash();
+  window.addEventListener("hashchange", openFromHash);
+
+  if (window.PhysLaboBg) window.PhysLaboBg.init("bgCanvas");
 })();

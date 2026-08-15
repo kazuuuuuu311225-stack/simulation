@@ -11,8 +11,13 @@
   var input = null;
   var errorEl = null;
   var toggleVisBtn = null;
+  var cancelBtn = null;
+  var titleEl = null;
+  var messageEl = null;
   var onSuccess = null;
   var scrollY = 0;
+  var gateMandatory = false;
+  var bound = false;
 
   function isAuthed() {
     try {
@@ -36,15 +41,18 @@
 
   function lockBody() {
     scrollY = window.scrollY || 0;
+    document.documentElement.classList.add("auth-gate-open");
     document.body.classList.add("auth-gate-open");
-    /* Hero 画面は html.hero-landing で既にスクロール固定 — body.fixed はレイアウトずれの原因 */
     if (isHeroPhase()) return;
     document.body.style.top = "-" + scrollY + "px";
     document.body.style.position = "fixed";
+    document.body.style.left = "0";
+    document.body.style.right = "0";
     document.body.style.width = "100%";
   }
 
   function unlockBody() {
+    document.documentElement.classList.remove("auth-gate-open");
     document.body.classList.remove("auth-gate-open");
     document.body.style.top = "";
     document.body.style.position = "";
@@ -57,18 +65,29 @@
   }
 
   function scrollPanelIntoView() {
-    if (!gate) return;
-    if (document.documentElement.classList.contains("hero-landing")) return;
-    var panel = gate.querySelector(".auth-panel");
-    if (panel && panel.scrollIntoView) {
-      panel.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    /* 固定オーバーレイのためページスクロールは不要 */
+  }
+
+  function applyGateOptions(options) {
+    options = options || {};
+    gateMandatory = !!options.mandatory;
+    if (cancelBtn) {
+      cancelBtn.style.display = gateMandatory ? "none" : "";
+    }
+    if (titleEl && options.title) {
+      titleEl.textContent = options.title;
+    }
+    if (messageEl && options.message) {
+      messageEl.textContent = options.message;
     }
   }
 
   function hideGate() {
     if (!gate) return;
+    if (gateMandatory && !isAuthed()) return;
     gate.classList.add("hidden");
     gate.setAttribute("aria-hidden", "true");
+    gateMandatory = false;
     unlockBody();
     if (input) {
       input.value = "";
@@ -119,7 +138,7 @@
       '<div class="auth-gate hidden" id="authGate" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-hidden="true">' +
       '<div class="auth-panel">' +
       '<h2 id="authTitle">パスワード入力</h2>' +
-      '<p>シミュレーションを見るにはパスワードが必要です。</p>' +
+      '<p id="authMessage">シミュレーションを見るにはパスワードが必要です。</p>' +
       '<input type="text" class="auth-input" id="authPassword" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="パスワード">' +
       '<button type="button" class="auth-toggle-vis" id="authToggleVis">入力を隠す</button>' +
       '<p class="auth-error hidden" id="authError" role="alert">パスワードが正しくありません</p>' +
@@ -132,16 +151,19 @@
 
   function bindOnce() {
     ensureGateDom();
-    if (gate) return;
+    if (bound) return;
     gate = document.getElementById("authGate");
     input = document.getElementById("authPassword");
     errorEl = document.getElementById("authError");
     toggleVisBtn = document.getElementById("authToggleVis");
+    cancelBtn = document.getElementById("authCancel");
+    titleEl = document.getElementById("authTitle");
+    messageEl = document.getElementById("authMessage");
     var submitBtn = document.getElementById("authSubmit");
-    var cancelBtn = document.getElementById("authCancel");
 
     if (!gate || !input || !submitBtn) return;
 
+    bound = true;
     if (input.type === "password") input.type = "text";
 
     submitBtn.addEventListener("click", submit);
@@ -151,12 +173,12 @@
       if (e.key === "Enter") {
         e.preventDefault();
         submit();
-      } else if (e.key === "Escape") {
+      } else if (e.key === "Escape" && !gateMandatory) {
         hideGate();
       }
     });
     gate.addEventListener("click", function (e) {
-      if (e.target === gate) hideGate();
+      if (e.target === gate && !gateMandatory) hideGate();
     });
 
     if (window.visualViewport) {
@@ -166,13 +188,14 @@
     }
   }
 
-  function requestAuth(callback) {
+  function requestAuth(callback, options) {
     bindOnce();
     if (isAuthed()) {
       if (typeof callback === "function") callback();
       return;
     }
     onSuccess = callback;
+    applyGateOptions(options);
     if (errorEl) errorEl.classList.add("hidden");
     if (input) {
       input.type = "text";
@@ -192,9 +215,30 @@
     }, 80);
   }
 
+  function initEntryGate(options) {
+    bindOnce();
+    if (isAuthed()) return;
+    requestAuth(null, options || {
+      mandatory: true,
+      title: "パスワード入力",
+      message: "physLabo を見るにはパスワードが必要です。"
+    });
+  }
+
   global.PhysLaboAuth = {
     isAuthed: isAuthed,
     requestAuth: requestAuth,
+    initEntryGate: initEntryGate,
     hideGate: hideGate
   };
+
+  if (document.body && document.body.hasAttribute("data-auth-entry")) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () {
+        initEntryGate();
+      });
+    } else {
+      initEntryGate();
+    }
+  }
 })(window);
