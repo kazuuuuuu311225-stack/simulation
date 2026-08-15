@@ -20,7 +20,7 @@ const VIEWPORT_BODY =
 const VIEWPORT_TAG =
   '<script src="assets/js/physlabo-viewport-inline.js?v=20260810"></script>';
 const BASE_CSS =
-  '<link rel="stylesheet" href="assets/css/physlabo-sim-base.css?v=20260826">';
+  '<link rel="stylesheet" href="assets/css/physlabo-sim-base.css?v=20260810">';
 
 const FOLDER_LABELS = {
   classical: "\u529b\u5b66",

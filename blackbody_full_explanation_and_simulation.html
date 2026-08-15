@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>黒体放射 — 解説 · プランク分布 · シミュレーション</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [["\\(", "\\)"], ["$", "$"]], displayMath: [["\\[", "\\]"], ["$$", "$$"]] },
+      startup: { pageReady: () => MathJax.startup.defaultPageReady() },
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fb923c; --accent-light: #fdba74; --accent-glow: rgba(251,146,60,0.4);
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(251,146,60,0.25);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0c1524 38%,#101c30 72%,#0a1018 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(920px,96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(251,146,60,0.25),rgba(251,191,36,0.2));
+      border: 1px solid rgba(251,146,60,0.35); box-shadow: 0 0 20px var(--accent-glow); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #ffedd5;
+      background: rgba(251,146,60,0.14); border: 1px solid rgba(251,146,60,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    .global-ctrl {
+      position: sticky; top: 0; z-index: 20; padding: 12px 14px; border-radius: 14px;
+      background: rgba(10,16,28,0.92); border: 1px solid rgba(251,146,60,0.35);
+      backdrop-filter: blur(10px); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .global-ctrl label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 8px; }
+    .temp-readout {
+      display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 8px;
+      font-size: 0.84rem; font-variant-numeric: tabular-nums;
+    }
+    .temp-readout span { color: #fdba74; font-weight: 700; }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    section.panel h3 {
+      margin: 0 0 10px; font-size: 1.05rem; font-weight: 600; color: var(--accent-light);
+      padding-bottom: 8px; border-bottom: 1px solid rgba(251,146,60,0.2);
+    }
+    .sec-num { color: #64748b; font-size: 0.78rem; font-weight: 700; margin-right: 6px; }
+    .prose { margin: 0 0 12px; font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+    .prose ul { margin: 8px 0; padding-left: 1.2rem; }
+    .prose li { margin-bottom: 6px; }
+    .prose strong { color: #fde68a; }
+    .formula-block {
+      margin: 12px 0; padding: 14px 16px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(251,146,60,0.2);
+      overflow-x: auto;
+    }
+    .calc-grid {
+      display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px;
+    }
+    @media (min-width:640px) { .calc-grid { grid-template-columns: repeat(3,1fr); } }
+    .calc-item {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(251,191,36,0.18);
+    }
+    .calc-item .label { display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 4px; }
+    .calc-item .val { font-size: 0.92rem; font-weight: 700; color: #e0f2fe; font-variant-numeric: tabular-nums; }
+    #colorCanvas {
+      display: block; width: 100%; max-width: 420px; height: 120px; margin: 12px auto 0;
+      border-radius: 12px; border: 2px solid rgba(255,255,255,0.15);
+      box-shadow: 0 0 30px rgba(251,146,60,0.25);
+    }
+    .chart-wrap { position: relative; height: min(320px,45dvh); min-height: 240px; margin-top: 10px; }
+    .star-btns {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+    }
+    .star-btns button {
+      padding: 8px 12px; font-family: inherit; font-size: 0.78rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; border: 1px solid rgba(148,163,184,0.35);
+      background: rgba(255,255,255,0.06); color: #e2e8f0; transition: transform 0.12s;
+    }
+    .star-btns button:hover { border-color: rgba(251,146,60,0.5); color: #ffedd5; }
+    .star-btns button.active {
+      background: linear-gradient(135deg,#ea580c,#fb923c); color: #fff; border: none;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .summary-box {
+      padding: 14px 16px; border-radius: 12px;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.25);
+    }
+    .summary-box ul { margin: 0; padding-left: 1.2rem; line-height: 1.75; font-size: 0.88rem; color: #fde68a; }
+    .legend-note { margin: 8px 0 0; font-size: 0.76rem; color: #64748b; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">☀</div>
+      <h2>黒体放射 — 解説とシミュレーション</h2>
+      <p class="chapter-label">15章 · 熱放射 · プランク分布 · 星の色</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <div class="global-ctrl">
+      <label for="tempSlider">温度 T（全セクション連動）</label>
+      <input type="range" id="tempSlider" min="500" max="35000" value="5800" step="100">
+      <div class="temp-readout">
+        <span id="readT">T = 5800 K</span>
+        <span id="readPeak">λ_peak = 500 nm</span>
+        <span id="readColor">黒体色</span>
+      </div>
+    </div>
+
+    <!-- §1 黒体放射とは -->
+    <section class="panel" id="sec1">
+      <h3><span class="sec-num">§1</span>黒体放射とは？</h3>
+      <p class="prose">
+        すべての物体は温度に応じて<strong>電磁波（光）</strong>を出します。温度が高いほど短波長側（青〜紫外）の成分が強くなり、
+        低いほど長波長側（赤〜赤外）が主になります。私たちが見る<strong>星の色</strong>も、表面温度で決まります。
+      </p>
+      <ul class="prose">
+        <li>高温 → 青白く見える（短波長が強い）</li>
+        <li>低温 → 赤く見える（長波長が強い）</li>
+        <li><strong>黒体</strong>は「どの波長も余さず吸収し、温度だけで決まる理想の光を出す物体」</li>
+      </ul>
+      <canvas id="colorCanvas" width="840" height="240" aria-label="黒体の色"></canvas>
+      <p class="legend-note">上のスライダーで温度を変えると、赤 → 橙 → 黄 → 白 → 青白へ変化します。</p>
+    </section>
+
+    <!-- §2 プランク分布の式 -->
+    <section class="panel" id="sec2">
+      <h3><span class="sec-num">§2</span>プランク分布の式</h3>
+      <p class="prose">単位波長あたりのエネルギー（スペクトル放射輝度）\(B(\lambda, T)\) は次の式で与えられます。</p>
+      <div class="formula-block">
+        \[
+        B(\lambda, T) = \frac{2hc^2}{\lambda^5} \cdot \frac{1}{\exp\!\left(\dfrac{hc}{\lambda k T}\right) - 1}
+        \]
+      </div>
+      <ul class="prose">
+        <li>\(h = 6.626 \times 10^{-34}\,\mathrm{J\,s}\)（プランク定数）</li>
+        <li>\(c = 3.00 \times 10^{8}\,\mathrm{m/s}\)（光速）</li>
+        <li>\(k = 1.381 \times 10^{-23}\,\mathrm{J/K}\)（ボルツマン定数）</li>
+      </ul>
+      <p class="prose">
+        <strong>読み取りのポイント：</strong> \(\lambda\) が短いほど \(\lambda^5\) で急激に減ります。
+        温度 \(T\) が高いほど短波長側の強度が増え、<strong>この式が星の色を決めています</strong>。
+      </p>
+    </section>
+
+    <!-- §3 計算 -->
+    <section class="panel" id="sec3">
+      <h3><span class="sec-num">§3</span>プランク分布の計算（JavaScript）</h3>
+      <p class="prose">波長 \(\lambda = 200 \sim 3000\,\mathrm{nm}\) をサンプリングし、下の関数 <code>planck(λ, T)</code> で \(B\) を計算しています（\(\lambda\) はメートル単位）。</p>
+      <div class="calc-grid">
+        <div class="calc-item"><span class="label">B(460 nm, T)</span><span class="val" id="calcB460">—</span></div>
+        <div class="calc-item"><span class="label">B(530 nm, T)</span><span class="val" id="calcB530">—</span></div>
+        <div class="calc-item"><span class="label">B(620 nm, T)</span><span class="val" id="calcB620">—</span></div>
+        <div class="calc-item"><span class="label">B(λ_peak, T)</span><span class="val" id="calcBpeak">—</span></div>
+        <div class="calc-item"><span class="label">最大 B（正規化基準）</span><span class="val" id="calcBmax">—</span></div>
+        <div class="calc-item"><span class="label">サンプル数</span><span class="val">281 点</span></div>
+      </div>
+      <p class="legend-note">値は SI 単位 W·m⁻³·sr⁻¹。グラフは見やすさのため各温度で最大値 1 に正規化して表示します。</p>
+    </section>
+
+    <!-- §4 黒体の色 -->
+    <section class="panel" id="sec4">
+      <h3><span class="sec-num">§4</span>黒体の色変化（Canvas · RGB）</h3>
+      <p class="prose">
+        簡易モデル：\(R \propto B(620\,\mathrm{nm})\)、\(G \propto B(530\,\mathrm{nm})\)、\(B \propto B(460\,\mathrm{nm})\) を正規化して RGB に変換します。
+        実際の色知覚はもっと複雑ですが、<strong>温度が上がると青成分が増える</strong>傾向を再現できます。
+      </p>
+      <canvas id="colorCanvas2" width="840" height="200" aria-label="黒体色プレビュー2"></canvas>
+      <p class="legend-note" id="rgbLabel">RGB = —</p>
+    </section>
+
+    <!-- §5 プランク分布グラフ -->
+    <section class="panel" id="sec5">
+      <h3><span class="sec-num">§5</span>プランク分布グラフ（Chart.js）</h3>
+      <p class="prose">横軸：波長（nm）· 縦軸：相対強度（\(B\) をその温度の最大で割った値）。高温ほどピークが<strong>左（短波長 · 青側）</strong>へ移動します。</p>
+      <div class="chart-wrap"><canvas id="spectrumChart"></canvas></div>
+    </section>
+
+    <!-- §6 ウィーンの変位則 -->
+    <section class="panel" id="sec6">
+      <h3><span class="sec-num">§6</span>ウィーンの変位則（ピーク波長）</h3>
+      <div class="formula-block">
+        \[
+        \lambda_{\mathrm{peak}} = \frac{b}{T}, \qquad b = 2.898 \times 10^{-3}\,\mathrm{m \cdot K}
+        \]
+      </div>
+      <p class="prose">
+        グラフ上の<strong>黄色の破線</strong>が \(\lambda_{\mathrm{peak}}\) です。温度を上げるとピークは短波長側へ移動します
+        （例：5800 K → 約 500 nm、3000 K → 約 970 nm）。
+      </p>
+      <div class="calc-item" style="max-width:320px">
+        <span class="label">計算値 λ_peak</span>
+        <span class="val" id="wienPeak">500 nm</span>
+      </div>
+    </section>
+
+    <!-- §7 星の分類 -->
+    <section class="panel" id="sec7">
+      <h3><span class="sec-num">§7</span>星の分類（O 〜 M 型）</h3>
+      <p class="prose">ボタンを押すと温度がジャンプし、黒体色 · スペクトル · \(\lambda_{\mathrm{peak}}\) が星のタイプに合わせて更新されます。</p>
+      <div class="star-btns" id="starBtns"></div>
+    </section>
+
+    <!-- §8 まとめ -->
+    <section class="panel" id="sec8">
+      <h3><span class="sec-num">§8</span>高校生向けまとめ</h3>
+      <div class="summary-box">
+        <ul>
+          <li>温度が<strong>高いほど青く</strong>、<strong>低いほど赤く</strong>見える</li>
+          <li><strong>星の色</strong>は表面温度の表れ（O 型は青白、M 型は赤）</li>
+          <li>プランク分布は「温度と波長で光の強さが決まる」量子論の出発点</li>
+          <li><strong>ウィーンの変位則</strong> \(\lambda_{\mathrm{peak}} = b/T\) でピーク波長が決まる</li>
+          <li>太陽（G 型 · 約 5800 K）は黄白色 · ピークは可視光の緑〜黄付近</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const H = 6.626e-34;
+    const C = 3e8;
+    const K = 1.381e-23;
+    const WIEN_B = 2.898e-3;
+    const LAMBDA_MIN_NM = 200;
+    const LAMBDA_MAX_NM = 3000;
+    const LAMBDA_STEP_NM = 10;
+
+    const STAR_TYPES = [
+      { type: "O", T: 30000, color: "#9bbcff" },
+      { type: "B", T: 15000, color: "#a8c4ff" },
+      { type: "A", T: 10000, color: "#e8f0ff" },
+      { type: "F", T: 7000, color: "#fff8ef" },
+      { type: "G", T: 5800, color: "#fff4c2" },
+      { type: "K", T: 4000, color: "#ffb86a" },
+      { type: "M", T: 3000, color: "#ff6b4a" },
+    ];
+
+    let temperatureK = 5800;
+    let peakNm = 500;
+    let spectrumChart = null;
+
+    const tempSlider = document.getElementById("tempSlider");
+
+    // プランク分布の計算（λ はメートル）
+    function planck(lambdaM, T) {
+      if (T <= 0 || lambdaM <= 0) return 0;
+      const c1 = (2 * H * C * C) / Math.pow(lambdaM, 5);
+      const x = (H * C) / (lambdaM * K * T);
+      if (x > 700) return 0;
+      const denom = Math.exp(x) - 1;
+      if (denom <= 0 || !Number.isFinite(denom)) return 0;
+      return c1 / denom;
+    }
+
+    function nmToM(nm) { return nm * 1e-9; }
+
+    function buildSpectrum(T) {
+      const labels = [];
+      const values = [];
+      let maxB = 0;
+      const raw = [];
+      for (let nm = LAMBDA_MIN_NM; nm <= LAMBDA_MAX_NM; nm += LAMBDA_STEP_NM) {
+        const B = planck(nmToM(nm), T);
+        raw.push(B);
+        labels.push(nm);
+        if (B > maxB) maxB = B;
+      }
+      for (let i = 0; i < raw.length; i++) {
+        values.push(maxB > 0 ? raw[i] / maxB : 0);
+      }
+      return { labels, values, maxB, raw };
+    }
+
+    // ウィーンの変位則
+    function wienPeakNm(T) {
+      return (WIEN_B / T) * 1e9;
+    }
+
+    // 黒体色の RGB 変換（簡易）
+    function blackbodyRGB(T) {
+      const r = planck(nmToM(620), T);
+      const g = planck(nmToM(530), T);
+      const b = planck(nmToM(460), T);
+      const max = Math.max(r, g, b, 1e-40);
+      let R = Math.pow(r / max, 0.45);
+      let G = Math.pow(g / max, 0.45);
+      let B = Math.pow(b / max, 0.45);
+      const peak = wienPeakNm(T);
+      if (peak < 450) { R *= 0.85; G *= 0.92; B = Math.min(1, B * 1.15); }
+      if (T > 12000) { R = Math.min(1, R * 1.05); G = Math.min(1, G * 1.02); B = Math.min(1, B * 1.08); }
+      const s = 255;
+      return {
+        rgb: [Math.round(R * s), Math.round(G * s), Math.round(B * s)],
+        css: `rgb(${Math.round(R * s)},${Math.round(G * s)},${Math.round(B * s)})`,
+      };
+    }
+
+    function drawColorCanvas(canvasId) {
+      const cv = document.getElementById(canvasId);
+      if (!cv) return;
+      const ctx = cv.getContext("2d");
+      const w = cv.width;
+      const h = cv.height;
+      const { css } = blackbodyRGB(temperatureK);
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      for (let i = 0; i <= 20; i++) {
+        const t = 500 + (35000 - 500) * (i / 20);
+        grad.addColorStop(i / 20, blackbodyRGB(t).css);
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      const markerX = ((temperatureK - 500) / (35000 - 500)) * w;
+      ctx.fillStyle = css;
+      ctx.fillRect(Math.max(0, markerX - 40), h * 0.25, 80, h * 0.5);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(Math.max(0, markerX - 40), h * 0.25, 80, h * 0.5);
+      ctx.fillStyle = "#fff";
+      ctx.font = "600 14px Inter,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${Math.round(temperatureK)} K`, markerX, h * 0.18);
+    }
+
+    function fmtSci(x) {
+      if (x === 0 || !Number.isFinite(x)) return "0";
+      if (x >= 1e6 || x < 1e-2) return x.toExponential(2);
+      return x.toFixed(2);
+    }
+
+    function updateCalcPanel() {
+      const peakM = nmToM(peakNm);
+      const B460 = planck(nmToM(460), temperatureK);
+      const B530 = planck(nmToM(530), temperatureK);
+      const B620 = planck(nmToM(620), temperatureK);
+      const Bpeak = planck(peakM, temperatureK);
+      const { maxB } = buildSpectrum(temperatureK);
+      document.getElementById("calcB460").textContent = fmtSci(B460) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcB530").textContent = fmtSci(B530) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcB620").textContent = fmtSci(B620) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcBpeak").textContent = fmtSci(Bpeak) + " W·m⁻³·sr⁻¹";
+      document.getElementById("calcBmax").textContent = fmtSci(maxB) + " W·m⁻³·sr⁻¹";
+    }
+
+    // Chart.js：ウィーン peak 縦線プラグイン
+    const peakLinePlugin = {
+      id: "wienPeakLine",
+      afterDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!scales.x) return;
+        const x = scales.x.getPixelForValue(peakNm);
+        if (x < chartArea.left - 2 || x > chartArea.right + 2) return;
+        ctx.save();
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "600 11px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`λ_peak=${Math.round(peakNm)} nm`, x, chartArea.top + 14);
+        ctx.restore();
+      },
+    };
+
+    function initChart() {
+      const ctx = document.getElementById("spectrumChart").getContext("2d");
+      const { labels, values } = buildSpectrum(temperatureK);
+      spectrumChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "B(λ,T) / max",
+            data: values,
+            borderColor: "#fb923c",
+            backgroundColor: "rgba(251,146,60,0.12)",
+            fill: true,
+            tension: 0.25,
+            pointRadius: 0,
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 200 },
+          scales: {
+            x: {
+              title: { display: true, text: "波長 λ (nm)", color: "#94a3b8" },
+              ticks: { color: "#94a3b8", maxTicksLimit: 10 },
+              grid: { color: "rgba(148,163,184,0.1)" },
+            },
+            y: {
+              title: { display: true, text: "相対強度 B / B_max", color: "#94a3b8" },
+              min: 0,
+              max: 1.05,
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(148,163,184,0.12)" },
+            },
+          },
+          plugins: {
+            legend: { labels: { color: "#cbd5e1" } },
+          },
+        },
+        plugins: [peakLinePlugin],
+      });
+    }
+
+    function updateChart() {
+      if (!spectrumChart) return;
+      const { labels, values } = buildSpectrum(temperatureK);
+      spectrumChart.data.labels = labels;
+      spectrumChart.data.datasets[0].data = values;
+      spectrumChart.update("none");
+    }
+
+    function highlightStarBtn() {
+      document.querySelectorAll("#starBtns button").forEach((btn) => {
+        btn.classList.toggle("active", +btn.dataset.t === temperatureK);
+      });
+    }
+
+    function setTemperature(T) {
+      temperatureK = Math.max(500, Math.min(35000, T));
+      tempSlider.value = temperatureK;
+      peakNm = wienPeakNm(temperatureK);
+      const { css, rgb } = blackbodyRGB(temperatureK);
+
+      document.getElementById("readT").textContent = `T = ${Math.round(temperatureK).toLocaleString()} K`;
+      document.getElementById("readPeak").textContent = `λ_peak = ${Math.round(peakNm)} nm`;
+      document.getElementById("readColor").textContent = `RGB (${rgb.join(", ")})`;
+      document.getElementById("wienPeak").textContent = `${Math.round(peakNm)} nm`;
+      document.getElementById("rgbLabel").textContent = `RGB = (${rgb.join(", ")}) · ${css}`;
+
+      drawColorCanvas("colorCanvas");
+      drawColorCanvas("colorCanvas2");
+      updateCalcPanel();
+      updateChart();
+      highlightStarBtn();
+    }
+
+    function initStarButtons() {
+      const wrap = document.getElementById("starBtns");
+      STAR_TYPES.forEach(({ type, T, color }) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.t = T;
+        btn.textContent = `${type}型 (${T.toLocaleString()} K)`;
+        btn.style.borderColor = color;
+        btn.addEventListener("click", () => setTemperature(T));
+        wrap.appendChild(btn);
+      });
+    }
+
+    tempSlider.addEventListener("input", () => setTemperature(+tempSlider.value));
+
+    initStarButtons();
+    initChart();
+    setTemperature(5800);
+  </script>
+</body>
+</html>

@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script>(function(){var D=1180,m=document.querySelector('meta[name=viewport]');if(!m)return;var h=document.documentElement;h.classList.add('physlabo-unified-layout');if('scrollRestoration' in history)history.scrollRestoration='manual';if(h.classList.contains('hero-landing')||h.classList.contains('hero-transition-active')||h.getAttribute('data-vp')==='device')return;var vw=window.innerWidth||document.documentElement.clientWidth||D;if(vw>=D)return;var s=Math.min(1,vw/D);m.setAttribute('content','width='+D+',initial-scale='+s.toFixed(4)+',minimum-scale='+Math.max(0.2,s*0.45).toFixed(4)+',maximum-scale=5,user-scalable=yes,viewport-fit=cover');})();</script>
+  <script>(function(){var h=document.documentElement;h.classList.add('physlabo-unified-layout');if(h.querySelector('.chapter-list'))h.classList.add('chapters-mode');if('scrollRestoration' in history)history.scrollRestoration='manual';})();</script>
 <title>25章 電磁誘導 — 誘導起電力とエネルギー 3Dラボ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,8 +159,8 @@
     .conserv-badge.warn {
       color: #fcd34d; background: rgba(120,53,15,0.2); border-color: rgba(251,191,36,0.35);
     }</style>
-  <link rel="stylesheet" href="assets/css/physlabo-mobile.css?v=20260813">
-  <script src="assets/js/physlabo-mobile.js?v=20260813" defer></script>
+  <link rel="stylesheet" href="assets/css/physlabo-mobile.css?v=20260626">
+  <script src="assets/js/physlabo-mobile.js?v=20260626" defer></script>
   <script src="assets/js/physlabo-a11y.js?v=20260810" defer></script>
 </head>
 <body>
@@ -353,6 +353,222 @@
 
       function calcEmf(vx, B0, L) { return B0 * L * vx; }
       function calcEqEz(vx, B0) { return vx * B0; }
+
+      function pushHistory() {
+        histW.push(wMech);
+        histEheat.push(eHeat);
+        histPmech.push(pMech);
+        histPheat.push(pHeat);
+        if (histW.length > HIST_LEN) histW.shift();
+        if (histEheat.length > HIST_LEN) histEheat.shift();
+        if (histPmech.length > HIST_LEN) histPmech.shift();
+        if (histPheat.length > HIST_LEN) histPheat.shift();
+      }
+
+      function clearHistory() {
+        histW.length = 0; histEheat.length = 0; histPmech.length = 0; histPheat.length = 0;
+        drawDualGraph(graphEnergy, [], [], "#f87171", "#fbbf24", "J", "J", true);
+        drawDualGraph(graphPower, [], [], "#fda4af", "#ef4444", "W", "W", false);
+      }
+
+      function drawDualGraph(canvas, dataA, dataB, colorA, colorB, unitA, unitB, fromZero) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(parent.clientWidth, 1);
+        const h = Math.max(parent.clientHeight, 1);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        const ctx = canvas.getContext("2d");
+        const cw = canvas.width, ch = canvas.height;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.fillStyle = "rgba(8,12,28,0.6)";
+        ctx.fillRect(0, 0, cw, ch);
+
+        let maxA = 0.05, maxB = 0.05;
+        if (fromZero) {
+          for (let i = 0; i < dataA.length; i++) maxA = Math.max(maxA, dataA[i]);
+          for (let i = 0; i < dataB.length; i++) maxB = Math.max(maxB, dataB[i]);
+        } else {
+          for (let i = 0; i < dataA.length; i++) maxA = Math.max(maxA, Math.abs(dataA[i]));
+          for (let i = 0; i < dataB.length; i++) maxB = Math.max(maxB, Math.abs(dataB[i]));
+        }
+        const margin = { l: 36 * dpr, r: 8 * dpr, t: 8 * dpr, b: 14 * dpr };
+        const plotW = cw - margin.l - margin.r;
+        const plotH = ch - margin.t - margin.b;
+        const baseY = fromZero ? margin.t + plotH : margin.t + plotH * 0.5;
+        const scale = fromZero ? plotH : plotH * 0.42;
+
+        ctx.strokeStyle = "rgba(148,163,184,0.18)";
+        ctx.lineWidth = 1 * dpr;
+        for (let g = 0; g <= 4; g++) {
+          const y = margin.t + (g / 4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(margin.l, y);
+          ctx.lineTo(cw - margin.r, y);
+          ctx.stroke();
+        }
+        if (!fromZero) {
+          ctx.strokeStyle = "rgba(148,163,184,0.45)";
+          ctx.beginPath();
+          ctx.moveTo(margin.l, baseY);
+          ctx.lineTo(cw - margin.r, baseY);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = `${8 * dpr}px Inter, sans-serif`;
+        ctx.textAlign = "right";
+        ctx.fillText(unitA, margin.l - 4 * dpr, margin.t + 8 * dpr);
+        ctx.fillText(unitB, margin.l - 4 * dpr, margin.t + 18 * dpr);
+
+        function drawSeries(data, color, maxAbs) {
+          if (data.length < 2) return;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2 * dpr;
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          for (let i = 0; i < data.length; i++) {
+            const x = margin.l + (i / (HIST_LEN - 1)) * plotW;
+            const val = fromZero ? data[i] : data[i] / maxAbs;
+            const y = fromZero ? baseY - (data[i] / maxAbs) * scale : baseY - val * scale;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        const maxPlot = Math.max(maxA, maxB, 0.05);
+        drawSeries(dataA, colorA, maxPlot);
+        drawSeries(dataB, colorB, maxPlot);
+      }
+
+      function updateGraphs() {
+        document.getElementById("graphValW").textContent = "W " + wMech.toFixed(2) + " J";
+        document.getElementById("graphValEheat").textContent = "Eheat " + eHeat.toFixed(2) + " J";
+        document.getElementById("graphValPmech").textContent = "Pmech " + pMech.toFixed(2) + " W";
+        document.getElementById("graphValPheat").textContent = "Pheat " + pHeat.toFixed(2) + " W";
+        drawDualGraph(graphEnergy, histW, histEheat, "#f87171", "#fbbf24", "J", "J", true);
+        drawDualGraph(graphPower, histPmech, histPheat, "#fda4af", "#ef4444", "W", "W", false);
+
+        const delta = Math.abs(wMech - eHeat);
+        const badge = document.getElementById("conservBadge");
+        if (badge) {
+          const ok = wMech < 0.5 || delta / Math.max(wMech, 0.01) < 0.08;
+          badge.textContent = "Δ = " + delta.toFixed(2) + " J · " + (ok ? "保存則 OK（W ≈ Eheat）" : "差が大きい（磁場外など）");
+          badge.classList.toggle("warn", !ok && wMech > 0.5);
+        }
+      }
+
+      function pushHistory() {
+        histW.push(wMech);
+        histEheat.push(eHeat);
+        histPmech.push(pMech);
+        histPheat.push(pHeat);
+        if (histW.length > HIST_LEN) histW.shift();
+        if (histEheat.length > HIST_LEN) histEheat.shift();
+        if (histPmech.length > HIST_LEN) histPmech.shift();
+        if (histPheat.length > HIST_LEN) histPheat.shift();
+      }
+
+      function clearHistory() {
+        histW.length = 0; histEheat.length = 0; histPmech.length = 0; histPheat.length = 0;
+        drawDualGraph(graphEnergy, [], [], "#f87171", "#fbbf24", "J", "J", true);
+        drawDualGraph(graphPower, [], [], "#fda4af", "#ef4444", "W", "W", false);
+      }
+
+      function drawDualGraph(canvas, dataA, dataB, colorA, colorB, unitA, unitB, fromZero) {
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(parent.clientWidth, 1);
+        const h = Math.max(parent.clientHeight, 1);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        const ctx = canvas.getContext("2d");
+        const cw = canvas.width, ch = canvas.height;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.fillStyle = "rgba(8,12,28,0.6)";
+        ctx.fillRect(0, 0, cw, ch);
+
+        let maxA = 0.05, maxB = 0.05;
+        if (fromZero) {
+          for (let i = 0; i < dataA.length; i++) maxA = Math.max(maxA, dataA[i]);
+          for (let i = 0; i < dataB.length; i++) maxB = Math.max(maxB, dataB[i]);
+        } else {
+          for (let i = 0; i < dataA.length; i++) maxA = Math.max(maxA, Math.abs(dataA[i]));
+          for (let i = 0; i < dataB.length; i++) maxB = Math.max(maxB, Math.abs(dataB[i]));
+        }
+        const margin = { l: 36 * dpr, r: 8 * dpr, t: 8 * dpr, b: 14 * dpr };
+        const plotW = cw - margin.l - margin.r;
+        const plotH = ch - margin.t - margin.b;
+        const baseY = fromZero ? margin.t + plotH : margin.t + plotH * 0.5;
+        const scale = fromZero ? plotH : plotH * 0.42;
+
+        ctx.strokeStyle = "rgba(148,163,184,0.18)";
+        ctx.lineWidth = 1 * dpr;
+        for (let g = 0; g <= 4; g++) {
+          const y = margin.t + (g / 4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(margin.l, y);
+          ctx.lineTo(cw - margin.r, y);
+          ctx.stroke();
+        }
+        if (!fromZero) {
+          ctx.strokeStyle = "rgba(148,163,184,0.45)";
+          ctx.beginPath();
+          ctx.moveTo(margin.l, baseY);
+          ctx.lineTo(cw - margin.r, baseY);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = `${8 * dpr}px Inter, sans-serif`;
+        ctx.textAlign = "right";
+        ctx.fillText(unitA, margin.l - 4 * dpr, margin.t + 8 * dpr);
+        ctx.fillText(unitB, margin.l - 4 * dpr, margin.t + 18 * dpr);
+
+        function drawSeries(data, color, maxAbs) {
+          if (data.length < 2) return;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2 * dpr;
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          for (let i = 0; i < data.length; i++) {
+            const x = margin.l + (i / (HIST_LEN - 1)) * plotW;
+            const val = fromZero ? data[i] : data[i] / maxAbs;
+            const y = fromZero ? baseY - (data[i] / maxAbs) * scale : baseY - val * scale;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        const maxPlot = Math.max(maxA, maxB, 0.05);
+        drawSeries(dataA, colorA, maxPlot);
+        drawSeries(dataB, colorB, maxPlot);
+      }
+
+      function updateGraphs() {
+        document.getElementById("graphValW").textContent = "W " + wMech.toFixed(2) + " J";
+        document.getElementById("graphValEheat").textContent = "Eheat " + eHeat.toFixed(2) + " J";
+        document.getElementById("graphValPmech").textContent = "Pmech " + pMech.toFixed(2) + " W";
+        document.getElementById("graphValPheat").textContent = "Pheat " + pHeat.toFixed(2) + " W";
+        drawDualGraph(graphEnergy, histW, histEheat, "#f87171", "#fbbf24", "J", "J", true);
+        drawDualGraph(graphPower, histPmech, histPheat, "#fda4af", "#ef4444", "W", "W", false);
+
+        const delta = Math.abs(wMech - eHeat);
+        const badge = document.getElementById("conservBadge");
+        if (badge) {
+          const ok = wMech < 0.5 || delta / Math.max(wMech, 0.01) < 0.08;
+          badge.textContent = "Δ = " + delta.toFixed(2) + " J · " + (ok ? "保存則 OK（W ≈ Eheat）" : "差が大きい（磁場外など）");
+          badge.classList.toggle("warn", !ok && wMech > 0.5);
+        }
+      }
 
       function pushHistory() {
         histW.push(wMech);
