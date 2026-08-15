@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>メスバウアー マッピング — 1024×1024 鉄分布</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #06b6d4; --accent-light: #22d3ee; --accent-glow: rgba(6,182,212,0.45);
+      --metal: #94a3b8; --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(6,182,212,0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#070a12 0%,#0c1524 38%,#101c30 72%,#0a1018 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px,98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+    .page-header { text-align: center; }
+    h2 { margin: 8px 0 4px; color: var(--accent-light); font-weight: 600; text-shadow: 0 0 24px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back { display: inline-block; margin-top: 10px; padding: 10px 16px; color: #cffafe;
+      background: rgba(6,182,212,0.14); border: 1px solid rgba(6,182,212,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; }
+    .panel { padding: 14px 16px; border-radius: 16px; background: var(--slate-bg);
+      border: 1px solid var(--slate-border); box-shadow: 0 8px 32px rgba(0,0,0,0.42); }
+    .panel h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--accent-light); }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(100px,1fr)); gap: 6px; }
+    .info-item { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.12); font-size: 0.72rem; }
+    .info-item .label { color: var(--muted); display: block; font-size: 0.64rem; }
+    .info-item .val { font-weight: 700; color: #f1f5f9; font-variant-numeric: tabular-nums; font-size: 0.82rem; }
+    .info-item .val.accent { color: var(--accent-light); }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 0.72rem; color: var(--muted); }
+    .legend-row span { display: inline-flex; align-items: center; gap: 5px; }
+    .swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15); }
+    .main-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 960px) {
+      .main-row { grid-template-columns: minmax(200px,1.1fr) minmax(180px,0.75fr) minmax(200px,1fr); }
+    }
+    .viz-block { border-radius: 14px; overflow: hidden; background: rgba(8,14,26,0.92);
+      border: 1px solid rgba(6,182,212,0.2); }
+    .viz-label { margin: 0; padding: 8px 12px 0; font-size: 0.76rem; font-weight: 600; color: var(--accent-light); }
+    .viz-legend { margin: 0; padding: 0 12px 6px; font-size: 0.7rem; color: var(--muted); }
+    .map-wrap { position: relative; width: 100%; aspect-ratio: 1; max-height: min(52vh,520px);
+      background: #0a0e14; cursor: crosshair; }
+    #mapCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .map-overlay { position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(6,182,212,0.04) 31px,rgba(6,182,212,0.04) 32px),
+      repeating-linear-gradient(90deg,transparent,transparent 31px,rgba(6,182,212,0.04) 31px,rgba(6,182,212,0.04) 32px); }
+    #appCanvas { display: block; width: 100%; height: min(220px,28dvh); min-height: 160px; }
+    #specCanvas { display: block; width: 100%; height: min(280px,34dvh); min-height: 200px; }
+    .progress-wrap { padding: 8px 12px 12px; }
+    .progress-bar { height: 8px; border-radius: 999px; background: rgba(148,163,184,0.15); overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg,#0891b2,var(--accent)); transition: width 0.08s; }
+    .progress-text { margin-top: 6px; font-size: 0.76rem; color: #a5f3fc; font-variant-numeric: tabular-nums; }
+    .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 640px) { .controls-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (min-width: 900px) { .controls-grid { grid-template-columns: repeat(4,1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.78rem; font-weight: 600; color: #a5f3fc; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; }
+    .btn-row button { flex: 1 1 calc(50% - 4px); min-height: 44px; padding: 10px; font-family: inherit;
+      font-size: 0.82rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(6,182,212,0.28); background: rgba(255,255,255,0.06); color: #cbd5e1; }
+    .btn-row button.primary { flex: 1 1 100%; background: linear-gradient(135deg,#0891b2,var(--accent));
+      color: white; border: none; box-shadow: 0 0 16px var(--accent-glow); }
+    .btn-row button.active { background: rgba(6,182,212,0.2); color: #cffafe; }
+    #runStatus { grid-column: 1/-1; margin: 0; padding: 10px; border-radius: 10px; font-size: 0.8rem;
+      text-align: center; background: rgba(6,182,212,0.1); color: #a5f3fc; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <h2>メスバウアー マッピング</h2>
+      <p class="chapter-label">EX章 — 1 点スキャン × 1024×1024 px 微量鉄分布（装置写真風 UI）</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>リアルタイム情報</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">ピクセル</span><span class="val accent" id="infoXY">—</span></div>
+        <div class="info-item"><span class="label">化学シフト δ</span><span class="val" id="infoDelta">—</span></div>
+        <div class="info-item"><span class="label">四極 ΔE</span><span class="val" id="infoQuad">—</span></div>
+        <div class="info-item"><span class="label">磁場 B</span><span class="val" id="infoB">—</span></div>
+        <div class="info-item"><span class="label">分裂本数</span><span class="val accent" id="infoLines">—</span></div>
+        <div class="info-item"><span class="label">推定状態</span><span class="val" id="infoState">—</span></div>
+        <div class="info-item"><span class="label">Fe 濃度</span><span class="val" id="infoConc">—</span></div>
+        <div class="info-item"><span class="label">進捗</span><span class="val" id="infoProg">0 %</span></div>
+      </div>
+      <div class="legend-row">
+        <span><i class="swatch" style="background:#3b82f6"></i>Fe²⁺</span>
+        <span><i class="swatch" style="background:#ef4444"></i>Fe³⁺</span>
+        <span><i class="swatch" style="background:#22c55e"></i>四極分裂</span>
+        <span><i class="swatch" style="background:#eab308"></i>磁性（6 本）</span>
+        <span><i class="swatch" style="background:#1e293b"></i>未スキャン / 低 Fe</span>
+      </div>
+    </section>
+
+    <div class="main-row">
+      <div class="viz-block">
+        <p class="viz-label">測定マップ 1024 × 1024 px</p>
+        <p class="viz-legend">クリックで 1 点選択 · スキャンで順次着色</p>
+        <div class="map-wrap">
+          <canvas id="mapCanvas" width="1024" height="1024"></canvas>
+          <div class="map-overlay"></div>
+        </div>
+      </div>
+
+      <div class="viz-block">
+        <p class="viz-label">測定装置（光学ベンチ + 真空チャンバー）</p>
+        <p class="viz-legend">ステージ走査 · 現在ピクセル位置</p>
+        <canvas id="appCanvas"></canvas>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+          <p class="progress-text" id="progText">待機中 — 「ランダム試料生成」で試料を用意</p>
+        </div>
+      </div>
+
+      <div class="viz-block">
+        <p class="viz-label">1 点スキャン — I vs v</p>
+        <p class="viz-legend">ドップラー -10〜+10 mm/s · ローレンツ吸収 + ノイズ</p>
+        <canvas id="specCanvas"></canvas>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h3>操作パネル</h3>
+      <div class="controls-grid">
+        <label>測定ノイズ<input id="noiseSlider" type="range" min="0" max="100" value="25">
+          <span class="slider-val" id="noiseVal">中</span></label>
+        <label>磁場 B（全体スケール）<input id="bSlider" type="range" min="0" max="100" value="50">
+          <span class="slider-val" id="bVal">1.00×</span></label>
+        <label>電場勾配 EFG<input id="efgSlider" type="range" min="0" max="100" value="50">
+          <span class="slider-val" id="efgVal">1.00×</span></label>
+        <label>Fe 濃度スケール<input id="concSlider" type="range" min="20" max="200" value="100">
+          <span class="slider-val" id="concVal">1.00×</span></label>
+        <div class="btn-row">
+          <button type="button" id="fullScanBtn" class="primary">スキャン開始（1024×1024 全点）</button>
+          <button type="button" id="oneBtn">1 点だけ測定</button>
+          <button type="button" id="genBtn">ランダム試料生成</button>
+          <button type="button" id="resetBtn">リセット</button>
+        </div>
+        <p id="runStatus">各ピクセルで v 走査 → スペクトル解析 → 色分けマップを構築</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const W = 1024, H = 1024;
+      const GAMMA = 0.22;
+      const V_MIN = -10, V_MAX = 10, V_STEPS = 120;
+
+      const mapCanvas = document.getElementById("mapCanvas");
+      const mapCtx = mapCanvas.getContext("2d", { willReadFrequently: true });
+      const appCanvas = document.getElementById("appCanvas");
+      const appCtx = appCanvas.getContext("2d");
+      const specCanvas = document.getElementById("specCanvas");
+      const specCtx = specCanvas.getContext("2d");
+
+      const feConc = new Float32Array(W * H);
+      const feState = new Uint8Array(W * H);
+      const feEfg = new Float32Array(W * H);
+      const feB = new Float32Array(W * H);
+      const scanned = new Uint8Array(W * H);
+
+      let mapImage = mapCtx.createImageData(W, H);
+      let curX = 512, curY = 512;
+      let fullScanning = false;
+      let scanIdx = 0;
+      let oneScanning = false;
+      let oneVIdx = 0;
+      let sampleReady = false;
+      let tAnim = 0;
+
+      function seededRandom(seed) {
+        let s = seed % 2147483647;
+        if (s <= 0) s += 2147483646;
+        return function () {
+          s = (s * 16807) % 2147483647;
+          return (s - 1) / 2147483646;
+        };
+      }
+
+      function getGlobals() {
+        return {
+          noise: Number(document.getElementById("noiseSlider").value) / 100,
+          bScale: 0.3 + Number(document.getElementById("bSlider").value) / 100 * 1.4,
+          efgScale: 0.2 + Number(document.getElementById("efgSlider").value) / 100 * 1.6,
+          concScale: Number(document.getElementById("concSlider").value) / 100
+        };
+      }
+
+      function pixelParams(idx) {
+        const g = getGlobals();
+        const state = feState[idx];
+        let delta = 0.2, quad = 0, B = 0;
+        if (state === 1) { delta = 0.85 + feEfg[idx] * 0.35; quad = 1.8 + feEfg[idx] * 1.2; }
+        else if (state === 2) { delta = 0.28 + feEfg[idx] * 0.15; quad = 0.35 + feEfg[idx] * 0.4; }
+        else if (state === 3) { delta = 0.05; B = 0.35 + feB[idx] * 0.5; quad = 0.1; }
+        quad *= g.efgScale;
+        B *= g.bScale;
+        if (state !== 3 && quad < 0.25) quad = 0;
+        return {
+          conc: feConc[idx] * g.concScale,
+          state,
+          delta,
+          quad,
+          B,
+          mag: state === 3 || B > 0.12
+        };
+      }
+
+      function getPeaks(p) {
+        const depth = 0.38 * Math.min(1, p.conc * 2.5);
+        if (p.mag && p.B > 0.08) {
+          const sc = p.B * 10.2;
+          return [-5, -3, -1, 1, 3, 5].map((o, i) => ({
+            v: p.delta + (o * sc) / 5,
+            d: depth * [0.14, 0.19, 0.06, 0.06, 0.19, 0.14][i] * 6
+          }));
+        }
+        if (p.quad > 0.3 && !p.mag) {
+          const h = p.quad / 2;
+          return [{ v: p.delta - h, d: depth * 0.55 }, { v: p.delta + h, d: depth * 0.55 }];
+        }
+        return [{ v: p.delta, d: depth }];
+      }
+
+      function lorentz(v, v0, gamma, amp) {
+        const x = (v - v0) / (gamma / 2);
+        return amp / (1 + x * x);
+      }
+
+      function spectrumAt(p, v, noise) {
+        let abs = 0;
+        getPeaks(p).forEach((pk) => { abs += lorentz(v, pk.v, GAMMA, pk.d); });
+        const I = 1 - abs;
+        return Math.max(0.04, Math.min(1, I + (Math.random() - 0.5) * noise * 0.12));
+      }
+
+      function buildSpectrum(p, noise) {
+        const arr = new Float32Array(V_STEPS);
+        for (let i = 0; i < V_STEPS; i++) {
+          const v = V_MIN + ((V_MAX - V_MIN) * i) / (V_STEPS - 1);
+          arr[i] = spectrumAt(p, v, noise * 0.5);
+        }
+        return arr;
+      }
+
+      function classifyFromParams(p, noise) {
+        const n = noise ? (Math.random() - 0.5) * noise * 0.4 : 0;
+        let lines = 1;
+        let stLabel = "背景";
+        if (p.conc < 0.04) { stLabel = "Fe なし"; lines = 0; }
+        else if (p.mag && p.B > 0.08) { lines = 6; stLabel = "磁性"; }
+        else if (p.quad > 0.35) { lines = 2; stLabel = p.state === 1 ? "Fe²⁺+四極" : "Fe³⁺+四極"; }
+        else if (p.state === 1) { stLabel = "Fe²⁺"; lines = 1; }
+        else if (p.state === 2) { stLabel = "Fe³⁺"; lines = 1; }
+        else if (p.state === 3) { stLabel = "磁性"; lines = 6; }
+        return {
+          delta: p.delta + n,
+          quad: p.quad + n * 0.2,
+          B: p.B,
+          lines,
+          state: stLabel,
+          conc: Math.max(0, p.conc + (noise ? (Math.random() - 0.5) * noise * 0.08 : 0))
+        };
+      }
+
+      function analyzeSpectrum(spec, p, noise) {
+        let minI = 1, minV = 0;
+        for (let i = 1; i < V_STEPS - 1; i++) {
+          const v = V_MIN + ((V_MAX - V_MIN) * i) / (V_STEPS - 1);
+          if (spec[i] < minI) { minI = spec[i]; minV = v; }
+        }
+        const a = classifyFromParams(p, noise);
+        a.minV = minV;
+        return a;
+      }
+
+      function analysisToRGB(a) {
+        if (a.conc < 0.035 || a.lines === 0) return [22, 26, 34];
+        const br = Math.min(255, a.conc * 220);
+        let r = 0, g = 0, b = 0;
+        if (a.state.includes("Fe²")) { b = br * 0.92; r = br * 0.12; g = br * 0.22; }
+        else if (a.state.includes("Fe³")) { r = br * 0.92; b = br * 0.1; }
+        else if (a.state.includes("磁性")) { r = br * 0.88; g = br * 0.72; b = br * 0.08; }
+        if (a.quad > 0.4) g = Math.min(255, g + br * 0.45);
+        if (a.lines === 6) { r = Math.min(255, r + br * 0.15); g = Math.min(255, g + br * 0.2); }
+        return [r | 0, g | 0, b | 0];
+      }
+
+      function setMapPixel(x, y, rgb) {
+        const i = (y * W + x) * 4;
+        mapImage.data[i] = rgb[0];
+        mapImage.data[i + 1] = rgb[1];
+        mapImage.data[i + 2] = rgb[2];
+        mapImage.data[i + 3] = 255;
+        scanned[y * W + x] = 1;
+      }
+
+      function clearMap() {
+        for (let i = 0; i < W * H; i++) {
+          scanned[i] = 0;
+          const j = i * 4;
+          mapImage.data[j] = 18;
+          mapImage.data[j + 1] = 20;
+          mapImage.data[j + 2] = 28;
+          mapImage.data[j + 3] = 255;
+        }
+        mapCtx.putImageData(mapImage, 0, 0);
+      }
+
+      function drawFePreview() {
+        for (let i = 0; i < W * H; i++) {
+          const c = feConc[i];
+          const j = i * 4;
+          if (c < 0.02) {
+            mapImage.data[j] = 18;
+            mapImage.data[j + 1] = 20;
+            mapImage.data[j + 2] = 28;
+          } else {
+            const v = Math.min(255, 24 + c * 380);
+            mapImage.data[j] = (v * 0.22) | 0;
+            mapImage.data[j + 1] = (v * 0.58) | 0;
+            mapImage.data[j + 2] = (v * 0.92) | 0;
+          }
+          mapImage.data[j + 3] = 255;
+        }
+        mapCtx.putImageData(mapImage, 0, 0);
+      }
+
+      function findRichFePixel() {
+        let best = -1, bestC = 0;
+        for (let i = 0; i < W * H; i++) {
+          if (feState[i] > 0 && feConc[i] > bestC) {
+            bestC = feConc[i];
+            best = i;
+          }
+        }
+        return best >= 0 ? idxToXY(best) : { x: 512, y: 512 };
+      }
+
+      function paintBlob(cx, cy, rad, bl, rnd) {
+        const r2 = rad * rad;
+        const y0 = Math.max(0, Math.floor(cy - rad));
+        const y1 = Math.min(H - 1, Math.ceil(cy + rad));
+        const x0 = Math.max(0, Math.floor(cx - rad));
+        const x1 = Math.min(W - 1, Math.ceil(cx + rad));
+        for (let y = y0; y <= y1; y++) {
+          const dy = y - cy;
+          for (let x = x0; x <= x1; x++) {
+            const dx = x - cx;
+            if (dx * dx + dy * dy > r2) continue;
+            const idx = y * W + x;
+            const fall = 1 - Math.sqrt(dx * dx + dy * dy) / rad;
+            feConc[idx] = Math.max(feConc[idx], bl.c * fall * (0.4 + rnd() * 0.6));
+            if (feConc[idx] > 0.05) feState[idx] = bl.state;
+            feEfg[idx] = 0.3 + rnd() * 0.7;
+            feB[idx] = 0.2 + rnd() * 0.8;
+          }
+        }
+      }
+
+      function generateSample() {
+        const status = document.getElementById("runStatus");
+        const genBtn = document.getElementById("genBtn");
+        genBtn.disabled = true;
+        status.textContent = "試料生成中…（UI を更新しています）";
+
+        requestAnimationFrame(() => {
+          const rnd = seededRandom(Date.now() % 999983);
+          feConc.fill(0);
+          feState.fill(0);
+          for (let i = 0; i < W * H; i++) {
+            feEfg[i] = rnd() * 0.3;
+            feB[i] = rnd() * 0.2;
+          }
+          const blobs = [
+            { n: 14, state: 1, c: 0.35, r: 72 },
+            { n: 12, state: 2, c: 0.28, r: 58 },
+            { n: 7, state: 3, c: 0.4, r: 48 },
+            { n: 10, state: 1, c: 0.18, r: 88 }
+          ];
+          blobs.forEach((bl) => {
+            for (let k = 0; k < bl.n; k++) {
+              paintBlob(rnd() * W, rnd() * H, bl.r * (0.55 + rnd() * 0.45), bl, rnd);
+            }
+          });
+
+          sampleReady = true;
+          scanIdx = 0;
+          scanned.fill(0);
+          drawFePreview();
+
+          const rich = findRichFePixel();
+          curX = rich.x;
+          curY = rich.y;
+          const r = measurePixelFull(curY * W + curX);
+          lastResult = r;
+          drawSpectrum(r.spec);
+          syncInfo(r.a, curX, curY);
+
+          genBtn.disabled = false;
+          status.textContent = "試料生成完了 — シアン＝Fe 分布プレビュー。全点スキャンで解析色に切替";
+          document.getElementById("progText").textContent = `試料 OK — 測定点 (${curX}, ${curY}) に Fe を検出`;
+        });
+      }
+
+      function idxToXY(idx) {
+        return { x: idx % W, y: Math.floor(idx / W) };
+      }
+
+      function processPixelFast(idx) {
+        const p = pixelParams(idx);
+        const g = getGlobals();
+        const a = classifyFromParams(p, g.noise * 0.35);
+        const { x, y } = idxToXY(idx);
+        setMapPixel(x, y, analysisToRGB(a));
+        return { spec: null, a, p };
+      }
+
+      function measurePixelFull(idx) {
+        const p = pixelParams(idx);
+        const g = getGlobals();
+        const spec = buildSpectrum(p, g.noise);
+        const a = analyzeSpectrum(spec, p, g.noise);
+        const { x, y } = idxToXY(idx);
+        setMapPixel(x, y, analysisToRGB(a));
+        return { spec, a, p };
+      }
+
+      function drawApparatus() {
+        const w = appCanvas.width, h = appCanvas.height;
+        appCtx.clearRect(0, 0, w, h);
+        const bg = appCtx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, "#1a2332");
+        bg.addColorStop(1, "#0f1419");
+        appCtx.fillStyle = bg;
+        appCtx.fillRect(0, 0, w, h);
+
+        appCtx.fillStyle = "#2a3544";
+        for (let x = 8; x < w; x += 14) {
+          for (let y = 8; y < h; y += 14) {
+            appCtx.fillRect(x, y, 2, 2);
+          }
+        }
+
+        const cx = w * 0.48, cy = h * 0.52;
+        appCtx.fillStyle = "#64748b";
+        appCtx.fillRect(cx - 22, cy - 55, 44, 110);
+        appCtx.strokeStyle = "#94a3b8";
+        appCtx.lineWidth = 2;
+        appCtx.strokeRect(cx - 22, cy - 55, 44, 110);
+        appCtx.fillStyle = "#475569";
+        appCtx.beginPath();
+        appCtx.ellipse(cx, cy - 58, 26, 8, 0, 0, Math.PI * 2);
+        appCtx.fill();
+
+        appCtx.fillStyle = "#334155";
+        appCtx.fillRect(cx + 35, cy - 35, 55, 70);
+        appCtx.strokeStyle = "#64748b";
+        appCtx.strokeRect(cx + 35, cy - 35, 55, 70);
+
+        appCtx.fillStyle = "#1e293b";
+        appCtx.fillRect(cx - 90, cy - 8, 50, 16);
+
+        const mx = 12 + (curX / W) * (w - 24);
+        const my = 12 + (curY / H) * (h - 24);
+        appCtx.strokeStyle = "#22d3ee";
+        appCtx.lineWidth = 1.5;
+        appCtx.strokeRect(mx - 6, my - 6, 12, 12);
+        appCtx.beginPath();
+        appCtx.moveTo(mx, 8);
+        appCtx.lineTo(mx, h - 8);
+        appCtx.moveTo(8, my);
+        appCtx.lineTo(w - 8, my);
+        appCtx.stroke();
+
+        appCtx.fillStyle = "#a5f3fc";
+        appCtx.font = "600 10px Inter,sans-serif";
+        appCtx.fillText(`ステージ (${curX}, ${curY})`, 10, h - 10);
+      }
+
+      function resizeAppSpec() {
+        const ar = appCanvas.parentElement.getBoundingClientRect();
+        appCanvas.width = Math.max(200, Math.floor(ar.width));
+        appCanvas.height = Math.max(160, Math.floor(Math.min(ar.width * 0.65, 240)));
+        const sr = specCanvas.parentElement.getBoundingClientRect();
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        specCanvas.width = Math.floor(Math.max(220, sr.width) * dpr);
+        specCanvas.height = Math.floor(Math.max(200, sr.height) * dpr);
+        specCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function drawSpectrum(spec, highlightV) {
+        const w = specCanvas.width / (Math.min(devicePixelRatio, 2) || 1);
+        const h = specCanvas.height / (Math.min(devicePixelRatio, 2) || 1);
+        specCtx.clearRect(0, 0, w, h);
+        const padL = 44, padT = 24, padB = 36;
+        const plotW = w - padL - 12, plotH = h - padT - padB;
+        const x0 = padL, y0 = padT + plotH;
+
+        specCtx.fillStyle = "#0a1424";
+        specCtx.fillRect(x0, y0 - plotH, plotW, plotH);
+        specCtx.strokeStyle = "rgba(186,230,253,0.45)";
+        specCtx.beginPath();
+        specCtx.moveTo(x0, y0);
+        specCtx.lineTo(x0, y0 - plotH);
+        specCtx.lineTo(x0 + plotW, y0 - plotH);
+        specCtx.stroke();
+
+        specCtx.strokeStyle = "#22d3ee";
+        specCtx.lineWidth = 2;
+        specCtx.beginPath();
+        for (let i = 0; i < V_STEPS; i++) {
+          const px = x0 + (plotW * i) / (V_STEPS - 1);
+          const py = y0 - (spec ? spec[i] : 1) * plotH;
+          if (i === 0) specCtx.moveTo(px, py);
+          else specCtx.lineTo(px, py);
+        }
+        specCtx.stroke();
+
+        if (highlightV !== undefined) {
+          const hx = x0 + ((highlightV - V_MIN) / (V_MAX - V_MIN)) * plotW;
+          specCtx.strokeStyle = "#f472b6";
+          specCtx.beginPath();
+          specCtx.moveTo(hx, y0);
+          specCtx.lineTo(hx, y0 - plotH);
+          specCtx.stroke();
+        }
+
+        specCtx.fillStyle = "#94a3b8";
+        specCtx.font = "500 9px Inter,sans-serif";
+        specCtx.textAlign = "center";
+        specCtx.fillText("v [mm/s]", x0 + plotW / 2, h - 6);
+        specCtx.textAlign = "left";
+        specCtx.fillText("I", 8, y0 - plotH * 0.5);
+        if (spec && spec.every((v) => v > 0.97)) {
+          specCtx.fillStyle = "#64748b";
+          specCtx.font = "500 8px Inter,sans-serif";
+          specCtx.fillText("Fe なし → 平坦（I≈1）", x0 + 4, y0 - plotH + 12);
+        }
+      }
+
+      function syncInfo(a, x, y) {
+        document.getElementById("infoXY").textContent = `(${x}, ${y})`;
+        document.getElementById("infoDelta").textContent = a.delta.toFixed(2) + " mm/s";
+        document.getElementById("infoQuad").textContent = a.quad.toFixed(2) + " mm/s";
+        document.getElementById("infoB").textContent = a.B.toFixed(2) + " T";
+        document.getElementById("infoLines").textContent = a.lines + " 本";
+        document.getElementById("infoState").textContent = a.state;
+        document.getElementById("infoConc").textContent = (a.conc * 100).toFixed(1) + " %";
+      }
+
+      function updateSliders() {
+        const n = Number(document.getElementById("noiseSlider").value);
+        document.getElementById("noiseVal").textContent = n <= 20 ? "低" : n <= 50 ? "中" : "高";
+        document.getElementById("bVal").textContent = (getGlobals().bScale).toFixed(2) + "×";
+        document.getElementById("efgVal").textContent = (getGlobals().efgScale).toFixed(2) + "×";
+        document.getElementById("concVal").textContent = (getGlobals().concScale).toFixed(2) + "×";
+      }
+
+      let lastResult = null;
+
+      function selectPixel(x, y) {
+        curX = Math.max(0, Math.min(W - 1, x));
+        curY = Math.max(0, Math.min(H - 1, y));
+        const idx = curY * W + curX;
+        if (!sampleReady) {
+          document.getElementById("runStatus").textContent = "先に「ランダム試料生成」を実行してください";
+          return;
+        }
+        oneScanning = false;
+        const r = measurePixelFull(idx);
+        lastResult = r;
+        mapCtx.putImageData(mapImage, 0, 0);
+        drawSpectrum(r.spec);
+        syncInfo(r.a, curX, curY);
+        document.getElementById("runStatus").textContent =
+          r.a.lines > 0 ? `ピクセル (${curX},${curY}) — ${r.a.state}` : `ピクセル (${curX},${curY}) — Fe なし（平坦スペクトル）`;
+      }
+
+      function startOnePointScan() {
+        if (!sampleReady) {
+          document.getElementById("runStatus").textContent = "先に「ランダム試料生成」";
+          return;
+        }
+        fullScanning = false;
+        oneScanning = true;
+        oneVIdx = -1;
+        document.getElementById("fullScanBtn").classList.remove("active");
+        document.getElementById("fullScanBtn").textContent = "スキャン開始（1024×1024 全点）";
+        document.getElementById("runStatus").textContent = `1 点 (${curX},${curY}) — v 走査中…`;
+      }
+
+      function loop() {
+        tAnim++;
+        const g = getGlobals();
+        let mapDirty = false;
+
+        if (fullScanning && sampleReady) {
+          const batch = 16384;
+          for (let b = 0; b < batch && scanIdx < W * H; b++, scanIdx++) {
+            processPixelFast(scanIdx);
+            const { x, y } = idxToXY(scanIdx);
+            curX = x;
+            curY = y;
+          }
+          mapDirty = true;
+          const pct = (scanIdx / (W * H) * 100).toFixed(1);
+          document.getElementById("progFill").style.width = pct + "%";
+          document.getElementById("progText").textContent = `全点スキャン ${pct}% — (${curX}, ${curY})`;
+          document.getElementById("infoProg").textContent = pct + " %";
+          if (scanIdx >= W * H) {
+            fullScanning = false;
+            document.getElementById("fullScanBtn").classList.remove("active");
+            document.getElementById("fullScanBtn").textContent = "スキャン開始（1024×1024 全点）";
+            document.getElementById("runStatus").textContent = "マッピング完了 — 1024×1024 鉄分布マップ";
+            const r = measurePixelFull(curY * W + curX);
+            lastResult = r;
+            drawSpectrum(r.spec);
+            syncInfo(r.a, curX, curY);
+          }
+        }
+
+        if (oneScanning && sampleReady) {
+          oneVIdx += 3;
+          const p = pixelParams(curY * W + curX);
+          const partial = new Float32Array(V_STEPS);
+          const lim = Math.min(oneVIdx, V_STEPS - 1);
+          const v = V_MIN + ((V_MAX - V_MIN) * lim) / (V_STEPS - 1);
+          for (let i = 0; i <= lim; i++) {
+            const vv = V_MIN + ((V_MAX - V_MIN) * i) / (V_STEPS - 1);
+            partial[i] = spectrumAt(p, vv, g.noise * 0.5);
+          }
+          for (let i = lim + 1; i < V_STEPS; i++) partial[i] = 1;
+          drawSpectrum(partial, v);
+          document.getElementById("progFill").style.width = ((lim + 1) / V_STEPS * 100).toFixed(0) + "%";
+          document.getElementById("progText").textContent = `1 点 v 走査 ${((lim + 1) / V_STEPS * 100).toFixed(0)}% — (${curX}, ${curY})`;
+          if (oneVIdx >= V_STEPS - 1) {
+            oneScanning = false;
+            const r = measurePixelFull(curY * W + curX);
+            lastResult = r;
+            mapDirty = true;
+            drawSpectrum(r.spec);
+            syncInfo(r.a, curX, curY);
+            document.getElementById("runStatus").textContent = "1 点スキャン完了 — スペクトル解析結果をマップに反映";
+          }
+        }
+
+        if (mapDirty) mapCtx.putImageData(mapImage, 0, 0);
+        drawApparatus();
+        requestAnimationFrame(loop);
+      }
+
+      mapCanvas.addEventListener("click", (e) => {
+        const rect = mapCanvas.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / rect.width * W);
+        const y = Math.floor((e.clientY - rect.top) / rect.height * H);
+        selectPixel(x, y);
+      });
+
+      document.getElementById("fullScanBtn").addEventListener("click", () => {
+        if (!sampleReady) { document.getElementById("runStatus").textContent = "先に「ランダム試料生成」"; return; }
+        fullScanning = !fullScanning;
+        if (fullScanning) {
+          oneScanning = false;
+          scanIdx = 0;
+          scanned.fill(0);
+          clearMap();
+          document.getElementById("fullScanBtn").classList.add("active");
+          document.getElementById("fullScanBtn").textContent = "スキャン停止";
+          document.getElementById("runStatus").textContent = "全点スキャン中… 左マップが順次着色されます";
+        } else {
+          document.getElementById("fullScanBtn").classList.remove("active");
+          document.getElementById("fullScanBtn").textContent = "スキャン開始（1024×1024 全点）";
+          mapCtx.putImageData(mapImage, 0, 0);
+        }
+      });
+
+      document.getElementById("oneBtn").addEventListener("click", startOnePointScan);
+
+      document.getElementById("genBtn").addEventListener("click", generateSample);
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        fullScanning = false;
+        oneScanning = false;
+        scanIdx = 0;
+        sampleReady = false;
+        clearMap();
+        document.getElementById("fullScanBtn").classList.remove("active");
+        document.getElementById("fullScanBtn").textContent = "スキャン開始（1024×1024 全点）";
+        document.getElementById("progFill").style.width = "0%";
+        document.getElementById("progText").textContent = "待機中";
+        document.getElementById("infoProg").textContent = "0 %";
+        drawSpectrum(null);
+        document.getElementById("runStatus").textContent = "リセット — 試料を再生成してください";
+      });
+
+      ["noiseSlider", "bSlider", "efgSlider", "concSlider"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", updateSliders);
+      });
+
+      window.addEventListener("resize", () => { clearTimeout(window._mbMap); window._mbMap = setTimeout(resizeAppSpec, 100); });
+
+      clearMap();
+      resizeAppSpec();
+      updateSliders();
+      drawSpectrum(null);
+      drawApparatus();
+      loop();
+    })();
+  </script>
+</body>
+</html>

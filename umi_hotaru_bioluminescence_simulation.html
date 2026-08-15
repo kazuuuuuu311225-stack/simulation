@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ウミホタル — 生物発光（Vargula hilgendorfii）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #06b6d4; --accent-light: #22d3ee; --accent-glow: rgba(6,182,212,0.45);
+      --glow: #38bdf8; --glow-bright: #7dd3fc;
+      --slate-bg: rgba(12,18,32,0.78); --slate-border: rgba(6,182,212,0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter","Poppins","Noto Sans JP",sans-serif;
+      background: linear-gradient(160deg,#040810 0%,#071525 40%,#0a1a2e 75%,#050a12 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(12px,env(safe-area-inset-top)) 0 max(20px,env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(56,189,248,0.08), transparent 60%);
+    }
+    .page-shell {
+      position: relative; z-index: 1; width: min(1100px,96vw); margin: 0 auto;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; margin-bottom: 6px; border-radius: 14px;
+      background: linear-gradient(135deg,rgba(56,189,248,0.25),rgba(6,182,212,0.3));
+      border: 1px solid rgba(56,189,248,0.35); box-shadow: 0 0 24px rgba(56,189,248,0.35);
+      font-size: 1.35rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light);
+      text-shadow: 0 0 24px var(--accent-glow); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 10px; padding: 10px 16px; color: #cffafe;
+      background: rgba(6,182,212,0.14); border: 1px solid rgba(6,182,212,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600;
+    }
+    .panel {
+      padding: 14px 16px; border-radius: 16px; background: var(--slate-bg);
+      border: 1px solid var(--slate-border); box-shadow: 0 8px 32px rgba(0,0,0,0.42);
+    }
+    .panel h3 { margin: 0 0 12px; font-size: 1rem; color: var(--accent-light); }
+    .info-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    }
+    @media (min-width: 640px) {
+      .info-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    .info-item {
+      padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(125,211,252,0.18);
+    }
+    .info-item .label { color: #cbd5e1; display: block; font-size: 0.72rem; margin-bottom: 4px; }
+    .info-item .val { font-weight: 700; color: #ffffff; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+    .info-item .val.glow { color: #e0f2fe; text-shadow: 0 0 14px rgba(56,189,248,0.85); font-size: 1.15rem; }
+    .comment-box {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(56,189,248,0.14); border: 1px solid rgba(125,211,252,0.35);
+      font-size: 0.88rem; line-height: 1.6; color: #e0f2fe;
+    }
+    .main-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 900px) {
+      .main-row { grid-template-columns: minmax(180px,0.85fr) minmax(220px,1.2fr) minmax(180px,0.85fr); }
+    }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg, rgba(14,28,48,0.95), rgba(8,16,28,0.98));
+      border: 1px solid rgba(125,211,252,0.35);
+      box-shadow: inset 0 0 40px rgba(56,189,248,0.06);
+    }
+    .viz-label { margin: 0; padding: 10px 14px 0; font-size: 0.88rem; font-weight: 600; color: #e0f2fe; }
+    .viz-legend { margin: 0; padding: 2px 14px 8px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.45; }
+    canvas { display: block; width: 100%; }
+    #levelCanvas { height: min(300px,36dvh); min-height: 240px; }
+    #oceanCanvas { height: min(360px,42dvh); min-height: 260px; }
+    #decayCanvas { height: min(300px,36dvh); min-height: 240px; }
+    .controls-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 640px) { .controls-grid { grid-template-columns: repeat(3,1fr); } }
+    label { display: block; font-size: 0.9rem; color: #e2e8f0; margin-bottom: 6px; font-weight: 500; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; height: 8px; }
+    .slider-val { font-size: 0.88rem; font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; }
+    .btn-row button {
+      flex: 1 1 calc(33% - 6px); min-height: 48px; padding: 12px; font-family: inherit;
+      font-size: 0.9rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(125,211,252,0.4); background: rgba(255,255,255,0.08); color: #e2e8f0;
+    }
+    .btn-row button.primary {
+      background: linear-gradient(135deg,#0284c7,#38bdf8); color: white; border: none;
+      box-shadow: 0 0 18px rgba(56,189,248,0.4);
+    }
+    .btn-row button.active { background: rgba(56,189,248,0.22); color: #e0f2fe; }
+    #runStatus {
+      grid-column: 1/-1; margin: 0; padding: 12px 14px; border-radius: 10px; font-size: 0.88rem;
+      text-align: center; background: rgba(56,189,248,0.16); color: #e0f2fe; line-height: 1.6;
+      border: 1px solid rgba(125,211,252,0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">✦</div>
+      <h2>ウミホタル — 生物発光</h2>
+      <p class="chapter-label">EX章 — Vargula hilgendorfii · ルシフェリン酸化 → S₁ → 450 nm 発光</p>
+      <a id="back" href="index.html">← メニューに戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>リアルタイム情報</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">発光強度 I(t)</span><span class="val glow" id="infoI">0.00</span></div>
+        <div class="info-item"><span class="label">温度</span><span class="val" id="infoT">20.0 °C</span></div>
+        <div class="info-item"><span class="label">反応速度 k</span><span class="val" id="infoK">—</span></div>
+        <div class="info-item"><span class="label">ルシフェリン濃度</span><span class="val" id="infoConc">50 %</span></div>
+        <div class="info-item"><span class="label">発光波長</span><span class="val glow">450 nm</span></div>
+        <div class="info-item"><span class="label">励起状態 S₁</span><span class="val" id="infoS1">0 %</span></div>
+        <div class="info-item"><span class="label">海中粒子数</span><span class="val" id="infoN">0</span></div>
+        <div class="info-item"><span class="label">経過時間</span><span class="val" id="infoTime">0.0 s</span></div>
+      </div>
+      <div class="comment-box" id="infoComment">
+        ウミホタルは化学反応で励起状態を作り、450 nm の青色光を放出します。
+      </div>
+    </section>
+
+    <div class="main-row">
+      <div class="viz-block">
+        <p class="viz-label">エネルギー準位図 S₀ / S₁</p>
+        <p class="viz-legend">ルシフェリン + O₂ → 酸化（励起）→ S₁ → S₀ + hν</p>
+        <canvas id="levelCanvas"></canvas>
+      </div>
+      <div class="viz-block">
+        <p class="viz-label">発光液の海中拡散</p>
+        <p class="viz-legend">ランダムウォーク · 粒子の明るさ ∝ 励起割合 × I(t)</p>
+        <canvas id="oceanCanvas"></canvas>
+      </div>
+      <div class="viz-block">
+        <p class="viz-label">発光強度 I(t)</p>
+        <p class="viz-legend">I(t) = I₀ · exp(−k·t) · 温度で k が変化</p>
+        <canvas id="decayCanvas"></canvas>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h3>操作パネル</h3>
+      <div class="controls-grid">
+        <label>反応速度 k（酵素活性）<input id="kSlider" type="range" min="0" max="100" value="45">
+          <span class="slider-val" id="kVal">中</span></label>
+        <label>温度<input id="tempSlider" type="range" min="0" max="40" value="20">
+          <span class="slider-val" id="tempVal">20 °C</span></label>
+        <label>ルシフェリン濃度<input id="concSlider" type="range" min="0" max="100" value="55">
+          <span class="slider-val" id="concVal">55 %</span></label>
+        <div class="btn-row">
+          <button type="button" id="startBtn" class="primary">発光開始</button>
+          <button type="button" id="releaseBtn">発光液を放出</button>
+          <button type="button" id="resetBtn">リセット</button>
+        </div>
+        <p id="runStatus">①「発光開始」→ ②「発光液を放出」で 3 パネルすべてが動きます</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const WAVELENGTH = 450;
+      const R_GAS = 8.314e-3;
+      const Ea = 42;
+
+      const levelCanvas = document.getElementById("levelCanvas");
+      const levelCtx = levelCanvas.getContext("2d");
+      const oceanCanvas = document.getElementById("oceanCanvas");
+      const oceanCtx = oceanCanvas.getContext("2d");
+      const decayCanvas = document.getElementById("decayCanvas");
+      const decayCtx = decayCanvas.getContext("2d");
+
+      let simTime = 0;
+      let I0 = 0;
+      let intensity = 0;
+      let reactionOn = false;
+      let s1Frac = 0;
+      let lastTs = 0;
+      let history = [];
+      const MAX_HIST = 300;
+
+      const diagramDots = [];
+      const flashes = [];
+      const seaParticles = [];
+
+      function getParams() {
+        const kNorm = Number(document.getElementById("kSlider").value) / 100;
+        const tempC = Number(document.getElementById("tempSlider").value);
+        const conc = Number(document.getElementById("concSlider").value) / 100;
+        const T = tempC + 273.15;
+        const Tref = 293.15;
+        const arr = Math.exp(-(Ea / R_GAS) * (1 / T - 1 / Tref));
+        const k = (0.15 + kNorm * 2.2) * arr;
+        return { kNorm, tempC, conc, k, arr };
+      }
+
+      function resizeCanvases() {
+        [levelCanvas, oceanCanvas, decayCanvas].forEach((c) => {
+          const r = c.parentElement.getBoundingClientRect();
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          c.width = Math.max(160, Math.floor(r.width * dpr));
+          c.height = Math.max(140, Math.floor((c === oceanCanvas ? Math.min(r.width * 0.72, 320) : Math.min(r.width * 0.62, 280)) * dpr));
+          c.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+        });
+        initDiagramDots();
+      }
+
+      function initDiagramDots() {
+        diagramDots.length = 0;
+        const w = levelCanvas.width / (Math.min(devicePixelRatio, 2) || 1);
+        const n = 14;
+        for (let i = 0; i < n; i++) {
+          diagramDots.push({
+            x: 40 + (i + 0.5) * (w - 80) / n,
+            level: 0,
+            phase: Math.random() * Math.PI * 2,
+            flash: 0
+          });
+        }
+      }
+
+      function resetSim() {
+        simTime = 0;
+        I0 = 0;
+        intensity = 0;
+        reactionOn = false;
+        s1Frac = 0;
+        history.length = 0;
+        seaParticles.length = 0;
+        flashes.length = 0;
+        initDiagramDots();
+        document.getElementById("startBtn").classList.remove("active");
+        document.getElementById("runStatus").textContent = "リセット完了 — ①発光開始 → ②発光液を放出";
+        updateInfo();
+      }
+
+      function startReaction() {
+        const p = getParams();
+        reactionOn = true;
+        simTime = 0;
+        history.length = 0;
+        I0 = 0.25 + p.conc * 0.75;
+        intensity = I0;
+        s1Frac = Math.min(0.95, 0.35 + p.conc * 0.55);
+        document.getElementById("startBtn").classList.add("active");
+        document.getElementById("runStatus").textContent =
+          "化学反応進行中 — ルシフェリン + O₂ → 酸化ルシフェリン（S₁）→ 450 nm 発光";
+        updateInfo();
+      }
+
+      function releaseFluid() {
+        const p = getParams();
+        const w = oceanCanvas.width / (Math.min(devicePixelRatio, 2) || 1);
+        const h = oceanCanvas.height / (Math.min(devicePixelRatio, 2) || 1);
+        const cx = w * 0.5, cy = h * 0.72;
+        const count = Math.floor(50 + p.conc * 140);
+        for (let i = 0; i < count; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const sp = 0.5 + Math.random() * 1.4;
+          seaParticles.push({
+            x: cx + (Math.random() - 0.5) * 20,
+            y: cy + (Math.random() - 0.5) * 12,
+            vx: Math.cos(ang) * sp,
+            vy: Math.sin(ang) * sp - 0.35,
+            excited: Math.random() < 0.65 + p.conc * 0.35,
+            life: 1,
+            r: 2.5 + Math.random() * 3.5,
+            birth: simTime
+          });
+        }
+        if (!reactionOn) {
+          reactionOn = true;
+          if (I0 < 0.1) {
+            I0 = 0.2 + p.conc * 0.6;
+            intensity = I0;
+            s1Frac = 0.4 + p.conc * 0.4;
+          }
+          document.getElementById("startBtn").classList.add("active");
+        }
+        document.getElementById("runStatus").textContent = `発光液 ${count} 粒子を放出 — 海中に拡散中`;
+      }
+
+      function updatePhysics(dt) {
+        if (!reactionOn) return;
+        const p = getParams();
+        simTime += dt;
+        intensity = I0 * Math.exp(-p.k * simTime);
+        s1Frac = Math.max(0, s1Frac * Math.exp(-p.k * dt * 1.8) + p.conc * 0.02 * dt);
+
+        history.push({ t: simTime, I: intensity });
+        if (history.length > MAX_HIST) history.shift();
+
+        diagramDots.forEach((d) => {
+          if (d.flash > 0) d.flash -= dt * 3;
+          const exciteRate = p.conc * p.k * 0.85;
+          const decayRate = p.k * 0.9;
+          if (Math.random() < exciteRate * dt && d.level === 0) {
+            d.level = 1;
+            d.flash = 0;
+          }
+          if (d.level === 1 && Math.random() < decayRate * dt) {
+            d.level = 0;
+            d.flash = 1;
+            flashes.push({ x: d.x, t: 0, y0: 0.38, y1: 0.72 });
+          }
+        });
+
+        for (let i = flashes.length - 1; i >= 0; i--) {
+          flashes[i].t += dt;
+          if (flashes[i].t > 0.6) flashes.splice(i, 1);
+        }
+
+        const w = oceanCanvas.width / (Math.min(devicePixelRatio, 2) || 1);
+        const h = oceanCanvas.height / (Math.min(devicePixelRatio, 2) || 1);
+        seaParticles.forEach((pt) => {
+          pt.x += pt.vx + (Math.random() - 0.5) * 0.6;
+          pt.y += pt.vy + (Math.random() - 0.5) * 0.6;
+          pt.vx *= 0.992;
+          pt.vy *= 0.992;
+          pt.vy += 0.015;
+          pt.life = Math.max(0, pt.life - p.k * dt * 0.045);
+          if (Math.random() < p.k * dt * 0.15 && pt.excited) pt.excited = false;
+          if (pt.x < 4) pt.x = 4;
+          if (pt.x > w - 4) pt.x = w - 4;
+          if (pt.y < 4) pt.y = 4;
+          if (pt.y > h - 4) pt.y = h - 4;
+        });
+        for (let i = seaParticles.length - 1; i >= 0; i--) {
+          if (seaParticles[i].life < 0.02) seaParticles.splice(i, 1);
+        }
+      }
+
+      function drawPlotGrid(ctx, x0, y0, plotW, plotH, tMax, I0preview, k) {
+        ctx.strokeStyle = "rgba(148,163,184,0.2)";
+        ctx.lineWidth = 1;
+        for (let i = 1; i <= 4; i++) {
+          const gy = y0 - (plotH * i) / 4;
+          ctx.beginPath();
+          ctx.moveTo(x0, gy);
+          ctx.lineTo(x0 + plotW, gy);
+          ctx.stroke();
+        }
+        for (let i = 1; i <= 4; i++) {
+          const gx = x0 + (plotW * i) / 4;
+          ctx.beginPath();
+          ctx.moveTo(gx, y0);
+          ctx.lineTo(gx, y0 - plotH);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "600 10px Inter,sans-serif";
+        ctx.fillText("1.0", x0 - 28, y0 - plotH + 4);
+        ctx.fillText("0", x0 - 16, y0 + 4);
+        ctx.fillText("0", x0, y0 + 14);
+        ctx.fillText(String(tMax.toFixed(0)), x0 + plotW - 10, y0 + 14);
+      }
+
+      function drawLevels() {
+        const dpr = Math.min(devicePixelRatio, 2) || 1;
+        const w = levelCanvas.width / dpr;
+        const h = levelCanvas.height / dpr;
+        levelCtx.clearRect(0, 0, w, h);
+        const bg = levelCtx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, "#122a45");
+        bg.addColorStop(1, "#0a1828");
+        levelCtx.fillStyle = bg;
+        levelCtx.fillRect(0, 0, w, h);
+
+        const yS1 = h * 0.26;
+        const yS0 = h * 0.66;
+        const lw = w - 56;
+
+        levelCtx.strokeStyle = "rgba(125,211,252,0.55)";
+        levelCtx.lineWidth = 2.5;
+        levelCtx.setLineDash([]);
+        levelCtx.beginPath();
+        levelCtx.moveTo(28, yS1);
+        levelCtx.lineTo(28 + lw, yS1);
+        levelCtx.stroke();
+        levelCtx.strokeStyle = "rgba(203,213,225,0.5)";
+        levelCtx.beginPath();
+        levelCtx.moveTo(28, yS0);
+        levelCtx.lineTo(28 + lw, yS0);
+        levelCtx.stroke();
+
+        levelCtx.fillStyle = "#bae6fd";
+        levelCtx.font = "700 13px Inter,sans-serif";
+        levelCtx.fillText("S₁  励起状態", 10, yS1 - 10);
+        levelCtx.fillStyle = "#e2e8f0";
+        levelCtx.fillText("S₀  基底状態", 10, yS0 - 10);
+
+        const barW = lw * Math.max(s1Frac, reactionOn ? 0.08 : 0.04);
+        levelCtx.fillStyle = "rgba(56,189,248,0.35)";
+        levelCtx.fillRect(28, yS1 - 5, barW, 10);
+
+        levelCtx.font = "600 11px Inter,sans-serif";
+        levelCtx.fillStyle = "#94a3b8";
+        levelCtx.fillText("ルシフェリン + O₂", w * 0.52, h * 0.46);
+        levelCtx.fillStyle = "#7dd3fc";
+        levelCtx.fillText("→ 酸化* → hν 450 nm", w * 0.52, h * 0.54);
+
+        if (!reactionOn) {
+          levelCtx.fillStyle = "rgba(186,230,253,0.75)";
+          levelCtx.font = "600 12px Inter,sans-serif";
+          levelCtx.textAlign = "center";
+          levelCtx.fillText("「発光開始」で S₀ → S₁ へ", w * 0.5, h * 0.88);
+          levelCtx.textAlign = "left";
+        }
+
+        flashes.forEach((f) => {
+          const alpha = 1 - f.t / 0.6;
+          const yStart = h * f.y0;
+          const yEnd = h * f.y1;
+          levelCtx.strokeStyle = `rgba(186,230,253,${alpha})`;
+          levelCtx.lineWidth = 3;
+          levelCtx.shadowColor = "#38bdf8";
+          levelCtx.shadowBlur = 12;
+          levelCtx.beginPath();
+          levelCtx.moveTo(f.x, yStart);
+          const mid = (yStart + yEnd) / 2 + Math.sin(f.t * 20) * 8;
+          levelCtx.quadraticCurveTo(f.x + 10, mid, f.x, yEnd);
+          levelCtx.stroke();
+          levelCtx.fillStyle = `rgba(224,242,254,${alpha})`;
+          levelCtx.beginPath();
+          levelCtx.arc(f.x, yEnd, 6 + alpha * 5, 0, Math.PI * 2);
+          levelCtx.fill();
+          levelCtx.shadowBlur = 0;
+        });
+
+        diagramDots.forEach((d) => {
+          const y = d.level === 1 ? yS1 : yS0;
+          const bob = Math.sin(simTime * 3 + d.phase) * 2;
+          const glowAmt = d.level === 1 ? Math.max(intensity, 0.4) : 0.2;
+          if (d.level === 1) {
+            levelCtx.shadowColor = "#7dd3fc";
+            levelCtx.shadowBlur = 14 + glowAmt * 20;
+            levelCtx.fillStyle = "#7dd3fc";
+          } else {
+            levelCtx.shadowColor = "#cbd5e1";
+            levelCtx.shadowBlur = 4;
+            levelCtx.fillStyle = "#e2e8f0";
+          }
+          levelCtx.beginPath();
+          levelCtx.arc(d.x, y + bob, 7, 0, Math.PI * 2);
+          levelCtx.fill();
+          levelCtx.strokeStyle = d.level === 1 ? "#bae6fd" : "#94a3b8";
+          levelCtx.lineWidth = 1.5;
+          levelCtx.stroke();
+          levelCtx.shadowBlur = 0;
+          if (d.flash > 0) {
+            levelCtx.strokeStyle = `rgba(224,242,254,${d.flash})`;
+            levelCtx.lineWidth = 3;
+            levelCtx.beginPath();
+            levelCtx.arc(d.x, y + bob, 12 + d.flash * 8, 0, Math.PI * 2);
+            levelCtx.stroke();
+          }
+        });
+      }
+
+      function drawOcean() {
+        const dpr = Math.min(devicePixelRatio, 2) || 1;
+        const w = oceanCanvas.width / dpr;
+        const h = oceanCanvas.height / dpr;
+        oceanCtx.clearRect(0, 0, w, h);
+
+        const bg = oceanCtx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, "#0a2848");
+        bg.addColorStop(0.5, "#124e78");
+        bg.addColorStop(1, "#0c3a58");
+        oceanCtx.fillStyle = bg;
+        oceanCtx.fillRect(0, 0, w, h);
+
+        oceanCtx.strokeStyle = "rgba(186,230,253,0.08)";
+        oceanCtx.lineWidth = 1;
+        for (let y = 20; y < h; y += 28) {
+          oceanCtx.beginPath();
+          oceanCtx.moveTo(0, y + Math.sin(simTime + y * 0.02) * 3);
+          oceanCtx.lineTo(w, y + Math.sin(simTime + y * 0.02 + 1) * 3);
+          oceanCtx.stroke();
+        }
+
+        const cx = w * 0.5, cy = h * 0.76;
+        oceanCtx.shadowColor = "#7dd3fc";
+        oceanCtx.shadowBlur = 16;
+        oceanCtx.fillStyle = "#64748b";
+        oceanCtx.beginPath();
+        oceanCtx.ellipse(cx, cy, 28, 14, 0, 0, Math.PI * 2);
+        oceanCtx.fill();
+        oceanCtx.strokeStyle = "#94a3b8";
+        oceanCtx.lineWidth = 2;
+        oceanCtx.stroke();
+        oceanCtx.shadowBlur = 0;
+        oceanCtx.fillStyle = "#e2e8f0";
+        oceanCtx.font = "700 11px Inter,sans-serif";
+        oceanCtx.textAlign = "center";
+        oceanCtx.fillText("V. hilgendorfii", cx, cy + 4);
+        oceanCtx.textAlign = "left";
+
+        if (seaParticles.length === 0 && !reactionOn) {
+          oceanCtx.fillStyle = "rgba(224,242,254,0.85)";
+          oceanCtx.font = "600 13px Inter,sans-serif";
+          oceanCtx.textAlign = "center";
+          oceanCtx.fillText("「発光液を放出」で青い光が広がります", w * 0.5, h * 0.42);
+          oceanCtx.font = "500 11px Inter,sans-serif";
+          oceanCtx.fillStyle = "rgba(186,230,253,0.7)";
+          oceanCtx.fillText("↓ ここから発光液が出ます", cx, cy - 22);
+          oceanCtx.textAlign = "left";
+        }
+
+        const glowBase = Math.max(intensity, reactionOn ? 0.35 : 0);
+        seaParticles.forEach((pt) => {
+          const age = simTime - (pt.birth || 0);
+          const br = pt.life * Math.max(glowBase, 0.55) * (pt.excited ? 1.15 : 0.55);
+          if (br < 0.03) return;
+          const radius = pt.r * (4 + br * 3);
+          oceanCtx.shadowColor = "#bae6fd";
+          oceanCtx.shadowBlur = 10 + br * 28;
+          const g = oceanCtx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
+          g.addColorStop(0, `rgba(255,255,255,${Math.min(1, br * 1.1)})`);
+          g.addColorStop(0.25, `rgba(186,230,253,${Math.min(1, br * 0.95)})`);
+          g.addColorStop(0.55, `rgba(56,189,248,${br * 0.75})`);
+          g.addColorStop(1, "rgba(56,189,248,0)");
+          oceanCtx.fillStyle = g;
+          oceanCtx.beginPath();
+          oceanCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+          oceanCtx.fill();
+          oceanCtx.fillStyle = `rgba(224,242,254,${Math.min(1, br * 0.9)})`;
+          oceanCtx.beginPath();
+          oceanCtx.arc(pt.x, pt.y, pt.r * 0.6, 0, Math.PI * 2);
+          oceanCtx.fill();
+        });
+        oceanCtx.shadowBlur = 0;
+      }
+
+      function drawDecay() {
+        const dpr = Math.min(devicePixelRatio, 2) || 1;
+        const w = decayCanvas.width / dpr;
+        const h = decayCanvas.height / dpr;
+        decayCtx.clearRect(0, 0, w, h);
+        const padL = 48, padT = 28, padB = 36, padR = 14;
+        const plotW = w - padL - padR;
+        const plotH = h - padT - padB;
+        const x0 = padL, y0 = padT + plotH;
+        const p = getParams();
+        const tMax = Math.max(8, simTime + 1);
+        const previewI0 = I0 > 0 ? I0 : 0.25 + p.conc * 0.75;
+
+        decayCtx.fillStyle = "#0e2438";
+        decayCtx.fillRect(x0, y0 - plotH, plotW, plotH);
+        drawPlotGrid(decayCtx, x0, y0, plotW, plotH, tMax, previewI0, p.k);
+
+        decayCtx.strokeStyle = "rgba(186,230,253,0.45)";
+        decayCtx.lineWidth = 1.5;
+        decayCtx.beginPath();
+        decayCtx.moveTo(x0, y0);
+        decayCtx.lineTo(x0, y0 - plotH);
+        decayCtx.lineTo(x0 + plotW, y0 - plotH);
+        decayCtx.stroke();
+
+        decayCtx.strokeStyle = "rgba(125,211,252,0.55)";
+        decayCtx.lineWidth = 2;
+        decayCtx.setLineDash([6, 5]);
+        decayCtx.beginPath();
+        for (let i = 0; i <= 80; i++) {
+          const t = (tMax * i) / 80;
+          const I = previewI0 * Math.exp(-p.k * t);
+          const px = x0 + (t / tMax) * plotW;
+          const py = y0 - I * plotH;
+          if (i === 0) decayCtx.moveTo(px, py);
+          else decayCtx.lineTo(px, py);
+        }
+        decayCtx.stroke();
+        decayCtx.setLineDash([]);
+
+        if (history.length > 1) {
+          decayCtx.strokeStyle = "#e0f2fe";
+          decayCtx.lineWidth = 3.5;
+          decayCtx.shadowColor = "#38bdf8";
+          decayCtx.shadowBlur = 14;
+          decayCtx.beginPath();
+          history.forEach((pt, i) => {
+            const px = x0 + (pt.t / tMax) * plotW;
+            const py = y0 - Math.min(1, pt.I) * plotH;
+            if (i === 0) decayCtx.moveTo(px, py);
+            else decayCtx.lineTo(px, py);
+          });
+          decayCtx.stroke();
+          decayCtx.shadowBlur = 0;
+          if (history.length > 0) {
+            const last = history[history.length - 1];
+            const lx = x0 + (last.t / tMax) * plotW;
+            const ly = y0 - last.I * plotH;
+            decayCtx.fillStyle = "#e0f2fe";
+            decayCtx.shadowBlur = 10;
+            decayCtx.shadowColor = "#38bdf8";
+            decayCtx.beginPath();
+            decayCtx.arc(lx, ly, 5, 0, Math.PI * 2);
+            decayCtx.fill();
+            decayCtx.shadowBlur = 0;
+          }
+        } else if (!reactionOn) {
+          decayCtx.fillStyle = "rgba(186,230,253,0.8)";
+          decayCtx.font = "600 12px Inter,sans-serif";
+          decayCtx.textAlign = "center";
+          decayCtx.fillText("「発光開始」で実測曲線（白）が描画", x0 + plotW / 2, y0 - plotH * 0.45);
+          decayCtx.textAlign = "left";
+        }
+
+        decayCtx.fillStyle = "#cbd5e1";
+        decayCtx.font = "600 11px Inter,sans-serif";
+        decayCtx.textAlign = "center";
+        decayCtx.fillText("t  [s]", x0 + plotW / 2, h - 8);
+        decayCtx.textAlign = "left";
+        decayCtx.fillText("I(t)", 10, y0 - plotH * 0.5);
+        decayCtx.fillStyle = "#e0f2fe";
+        decayCtx.font = "600 10px Inter,sans-serif";
+        decayCtx.fillText("━ 実測", x0 + 8, y0 - plotH + 14);
+        decayCtx.fillStyle = "rgba(186,230,253,0.75)";
+        decayCtx.fillText("- -  I₀e⁻ᵏᵗ", x0 + 58, y0 - plotH + 14);
+      }
+
+      function updateInfo() {
+        const p = getParams();
+        document.getElementById("infoI").textContent = intensity.toFixed(3);
+        document.getElementById("infoT").textContent = p.tempC.toFixed(1) + " °C";
+        document.getElementById("infoK").textContent = p.k.toFixed(3) + " s⁻¹";
+        document.getElementById("infoConc").textContent = Math.round(p.conc * 100) + " %";
+        document.getElementById("infoS1").textContent = Math.round(s1Frac * 100) + " %";
+        document.getElementById("infoN").textContent = String(seaParticles.length);
+        document.getElementById("infoTime").textContent = simTime.toFixed(1) + " s";
+
+        const comment = document.getElementById("infoComment");
+        if (p.tempC > 28) {
+          comment.textContent = "温度が高いほど反応が速くなり、光が早く消えます（k が増加 → 減衰が速い）。";
+        } else if (reactionOn && intensity > 0.3) {
+          comment.textContent = "ウミホタルは化学反応で励起状態 S₁ を作り、450 nm の青色光を放出します。";
+        } else if (reactionOn) {
+          comment.textContent = "励起状態から基底状態 S₀ へ戻るとき、hν（450 nm）が放出されます。";
+        } else {
+          comment.textContent = "ルシフェリン + ルシフェラーゼ + O₂ → 酸化ルシフェリン* → 光";
+        }
+      }
+
+      function updateSliders() {
+        const p = getParams();
+        const kn = Number(document.getElementById("kSlider").value);
+        document.getElementById("kVal").textContent =
+          kn <= 25 ? "低" : kn <= 60 ? "中" : "高";
+        document.getElementById("tempVal").textContent = p.tempC.toFixed(0) + " °C";
+        document.getElementById("concVal").textContent = Math.round(p.conc * 100) + " %";
+        if (reactionOn && simTime > 0) {
+          intensity = I0 * Math.exp(-p.k * simTime);
+        }
+        updateInfo();
+      }
+
+      function loop(ts) {
+        if (!lastTs) lastTs = ts;
+        const dt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+        if (reactionOn) updatePhysics(dt);
+        drawLevels();
+        drawOcean();
+        drawDecay();
+        updateInfo();
+        requestAnimationFrame(loop);
+      }
+
+      document.getElementById("startBtn").addEventListener("click", startReaction);
+      document.getElementById("releaseBtn").addEventListener("click", releaseFluid);
+      document.getElementById("resetBtn").addEventListener("click", resetSim);
+      ["kSlider", "tempSlider", "concSlider"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", updateSliders);
+      });
+      window.addEventListener("resize", () => {
+        clearTimeout(window._umiR);
+        window._umiR = setTimeout(resizeCanvases, 100);
+      });
+
+      resizeCanvases();
+      updateSliders();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
