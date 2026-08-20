@@ -60,6 +60,19 @@ GitHub Pages 等に `projectile-sim/` ごとデプロイする運用を想定し
 
 GitHub Pages 等にデプロイする場合は、更新後の `data/news.json` を一緒にアップロードしてください。
 
+### ブラウザから直接更新（GitHub 公開後）
+
+公開サイトの URL から管理画面を開けます（PC の news-server 不要）。
+
+1. ブラウザで **`https://あなたのサイト/admin/news.html`** を開く  
+   （例: `https://username.github.io/hyakumasu-calc/projectile-sim/admin/news.html`）
+2. （任意）`assets/js/news-github-config.example.js` を `news-github-config.js` にコピーし、ユーザー名・リポジトリ名を記入して GitHub に push
+3. GitHub で **Personal Access Token** を作成（リポジトリの **Contents 書き込み** 権限）
+4. 管理画面に **ユーザー名・リポジトリ名・トークン** を入力してログイン
+5. 記事を書いて **「HPに反映」** → GitHub に直接保存（1〜2分後にサイトに反映）
+
+トークンはブラウザの sessionStorage にだけ保存され、GitHub にはアップロードされません。
+
 ## 開発
 
 新規 sim・更新ルールは **`CONVENTIONS.md`** を参照してください。
