@@ -80,22 +80,27 @@ const TARGETS = [
     out: "05_atomic_models.png",
     path: "/83_atomic_models_thomson_nagaoka_rutherford_3D.html",
     selector: "#field3dWrap canvas",
-    clipRatio: 0.68,
+    clipRatio: 0.62,
     prepare: async (page) => {
-      await page.waitForTimeout(3500);
+      await page.waitForTimeout(4000);
       await page.locator('.mode-btn[data-model="bohr"]').click({ timeout: 10000 });
-      await page.waitForTimeout(2500);
+      await page.waitForTimeout(2000);
       if (await page.locator("#btnSpin.active").count()) {
         await page.click("#btnSpin");
       }
       await page.evaluate(() => {
+        document.querySelectorAll(".mode-badge, .status-badge").forEach((el) => {
+          el.style.display = "none";
+        });
         const wrap = document.getElementById("field3dWrap");
         if (!wrap) return;
-        for (let i = 0; i < 60; i++) {
-          wrap.dispatchEvent(new WheelEvent("wheel", { deltaY: -150, bubbles: true, cancelable: true }));
+        for (let i = 0; i < 80; i++) {
+          wrap.dispatchEvent(
+            new WheelEvent("wheel", { deltaY: -200, bubbles: true, cancelable: true })
+          );
         }
       });
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(1500);
     },
   },
   {
@@ -103,6 +108,8 @@ const TARGETS = [
     path: "/fluorescence_phosphorescence_simulation.html",
     selector: "#jabWrap",
     prepare: async (page) => {
+      await page.waitForTimeout(3500);
+      await page.locator("#exciteBtn").click({ timeout: 10000 });
       await page.waitForTimeout(2500);
     },
   },
