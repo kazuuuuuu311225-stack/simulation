@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>20章 回折格子とCD — 光の回折</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #a78bfa;
+      --accent-light: #c4b5fd;
+      --panel: rgba(8, 16, 28, 0.88);
+      --border: rgba(167, 139, 250, 0.28);
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #120a24 45%, #0a1628 100%);
+      color: #e2e8f0;
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.45), rgba(56,189,248,0.35));
+      border: 1px solid rgba(167,139,250,0.4); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ede9fe; background: rgba(167,139,250,0.14);
+      border: 1px solid rgba(167,139,250,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.02rem; color: var(--accent-light); }
+    section.panel p, section.panel li { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      padding: 8px 12px; border-radius: 10px; margin-bottom: 10px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.22);
+      font-size: 0.84rem; color: #ddd6fe; text-align: center; line-height: 1.6;
+    }
+    .canvas-wrap {
+      position: relative; border-radius: 12px; overflow: hidden;
+      background: #020617; border: 1px solid rgba(167,139,250,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(480px, 52dvh); min-height: 300px; cursor: crosshair;
+    }
+    .canvas-hud {
+      position: absolute; left: 10px; top: 10px; right: 10px;
+      display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none;
+    }
+    .hud-chip {
+      padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+      background: rgba(0,0,0,0.65); border: 1px solid rgba(148,163,184,0.35);
+    }
+    .hud-chip.bright { color: #fde68a; border-color: rgba(250,204,21,0.5); }
+    .hud-chip.dark { color: #94a3b8; border-color: rgba(100,116,139,0.5); }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px) { .param-grid { grid-template-columns: repeat(4, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #ddd6fe; font-variant-numeric: tabular-nums; }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .toggle-btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(167,139,250,0.3); background: rgba(15,30,45,0.6);
+      color: #cbd5e1; font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-active {
+      background: rgba(250,204,21,0.18); border-color: rgba(250,204,21,0.45); color: #fef9c3;
+    }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(167,139,250,0.06); border: 1px solid rgba(167,139,250,0.16);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #f5f3ff; }
+    .formula-live {
+      margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(167,139,250,0.2);
+      font-size: 0.84rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .mode-note { margin-top: 8px; font-size: 0.82rem; color: #a5b4fc; }
+    .phase-tab-wrap { margin-top: 12px; }
+    .phase-tab {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-radius: 12px;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(15,30,45,0.75);
+      color: #e2e8f0; font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-align: left;
+    }
+    .phase-tab.is-open {
+      border-radius: 12px 12px 0 0;
+      background: rgba(250,204,21,0.12); border-color: rgba(250,204,21,0.45); color: #fef9c3;
+    }
+    .phase-tab-chevron { font-size: 0.8rem; opacity: 0.75; transition: transform 0.2s; }
+    .phase-tab.is-open .phase-tab-chevron { transform: rotate(180deg); }
+    .phase-panel {
+      display: none; border: 1px solid rgba(250,204,21,0.35); border-top: none;
+      border-radius: 0 0 12px 12px; background: rgba(4,10,20,0.95); overflow: hidden;
+    }
+    .phase-panel.is-open { display: block; }
+    .phase-panel canvas { display: block; width: 100%; height: min(280px, 40dvh); min-height: 200px; }
+    .phase-caption {
+      padding: 8px 14px 12px; font-size: 0.78rem; color: var(--muted); line-height: 1.6;
+      border-top: 1px solid rgba(167,139,250,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">💿</div>
+      <p class="chapter-label">第20章 — 光の干渉・回折</p>
+      <h2>回折格子と CD — スペクトル</h2>
+      <a id="back" href="../00_folder_waves.html#chapter-20">← 波動フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>明線の条件（回折格子・CD 共通）</h3>
+      <p>
+        等間隔のスリット（回折格子）や CD の溝から光が回折すると、
+        <strong>位相が揃う方向</strong>に鋭い明線（スペクトル）が現れます。
+      </p>
+      <div class="formula-box">
+        回折格子：d sin θ = m λ &nbsp;·&nbsp; CD：d (sin α + sin β) = m λ &nbsp;（m = 0, ±1, ±2 …）
+      </div>
+      <ul>
+        <li>白色光では波長ごとに θ が違う → 虹色スペクトル</li>
+        <li>CD は d ≈ 1.6 μm の<strong>反射型回折格子</strong>。傾きを変えると虹の位置が動く</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3>アニメーション</h3>
+      <p>
+        CD モード：白い光が CD の溝で波長ごとに反射し、壁に虹が映ります。傾き角で虹の位置が変わります。
+        回折格子モード：N 本のスリットから波が重なり明線ができます。壁／スクリーンをクリックで位置固定。
+      </p>
+
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnModeGrating">回折格子</button>
+        <button type="button" class="toggle-btn" id="btnModeCd">CD</button>
+        <button type="button" class="toggle-btn" id="btnMono">単色光</button>
+        <button type="button" class="toggle-btn is-active" id="btnWhite">白色光</button>
+      </div>
+      <p class="mode-note" id="modeNote">回折格子：多数スリット（N 本）の干渉で鋭い明線が現れます。</p>
+
+      <div class="canvas-wrap">
+        <canvas id="simCanvas" aria-label="回折格子とCDの回折シミュレーション"></canvas>
+        <div class="canvas-hud">
+          <span class="hud-chip bright" id="hudOrder">m = —</span>
+          <span class="hud-chip" id="hudSin">sin θ = —</span>
+          <span class="hud-chip" id="hudLambda">λ = —</span>
+        </div>
+      </div>
+      <div class="legend-row" id="legendGrating">
+        <span style="color:#a78bfa">|</span> 回折格子スリット
+        <span style="color:#7dd3fc">○</span> 上側スリットの波
+        <span style="color:#fde047">○</span> 中央スリットの波
+        <span style="color:#f9a8d4">○</span> 下側スリットの波
+        <span style="color:#fde047">■</span> 重なって明るい（明線）
+        <span>🌈</span> 白色光スペクトル
+        <span style="color:#fbbf24">|</span> 次数 m
+      </div>
+      <div class="legend-row" id="legendCd" style="display:none">
+        <span>☀</span> 白色光（懐中電灯）
+        <span style="color:#e2e8f0">→</span> 入射角 α
+        <span style="color:#94a3b8">💿</span> CD 溝（d = 1.6 μm）
+        <span>🌈</span> 波長ごとの反射 β
+        <span style="color:#fde047">●</span> 光が壁へ伝わる
+        <span style="color:#fbbf24">|</span> 次数 m
+      </div>
+
+      <div class="toggle-row" id="viewScanRow">
+        <button type="button" class="toggle-btn is-active" id="btnScan">自動スキャン</button>
+      </div>
+
+      <div class="phase-tab-wrap">
+        <button type="button" class="phase-tab" id="btnDetailTab" aria-expanded="false" aria-controls="detailPanel">
+          <span>スペクトル詳細（拡大）</span>
+          <span class="phase-tab-chevron" aria-hidden="true">▼</span>
+        </button>
+        <div class="phase-panel" id="detailPanel" hidden>
+          <canvas id="detailCanvas" aria-label="スペクトル詳細"></canvas>
+          <p class="phase-caption" id="detailCaption">
+            スキャン位置のスペクトル強度・次数 m・格子の干渉因子を拡大表示します。メイン画面と同期します。
+          </p>
+        </div>
+      </div>
+
+      <div class="param-grid">
+        <div id="wrapLambda">
+          <label for="lambdaSlider">波長 λ <span class="slider-val" id="lambdaVal">550 nm</span></label>
+          <input type="range" id="lambdaSlider" min="400" max="700" value="550" step="5">
+        </div>
+        <div id="wrapD">
+          <label for="dSlider">格子定数 d <span class="slider-val" id="dVal">2.0 μm</span></label>
+          <input type="range" id="dSlider" min="100" max="400" value="200" step="10">
+        </div>
+        <div id="wrapCdAngle">
+          <label for="cdAngleSlider">CD の傾き角 <span class="slider-val" id="cdAngleVal">40°</span></label>
+          <input type="range" id="cdAngleSlider" min="20" max="65" value="40" step="1">
+        </div>
+        <div>
+          <label for="mSlider">次数 m（強調） <span class="slider-val" id="mVal">1</span></label>
+          <input type="range" id="mSlider" min="0" max="3" value="1" step="1">
+        </div>
+        <div id="wrapNSlits">
+          <label for="nSlitsSlider">スリット本数 N <span class="slider-val" id="nSlitsVal">15</span></label>
+          <input type="range" id="nSlitsSlider" min="5" max="25" value="15" step="1">
+        </div>
+        <div>
+          <label for="speedSlider">速度 <span class="slider-val" id="speedVal">1.0×</span></label>
+          <input type="range" id="speedSlider" min="20" max="200" value="100" step="5">
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout"><dt>格子定数 d</dt><dd id="readD">—</dd></dl>
+        <dl class="readout"><dt>sin θ（スキャン）</dt><dd id="readSin">—</dd></dl>
+        <dl class="readout"><dt>スキャン位置 y</dt><dd id="readY">—</dd></dl>
+        <dl class="readout"><dt>干渉因子 I</dt><dd id="readIntensity">—</dd></dl>
+      </div>
+      <div class="formula-live" id="formulaLive">—</div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+      const detailCanvas = document.getElementById("detailCanvas");
+      const detailCtx = detailCanvas.getContext("2d");
+      const formulaLive = document.getElementById("formulaLive");
+      const modeNote = document.getElementById("modeNote");
+      const hudOrder = document.getElementById("hudOrder");
+      const hudSin = document.getElementById("hudSin");
+      const hudLambda = document.getElementById("hudLambda");
+      const btnDetailTab = document.getElementById("btnDetailTab");
+      const detailPanel = document.getElementById("detailPanel");
+
+      const CD_D_UM = 1.6;
+
+      let mode = "grating";
+      let lightMode = "white";
+      let lambdaNm = 550;
+      let dMicron = 2.0;
+      let cdAngleDeg = 40;
+      let orderM = 1;
+      let nSlits = 15;
+      let animSpeed = 1.0;
+      let autoScan = true;
+      let userProbe = false;
+      let detailOpen = false;
+      let phase = 0;
+      let scanPhase = 0;
+      let probeY = null;
+
+      let canvasW = 800, canvasH = 400;
+      let detailW = 800, detailH = 240;
+      let sourceX = 40, elementX = 160, screenX = 740, centerY = 220;
+      const Lmeter = 1.0;
+
+      let cacheKey = "";
+      let waveStripCanvas = null;
+      let waveStripPhase = -1;
+      let cdWallCanvas = null;
+      let cdWallPhase = -1;
+      let fieldCanvas = null;
+      let fieldPhase = -1;
+
+      const CD_WAVELENGTHS = [
+        { nm: 430, label: "紫" },
+        { nm: 480, label: "青" },
+        { nm: 530, label: "緑" },
+        { nm: 580, label: "黄" },
+        { nm: 630, label: "橙" },
+        { nm: 680, label: "赤" },
+      ];
+
+      function waveDisplayK(nm) {
+        const waveLambdaPx = Math.max(34, (nm || lambdaNm) * 0.12);
+        return (2 * Math.PI) / waveLambdaPx;
+      }
+
+      function wavePhysicsK(nm) {
+        return (2 * Math.PI) / Math.max(22, (nm || lambdaNm) * 0.065);
+      }
+
+      function waveOverlapRgb(u1, u2, u3) {
+        const sum = u1 + u2 + u3;
+        if (lightMode === "mono") {
+          const I = softIntensity((sum * sum) / 3);
+          const c = nmToRgb(lambdaNm);
+          return [
+            Math.min(255, Math.round(c[0] * I * 1.08)),
+            Math.min(255, Math.round(c[1] * I * 1.08)),
+            Math.min(255, Math.round(c[2] * I * 1.08)),
+          ];
+        }
+        const w1 = 0.5 + 0.5 * u1;
+        const w2 = 0.5 + 0.5 * u2;
+        const w3 = 0.5 + 0.5 * u3;
+        const boost = Math.max(0, sum) * 0.5;
+        const dip = Math.max(0, -sum) * 0.32;
+        const r = Math.round(18 + w3 * 100 + w2 * 60 + boost * 200 - dip * 8);
+        const gch = Math.round(20 + w2 * 150 + w1 * 50 + boost * 170 - dip * 10);
+        const bch = Math.round(38 + w1 * 210 + w3 * 40 + boost * 45 - dip * 15);
+        return [
+          Math.min(255, Math.max(0, r)),
+          Math.min(255, Math.max(0, gch)),
+          Math.min(255, Math.max(0, bch)),
+        ];
+      }
+
+      function showcaseSlits() {
+        const all = slitPositions();
+        if (all.length <= 3) return all;
+        const mid = Math.floor(all.length / 2);
+        return [all[0], all[mid], all[all.length - 1]];
+      }
+
+      function nmToRgb(nm) {
+        let r = 0, g = 0, b = 0;
+        if (nm >= 380 && nm < 440) { r = -(nm - 440) / 60; b = 1; }
+        else if (nm >= 440 && nm < 490) { g = (nm - 440) / 50; b = 1; }
+        else if (nm >= 490 && nm < 510) { g = 1; b = -(nm - 510) / 20; }
+        else if (nm >= 510 && nm < 580) { r = (nm - 510) / 70; g = 1; }
+        else if (nm >= 580 && nm < 645) { r = 1; g = -(nm - 645) / 65; }
+        else if (nm >= 645 && nm <= 780) { r = 1; }
+        const fade = nm < 420 ? 0.3 + 0.7 * (nm - 380) / 40
+          : nm > 700 ? 0.3 + 0.7 * (780 - nm) / 80 : 1;
+        return [Math.round(255 * r * fade), Math.round(255 * g * fade), Math.round(255 * b * fade)];
+      }
+
+      function activeD() { return mode === "cd" ? CD_D_UM : dMicron; }
+
+      function lambdaPx() { return Math.max(22, lambdaNm * 0.065); }
+
+      function waveSumAt(x, y, t, nm) {
+        const slits = slitPositions();
+        const k = wavePhysicsK(nm);
+        let sum = 0;
+        for (let i = 0; i < slits.length; i += 1) {
+          sum += Math.sin(k * Math.hypot(x - slits[i].x, y - slits[i].y) - t);
+        }
+        return sum / slits.length;
+      }
+
+      function showcaseWaveAt(x, y, t) {
+        const picks = showcaseSlits();
+        const nm = lightMode === "mono" ? lambdaNm : 550;
+        const k = wavePhysicsK(nm);
+        const u = picks.map((s) => Math.sin(k * Math.hypot(x - s.x, y - s.y) - t));
+        return { u1: u[0], u2: u[1], u3: u[2], sum: waveSumAt(x, y, t, nm) };
+      }
+
+      function spectrumAtY(y, t) {
+        const sinT = sinAtProbe(y);
+        if (lightMode === "mono") {
+          const sum = waveSumAt(screenX, y, t, lambdaNm);
+          const instant = sum * sum;
+          const orderI = gratingIntensity(sinT, lambdaNm, nSlits, dMicron);
+          const I = instant * (0.35 + orderI * 0.65);
+          const c = nmToRgb(lambdaNm);
+          const s = softIntensity(I);
+          return { r: c[0] * s, g: c[1] * s, b: c[2] * s, I };
+        }
+        let r = 0, g = 0, b = 0;
+        let maxI = 0;
+        for (let nm = 400; nm <= 700; nm += 8) {
+          const sum = waveSumAt(screenX, y, t, nm);
+          const instant = sum * sum;
+          const orderI = gratingIntensity(sinT, nm, nSlits, dMicron);
+          const I = instant * (0.35 + orderI * 0.65);
+          if (I > maxI) maxI = I;
+          const c = nmToRgb(nm);
+          r += c[0] * I;
+          g += c[1] * I;
+          b += c[2] * I;
+        }
+        const maxC = Math.max(r, g, b, 1);
+        return { r: r / maxC * 225, g: g / maxC * 225, b: b / maxC * 225, I: maxI };
+      }
+
+      function sinTheta(m, lambda, dUm) {
+        return (m * lambda * 1e-9) / (dUm * 1e-6);
+      }
+
+      function cdIncidentAngleRad() { return (cdAngleDeg - 30) * Math.PI / 180; }
+
+      function cdDiffractionSin(m, lam, dUm) {
+        return (m * lam * 1e-9) / (dUm * 1e-6) - Math.sin(cdIncidentAngleRad());
+      }
+
+      function sinAtProbe(y) {
+        if (mode === "cd") {
+          const scale = (canvasH - 80) * 0.38;
+          return -(y - centerY) / scale;
+        }
+        const dy = y - centerY;
+        return dy / ((screenX - elementX) * 0.42 / Lmeter);
+      }
+
+      function orderAtProbe(y) {
+        const lam = lightMode === "mono" ? lambdaNm : 550;
+        if (mode === "cd") {
+          const sinB = sinAtProbe(y);
+          const mVal = (CD_D_UM * 1e-6 * (Math.sin(cdIncidentAngleRad()) + sinB)) / (lam * 1e-9);
+          return { m: Math.round(mVal), ratio: mVal, sinT: sinB };
+        }
+        const sinT = sinAtProbe(y);
+        const ratio = (sinT * activeD() * 1e-6) / (lam * 1e-9);
+        return { m: Math.round(ratio), ratio, sinT };
+      }
+
+      function screenYFromSin(sinT) {
+        if (!isFinite(sinT) || Math.abs(sinT) > 1) return null;
+        return centerY + sinT * Lmeter * ((screenX - elementX) / Lmeter) * 0.42;
+      }
+
+      function cdWallScale() { return (canvasH - 80) * 0.38; }
+
+      function wallYFromLambda(m, lam) {
+        const sinB = cdDiffractionSin(m, lam, CD_D_UM);
+        if (!isFinite(sinB) || Math.abs(sinB) > 0.95) return null;
+        return centerY - sinB * cdWallScale();
+      }
+
+      function cdWaveMod(nm, t, y) {
+        const lay = cdLayout();
+        const path = Math.hypot((screenX - 8) - lay.hitX, y - lay.hitY);
+        const k = waveDisplayK(nm);
+        const phase = k * path * 0.14 - t * 1.08 + (nm || lambdaNm) * 0.018;
+        return 0.38 + 0.62 * Math.pow(0.5 + 0.5 * Math.sin(phase), 2);
+      }
+
+      function cdSpectrumAtY(y, t) {
+        if (lightMode === "mono") {
+          let r = 0, g = 0, b = 0, maxI = 0;
+          const c = nmToRgb(lambdaNm);
+          for (let m = -1; m <= 2; m += 1) {
+            const peakY = wallYFromLambda(m, lambdaNm);
+            if (peakY == null) continue;
+            const dist = Math.abs(y - peakY);
+            const spatial = Math.exp(-dist * dist / 42);
+            const I = spatial * cdWaveMod(lambdaNm, t, y);
+            if (I < 0.025) continue;
+            if (I > maxI) maxI = I;
+            r += c[0] * I;
+            g += c[1] * I;
+            b += c[2] * I;
+          }
+          const maxC = Math.max(r, g, b, 1);
+          return { r: r / maxC * 235, g: g / maxC * 235, b: b / maxC * 235, I: maxI };
+        }
+        let r = 0, g = 0, b = 0;
+        let maxI = 0;
+        for (let nm = 400; nm <= 700; nm += 6) {
+          for (let m = -1; m <= 2; m += 1) {
+            const peakY = wallYFromLambda(m, nm);
+            if (peakY == null) continue;
+            const dist = Math.abs(y - peakY);
+            const spatial = Math.exp(-dist * dist / 42);
+            const I = spatial * cdWaveMod(nm, t, y);
+            if (I < 0.025) continue;
+            if (I > maxI) maxI = I;
+            const c = nmToRgb(nm);
+            r += c[0] * I;
+            g += c[1] * I;
+            b += c[2] * I;
+          }
+        }
+        const maxC = Math.max(r, g, b, 1);
+        return { r: r / maxC * 235, g: g / maxC * 235, b: b / maxC * 235, I: maxI };
+      }
+
+      function cdLayout() {
+        const cx = canvasW * 0.38;
+        const cy = canvasH * 0.58;
+        const discR = Math.min(canvasW, canvasH) * 0.11;
+        return { cx, cy, discR, tilt: (cdAngleDeg - 90) * Math.PI / 180, hitX: cx, hitY: cy - discR * 0.15 };
+      }
+
+      function gratingIntensity(sinT, lambda, N, dUm) {
+        if (Math.abs(sinT) > 1) return 0;
+        const beta = Math.PI * dUm * 1e-6 * sinT / (lambda * 1e-9);
+        if (Math.abs(beta) < 1e-6) return 1;
+        const val = Math.sin(N * beta) / Math.sin(beta);
+        return Math.min(1, (val * val) / (N * N));
+      }
+
+      function softIntensity(raw) { return 0.1 + Math.pow(Math.max(0, raw), 0.72) * 0.82; }
+
+      function slitPositions() {
+        const pitchPx = Math.max(4, dMicron * 0.12);
+        const totalW = (nSlits - 1) * pitchPx;
+        const positions = [];
+        for (let i = 0; i < nSlits; i++) {
+          positions.push({ x: elementX, y: centerY - totalW / 2 + i * pitchPx });
+        }
+        return positions;
+      }
+
+      function invalidateCache() {
+        cacheKey = "";
+        waveStripPhase = -1;
+        cdWallPhase = -1;
+      }
+
+      function makeCacheKey() {
+        return [mode, lightMode, lambdaNm, dMicron, cdAngleDeg, orderM, nSlits, canvasW, canvasH].join("|");
+      }
+
+      function rebuildWaveStrip(t) {
+        const sw = 36;
+        const top = 25;
+        const h = canvasH - 50;
+        if (!waveStripCanvas) waveStripCanvas = document.createElement("canvas");
+        waveStripCanvas.width = sw;
+        waveStripCanvas.height = h;
+        const sctx = waveStripCanvas.getContext("2d");
+        const img = sctx.createImageData(sw, h);
+        for (let j = 0; j < h; j += 1) {
+          const y = top + j;
+          const col = spectrumAtY(y, t);
+          for (let i = 0; i < sw; i += 1) {
+            const idx = (j * sw + i) * 4;
+            img.data[idx] = Math.round(col.r);
+            img.data[idx + 1] = Math.round(col.g);
+            img.data[idx + 2] = Math.round(col.b);
+            img.data[idx + 3] = 255;
+          }
+        }
+        sctx.putImageData(img, 0, 0);
+        waveStripPhase = t;
+      }
+
+      function rebuildField(t) {
+        if (mode !== "grating") return;
+        const x0 = elementX + 10;
+        const y0 = 25;
+        const w = Math.floor(screenX - elementX - 24);
+        const h = Math.floor(canvasH - 50);
+        if (w <= 0 || h <= 0) return;
+        const step = 3;
+        const iw = Math.ceil(w / step);
+        const ih = Math.ceil(h / step);
+        if (!fieldCanvas) fieldCanvas = document.createElement("canvas");
+        fieldCanvas.width = iw;
+        fieldCanvas.height = ih;
+        const fctx = fieldCanvas.getContext("2d");
+        const img = fctx.createImageData(iw, ih);
+        for (let j = 0; j < ih; j += 1) {
+          const y = y0 + j * step;
+          for (let i = 0; i < iw; i += 1) {
+            const x = x0 + i * step;
+            const { u1, u2, u3 } = showcaseWaveAt(x, y, t);
+            const rgb = waveOverlapRgb(u1, u2, u3);
+            const idx = (j * iw + i) * 4;
+            img.data[idx] = rgb[0];
+            img.data[idx + 1] = rgb[1];
+            img.data[idx + 2] = rgb[2];
+            img.data[idx + 3] = 255;
+          }
+        }
+        fctx.putImageData(img, 0, 0);
+        fieldPhase = t;
+      }
+
+      function rebuildCdWall(t) {
+        const wallLeft = screenX - 8;
+        const top = 28, bot = canvasH - 28;
+        const h = bot - top;
+        const sw = Math.max(1, canvasW - wallLeft - 6);
+        if (!cdWallCanvas) cdWallCanvas = document.createElement("canvas");
+        cdWallCanvas.width = sw;
+        cdWallCanvas.height = h;
+        const wctx = cdWallCanvas.getContext("2d");
+        const img = wctx.createImageData(sw, h);
+        for (let j = 0; j < h; j += 1) {
+          const y = top + j;
+          const col = cdSpectrumAtY(y, t);
+          for (let i = 0; i < sw; i += 1) {
+            const idx = (j * sw + i) * 4;
+            img.data[idx] = Math.round(col.r);
+            img.data[idx + 1] = Math.round(col.g);
+            img.data[idx + 2] = Math.round(col.b);
+            img.data[idx + 3] = 255;
+          }
+        }
+        wctx.putImageData(img, 0, 0);
+        cdWallPhase = t;
+      }
+
+      function ensureCaches(t) {
+        const key = makeCacheKey();
+        if (key !== cacheKey) {
+          cacheKey = key;
+          waveStripPhase = -1;
+          fieldPhase = -1;
+        }
+        if (mode === "grating") {
+          if (waveStripPhase === -1 || Math.abs(t - waveStripPhase) > 0.04) rebuildWaveStrip(t);
+          if (fieldPhase === -1 || Math.abs(t - fieldPhase) > 0.04) rebuildField(t);
+        }
+        if (mode === "cd") {
+          if (cdWallPhase === -1 || Math.abs(t - cdWallPhase) > 0.04) rebuildCdWall(t);
+        }
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvasW = rect.width;
+        canvasH = rect.height;
+        sourceX = canvasW * 0.05;
+        elementX = canvasW * 0.2;
+        screenX = canvasW * 0.92;
+        centerY = canvasH * 0.52;
+        if (probeY === null) probeY = centerY;
+        invalidateCache();
+        resizeDetailCanvas();
+      }
+
+      function resizeDetailCanvas() {
+        if (!detailOpen) return;
+        const rect = detailCanvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+        detailCanvas.width = Math.round(rect.width * dpr);
+        detailCanvas.height = Math.round(rect.height * dpr);
+        detailCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        detailW = rect.width;
+        detailH = rect.height;
+      }
+
+      function updateProbe(dt) {
+        const span = mode === "cd" ? (canvasH - 80) * 0.35 : (canvasH - 80) * 0.4;
+        if (autoScan && !userProbe) {
+          scanPhase += dt * 0.4 * animSpeed;
+          probeY = centerY + Math.sin(scanPhase * 0.65) * span + Math.sin(scanPhase * 0.2) * span * 0.25;
+        }
+        probeY = Math.max(32, Math.min(canvasH - 32, probeY));
+      }
+
+      function drawSource() {
+        ctx.fillStyle = lightMode === "white" ? "rgba(255,255,255,0.9)" : "rgb(" + nmToRgb(lambdaNm).join(",") + ")";
+        ctx.beginPath();
+        ctx.arc(sourceX, centerY, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(148,163,184,0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sourceX + 12, centerY);
+        ctx.lineTo(elementX - 18, centerY);
+        ctx.stroke();
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("光源", sourceX, centerY - 18);
+      }
+
+      function drawGrating() {
+        const slits = slitPositions();
+        const picks = showcaseSlits();
+        const top = 30, bot = canvasH - 30;
+        ctx.fillStyle = "#1e1b4b";
+        ctx.fillRect(elementX - 6, top, 12, bot - top);
+        ctx.fillStyle = "#020617";
+        const gap = 2.5;
+        for (let i = 0; i < slits.length; i += 1) {
+          const sy = slits[i].y;
+          if (i === 0) ctx.fillRect(elementX - 4, top, 8, sy - gap / 2 - top);
+          else ctx.fillRect(elementX - 4, slits[i - 1].y + gap / 2, 8, sy - gap / 2 - (slits[i - 1].y + gap / 2));
+          if (i === slits.length - 1) ctx.fillRect(elementX - 4, sy + gap / 2, 8, bot - (sy + gap / 2));
+        }
+        const monoRgb = nmToRgb(lambdaNm);
+        const colors = lightMode === "mono"
+          ? ["rgb(" + monoRgb.join(",") + ")", "rgba(" + monoRgb.join(",") + ",0.82)", "rgba(" + monoRgb.join(",") + ",0.65)"]
+          : ["#7dd3fc", "#fde047", "#f9a8d4"];
+        const labels = ["上", "中", "下"];
+        picks.forEach((sl, idx) => {
+          ctx.fillStyle = colors[idx];
+          ctx.beginPath();
+          ctx.arc(elementX, sl.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.font = "700 9px Noto Sans JP, sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(labels[idx], elementX + 10, sl.y + 3);
+        });
+        ctx.fillStyle = "#c4b5fd";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("回折格子  N=" + nSlits, elementX, 18);
+      }
+
+      function drawRipples(t) {
+        if (mode !== "grating") return;
+        const picks = showcaseSlits();
+        const nm = lightMode === "mono" ? lambdaNm : 550;
+        const monoStr = nmToRgb(nm).join(",");
+        const colors = lightMode === "mono"
+          ? [monoStr, monoStr, monoStr]
+          : ["56,189,248", "250,204,21", "244,114,182"];
+        const k = waveDisplayK(nm);
+        const waveL = (2 * Math.PI) / k;
+        ctx.lineWidth = 2;
+        picks.forEach((sl, idx) => {
+          for (let r = waveL * 0.5; r < waveL * 7 && r < canvasW; r += waveL * 0.88) {
+            const crest = 0.5 + 0.5 * Math.cos(k * r - t);
+            if (crest < 0.38) continue;
+            const alpha = lightMode === "mono" ? 0.32 + crest * 0.48 : 0.38 + crest * 0.52;
+            ctx.strokeStyle = "rgba(" + colors[idx] + "," + alpha.toFixed(2) + ")";
+            ctx.beginPath();
+            ctx.arc(sl.x, sl.y, r, -Math.PI * 0.48, Math.PI * 0.48);
+            ctx.stroke();
+          }
+        });
+      }
+
+      function drawTravelingDots(t) {
+        if (mode !== "grating") return;
+        const picks = showcaseSlits();
+        const monoCol = "rgb(" + nmToRgb(lambdaNm).join(",") + ")";
+        const colors = lightMode === "mono" ? [monoCol, monoCol, monoCol] : ["#7dd3fc", "#fde047", "#f9a8d4"];
+        picks.forEach((sl, idx) => {
+          const dx = screenX - sl.x;
+          const dy = probeY - sl.y;
+          for (let n = 0; n < 2; n += 1) {
+            const u = ((t * 0.26 * animSpeed + n * 0.4 + idx * 0.1) % 1);
+            ctx.fillStyle = colors[idx];
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(sl.x + dx * u, sl.y + dy * u, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+        });
+      }
+
+      function drawWaveField(t) {
+        if (mode !== "grating" || !fieldCanvas) return;
+        const x0 = elementX + 10;
+        const y0 = 25;
+        const w = screenX - elementX - 24;
+        const h = canvasH - 50;
+        ctx.fillStyle = "rgba(6,14,28,0.5)";
+        ctx.fillRect(x0, y0, w, h);
+        ctx.imageSmoothingEnabled = true;
+        ctx.globalAlpha = 0.93;
+        ctx.drawImage(fieldCanvas, 0, 0, fieldCanvas.width, fieldCanvas.height, x0, y0, w, h);
+        ctx.globalAlpha = 1;
+      }
+
+      function drawScreenStrip(t) {
+        const top = 25;
+        const h = canvasH - 50;
+        if (mode === "grating" && waveStripCanvas) {
+          ctx.drawImage(waveStripCanvas, screenX - 3, top);
+          ctx.fillStyle = "#475569";
+          ctx.fillRect(screenX - 5, top, 10, h);
+        }
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("スペクトル（瞬間）", screenX + 16, 14);
+      }
+
+      function drawCdWall() {
+        const wallLeft = screenX - 8;
+        const top = 28, bot = canvasH - 28;
+        if (cdWallCanvas) ctx.drawImage(cdWallCanvas, wallLeft, top);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("壁（虹・瞬間）", wallLeft + (canvasW - wallLeft) * 0.45, top - 8);
+      }
+
+      function drawCdGrooveInset() {
+        const ix = 16, iy = canvasH - 124, iw = 168, ih = 96;
+        ctx.fillStyle = "rgba(15,23,42,0.94)";
+        ctx.strokeStyle = "rgba(167,139,250,0.55)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(ix, iy, iw, ih, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(ix + 2, iy + 2, iw - 4, ih - 4);
+        ctx.clip();
+        const gx0 = ix + 12, gx1 = ix + iw - 12;
+        const gy0 = iy + 22, gy1 = iy + ih - 24;
+        const pitch = 8;
+        ctx.fillStyle = "#475569";
+        ctx.fillRect(gx0, gy0, gx1 - gx0, gy1 - gy0);
+        for (let gy = gy0; gy <= gy1; gy += pitch) {
+          ctx.strokeStyle = "rgba(15,23,42,0.8)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(gx0, gy);
+          ctx.lineTo(gx1, gy);
+          ctx.stroke();
+        }
+        const midX = gx0 + (gx1 - gx0) * 0.55;
+        const yA = iy + 36, yB = yA + pitch;
+        ctx.strokeStyle = "#fde68a";
+        ctx.fillStyle = "#fde68a";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(midX, yA);
+        ctx.lineTo(midX, yB);
+        ctx.stroke();
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("d", midX + 6, (yA + yB) / 2 + 4);
+        ctx.restore();
+        ctx.fillStyle = "#ddd6fe";
+        ctx.font = "700 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("CD 表面（溝 = 回折格子）", ix + 10, iy + 14);
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "600 9px Noto Sans JP, sans-serif";
+        ctx.fillText("d = 1.6 μm", ix + 10, iy + ih - 8);
+      }
+
+      function drawCdSideView() {
+        const lay = cdLayout();
+        const lampX = canvasW * 0.1, lampY = canvasH * 0.22;
+        const wallLeft = screenX - 8;
+        const top = 28, bot = canvasH - 28;
+        const hitX = lay.hitX, hitY = lay.hitY;
+
+        ctx.strokeStyle = "rgba(51,65,85,0.6)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(20, bot);
+        ctx.lineTo(wallLeft, bot);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(30,41,59,0.88)";
+        ctx.fillRect(wallLeft, top, canvasW - wallLeft - 4, bot - top);
+
+        ctx.fillStyle = "#475569";
+        ctx.fillRect(lampX - 8, lampY + 6, 16, 28);
+        ctx.fillStyle = lightMode === "white" ? "#fef9c3" : "rgb(" + nmToRgb(lambdaNm).join(",") + ")";
+        ctx.beginPath();
+        ctx.arc(lampX, lampY, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(254,240,138,0.45)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(lampX, lampY, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "600 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("懐中電灯", lampX, lampY - 28);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 9;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(lampX + 12, lampY + 8);
+        ctx.lineTo(hitX - 8, hitY);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(lampX + 12, lampY + 8);
+        ctx.lineTo(hitX - 8, hitY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#bae6fd";
+        ctx.textAlign = "left";
+        ctx.fillText("入射（α）", lampX + 28, lampY + 18);
+
+        ctx.save();
+        ctx.translate(lay.cx, lay.cy);
+        ctx.rotate(lay.tilt);
+        const r = lay.discR;
+        const discGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.05, 0, 0, r);
+        discGrad.addColorStop(0, "#cbd5e1");
+        discGrad.addColorStop(0.55, "#64748b");
+        discGrad.addColorStop(1, "#334155");
+        ctx.fillStyle = discGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+        if (lightMode === "mono") {
+          const mc = nmToRgb(lambdaNm);
+          ctx.fillStyle = "rgba(" + mc.join(",") + ",0.55)";
+        } else {
+          const hi = ctx.createLinearGradient(-r, -r, r, r);
+          hi.addColorStop(0, "rgba(239,68,68,0.35)");
+          hi.addColorStop(0.35, "rgba(250,204,21,0.45)");
+          hi.addColorStop(0.6, "rgba(34,197,94,0.35)");
+          hi.addColorStop(0.8, "rgba(56,189,248,0.4)");
+          hi.addColorStop(1, "rgba(167,139,250,0.35)");
+          ctx.fillStyle = hi;
+        }
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.94, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(226,232,240,0.65)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.17, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = "#c4b5fd";
+        ctx.textAlign = "center";
+        ctx.fillText("CD", lay.cx, lay.cy + lay.discR + 16);
+        ctx.fillStyle = "#fde68a";
+        ctx.fillText("傾き " + cdAngleDeg + "°", lay.cx, lay.cy + lay.discR + 30);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.75)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(hitX, hitY);
+        ctx.lineTo(hitX + 55, hitY - 55);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "600 9px Inter, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("法線", hitX + 28, hitY - 42);
+
+        drawCdGrooveInset();
+      }
+
+      function drawCdRays(t) {
+        const lay = cdLayout();
+        const wallLeft = screenX - 8;
+        const orderUse = orderM || 1;
+        const list = lightMode === "white"
+          ? CD_WAVELENGTHS
+          : [{ nm: lambdaNm, label: lambdaNm + "nm" }];
+        list.forEach(({ nm, label }, idx) => {
+          const wy = wallYFromLambda(orderUse, nm);
+          if (wy == null || wy < 36 || wy > canvasH - 36) return;
+          const rgb = nmToRgb(nm);
+          const pulse = 0.62 + 0.38 * Math.sin(t * 2.2 + idx * 0.9);
+          ctx.strokeStyle = "rgba(" + rgb.join(",") + "," + (0.55 + pulse * 0.35).toFixed(2) + ")";
+          ctx.lineWidth = lightMode === "white" ? 3.5 : 5;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(lay.hitX + 5, lay.hitY - 2);
+          ctx.lineTo(wallLeft, wy);
+          ctx.stroke();
+          if (lightMode === "white") {
+            ctx.fillStyle = "rgb(" + rgb.join(",") + ")";
+            ctx.font = "600 9px Noto Sans JP, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(label, lay.hitX + 18 + idx * 5, lay.hitY - 14 - idx * 10);
+          }
+        });
+      }
+
+      function drawCdTravelingDots(t) {
+        const lay = cdLayout();
+        const wallLeft = screenX - 8;
+        const orderUse = orderM || 1;
+        const list = lightMode === "white" ? CD_WAVELENGTHS : [{ nm: lambdaNm }];
+        list.forEach(({ nm }, idx) => {
+          const wy = wallYFromLambda(orderUse, nm);
+          if (wy == null) return;
+          const rgb = nmToRgb(nm);
+          for (let n = 0; n < 2; n += 1) {
+            const u = ((t * 0.3 * animSpeed + n * 0.45 + idx * 0.07) % 1);
+            const px = lay.hitX + (wallLeft - lay.hitX) * u;
+            const py = lay.hitY + (wy - lay.hitY) * u;
+            ctx.fillStyle = "rgb(" + rgb.join(",") + ")";
+            ctx.strokeStyle = "rgba(255,255,255,0.55)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+        });
+      }
+
+      function drawCdProbeHighlight(t) {
+        const orderUse = orderM || 1;
+        const lam = lightMode === "mono" ? lambdaNm : 550;
+        const wy = wallYFromLambda(orderUse, lam);
+        if (wy == null) return;
+        const dist = Math.abs(probeY - wy);
+        if (dist > 28) return;
+        const lay = cdLayout();
+        const rgb = nmToRgb(lam);
+        ctx.strokeStyle = "rgba(" + rgb.join(",") + ",0.95)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(lay.hitX + 5, lay.hitY);
+        ctx.lineTo(screenX - 8, probeY);
+        ctx.stroke();
+      }
+
+      function drawOrderMarkers() {
+        const d = activeD();
+        ctx.font = "700 10px Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        const mx = mode === "cd" ? screenX + 14 : screenX + 26;
+        for (let m = -2; m <= 2; m += 1) {
+          let yPos;
+          if (mode === "cd") {
+            yPos = wallYFromLambda(m, lightMode === "mono" ? lambdaNm : 550);
+          } else {
+            yPos = screenYFromSin(sinTheta(m, lightMode === "mono" ? lambdaNm : 550, d));
+          }
+          if (yPos == null || yPos < 30 || yPos > canvasH - 30) continue;
+          const hi = m === orderM || m === -orderM;
+          ctx.strokeStyle = hi ? "rgba(251,191,36,0.9)" : "rgba(167,139,250,0.5)";
+          ctx.lineWidth = hi ? 2 : 1;
+          ctx.beginPath();
+          ctx.moveTo(screenX + 4, yPos);
+          ctx.lineTo(screenX + 18, yPos);
+          ctx.stroke();
+          ctx.fillStyle = hi ? "#fde68a" : "#ddd6fe";
+          ctx.fillText("m=" + m, mx, yPos + 4);
+        }
+      }
+
+      function drawScanLine(t) {
+        const info = orderAtProbe(probeY);
+        const lam = lightMode === "mono" ? lambdaNm : 550;
+        const I = mode === "grating"
+          ? Math.pow(waveSumAt(screenX, probeY, t, lightMode === "mono" ? lambdaNm : 550), 2)
+          : cdSpectrumAtY(probeY).I;
+        const bright = I > 0.35;
+
+        ctx.strokeStyle = bright ? "rgba(250,204,21,0.9)" : "rgba(100,116,139,0.85)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        if (mode === "grating") {
+          ctx.moveTo(elementX, probeY);
+          ctx.lineTo(screenX + 40, probeY);
+        } else {
+          ctx.moveTo(screenX - 8, probeY);
+          ctx.lineTo(canvasW - 10, probeY);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function drawDetailPanel(t) {
+        if (!detailOpen) return;
+        const w = detailW, h = detailH;
+        detailCtx.fillStyle = "#030712";
+        detailCtx.fillRect(0, 0, w, h);
+        const top = 14, stripW = Math.min(56, w * 0.12);
+        const graphX = stripW + 28;
+        const graphW = w - graphX - 16;
+        const stripH = h - top - 16;
+
+        detailCtx.fillStyle = "rgba(8,16,30,0.92)";
+        detailCtx.strokeStyle = "rgba(167,139,250,0.25)";
+        detailCtx.beginPath();
+        detailCtx.roundRect(12, top, stripW, stripH, 8);
+        detailCtx.fill();
+        detailCtx.stroke();
+
+        for (let j = 0; j < stripH; j += 1) {
+          const y = 25 + (j / stripH) * (canvasH - 50);
+          const col = mode === "cd" ? cdSpectrumAtY(y, t) : spectrumAtY(y, t);
+          detailCtx.fillStyle = "rgb(" + Math.round(col.r) + "," + Math.round(col.g) + "," + Math.round(col.b) + ")";
+          detailCtx.fillRect(14, top + j, stripW - 4, 1);
+        }
+
+        const py = top + ((probeY - 25) / (canvasH - 50)) * stripH;
+        detailCtx.strokeStyle = "#fde68a";
+        detailCtx.lineWidth = 2;
+        detailCtx.beginPath();
+        detailCtx.moveTo(10, py);
+        detailCtx.lineTo(stripW + 18, py);
+        detailCtx.stroke();
+
+        detailCtx.fillStyle = "rgba(8,16,30,0.92)";
+        detailCtx.beginPath();
+        detailCtx.roundRect(graphX, top, graphW, stripH, 8);
+        detailCtx.fill();
+        detailCtx.stroke();
+
+        const info = orderAtProbe(probeY);
+        const lam = lightMode === "mono" ? lambdaNm : 550;
+        const I = mode === "grating"
+          ? probeIntensity(t)
+          : cdSpectrumAtY(probeY).I;
+
+        detailCtx.textAlign = "left";
+        detailCtx.font = "700 13px Noto Sans JP, sans-serif";
+        detailCtx.fillStyle = I > 0.35 ? "#fde68a" : "#94a3b8";
+        detailCtx.fillText(I > 0.35 ? "● 明線付近（強め合い）" : "○ 暗部付近", graphX + 14, top + 24);
+        detailCtx.font = "500 12px Inter, Noto Sans JP, sans-serif";
+        detailCtx.fillStyle = "#cbd5e1";
+        detailCtx.fillText("スキャン y = " + probeY.toFixed(0) + " px", graphX + 14, top + 46);
+        detailCtx.fillText((mode === "cd" ? "sin β" : "sin θ") + " ≈ " + (isFinite(info.sinT) ? info.sinT.toFixed(4) : "—"), graphX + 14, top + 66);
+        detailCtx.fillText("次数 m ≈ " + info.m + "  （δ/λ ≈ " + info.ratio.toFixed(2) + "）", graphX + 14, top + 86);
+        detailCtx.fillText("干渉強度 I ≈ " + I.toFixed(2), graphX + 14, top + 106);
+        detailCtx.fillStyle = "#64748b";
+        detailCtx.font = "500 11px Noto Sans JP, sans-serif";
+        detailCtx.fillText(mode === "cd" ? "d (sin α + sin β) = m λ" : "d sin θ = m λ", graphX + 14, stripH + top - 28);
+        detailCtx.fillText(
+          mode === "cd" ? "傾き " + cdAngleDeg + "° · d = 1.60 μm · 反射型回折格子" : "N = " + nSlits + " 本のスリット干渉",
+          graphX + 14, stripH + top - 10
+        );
+
+        const barX = graphX + graphW - 90;
+        const barH = stripH - 50;
+        detailCtx.fillStyle = "#334155";
+        detailCtx.fillRect(barX, top + 30, 24, barH);
+        detailCtx.fillStyle = I > 0.35 ? "#fde68a" : "#64748b";
+        detailCtx.fillRect(barX, top + 30 + barH * (1 - I), 24, barH * I);
+        detailCtx.fillStyle = "#94a3b8";
+        detailCtx.font = "600 10px Inter, sans-serif";
+        detailCtx.textAlign = "center";
+        detailCtx.fillText("I", barX + 12, top + 22);
+      }
+
+      function updateHud(t) {
+        const info = orderAtProbe(probeY);
+        const I = probeIntensity(t);
+        hudOrder.textContent = "m ≈ " + info.m;
+        hudSin.textContent = (mode === "cd" ? "sin β = " : "sin θ = ")
+          + (isFinite(info.sinT) ? info.sinT.toFixed(3) : "—");
+        hudLambda.textContent = lightMode === "mono" ? "λ = " + lambdaNm + " nm" : "λ = 400–700 nm";
+        hudOrder.className = "hud-chip " + (I > 0.35 ? "bright" : "dark");
+        document.getElementById("readD").textContent = activeD().toFixed(2) + " μm";
+        document.getElementById("readSin").textContent = isFinite(info.sinT) ? info.sinT.toExponential(3) : "—";
+        document.getElementById("readY").textContent = probeY.toFixed(0) + " px";
+        document.getElementById("readIntensity").textContent = I.toFixed(2);
+        formulaLive.innerHTML = mode === "cd"
+          ? "<strong>d (sin α + sin β) = m λ</strong> · d = 1.60 μm · 傾き = " + cdAngleDeg + "° · m = " + orderM
+          : "<strong>d sin θ = m λ</strong> · d = " + activeD().toFixed(2) + " μm · N = " + nSlits
+          + (lightMode === "mono" ? " · λ = " + lambdaNm + " nm" : " · 白色光");
+      }
+
+      function updateModeUi() {
+        const isGrating = mode === "grating";
+        document.getElementById("wrapD").style.display = isGrating ? "" : "none";
+        document.getElementById("wrapCdAngle").style.display = isGrating ? "none" : "";
+        document.getElementById("wrapNSlits").style.display = isGrating ? "" : "none";
+        document.getElementById("gratingViewRow") && (document.getElementById("viewScanRow").style.display = "");
+        document.getElementById("wrapLambda").style.opacity = lightMode === "white" ? "0.5" : "1";
+        document.getElementById("btnModeGrating").classList.toggle("is-active", isGrating);
+        document.getElementById("btnModeCd").classList.toggle("is-active", !isGrating);
+        document.getElementById("btnMono").classList.toggle("is-active", lightMode === "mono");
+        document.getElementById("btnWhite").classList.toggle("is-active", lightMode === "white");
+        document.getElementById("legendGrating").style.display = isGrating ? "" : "none";
+        document.getElementById("legendCd").style.display = isGrating ? "none" : "";
+        document.getElementById("btnScan").classList.toggle("is-active", autoScan);
+        document.getElementById("detailCaption").textContent = isGrating
+          ? "スキャン位置のスペクトル強度・次数 m・N 本干渉因子を拡大表示します。"
+          : "壁の虹スペクトル・sin β・次数 m を拡大表示します。傾き角スライダーと連動します。";
+        const monoNote = lightMode === "mono" ? " · 単色 λ = " + lambdaNm + " nm" : "";
+        modeNote.textContent = isGrating
+          ? (lightMode === "mono"
+            ? "回折格子（単色）：同じ色の波が N 本重なり、次数 m の明線が現れます。"
+            : "回折格子：N 本のスリットから出た波（青・黄・桃）が重なり、明線が現れます。上・中・下の 3 本を代表表示。")
+          : (lightMode === "mono"
+            ? "CD（単色）：選んだ波長の光線が壁の次数位置へ。スキャンと壁の明線が同期します。" + monoNote
+            : "CD：紫〜赤の光線が CD から壁へ。壁の虹は波と同期して明滅。傾き " + cdAngleDeg + "° · d = 1.60 μm");
+        invalidateCache();
+      }
+
+      function drawScene(t) {
+        if (canvasW < 10) return;
+        ensureCaches(t);
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        if (mode === "grating") {
+          drawRipples(t);
+          drawWaveField(t);
+          drawGrating();
+          drawSource();
+          drawTravelingDots(t);
+          drawScreenStrip(t);
+        } else {
+          drawCdSideView();
+          drawCdWall();
+          drawCdRays(t);
+          drawCdTravelingDots(t);
+          drawCdProbeHighlight(t);
+        }
+        drawOrderMarkers();
+        drawScanLine(t);
+        updateHud(t);
+        drawDetailPanel(t);
+      }
+
+      let lastTs = 0;
+      function loop(ts) {
+        if (!lastTs) lastTs = ts;
+        const dt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+        phase += dt * 5 * animSpeed;
+        updateProbe(dt);
+        drawScene(phase);
+        requestAnimationFrame(loop);
+      }
+
+      document.getElementById("btnModeGrating").addEventListener("click", () => { mode = "grating"; updateModeUi(); });
+      document.getElementById("btnModeCd").addEventListener("click", () => {
+        mode = "cd";
+        updateModeUi();
+      });
+      document.getElementById("btnMono").addEventListener("click", () => { lightMode = "mono"; updateModeUi(); });
+      document.getElementById("btnWhite").addEventListener("click", () => { lightMode = "white"; updateModeUi(); });
+      document.getElementById("btnScan").addEventListener("click", () => {
+        autoScan = !autoScan;
+        userProbe = !autoScan;
+        updateModeUi();
+      });
+      btnDetailTab.addEventListener("click", () => {
+        detailOpen = !detailOpen;
+        btnDetailTab.classList.toggle("is-open", detailOpen);
+        btnDetailTab.setAttribute("aria-expanded", detailOpen ? "true" : "false");
+        detailPanel.classList.toggle("is-open", detailOpen);
+        detailPanel.hidden = !detailOpen;
+        if (detailOpen) requestAnimationFrame(resizeDetailCanvas);
+      });
+
+      canvas.addEventListener("pointerdown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        probeY = e.clientY - rect.top;
+        userProbe = true;
+        autoScan = false;
+        updateModeUi();
+      });
+
+      function bindSlider(id, fn) {
+        document.getElementById(id).addEventListener("input", (e) => { fn(e.target); invalidateCache(); });
+      }
+      bindSlider("lambdaSlider", (el) => {
+        lambdaNm = +el.value;
+        document.getElementById("lambdaVal").textContent = lambdaNm + " nm";
+      });
+      bindSlider("dSlider", (el) => {
+        dMicron = +el.value / 100;
+        document.getElementById("dVal").textContent = dMicron.toFixed(2) + " μm";
+      });
+      bindSlider("cdAngleSlider", (el) => {
+        cdAngleDeg = +el.value;
+        document.getElementById("cdAngleVal").textContent = cdAngleDeg + "°";
+      });
+      bindSlider("mSlider", (el) => {
+        orderM = +el.value;
+        document.getElementById("mVal").textContent = String(orderM);
+      });
+      bindSlider("nSlitsSlider", (el) => {
+        nSlits = +el.value;
+        document.getElementById("nSlitsVal").textContent = String(nSlits);
+      });
+      bindSlider("speedSlider", (el) => {
+        animSpeed = +el.value / 100;
+        document.getElementById("speedVal").textContent = animSpeed.toFixed(1) + "×";
+      });
+
+      window.addEventListener("resize", () => { resizeCanvas(); resizeDetailCanvas(); });
+      updateModeUi();
+      resizeCanvas();
+      probeY = centerY;
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

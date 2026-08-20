@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>17章 ドップラー効果 — 音の周波数変化</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --slate-bg: rgba(12, 18, 32, 0.82); --slate-border: rgba(251, 191, 36, 0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+      --wave: #38bdf8; --high: #f87171; --low: #818cf8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #050810 0%, #12100a 45%, #0a1220 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.28), rgba(248,113,113,0.2));
+      border: 1px solid rgba(253,230,138,0.35); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #fef3c7;
+      background: rgba(251,191,36,0.14); border: 1px solid rgba(253,230,138,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li { font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 12px; border-radius: 12px; text-align: center;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);
+      color: #fde68a; font-variant-numeric: tabular-nums; font-size: 0.9rem; line-height: 1.6;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #070b14; border: 1px solid rgba(251,191,36,0.2);
+    }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(200px, 28dvh); min-height: 170px; }
+    .canvas-wrap--demo canvas { height: min(280px, 36dvh); min-height: 250px; }
+    .canvas-wrap--tall canvas,
+    .canvas-wrap--sim canvas { height: min(400px, 48dvh); min-height: 360px; }
+    .canvas-wrap--interactive canvas { cursor: grab; touch-action: none; }
+    .canvas-wrap--interactive.dragging canvas { cursor: grabbing; }
+    .canvas-caption { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+    .canvas-hint {
+      margin-top: 6px; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); color: #bae6fd;
+    }
+    label { display: block; font-size: 0.86rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.8rem; font-weight: 600; color: #fde68a; }
+    .param-grid { display: grid; gap: 12px; margin-top: 10px; }
+    @media (min-width:640px) { .param-grid { grid-template-columns: 1fr 1fr; } }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+    @media (min-width:640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.18);
+    }
+    .readout .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .readout .val { font-size: 0.95rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+    .readout .val.hl { color: #86efac; }
+    .readout .val.warn { color: #fde68a; }
+    .readout .val.high { color: #fca5a5; }
+    .readout .val.low { color: #a5b4fc; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .btn-row button {
+      flex: 1 1 calc(50% - 4px); min-height: 42px; padding: 8px 12px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .btn-row button.active { background: rgba(251,191,36,0.22); color: #fef3c7; }
+    .btn-play { background: rgba(74,222,128,0.15) !important; border-color: rgba(74,222,128,0.4) !important; }
+    .btn-play.active { background: rgba(74,222,128,0.3) !important; color: #bbf7d0 !important; }
+    .btn-stop { background: rgba(248,113,113,0.12) !important; border-color: rgba(248,113,113,0.35) !important; }
+    .example-grid { display: grid; gap: 10px; margin-top: 10px; }
+    @media (min-width:640px) { .example-grid { grid-template-columns: 1fr 1fr; } }
+    .example-card {
+      padding: 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.18);
+      font-size: 0.86rem; line-height: 1.65; color: #cbd5e1;
+    }
+    .example-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--accent-light); }
+    .insight-box {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.86rem; line-height: 1.7; color: #bae6fd;
+    }
+    .insight-box.warn {
+      background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.22); color: #fde68a;
+    }
+    .summary-box {
+      padding: 14px; border-radius: 12px;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.22);
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .summary-box ol { margin: 8px 0 0; padding-left: 1.2rem; }
+    #runStatus {
+      margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem;
+      text-align: center; background: rgba(251,191,36,0.1); color: #fde68a;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">🚑</div>
+      <h2>17章 ドップラー効果</h2>
+      <p class="chapter-label">相対運動 · 波面の圧縮 · 周波数変化 · Web Audio</p>
+      <a id="back" href="../index.html">← メニューに戻る</a>
+      <p id="runStatus">読み込み中…</p>
+    </header>
+
+    <section class="panel">
+      <h3>1. ドップラー効果とは何か</h3>
+      <p>音源と観測者が<strong>相対的に動く</strong>と、聞こえる周波数が元の音と異なる現象を<strong>ドップラー効果</strong>といいます。</p>
+      <ul>
+        <li>音源が<strong>近づく</strong> → 高い音（f′ &gt; f）</li>
+        <li>音源が<strong>遠ざかる</strong> → 低い音（f′ &lt; f）</li>
+        <li>救急車のサイレンが典型例</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3>2. 音源が近づくと高く聞こえる理由</h3>
+      <p>音源が観測者に向かって進むと、波面が<strong>圧縮</strong>され、波長 λ が短くなります。v = fλ より<strong>周波数 f が高く</strong>聞こえます。</p>
+      <div class="canvas-wrap canvas-wrap--demo"><canvas id="approachCanvas"></canvas></div>
+      <p class="canvas-caption">🚑 が観測者に向かって大きく近づく — 前方の波面が密になる</p>
+    </section>
+
+    <section class="panel">
+      <h3>3. 音源が遠ざかると低く聞こえる理由</h3>
+      <p>音源が観測者から離れると、波面が<strong>伸び</strong>、波長 λ が長くなります。<strong>周波数 f が低く</strong>聞こえます。</p>
+      <div class="canvas-wrap canvas-wrap--demo"><canvas id="recedeCanvas"></canvas></div>
+      <p class="canvas-caption">🚑 が観測者から大きく遠ざかる — 後方の波面が疎になる</p>
+    </section>
+
+    <section class="panel">
+      <h3>4. 波面の圧縮・伸びの図</h3>
+      <p>音源が右方向に移動すると、<strong>前方</strong>の波面は密に、<strong>後方</strong>の波面は疎に並びます。<strong>🚑 をドラッグ</strong>して動かすと、波紋の変化を確認できます。</p>
+      <div class="canvas-wrap canvas-wrap--tall canvas-wrap--interactive" id="wavefrontWrap">
+        <canvas id="wavefrontCanvas"></canvas>
+      </div>
+      <p class="canvas-hint">👆 救急車をドラッグ（またはタッチ）して動かしてください — 進行方向の前方が密、後方が疎になります</p>
+      <p class="canvas-caption">ドラッグ移動 — 前方＝圧縮（高 f′） · 後方＝伸び（低 f′）</p>
+      <div class="legend-row" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:0.78rem;color:#cbd5e1;">
+        <span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f87171;margin-right:4px;"></i>前方（密）</span>
+        <span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#818cf8;margin-right:4px;"></i>後方（疎）</span>
+        <span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#fde68a;margin-right:4px;"></i>音源</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>5. 観測者と音源の相対速度</h3>
+      <p>ここでは<strong>音源が動き、観測者は静止</strong>する場合を扱います（観測者が動く場合も、相対速度で同様に説明できます）。</p>
+      <ul>
+        <li>音源速度 v<sub>s</sub> が大きいほど f′ の変化も大きい</li>
+        <li>v<sub>s</sub> ≪ v（音速）のとき、近似式 f′ ≈ f(1 ± v<sub>s</sub>/v) も使える</li>
+        <li>音速 v ＝ 331 ＋ 0.6T［m/s］（T：温度［℃］）</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3>6. ドップラー効果の式（音源が動く場合）</h3>
+      <div class="formula-box">
+        近づく：f′ ＝ f × v / (v − v<sub>s</sub>)<br>
+        遠ざかる：f′ ＝ f × v / (v + v<sub>s</sub>)
+      </div>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">元の f</span><span class="val" id="outF">600 Hz</span></div>
+        <div class="readout"><span class="lbl">音速 v</span><span class="val hl" id="outV">343 m/s</span></div>
+        <div class="readout"><span class="lbl">v<sub>s</sub></span><span class="val warn" id="outVs">20 m/s</span></div>
+        <div class="readout"><span class="lbl">観測 f′</span><span class="val high" id="outFprime">—</span></div>
+      </div>
+      <div class="formula-box" id="liveFormula">f′ ＝ —</div>
+    </section>
+
+    <section class="panel">
+      <h3>7. 救急車のサイレンの例</h3>
+      <div class="example-grid">
+        <div class="example-card">
+          <h4>🚑 近づくとき</h4>
+          サイレンの f₁ · f₂ が交互に鳴るが、<strong>ドップラー効果</strong>で全体が高く（「ピャーーー」）聞こえる。
+        </div>
+        <div class="example-card">
+          <h4>🚑 遠ざかるとき</h4>
+          同じサイレンでも<strong>低く</strong>（「フォーーー」）聞こえる。通過の瞬間に音程が下がる。
+        </div>
+      </div>
+      <div class="insight-box warn">救急車が横を通り過ぎると、一瞬で「高い音 → 低い音」に切り替わるのを体感できます（§9 · §11）。</div>
+    </section>
+
+    <section class="panel">
+      <h3>8. ドップラー効果のシミュレーション（Canvas）</h3>
+      <p>音源（🚑）が左右に移動し、波面の圧縮 · 伸びと観測者位置での<strong>波の到達間隔</strong>を表示します。<strong>v<sub>s</sub></strong> は f′ の計算、<strong>移動速度</strong> は Canvas 上の左右の動きに使います。</p>
+      <div class="param-grid">
+        <label>音源速度 v<sub>s</sub>（0〜50 m/s）
+          <input id="vsSlider" type="range" min="0" max="50" step="1" value="20">
+          <span class="slider-val" id="vsVal">20 m/s</span>
+        </label>
+        <label>元の周波数 f（200〜1000 Hz）
+          <input id="fSlider" type="range" min="200" max="1000" step="10" value="600">
+          <span class="slider-val" id="fVal">600 Hz</span>
+        </label>
+        <label>温度 T（℃）— 音速 v ＝ 331 ＋ 0.6T
+          <input id="tempSlider" type="range" min="-10" max="40" step="1" value="20">
+          <span class="slider-val" id="tempVal">20 ℃</span>
+        </label>
+        <label>🚑 救急車の移動速度（左右）
+          <input id="simSpeedSlider" type="range" min="5" max="100" step="1" value="35">
+          <span class="slider-val" id="simSpeedVal">35 — やや遅め</span>
+        </label>
+      </div>
+      <div class="canvas-wrap canvas-wrap--sim"><canvas id="simCanvas"></canvas></div>
+      <p class="canvas-caption">👤 観測者（左） · 🚑 が左右に移動 — 波面の圧縮 · 伸びと到達間隔を大きく表示</p>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">状態</span><span class="val hl" id="outMotion">—</span></div>
+        <div class="readout"><span class="lbl">λ′（観測）</span><span class="val" id="outLambda">—</span></div>
+        <div class="readout"><span class="lbl">到達間隔 T′</span><span class="val warn" id="outPeriod">—</span></div>
+        <div class="readout"><span class="lbl">f′</span><span class="val high" id="outFprimeSim">—</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>9. Web Audio API による周波数変化の再生</h3>
+      <p>Canvas の音源運動と<strong>同期</strong>して、観測周波数 f′ をリアルタイムで再生します。§8 の 🚑 が観測者に近づくと<strong>高く</strong>、通過後は<strong>低く</strong>聞こえます。</p>
+      <div class="btn-row">
+        <button type="button" id="modeNormalBtn" class="active">通常モード</button>
+        <button type="button" id="modeAmbulanceBtn">救急車サイレンモード</button>
+      </div>
+      <div class="param-grid" id="sirenParams" style="display:none;">
+        <label>サイレン切替周期（0.2〜1.0 s）
+          <input id="sirenPeriodSlider" type="range" min="0.2" max="1" step="0.05" value="0.5">
+          <span class="slider-val" id="sirenPeriodVal">0.50 s</span>
+        </label>
+        <label>サイレン周波数 f₁ / f₂
+          <span class="slider-val">700 Hz / 900 Hz</span>
+        </label>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="playBtn" class="btn-play">▶ 再生</button>
+        <button type="button" id="stopBtn" class="btn-stop">■ 停止</button>
+      </div>
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">再生モード</span><span class="val hl" id="outAudioMode">通常</span></div>
+        <div class="readout"><span class="lbl">再生 f′</span><span class="val warn" id="outPlayF">—</span></div>
+        <div class="readout"><span class="lbl">基準 f</span><span class="val" id="outBaseF">600 Hz</span></div>
+        <div class="readout"><span class="lbl">状態</span><span class="val" id="outPlayState">停止</span></div>
+      </div>
+      <div class="insight-box" id="audioHint">通常モード：f′ ＝ f × v / (v ± v<sub>s</sub>)。サイレンモード：f₁′ と f₂′ を交互に再生。</div>
+    </section>
+
+    <section class="panel">
+      <h3>10. 高校生向けまとめ</h3>
+      <div class="summary-box">
+        <ol>
+          <li><strong>ドップラー効果</strong> … 音源と観測者の相対運動で聞こえる周波数が変わる。</li>
+          <li>近づく → 波面圧縮 → λ 短 → <strong>f′ 高</strong>。遠ざかる → 波面伸び → λ 長 → <strong>f′ 低</strong>。</li>
+          <li>音源が動く場合：近づく f′ ＝ f v/(v−v<sub>s</sub>)、遠ざかる f′ ＝ f v/(v+v<sub>s</sub>)。</li>
+          <li>音速 v ＝ 331 ＋ 0.6T。v<sub>s</sub> が大きいほど f′ の変化も大きい。</li>
+          <li>救急車のサイレンは f₁ · f₂ の切替に加え、通過前後で全体の音程が変わる。</li>
+          <li>Canvas の波面図と Web Audio の f′ が同期 — 見て聞いて理解できる。</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // ── パラメータ ──
+      var WAVE_VISUAL_SCALE = 0.32;    // 波面の Canvas 表示スケール（大きめ）
+      var DEMO_TRAVEL_SPEED = 0.14;    // §2·§3 の救急車移動速度（正規化 / s）
+      var AMB_HIT_R = 32;              // ドラッグ判定半径
+      var fBase = 600;
+      var vsPhys = 20;
+      var tempC = 20;
+      var audioMode = "normal";
+      var sirenPeriod = 0.5;
+      var SIREN_F1 = 700;
+      var SIREN_F2 = 900;
+
+      var animT = 0;
+      var lastTs = 0;
+      var lastDt = 1 / 60;
+      var isPlaying = false;
+
+      // §2·§3 アニメーション
+      var approachT = 0;
+      var recedeT = 0;
+      var approachFronts = [];
+      var recedeFronts = [];
+      var approachLastEmit = 0;
+      var recedeLastEmit = 0;
+
+      // §4 ドラッグ操作
+      var dragX = null;
+      var dragY = null;
+      var dragFronts = [];
+      var dragLastEmit = 0;
+      var dragVelX = 0;
+      var isDragging = false;
+      var dragPointerId = null;
+
+      // §8 シミュレーション
+      var SIM_EMIT_INTERVAL = 0.18;    // §4 と同じ波紋の出し間隔
+      var observerNorm = 0.16;
+      var sourceNorm = 0.78;
+      var sourceDir = -1;
+      var simTravelSpeed = 0.35;       // 左右移動速度（正規化 / s · スライダー連動）
+      var simFronts = [];
+      var arrivalMarks = [];
+      var simLastEmit = 0;
+
+      var approachCanvas = document.getElementById("approachCanvas");
+      var recedeCanvas = document.getElementById("recedeCanvas");
+      var wavefrontCanvas = document.getElementById("wavefrontCanvas");
+      var wavefrontWrap = document.getElementById("wavefrontWrap");
+      var simCanvas = document.getElementById("simCanvas");
+
+      var audioCtx = null;
+      var oscillator = null;
+      var gainNode = null;
+
+      function soundSpeed() {
+        return 331 + 0.6 * tempC;
+      }
+
+      function waveSpeedPx() {
+        return soundSpeed() * WAVE_VISUAL_SCALE;
+      }
+
+      function clampVs(vs) {
+        return Math.min(Math.abs(vs), soundSpeed() * 0.92);
+      }
+
+      function isApproaching(sourceX, vSrc, obsX) {
+        if (sourceX > obsX) return vSrc < 0;
+        if (sourceX < obsX) return vSrc > 0;
+        return false;
+      }
+
+      function dopplerFprime(f, vs, approaching) {
+        var v = soundSpeed();
+        var vsC = clampVs(vs);
+        if (approaching) return f * v / (v - vsC);
+        return f * v / (v + vsC);
+      }
+
+      function getSourceVelocityPx(w) {
+        // 左右移動の向き（近づく／遠ざかる判定用）
+        return simTravelSpeed * w * sourceDir;
+      }
+
+      function getSourceState(w) {
+        var obsX = observerNorm * w;
+        var srcX = sourceNorm * w;
+        var vPx = getSourceVelocityPx(w);
+        return { obsX: obsX, srcX: srcX, vPx: vPx, approaching: isApproaching(srcX, vPx, obsX) };
+      }
+
+      function getCurrentBaseF() {
+        if (audioMode === "normal") return fBase;
+        var half = sirenPeriod / 2;
+        return (animT % sirenPeriod) < half ? SIREN_F1 : SIREN_F2;
+      }
+
+      // 観測者を通過するときに f′ が滑らかに変化する連続ドップラー（§9 音声用）
+      function getObservedFrequency(w) {
+        var baseF = getCurrentBaseF();
+        var v = soundSpeed();
+        var vsC = clampVs(vsPhys);
+        if (vsC < 0.5) return baseF;
+
+        var xRel = sourceNorm - observerNorm;
+        var vNorm = sourceDir * simTravelSpeed;
+        if (Math.abs(vNorm) < 0.001) return dopplerFprime(baseF, vsC, xRel > 0);
+
+        // tanh で通過瞬間を滑らかに：右側→正、左側→負、観測者上→0
+        var smooth = Math.tanh(xRel / 0.06);
+        var vRadial = -vsC * smooth * (vNorm > 0 ? 1 : -1);
+
+        if (Math.abs(vRadial) < 0.4) {
+          return baseF * (1 + vRadial / v);
+        }
+        if (vRadial > 0) {
+          return baseF * v / (v - Math.min(vsC, vRadial));
+        }
+        return baseF * v / (v + Math.min(vsC, -vRadial));
+      }
+
+      // 近づくほど大きく聞こえる距離ゲイン（0.15〜0.35）
+      function getAudioGain() {
+        var dist = Math.abs(sourceNorm - observerNorm);
+        var near = Math.max(0, 1 - dist / 0.45);
+        return 0.14 + near * 0.22;
+      }
+
+      function fitCanvas(canvas, kind) {
+        var wrap = canvas.parentElement;
+        var w = wrap.clientWidth;
+        var h;
+        if (kind === "demo") h = Math.max(250, 280);
+        else if (kind === "sim" || kind === "tall") h = Math.max(360, 400);
+        else h = Math.max(170, 200);
+        var dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.height = h + "px";
+        var ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx: ctx, w: w, h: h };
+      }
+
+      // ── 共通描画：救急車・観測者・波面 ──
+      function drawAmbulance(ctx, x, y, dir, scale) {
+        scale = scale || 1;
+        var bw = 72 * scale, bh = 34 * scale;
+        ctx.save();
+        ctx.translate(x, y);
+        if (dir < 0) ctx.scale(-1, 1);
+
+        ctx.fillStyle = "#f8fafc";
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(-bw / 2, -bh / 2, bw, bh, 7 * scale);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+        }
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(-bw / 2 + 10 * scale, -bh / 2 + 5 * scale, bw - 20 * scale, bh - 10 * scale);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(-8 * scale, -bh / 2 + 8 * scale, 16 * scale, bh - 16 * scale);
+        ctx.fillRect(-bw / 4, -3 * scale, bw / 2, 6 * scale);
+
+        ctx.fillStyle = "#7dd3fc";
+        ctx.fillRect(bw / 4, -bh / 2 + 6 * scale, bw / 5, bh / 2.2);
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.arc(bw / 2 - 2 * scale, -bh / 2 - 2 * scale, 5 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.arc(-bw / 4, bh / 2 + 2 * scale, 7 * scale, 0, Math.PI * 2);
+        ctx.arc(bw / 4, bh / 2 + 2 * scale, 7 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawObserver(ctx, x, y, scale) {
+        scale = scale || 1;
+        var r = 10 * scale;
+        ctx.fillStyle = "#86efac";
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#4ade80";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 5 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#86efac";
+        ctx.font = (13 * scale) + "px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("👤 観測者", x, y + 38 * scale);
+        ctx.textAlign = "left";
+      }
+
+      function drawWavefrontSet(ctx, fronts, srcX, srcY, t, vWave, velDir, maxDim, lineW) {
+        lineW = lineW || 2;
+        velDir = velDir || 1;
+        for (var i = 0; i < fronts.length; i++) {
+          var f = fronts[i];
+          var r = vWave * (t - f.t);
+          if (r < 3) continue;
+          if (r > maxDim * 0.65) continue;
+          var relX = f.x - srcX;
+          var col;
+          if (velDir > 0) {
+            col = relX > -r * 0.15 ? "rgba(248,113,113,0.55)" : "rgba(129,140,248,0.5)";
+          } else {
+            col = relX < r * 0.15 ? "rgba(248,113,113,0.55)" : "rgba(129,140,248,0.5)";
+          }
+          ctx.strokeStyle = col;
+          ctx.lineWidth = lineW;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      function emitFront(fronts, x, y, t, maxLen) {
+        fronts.push({ x: x, y: y, t: t });
+        while (fronts.length > maxLen) fronts.shift();
+      }
+
+      function drawMotionArrow(ctx, x, y, dir, color) {
+        ctx.fillStyle = color;
+        ctx.font = "bold 22px Inter, sans-serif";
+        ctx.fillText(dir > 0 ? "→" : "←", x + (dir > 0 ? 48 : -58), y - 28);
+      }
+
+      function drawLabelBox(ctx, x, y, text, color) {
+        ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+        var tw = ctx.measureText(text).width;
+        ctx.fillStyle = "rgba(7,11,20,0.75)";
+        ctx.fillRect(x - 4, y - 14, tw + 8, 20);
+        ctx.fillStyle = color;
+        ctx.fillText(text, x, y);
+      }
+
+      // ── §2 近づく（大きく動く救急車） ──
+      function updateApproach(dt, w, h) {
+        approachT += dt * DEMO_TRAVEL_SPEED;
+        if (approachT > 1.05) {
+          approachT = 0;
+          approachFronts.length = 0;
+          approachLastEmit = animT;
+        }
+        var obsX = w * 0.14;
+        var midY = h * 0.55;
+        var startX = w * 0.92;
+        var endX = obsX + 90;
+        var srcX = startX + (endX - startX) * Math.min(1, approachT);
+        if (animT - approachLastEmit > 0.22) {
+          emitFront(approachFronts, srcX, midY, animT, 16);
+          approachLastEmit = animT;
+        }
+        return { obsX: obsX, srcX: srcX, midY: midY, dir: -1 };
+      }
+
+      function drawApproach(view) {
+        var ctx = view.ctx, w = view.w, h = view.h;
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+        var st = updateApproach(lastDt, w, h);
+        var vWave = waveSpeedPx();
+
+        drawWavefrontSet(ctx, approachFronts, st.srcX, st.midY, animT, vWave, st.dir, Math.max(w, h), 2.2);
+        drawObserver(ctx, st.obsX, st.midY, 1.15);
+        drawAmbulance(ctx, st.srcX, st.midY, st.dir, 1.2);
+        drawMotionArrow(ctx, st.srcX, st.midY, st.dir, "#f87171");
+        drawLabelBox(ctx, w * 0.28, 28, "近づく → 波面が密 → λ 短 → f′ 高", "#fca5a5");
+      }
+
+      // ── §3 遠ざかる ──
+      function updateRecede(dt, w, h) {
+        recedeT += dt * DEMO_TRAVEL_SPEED;
+        if (recedeT > 1.05) {
+          recedeT = 0;
+          recedeFronts.length = 0;
+          recedeLastEmit = animT;
+        }
+        var obsX = w * 0.14;
+        var midY = h * 0.55;
+        var startX = obsX + 100;
+        var endX = w * 0.92;
+        var srcX = startX + (endX - startX) * Math.min(1, recedeT);
+        if (animT - recedeLastEmit > 0.28) {
+          emitFront(recedeFronts, srcX, midY, animT, 14);
+          recedeLastEmit = animT;
+        }
+        return { obsX: obsX, srcX: srcX, midY: midY, dir: 1 };
+      }
+
+      function drawRecede(view) {
+        var ctx = view.ctx, w = view.w, h = view.h;
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+        var st = updateRecede(lastDt, w, h);
+        drawWavefrontSet(ctx, recedeFronts, st.srcX, st.midY, animT, waveSpeedPx(), st.dir, Math.max(w, h), 2.2);
+        drawObserver(ctx, st.obsX, st.midY, 1.15);
+        drawAmbulance(ctx, st.srcX, st.midY, st.dir, 1.2);
+        drawMotionArrow(ctx, st.srcX, st.midY, st.dir, "#818cf8");
+        drawLabelBox(ctx, w * 0.28, 28, "遠ざかる → 波面が疎 → λ 長 → f′ 低", "#a5b4fc");
+      }
+
+      // ── §4 ドラッグ可能な波面図 ──
+      function initDragPos(w, h) {
+        if (dragX === null) {
+          dragX = w * 0.45;
+          dragY = h * 0.52;
+        }
+      }
+
+      function updateDragEmit() {
+        if (animT - dragLastEmit > 0.18) {
+          emitFront(dragFronts, dragX, dragY, animT, 22);
+          dragLastEmit = animT;
+        }
+      }
+
+      function drawWavefrontDiagram(view) {
+        var ctx = view.ctx, w = view.w, h = view.h;
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+        initDragPos(w, h);
+        updateDragEmit();
+
+        var vWave = waveSpeedPx();
+        var velDir = dragVelX > 15 ? 1 : dragVelX < -15 ? -1 : 1;
+        drawWavefrontSet(ctx, dragFronts, dragX, dragY, animT, vWave, velDir, Math.max(w, h), 2.4);
+
+        if (Math.abs(dragVelX) > 15) {
+          drawMotionArrow(ctx, dragX, dragY, velDir, "#f87171");
+        }
+
+        drawAmbulance(ctx, dragX, dragY, velDir, 1.35);
+
+        if (isDragging) {
+          ctx.strokeStyle = "rgba(253,230,138,0.6)";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.arc(dragX, dragY, AMB_HIT_R + 8, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        var frontLabelX = velDir > 0 ? w * 0.68 : w * 0.08;
+        var backLabelX = velDir > 0 ? w * 0.08 : w * 0.68;
+        drawLabelBox(ctx, frontLabelX, 28, "前方（密 · 高 f′）", "#fca5a5");
+        drawLabelBox(ctx, backLabelX, 28, "後方（疎 · 低 f′）", "#a5b4fc");
+        drawLabelBox(ctx, w * 0.32, h - 16, isDragging ? "ドラッグ中…" : "🚑 をドラッグして動かす", "#94a3b8");
+      }
+
+      function canvasPointerPos(canvas, e) {
+        var rect = canvas.getBoundingClientRect();
+        var cx = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        var cy = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        return { x: cx - rect.left, y: cy - rect.top };
+      }
+
+      function hitAmbulance(px, py) {
+        var dx = px - dragX, dy = py - dragY;
+        return dx * dx + dy * dy <= (AMB_HIT_R + 12) * (AMB_HIT_R + 12);
+      }
+
+      function onDragStart(e) {
+        var pos = canvasPointerPos(wavefrontCanvas, e);
+        initDragPos(wavefrontCanvas.parentElement.clientWidth, 400);
+        if (!hitAmbulance(pos.x, pos.y)) return;
+        isDragging = true;
+        dragPointerId = e.pointerId !== undefined ? e.pointerId : 0;
+        wavefrontWrap.classList.add("dragging");
+        if (wavefrontCanvas.setPointerCapture && e.pointerId !== undefined) {
+          wavefrontCanvas.setPointerCapture(e.pointerId);
+        }
+        e.preventDefault();
+      }
+
+      function onDragMove(e) {
+        if (!isDragging) return;
+        var pos = canvasPointerPos(wavefrontCanvas, e);
+        var dt = 0.016;
+        dragVelX = (pos.x - dragX) / dt;
+        dragX = Math.max(AMB_HIT_R + 10, Math.min(wavefrontCanvas.parentElement.clientWidth - AMB_HIT_R - 10, pos.x));
+        dragY = Math.max(50, Math.min(wavefrontCanvas.parentElement.clientHeight - 30, pos.y));
+        e.preventDefault();
+      }
+
+      function onDragEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        wavefrontWrap.classList.remove("dragging");
+        setTimeout(function () { dragVelX *= 0.3; }, 50);
+      }
+
+      wavefrontCanvas.addEventListener("pointerdown", onDragStart);
+      wavefrontCanvas.addEventListener("pointermove", onDragMove);
+      wavefrontCanvas.addEventListener("pointerup", onDragEnd);
+      wavefrontCanvas.addEventListener("pointercancel", onDragEnd);
+      wavefrontCanvas.addEventListener("mousedown", function (e) {
+        if (e.button !== 0) return;
+        onDragStart(e);
+        function mm(ev) { onDragMove(ev); }
+        function mu() {
+          window.removeEventListener("mousemove", mm);
+          window.removeEventListener("mouseup", mu);
+          onDragEnd({});
+        }
+        window.addEventListener("mousemove", mm);
+        window.addEventListener("mouseup", mu);
+      });
+
+      // ── §8 メインシミュレーション（§4 と同じ波紋サイズ · 移動速度スライダー） ──
+      function updateSimulation(dt, w, h) {
+        sourceNorm += simTravelSpeed * sourceDir * dt;
+        if (sourceNorm < 0.1) { sourceNorm = 0.1; sourceDir = 1; }
+        if (sourceNorm > 0.9) { sourceNorm = 0.9; sourceDir = -1; }
+
+        // §4 と同じ間隔で波紋を生成 → 見た目の大きさが一致
+        if (animT - simLastEmit >= SIM_EMIT_INTERVAL) {
+          simFronts.push({ x: sourceNorm * w, y: h * 0.5, t: animT });
+          simLastEmit = animT;
+          if (simFronts.length > 22) simFronts.shift();
+        }
+
+        var vWave = waveSpeedPx();
+        var obsX = observerNorm * w;
+        var srcX = sourceNorm * w;
+        var vPx = getSourceVelocityPx(w);
+
+        for (var i = 0; i < simFronts.length; i++) {
+          var wf = simFronts[i];
+          if (wf.hit) continue;
+          var r = vWave * (animT - wf.t);
+          var dist = Math.abs(wf.x - obsX);
+          if (r >= dist) {
+            wf.hit = true;
+            arrivalMarks.push({ t: animT, approaching: isApproaching(srcX, vPx, obsX) });
+            if (arrivalMarks.length > 24) arrivalMarks.shift();
+          }
+        }
+      }
+
+      function drawSim(view) {
+        var ctx = view.ctx, w = view.w, h = view.h;
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+
+        var midY = h * 0.5;
+        var obsX = observerNorm * w;
+        var srcX = sourceNorm * w;
+        var st = getSourceState(w);
+        var fPrime = getObservedFrequency(w);
+
+        drawWavefrontSet(ctx, simFronts, srcX, midY, animT, waveSpeedPx(), sourceDir, Math.max(w, h), 2.4);
+
+        var markY = h * 0.82;
+        ctx.strokeStyle = "rgba(148,163,184,0.45)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(obsX, markY - 30);
+        ctx.lineTo(obsX, markY + 10);
+        ctx.stroke();
+        for (var j = 0; j < arrivalMarks.length; j++) {
+          var age = animT - arrivalMarks[j].t;
+          if (age > 2.5) continue;
+          var alpha = 1 - age / 2.5;
+          ctx.fillStyle = arrivalMarks[j].approaching ? "rgba(248,113,113," + alpha + ")" : "rgba(129,140,248," + alpha + ")";
+          ctx.fillRect(obsX - 5, markY - age * 18, 10, 6);
+        }
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("到達間隔", obsX, markY + 24);
+        ctx.textAlign = "left";
+
+        drawObserver(ctx, obsX, midY, 1.25);
+        drawAmbulance(ctx, srcX, midY, sourceDir, 1.35);
+        drawMotionArrow(ctx, srcX, midY, sourceDir, sourceDir > 0 ? "#f87171" : "#818cf8");
+
+        drawLabelBox(ctx, w * 0.38, 32, st.approaching ? "近づいている → f′ 高" : "遠ざかっている → f′ 低", st.approaching ? "#fca5a5" : "#a5b4fc");
+        drawLabelBox(ctx, w * 0.38, 54, "f′ = " + Math.round(fPrime) + " Hz  ·  v_s = " + vsPhys + " m/s", "#fde68a");
+        drawLabelBox(ctx, w * 0.38, 76, "移動速度 " + Math.round(simTravelSpeed * 100) + "%", "#94a3b8");
+      }
+
+      function simSpeedLabel(pct) {
+        if (pct <= 15) return pct + " — とても遅い";
+        if (pct <= 35) return pct + " — やや遅め";
+        if (pct <= 60) return pct + " — 普通";
+        if (pct <= 85) return pct + " — 速い";
+        return pct + " — とても速い";
+      }
+
+      // ── Web Audio（§8 の 🚑 運動と同期 · 連続ドップラー） ──
+      function ensureAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+      }
+
+      function updateAudioFrequency() {
+        if (!isPlaying || !oscillator || !gainNode || !audioCtx) return;
+        var w = simCanvas.parentElement.clientWidth || 800;
+        var fPrime = Math.max(30, Math.min(4000, getObservedFrequency(w)));
+        var t = audioCtx.currentTime;
+        oscillator.frequency.setTargetAtTime(fPrime, t, 0.012);
+        gainNode.gain.setTargetAtTime(getAudioGain(), t, 0.05);
+      }
+
+      function startAudio() {
+        var ctx = ensureAudio();
+        if (ctx.state === "suspended") ctx.resume();
+        stopAudio(false);
+
+        oscillator = ctx.createOscillator();
+        gainNode = ctx.createGain();
+        oscillator.type = audioMode === "ambulance" ? "triangle" : "triangle";
+        gainNode.gain.value = 0;
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        var w = simCanvas.parentElement.clientWidth || 800;
+        var t = ctx.currentTime;
+        oscillator.frequency.setValueAtTime(Math.max(30, getObservedFrequency(w)), t);
+        gainNode.gain.setTargetAtTime(getAudioGain(), t, 0.08);
+        oscillator.start();
+
+        isPlaying = true;
+        document.getElementById("outPlayState").textContent = "再生中（ドップラー同期）";
+        document.getElementById("playBtn").classList.add("active");
+      }
+
+      function stopAudio(clearState) {
+        if (clearState === undefined) clearState = true;
+        if (oscillator) {
+          try { oscillator.stop(); } catch (err) { /* noop */ }
+          oscillator.disconnect();
+          oscillator = null;
+        }
+        if (gainNode) {
+          gainNode.disconnect();
+          gainNode = null;
+        }
+        if (clearState) {
+          isPlaying = false;
+          document.getElementById("outPlayState").textContent = "停止";
+          document.getElementById("playBtn").classList.remove("active");
+        }
+      }
+
+      function updateReadouts(w) {
+        w = w || 800;
+        fBase = Number(document.getElementById("fSlider").value);
+        vsPhys = Number(document.getElementById("vsSlider").value);
+        tempC = Number(document.getElementById("tempSlider").value);
+        sirenPeriod = Number(document.getElementById("sirenPeriodSlider").value);
+        var simPct = Number(document.getElementById("simSpeedSlider").value);
+        simTravelSpeed = simPct / 100;
+
+        document.getElementById("vsVal").textContent = vsPhys + " m/s";
+        document.getElementById("fVal").textContent = fBase + " Hz";
+        document.getElementById("tempVal").textContent = tempC + " ℃";
+        document.getElementById("sirenPeriodVal").textContent = sirenPeriod.toFixed(2) + " s";
+        document.getElementById("simSpeedVal").textContent = simSpeedLabel(simPct);
+
+        var v = soundSpeed();
+        var st = getSourceState(w);
+        var fPrime = getObservedFrequency(w);
+        var fPrimeBin = dopplerFprime(fBase, vsPhys, st.approaching);
+        var sign = st.approaching ? "−" : "+";
+
+        document.getElementById("outF").textContent = fBase + " Hz";
+        document.getElementById("outV").textContent = v.toFixed(0) + " m/s";
+        document.getElementById("outVs").textContent = vsPhys + " m/s";
+        document.getElementById("outFprime").textContent = Math.round(fPrimeBin) + " Hz";
+        document.getElementById("outFprimeSim").textContent = Math.round(fPrime) + " Hz";
+        document.getElementById("outMotion").textContent = st.approaching ? "近づく" : "遠ざかる";
+        document.getElementById("outLambda").textContent = (v / fPrime).toFixed(2) + " m";
+        document.getElementById("outPeriod").textContent = (1000 / fPrime).toFixed(2) + " ms";
+        document.getElementById("liveFormula").textContent =
+          "f′ ＝ " + fBase + " × " + v.toFixed(0) + " / (" + v.toFixed(0) + " " + sign + " " + vsPhys + ") ≈ " + Math.round(fPrimeBin) + " Hz（再生：" + Math.round(fPrime) + " Hz）";
+        document.getElementById("outAudioMode").textContent = audioMode === "ambulance" ? "救急車サイレン" : "通常";
+        document.getElementById("outBaseF").textContent = audioMode === "ambulance"
+          ? getCurrentBaseF() + " Hz（f₁/f₂切替）" : fBase + " Hz";
+        document.getElementById("outPlayF").textContent = Math.round(isPlaying ? getObservedFrequency(w) : fPrime) + " Hz";
+        document.getElementById("modeNormalBtn").classList.toggle("active", audioMode === "normal");
+        document.getElementById("modeAmbulanceBtn").classList.toggle("active", audioMode === "ambulance");
+        document.getElementById("sirenParams").style.display = audioMode === "ambulance" ? "grid" : "none";
+        document.getElementById("audioHint").textContent = audioMode === "ambulance"
+          ? "救急車モード：f₁=" + SIREN_F1 + " · f₂=" + SIREN_F2 + " Hz を交互に、§8 の 🚑 通過で f′ が連続変化。"
+          : "▶ 再生中は §8 の 🚑 運動と同期。近づくと高く、通過後に低く聞こえます。v_s を上げると変化が大きくなります。";
+      }
+
+      ["vsSlider", "fSlider", "tempSlider", "sirenPeriodSlider", "simSpeedSlider"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", function () {
+          updateReadouts(simCanvas.parentElement.clientWidth);
+          updateAudioFrequency();
+        });
+      });
+
+      document.getElementById("modeNormalBtn").addEventListener("click", function () {
+        audioMode = "normal";
+        updateReadouts(simCanvas.parentElement.clientWidth);
+        updateAudioFrequency();
+      });
+      document.getElementById("modeAmbulanceBtn").addEventListener("click", function () {
+        audioMode = "ambulance";
+        updateReadouts(simCanvas.parentElement.clientWidth);
+        updateAudioFrequency();
+      });
+      document.getElementById("playBtn").addEventListener("click", startAudio);
+      document.getElementById("stopBtn").addEventListener("click", function () { stopAudio(true); });
+
+      window.addEventListener("resize", function () {
+        dragX = null;
+        dragY = null;
+      });
+
+      function frame(ts) {
+        if (!lastTs) lastTs = ts;
+        var dt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+        lastDt = dt;
+        animT += dt;
+        if (!isDragging) dragVelX *= 0.92;
+
+        var simView = fitCanvas(simCanvas, "sim");
+        updateSimulation(dt, simView.w, simView.h);
+        drawApproach(fitCanvas(approachCanvas, "demo"));
+        drawRecede(fitCanvas(recedeCanvas, "demo"));
+        drawWavefrontDiagram(fitCanvas(wavefrontCanvas, "tall"));
+        drawSim(simView);
+        updateReadouts(simView.w);
+        if (isPlaying) updateAudioFrequency();
+        requestAnimationFrame(frame);
+      }
+
+      document.getElementById("runStatus").textContent =
+        "ドップラー効果 — §4 は 🚑 ドラッグ · §8 は大画面シミュレーション";
+      updateReadouts(800);
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>18章 光の散乱と偏光</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8;
+      --accent-light: #a5b4fc;
+      --accent-glow: rgba(129, 140, 248, 0.35);
+      --panel: rgba(8, 12, 28, 0.92);
+      --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a0a18 45%, #0c0814 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px; border-radius: 16px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(56,189,248,0.3), rgba(244,114,182,0.25));
+      border: 1px solid rgba(165,180,252,0.45);
+      box-shadow: 0 0 24px var(--accent-glow);
+      font-size: 1.4rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: var(--accent-light); font-size: clamp(1.1rem, 3vw, 1.35rem); }
+    .tagline { margin: 0; font-size: 0.86rem; color: #c7d2fe; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(165,180,252,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(129,140,248,0.1));
+      border: 1px solid rgba(129,140,248,0.32);
+    }
+    .formula-main { font-size: 0.88rem; font-weight: 800; color: #e0e7ff; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud";
+    }
+    @media (min-width: 980px) {
+      .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: #060810; border: 1px solid rgba(129,140,248,0.32);
+    }
+    .viz-head {
+      padding: 10px 14px 0; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0e7ff; }
+    .mode-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+    .mode-tab {
+      padding: 6px 11px; font-size: 0.68rem; font-weight: 700; border-radius: 8px; cursor: pointer;
+      border: 1px solid rgba(129,140,248,0.35); background: rgba(255,255,255,0.05); color: #94a3b8;
+      font-family: inherit;
+    }
+    .mode-tab.active {
+      background: rgba(129,140,248,0.28); color: #e0e7ff;
+      border-color: rgba(129,140,248,0.6); box-shadow: 0 0 12px rgba(129,140,248,0.2);
+    }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; font-weight: 600; color: #e2e8f0;
+    }
+    .color-chip {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+      box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3);
+    }
+    .canvas-wrap { position: relative; background: #04060c; }
+    #simCanvas {
+      display: block; width: 100%;
+      height: min(520px, 52dvh); min-height: 380px;
+    }
+    .canvas-badge {
+      position: absolute; z-index: 4; pointer-events: none;
+      padding: 6px 10px; border-radius: 8px;
+      background: rgba(2,6,23,0.96); border: 1px solid rgba(129,140,248,0.55);
+      font-size: 0.66rem; font-weight: 700; line-height: 1.45; color: #e0e7ff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55); max-width: min(200px, 38vw);
+    }
+    .canvas-badge.top-left { top: 10px; left: 10px; }
+    .canvas-badge.top-right { top: 10px; right: 10px; text-align: right; }
+    .legend-bar {
+      display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.1);
+      background: rgba(2,6,23,0.5);
+    }
+    .legend-bar span {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.72rem; color: #cbd5e1;
+    }
+    .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+    .viz-foot {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.1);
+      font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+      background: rgba(129,140,248,0.06);
+    }
+    .viz-foot strong { color: #fde68a; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(129,140,248,0.2);
+      display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto; max-height: min(780px, 85dvh);
+    }
+    .hud-title { margin: 0; font-size: 0.92rem; font-weight: 800; color: var(--accent-light); }
+    .hud-section { font-size: 0.66rem; font-weight: 800; color: #a5b4fc; margin: 2px 0; }
+    .hud-card {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(129,140,248,0.45); background: rgba(49,46,129,0.18); }
+    .hud-card .lbl { font-size: 0.62rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+    .hud-card .val { font-size: 0.88rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hud-card .val.big { font-size: 1.15rem; color: #fde68a; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label {
+      font-size: 0.72rem; color: #94a3b8; font-weight: 600;
+      display: flex; justify-content: space-between; margin: 0;
+    }
+    .slider-row input[type=range] { width: 100%; accent-color: var(--accent); height: 8px; }
+    .toggle-row label {
+      display: flex; align-items: center; gap: 8px; font-size: 0.78rem;
+      color: #cbd5e1; cursor: pointer; margin: 0;
+    }
+    .toggle-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .param-cell.hidden { display: none; }
+    .status-msg {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; line-height: 1.6;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.22); color: #c7d2fe;
+    }
+    .edu-list { margin: 0; padding-left: 1.2rem; font-size: 0.84rem; line-height: 1.75; color: #cbd5e1; }
+    .edu-list li { margin-bottom: 6px; }
+    .edu-list strong { color: #fde68a; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">🌤️</div>
+      <p class="chapter-label">第18章 — 光の性質</p>
+      <h2>光の散乱と偏光</h2>
+      <p class="tagline">レイリー散乱 · 偏光板 · マリュスの法則 · 偏光サングラス</p>
+      <a id="back" href="../00_folder_waves.html#chapter-18">← メニューに戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">レイリー散乱 <strong>∝ 1/λ⁴</strong>　·　マリュス <strong>I = I₀ cos²θ</strong></div>
+        <div class="formula-sub">短い波長ほど散る → 空は青 · 偏光板の軸と振動方向のなす角 θ で透過が変わる</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head">
+              <p class="viz-label" id="vizLabel">光の散乱ビジュアル</p>
+              <div class="mode-tabs">
+                <button type="button" class="mode-tab active" data-mode="scatter">① レイリー散乱</button>
+                <button type="button" class="mode-tab" data-mode="polar">② 偏光板</button>
+                <button type="button" class="mode-tab" data-mode="combined">③ 空＋サングラス</button>
+              </div>
+            </div>
+            <div class="color-legend" id="colorLegend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>青い光（強く散乱）</span>
+              <span><i class="color-chip" style="background:#ef4444;color:#ef4444"></i>赤い光（直進）</span>
+              <span><i class="color-chip" style="background:#fde68a;color:#fde68a"></i>太陽光</span>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="simCanvas" aria-label="光の散乱と偏光シミュレーション"></canvas>
+              <div class="canvas-badge top-left" id="badgeStory">—</div>
+              <div class="canvas-badge top-right" id="badgeFormula">—</div>
+            </div>
+            <div class="legend-bar" id="legendBar">
+              <span><span class="legend-dot" style="background:#38bdf8;box-shadow:0 0 8px #38bdf8"></span>散った青 → 上を見ると空が青</span>
+              <span><span class="legend-dot" style="background:#ef4444;box-shadow:0 0 8px #ef4444"></span>夕方は光の道が長い → 赤だけ残る</span>
+            </div>
+            <div class="viz-foot" id="vizFoot">—</div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <h3 class="hud-title">操作パネル</h3>
+            <div class="hud-grid">
+              <div class="hud-card highlight">
+                <div class="lbl">いまのモード</div>
+                <div class="val big" id="readMode">—</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">空の色</div>
+                <div class="val" id="readSky">—</div>
+              </div>
+              <div class="hud-card" id="cardScatter">
+                <div class="lbl">青/赤 散乱比</div>
+                <div class="val" id="readScatter">—</div>
+              </div>
+              <div class="hud-card" id="cardTrans">
+                <div class="lbl">透過 I/I₀</div>
+                <div class="val" id="readTrans">—</div>
+              </div>
+            </div>
+
+            <div class="hud-section">パラメータ</div>
+            <div class="slider-row param-cell" id="cellScatter">
+              <label>散乱の強さ <span id="scatterVal">1.0×</span></label>
+              <input type="range" id="scatterSlider" min="10" max="300" step="5" value="100">
+            </div>
+            <div class="slider-row param-cell" id="cellSun">
+              <label>太陽の高さ <span id="sunVal">60°</span></label>
+              <input type="range" id="sunSlider" min="5" max="90" step="1" value="60">
+            </div>
+            <div class="slider-row param-cell" id="cellDensity">
+              <label>大気の量 <span id="densityVal">1.0×</span></label>
+              <input type="range" id="densitySlider" min="50" max="200" step="5" value="100">
+            </div>
+            <div class="slider-row param-cell" id="cellPolar">
+              <label>偏光板 θ <span id="polarVal">0°</span></label>
+              <input type="range" id="polarSlider" min="0" max="90" step="1" value="0">
+            </div>
+            <div class="toggle-row param-cell" id="malusRow">
+              <label><input type="checkbox" id="malusToggle" checked> マリュスの法則 ON</label>
+            </div>
+
+            <p class="status-msg" id="statusMsg">—</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 style="margin:0 0 10px;font-size:1rem;color:var(--accent-light)">ポイント</h3>
+      <ul class="edu-list" id="eduList">
+        <li><strong>レイリー散乱</strong>：波長が短いほど散りやすい（∝ 1/λ⁴）。太陽光の<strong>青</strong>が散って目に入るから空は青。</li>
+        <li>空の色は<strong>太陽の高さ</strong>で変わる（夕方は光の道が長く赤が残る）。青と赤の散乱の差は右のグラフ（450nm vs 650nm）。</li>
+        <li><strong>偏光</strong>：振動が一方向にそろった光。偏光板で <strong>I = I₀ cos²θ</strong>（マリュス）。</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var canvas = document.getElementById("simCanvas");
+      var ctx = canvas.getContext("2d");
+
+      var mode = "scatter";
+      var LAM_BLUE = 450;
+      var LAM_RED = 650;
+      var scatterMult = 1;
+      var sunAlt = 60;
+      var density = 1;
+      var polarDeg = 0;
+      var malusOn = true;
+      var animT = 0;
+      var cw = 600;
+      var ch = 400;
+      var particles = [];
+      var lastScatterKey = "";
+
+      function readParams() {
+        scatterMult = parseInt(document.getElementById("scatterSlider").value, 10) / 100;
+        sunAlt = parseInt(document.getElementById("sunSlider").value, 10);
+        density = parseInt(document.getElementById("densitySlider").value, 10) / 100;
+        polarDeg = parseInt(document.getElementById("polarSlider").value, 10);
+        malusOn = document.getElementById("malusToggle").checked;
+      }
+
+      function scatterIntensityFactor() {
+        return scatterMult * density;
+      }
+
+      function rayleighStrength(lambda) {
+        return scatterMult * density * Math.pow(550 / lambda, 4);
+      }
+
+      function pathFactor() {
+        return Math.min(10, 1 / Math.max(Math.sin(sunAlt * Math.PI / 180), 0.08));
+      }
+
+      function transmission() {
+        if (!malusOn) return 1;
+        return Math.pow(Math.cos(polarDeg * Math.PI / 180), 2);
+      }
+
+      function transmissionCombined() {
+        if (!malusOn) return 1;
+        var a = (90 - polarDeg) * Math.PI / 180;
+        return Math.pow(Math.cos(a), 2);
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function lerpColor(c1, c2, t) {
+        return {
+          r: Math.round(lerp(c1.r, c2.r, t)),
+          g: Math.round(lerp(c1.g, c2.g, t)),
+          b: Math.round(lerp(c1.b, c2.b, t))
+        };
+      }
+
+      function skyColor() {
+        var pf = pathFactor();
+        var altNorm = Math.max(0, Math.min(1, 1 - sunAlt / 32));
+        var pathNorm = Math.max(0, Math.min(1, (pf - 1) / 7));
+        var t = Math.min(1, altNorm * 0.7 + pathNorm * 0.45);
+        if (sunAlt < 10) t = Math.min(1, t + 0.2);
+
+        var zenithClear = { r: 25, g: 95, b: 198 };
+        var horizonClear = { r: 135, g: 190, b: 238 };
+        var zenithSunset = { r: 62, g: 78, b: 138 };
+        var horizonSunset = { r: 248, g: 118, b: 52 };
+        var zenithSunward = { r: 48, g: 88, b: 168 };
+        var horizonSunward = { r: 255, g: 96, b: 48 };
+
+        var zenithUp = lerpColor(zenithClear, zenithSunset, t);
+        var horizonUp = lerpColor(horizonClear, horizonSunset, t);
+        var zenithToward = lerpColor(zenithClear, zenithSunward, t * 0.85);
+        var horizonToward = lerpColor(horizonClear, horizonSunward, Math.min(1, t * 1.15));
+        var sun = lerpColor({ r: 255, g: 250, b: 225 }, { r: 255, g: 168, b: 48 }, t);
+
+        return {
+          zenithUp: zenithUp,
+          horizonUp: horizonUp,
+          zenithToward: zenithToward,
+          horizonToward: horizonToward,
+          sun: sun,
+          t: t,
+          r: zenithUp.r,
+          g: zenithUp.g,
+          b: zenithUp.b
+        };
+      }
+
+      function wavelengthToRGB(lambda) {
+        var r = 0, g = 0, b = 0;
+        if (lambda < 450) { r = (450 - lambda) / 70; b = 1; }
+        else if (lambda < 495) { g = (lambda - 450) / 45; b = 1; }
+        else if (lambda < 570) { r = (lambda - 495) / 75; g = 1; b = 1 - (lambda - 495) / 75; }
+        else if (lambda < 590) { r = 1; g = 1 - (lambda - 570) / 20 * 0.35; }
+        else if (lambda < 620) { r = 1; g = 0.65 - (lambda - 590) / 30 * 0.45; }
+        else { r = 1; g = Math.max(0, 0.2 - (lambda - 620) / 160 * 0.2); }
+        var fade = 1;
+        if (lambda < 420) fade = 0.3 + 0.7 * (lambda - 380) / 40;
+        if (lambda > 700) fade = 0.3 + 0.7 * (780 - lambda) / 80;
+        return {
+          r: Math.round(255 * Math.pow(r * fade, 0.85)),
+          g: Math.round(255 * Math.pow(g * fade, 0.85)),
+          b: Math.round(255 * Math.pow(b * fade, 0.85))
+        };
+      }
+
+      function rgbStr(c, a) {
+        return "rgba(" + c.r + "," + c.g + "," + c.b + "," + (a !== undefined ? a : 1) + ")";
+      }
+
+      function colorName(lam) {
+        if (lam < 450) return "紫";
+        if (lam < 495) return "青";
+        if (lam < 570) return "緑";
+        if (lam < 590) return "黄";
+        if (lam < 620) return "橙";
+        return "赤";
+      }
+
+      function fitCanvas() {
+        var rect = canvas.getBoundingClientRect();
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        cw = Math.max(320, rect.width || 600);
+        ch = Math.max(380, rect.height || 400);
+        canvas.width = Math.floor(cw * dpr);
+        canvas.height = Math.floor(ch * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function fs(base) {
+        return Math.round(Math.max(base, Math.min(cw, ch) * 0.024));
+      }
+
+      function roundRect(x, y, w, h, r) {
+        var rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
+
+      function drawBadge(x, y, text, opts) {
+        opts = opts || {};
+        var size = opts.size || fs(11);
+        var padX = opts.padX || 8;
+        var padY = opts.padY || 5;
+        var align = opts.align || "left";
+        ctx.font = "700 " + size + "px Noto Sans JP, sans-serif";
+        var tw = ctx.measureText(text).width;
+        var bw = tw + padX * 2;
+        var bh = size + padY * 2;
+        var bx = x;
+        if (align === "center") bx = x - bw / 2;
+        if (align === "right") bx = x - bw;
+        roundRect(bx, y, bw, bh, 6);
+        ctx.fillStyle = opts.bg || "rgba(2,6,23,0.94)";
+        ctx.fill();
+        ctx.strokeStyle = opts.border || "rgba(129,140,248,0.4)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = opts.color || "#e2e8f0";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(text, bx + padX, y + padY + size * 0.82);
+      }
+
+      function drawSectionHeader(x, y, text, accent) {
+        drawBadge(x, y, text, {
+          bg: accent, border: "transparent", color: "#0f172a", size: fs(12), padX: 10, padY: 6
+        });
+      }
+
+      function drawArrow(x1, y1, x2, y2, color, w, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha !== undefined ? alpha : 1;
+        var ang = Math.atan2(y2 - y1, x2 - x1);
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = w || 2.5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - Math.cos(ang - 0.42) * 10, y2 - Math.sin(ang - 0.42) * 10);
+        ctx.lineTo(x2 - Math.cos(ang + 0.42) * 10, y2 - Math.sin(ang + 0.42) * 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawEfieldOsc(cx, cy, amp, axisDeg, color, alpha, phaseOff) {
+        if (alpha < 0.04) return;
+        var pulse = 0.7 + 0.3 * Math.sin(animT * 5.5 + (phaseOff || 0));
+        var len = amp * pulse;
+        var rad = axisDeg * Math.PI / 180;
+        var dx = Math.cos(rad) * len;
+        var dy = Math.sin(rad) * len;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = alpha > 0.45 ? 10 : 0;
+        for (var i = -1; i <= 1; i++) {
+          var px = -Math.sin(rad) * i * 15;
+          var py = Math.cos(rad) * i * 15;
+          ctx.beginPath();
+          ctx.moveTo(cx + px - dx, cy + py - dy);
+          ctx.lineTo(cx + px + dx, cy + py + dy);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      function drawLightBeam(x0, y0, x1, y1, color, alpha, width, phaseOff) {
+        if (alpha < 0.05) return;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.35;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width || 8;
+        ctx.lineCap = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        var t = (animT * 0.45 + (phaseOff || 0)) % 1;
+        var px = x0 + (x1 - x0) * t;
+        var py = y0 + (y1 - y0) * t;
+        ctx.globalAlpha = alpha * (0.55 + 0.45 * Math.sin(animT * 6));
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(px, py, 4 + alpha * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawPolarizerDetailed(cx, cy, w, h, angleDeg) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angleDeg * Math.PI / 180);
+
+        roundRect(-w / 2 - 6, -h / 2 - 6, w + 12, h + 12, 10);
+        ctx.fillStyle = "rgba(15,23,42,0.55)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        var g = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+        g.addColorStop(0, "rgba(30,41,59,0.98)");
+        g.addColorStop(0.35, "rgba(71,85,105,0.88)");
+        g.addColorStop(0.65, "rgba(51,65,85,0.9)");
+        g.addColorStop(1, "rgba(15,23,42,0.98)");
+        roundRect(-w / 2, -h / 2, w, h, 8);
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.strokeStyle = "#c7d2fe";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(248,113,113,0.28)";
+        ctx.lineWidth = 1.2;
+        for (var li = -5; li <= 5; li++) {
+          ctx.beginPath();
+          ctx.moveTo(li * 4.2, -h * 0.42);
+          ctx.lineTo(li * 4.2, h * 0.42);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(148,163,184,0.18)";
+        ctx.lineWidth = 1;
+        for (var gi = -4; gi <= 4; gi++) {
+          ctx.beginPath();
+          ctx.moveTo(-w * 0.38, gi * 3.5);
+          ctx.lineTo(w * 0.38, gi * 3.5);
+          ctx.stroke();
+        }
+
+        var glint = ctx.createLinearGradient(-w * 0.35, -h * 0.5, w * 0.15, h * 0.5);
+        glint.addColorStop(0, "rgba(255,255,255,0.16)");
+        glint.addColorStop(0.45, "rgba(255,255,255,0.03)");
+        glint.addColorStop(1, "rgba(255,255,255,0)");
+        roundRect(-w / 2 + 2, -h / 2 + 2, w * 0.55, h - 4, 6);
+        ctx.fillStyle = glint;
+        ctx.fill();
+
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 4.5;
+        ctx.shadowColor = "#fde68a";
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.4, 0);
+        ctx.lineTo(w * 0.4, 0);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.moveTo(w * 0.4, 0);
+        ctx.lineTo(w * 0.28, -5);
+        ctx.lineTo(w * 0.28, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        if (angleDeg > 3) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(251,191,36,0.55)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 4]);
+          ctx.beginPath();
+          ctx.arc(cx, cy, Math.min(30, w * 0.34), 0, angleDeg * Math.PI / 180);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#fde68a";
+          ctx.font = "700 " + fs(8) + "px Noto Sans JP, sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText("θ", cx + Math.min(30, w * 0.34) * 0.55, cy - 4);
+          ctx.restore();
+        }
+      }
+
+      function drawFieldDecomposition(cx, cy, amp, incAxisDeg, polAxisDeg, blockAmt) {
+        var rel = (incAxisDeg - polAxisDeg) * Math.PI / 180;
+        var cosA = Math.cos(rel);
+        var sinA = Math.sin(rel);
+        var parAmp = amp * Math.abs(cosA);
+        var perpAmp = amp * Math.abs(sinA);
+        var parDeg = polAxisDeg;
+        var perpDeg = polAxisDeg + 90;
+        var pulse = 0.72 + 0.28 * Math.sin(animT * 5.5);
+
+        drawEfieldOsc(cx, cy, amp * pulse, incAxisDeg, "#f8fafc", 0.35, 0);
+
+        if (parAmp > 2) {
+          drawEfieldOsc(cx, cy, parAmp * pulse, parDeg, "#fde68a", 0.88, 0.4);
+        }
+        if (blockAmt > 0.06 && perpAmp > 2) {
+          drawEfieldOsc(cx, cy, perpAmp * pulse, perpDeg, "#f87171", blockAmt * 0.72, 1.1);
+          ctx.save();
+          ctx.globalAlpha = blockAmt * 0.55;
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 2;
+          var pr = perpDeg * Math.PI / 180;
+          var px = Math.cos(pr) * perpAmp * pulse * 0.55;
+          var py = Math.sin(pr) * perpAmp * pulse * 0.55;
+          ctx.beginPath();
+          ctx.moveTo(cx + px - 5, cy + py - 5);
+          ctx.lineTo(cx + px + 5, cy + py + 5);
+          ctx.moveTo(cx + px + 5, cy + py - 5);
+          ctx.lineTo(cx + px - 5, cy + py + 5);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        var labelY = cy + amp + 16;
+        drawBadge(cx - 34, labelY, "∥ cosθ", {
+          align: "center", size: fs(7), color: "#fde68a",
+          bg: "rgba(49,46,129,0.75)", border: "rgba(251,191,36,0.35)"
+        });
+        if (blockAmt > 0.06) {
+          drawBadge(cx + 34, labelY, "⊥ sinθ", {
+            align: "center", size: fs(7), color: "#fecaca",
+            bg: "rgba(69,10,10,0.75)", border: "rgba(248,113,113,0.4)"
+          });
+        }
+      }
+
+      function drawIntensityPair(x, y, w, h, trans) {
+        roundRect(x, y, w, h, 6);
+        ctx.fillStyle = "rgba(15,23,42,0.72)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(148,163,184,0.28)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        drawBadge(x + w / 2, y - 4, "強度", {
+          align: "center", size: fs(8), color: "#cbd5e1",
+          bg: "rgba(2,6,23,0.85)", border: "rgba(148,163,184,0.3)"
+        });
+        var barW = (w - 18) / 2;
+        var baseY = y + h - 8;
+        var maxBarH = h - 22;
+        ctx.fillStyle = "rgba(148,163,184,0.18)";
+        ctx.fillRect(x + 6, baseY - maxBarH, barW, maxBarH);
+        ctx.fillRect(x + 12 + barW, baseY - maxBarH, barW, maxBarH);
+        var h0 = maxBarH;
+        var h1 = maxBarH * Math.max(0, Math.min(1, trans));
+        var g0 = ctx.createLinearGradient(0, baseY, 0, baseY - h0);
+        g0.addColorStop(0, "#94a3b8");
+        g0.addColorStop(1, "#e2e8f0");
+        ctx.fillStyle = g0;
+        ctx.fillRect(x + 6, baseY - h0, barW, h0);
+        var g1 = ctx.createLinearGradient(0, baseY, 0, baseY - h1);
+        g1.addColorStop(0, "#0284c7");
+        g1.addColorStop(1, "#38bdf8");
+        ctx.fillStyle = g1;
+        ctx.fillRect(x + 12 + barW, baseY - h1, barW, h1);
+        drawBadge(x + 6 + barW / 2, baseY + 6, "I₀", {
+          align: "center", size: fs(7), color: "#e2e8f0",
+          bg: "rgba(30,41,59,0.85)", border: "transparent"
+        });
+        drawBadge(x + 12 + barW + barW / 2, baseY + 6, (trans * 100).toFixed(0) + "%", {
+          align: "center", size: fs(7), color: "#7dd3fc",
+          bg: "rgba(8,47,73,0.85)", border: "transparent"
+        });
+      }
+
+      function drawMalusMiniChart(x, y, w, h, thetaDeg, trans) {
+        roundRect(x, y, w, h, 8);
+        ctx.fillStyle = "rgba(15,23,42,0.75)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(129,140,248,0.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        drawBadge(x + w / 2, y - 4, "I/I₀ = cos²θ", {
+          align: "center", size: fs(8), color: "#c7d2fe",
+          bg: "rgba(2,6,23,0.85)", border: "rgba(129,140,248,0.35)"
+        });
+        var padX = 10;
+        var padY = 8;
+        var gw = w - padX * 2;
+        var gh = h - padY * 2 - 8;
+        var gx = x + padX;
+        var gy = y + padY + 6;
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.beginPath();
+        ctx.moveTo(gx, gy + gh);
+        ctx.lineTo(gx + gw, gy + gh);
+        ctx.moveTo(gx, gy);
+        ctx.lineTo(gx, gy + gh);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(148,163,184,0.55)";
+        ctx.font = "600 " + fs(7) + "px Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("0°", gx, gy + gh + 10);
+        ctx.fillText("90°", gx + gw, gy + gh + 10);
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(56,189,248,0.85)";
+        ctx.lineWidth = 2;
+        for (var d = 0; d <= 90; d++) {
+          var tx = gx + (d / 90) * gw;
+          var ty = gy + gh - Math.pow(Math.cos(d * Math.PI / 180), 2) * gh;
+          if (d === 0) ctx.moveTo(tx, ty);
+          else ctx.lineTo(tx, ty);
+        }
+        ctx.stroke();
+        var mx = gx + (thetaDeg / 90) * gw;
+        var my = gy + gh - trans * gh;
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.arc(mx, my, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        drawBadge(mx, my - 12, thetaDeg + "° → " + trans.toFixed(2), {
+          align: "center", size: fs(7), color: "#0f172a",
+          bg: "rgba(253,224,71,0.92)", border: "transparent"
+        });
+      }
+
+      function drawMeter(x, y, w, h, ratio) {
+        roundRect(x, y, w, h, 4);
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.fill();
+        ctx.strokeStyle = "#64748b";
+        ctx.stroke();
+        var fillH = h * Math.max(0, Math.min(1, ratio));
+        var g = ctx.createLinearGradient(0, y + h, 0, y);
+        g.addColorStop(0, "#22c55e");
+        g.addColorStop(0.5, "#fbbf24");
+        g.addColorStop(1, "#ef4444");
+        ctx.fillStyle = g;
+        ctx.fillRect(x + 2, y + h - fillH + 2, w - 4, Math.max(0, fillH - 4));
+        drawBadge(x - 2, y - 22, "I/I₀", { size: fs(9), bg: "rgba(2,6,23,0.8)", border: "rgba(148,163,184,0.3)" });
+        drawBadge(x + w + 6, y + h * 0.5 - 10, (ratio * 100).toFixed(0) + "%", {
+          size: fs(11), color: "#fde68a", bg: "rgba(2,6,23,0.9)", border: "rgba(251,191,36,0.4)"
+        });
+      }
+
+      function drawSkyRect(x, y, w, h, sky, sunAltDeg, label) {
+        var sunLow = sunAltDeg < 28;
+        var lookingUp = label.indexOf("上") >= 0 || label === "なし" || label.indexOf("θ=") === 0;
+        var zenith = lookingUp ? sky.zenithUp : sky.zenithToward;
+        var horizon = lookingUp ? sky.horizonUp : sky.horizonToward;
+        var skyH = h * 0.82;
+        var grad = ctx.createLinearGradient(x, y, x, y + skyH);
+        grad.addColorStop(0, rgbStr(zenith));
+        grad.addColorStop(0.45, rgbStr(lerpColor(zenith, horizon, 0.35)));
+        grad.addColorStop(1, rgbStr(horizon));
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, w, skyH);
+        ctx.fillStyle = "#3d5c1f";
+        ctx.fillRect(x, y + skyH, w, h - skyH);
+        if (label.indexOf("太陽") >= 0) {
+          var sc = sky.sun;
+          ctx.save();
+          ctx.shadowColor = rgbStr(sc);
+          ctx.shadowBlur = sunLow ? 26 : 16;
+          ctx.fillStyle = rgbStr(sc);
+          ctx.beginPath();
+          ctx.arc(x + w * 0.72, y + skyH * (sunLow ? 0.62 : 0.32), sunLow ? 15 : 12, 0, Math.PI * 2);
+          ctx.fill();
+          if (sunLow) {
+            var glow = ctx.createRadialGradient(
+              x + w * 0.72, y + skyH * 0.62, 4,
+              x + w * 0.72, y + skyH * 0.62, skyH * 0.55
+            );
+            glow.addColorStop(0, "rgba(255,160,60,0.35)");
+            glow.addColorStop(1, "rgba(255,120,40,0)");
+            ctx.fillStyle = glow;
+            ctx.fillRect(x, y, w, skyH);
+          }
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+        drawBadge(x + w / 2, y + h * 0.72, label, {
+          align: "center", size: fs(9), bg: "rgba(2,6,23,0.88)", border: "rgba(129,140,248,0.35)"
+        });
+      }
+
+      function scatterBalance() {
+        var pf = pathFactor();
+        var pathNorm = Math.max(0, Math.min(1, (pf - 1) / 5.5));
+        var sBlue = rayleighStrength(LAM_BLUE);
+        var sRed = rayleighStrength(LAM_RED);
+        var effBlue = sBlue;
+        var effRed = sRed * (1 + pathNorm * 4.2);
+        var scatterSum = effBlue + effRed + 0.001;
+        var toEyeRed = effRed * (0.08 + pathNorm * 0.82);
+        var toEyeBlue = effBlue * (0.92 - pathNorm * 0.2);
+        var eyeSum = toEyeBlue + toEyeRed + 0.001;
+        return {
+          pathNorm: pathNorm,
+          pf: pf,
+          blueFrac: effBlue / scatterSum,
+          redFrac: effRed / scatterSum,
+          redDirect: Math.max(0.1, 1 - pathNorm * 0.9),
+          blueDirect: Math.max(0.08, 1 - pathNorm * 0.92),
+          eyeBlue: toEyeBlue / eyeSum,
+          eyeRed: toEyeRed / eyeSum,
+          blueBurst: 0.5 + (effBlue / scatterSum) * 0.5,
+          redBurst: Math.min(1, pathNorm * 1.15)
+        };
+      }
+
+      function spawnScatterParticles(beamPts, eyeX, eyeY, col, rateMul, toEyeMul) {
+        rateMul = rateMul === undefined ? 1 : rateMul;
+        toEyeMul = toEyeMul === undefined ? 1 : toEyeMul;
+        if (rateMul < 0.05) return;
+        var rate = (0.08 + 0.18 * scatterIntensityFactor()) * rateMul;
+        if (Math.random() > rate) return;
+        var pt = beamPts[Math.floor(Math.random() * beamPts.length)];
+        var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.6;
+        var spd = (0.35 + Math.random() * 0.7) * (0.7 + scatterIntensityFactor() * 0.3);
+        particles.push({
+          x: pt.x, y: pt.y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+          life: 1,
+          toEye: Math.random() < (0.16 + scatterIntensityFactor() * 0.06) * toEyeMul,
+          eyeX: eyeX, eyeY: eyeY, col: col
+        });
+      }
+
+      function updateParticles() {
+        for (var i = particles.length - 1; i >= 0; i--) {
+          var p = particles[i];
+          if (p.toEye) {
+            var dx = p.eyeX - p.x;
+            var dy = p.eyeY - p.y;
+            var d = Math.sqrt(dx * dx + dy * dy) || 1;
+            p.vx = dx / d * 1.2;
+            p.vy = dy / d * 1.2;
+          }
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= 0.012;
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+        if (particles.length > 48) particles.splice(0, particles.length - 48);
+      }
+
+      function drawParticles() {
+        particles.forEach(function (p) {
+          var c = p.col;
+          if (!c) return;
+          ctx.save();
+          ctx.globalAlpha = p.life * 0.92;
+          ctx.fillStyle = rgbStr(c, p.life);
+          ctx.shadowColor = rgbStr(c);
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2.5 + scatterIntensityFactor() * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      function drawBeamFlow(beamPts, col, alpha) {
+        if (beamPts.length < 2) return;
+        var pulse = 0.55 + 0.45 * Math.sin(animT * 3.2);
+        var t = (animT * 0.35) % 1;
+        var idx = t * (beamPts.length - 1);
+        var i0 = Math.floor(idx);
+        var i1 = Math.min(beamPts.length - 1, i0 + 1);
+        var f = idx - i0;
+        var x = beamPts[i0].x + (beamPts[i1].x - beamPts[i0].x) * f;
+        var y = beamPts[i0].y + (beamPts[i1].y - beamPts[i0].y) * f;
+        ctx.save();
+        ctx.globalAlpha = alpha * pulse;
+        ctx.fillStyle = rgbStr(col, alpha * pulse);
+        ctx.shadowColor = rgbStr(col);
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(x, y, 5 + pulse * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawScatterBursts(beamPts, col, strength, phaseOff) {
+        if (strength < 0.07 || beamPts.length < 2) return;
+        phaseOff = phaseOff || 0;
+        var n = strength > 0.45 ? 3 : 2;
+        for (var b = 0; b < n; b++) {
+          var phase = (animT * 0.9 + phaseOff + b / n) % 1;
+          var idx = Math.floor(phase * (beamPts.length - 2)) + 1;
+          var pt = beamPts[idx];
+          var ang = -Math.PI / 2 + Math.sin(animT * 2 + b + phaseOff * 2) * 0.35;
+          var len = (16 + 12 * Math.sin(animT * 4 + b * 1.7)) * (0.65 + strength * 0.5);
+          ctx.save();
+          ctx.globalAlpha = (0.28 + 0.32 * Math.sin(animT * 5 + b)) * strength;
+          drawArrow(pt.x, pt.y, pt.x + Math.cos(ang) * len, pt.y + Math.sin(ang) * len,
+            rgbStr(col, 0.85), 2 + strength * 1.5, 0.75);
+          ctx.restore();
+        }
+      }
+
+      function drawEyeAndSkyView(eyeX, eyeY, atmTop, atmH, cBlue, cRed, bal) {
+        var lookTop = atmTop + 18;
+        var midY = (eyeY + lookTop) * 0.48;
+
+        ctx.save();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = "rgba(203,213,225,0.55)";
+        ctx.lineWidth = 1.8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(eyeX, eyeY - 6);
+        ctx.lineTo(eyeX, lookTop);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        drawBadge(eyeX + 10, midY, "視線↑", {
+          align: "left", size: fs(8), color: "#cbd5e1",
+          bg: "rgba(30,41,59,0.88)", border: "rgba(148,163,184,0.4)"
+        });
+
+        var ly = atmTop + atmH * 0.2;
+        var nBlue = Math.max(1, Math.round(1 + bal.eyeBlue * 2));
+        var nRed = bal.eyeRed > 0.14 ? Math.max(1, Math.round(bal.eyeRed * 2)) : 0;
+        var i;
+        for (i = 0; i < nBlue; i++) {
+          var ox = eyeX - 18 + i * 14;
+          drawArrow(ox, ly + i * 8, eyeX - 1, eyeY - 7,
+            rgbStr(cBlue, 0.35 + bal.eyeBlue * 0.55), 1.6 + bal.eyeBlue, 0.55 + bal.eyeBlue * 0.35);
+        }
+        for (i = 0; i < nRed; i++) {
+          var rx = eyeX + 8 + i * 12;
+          drawArrow(rx, ly + 14 + i * 7, eyeX + 1, eyeY - 7,
+            rgbStr(cRed, 0.3 + bal.eyeRed * 0.6), 1.5 + bal.eyeRed * 1.2, 0.45 + bal.eyeRed * 0.45);
+        }
+        var eyeLabel = bal.eyeRed > 0.22
+          ? "青" + Math.round(bal.eyeBlue * 100) + "% 赤" + Math.round(bal.eyeRed * 100) + "%"
+          : "散った青";
+        drawBadge(eyeX + 24, ly - 2, eyeLabel, {
+          align: "left", size: fs(8),
+          color: bal.eyeRed > 0.22 ? "#fde68a" : rgbStr(cBlue, 1),
+          bg: "rgba(2,6,23,0.85)", border: "rgba(148,163,184,0.35)"
+        });
+
+        ctx.fillStyle = "#fcd34d";
+        ctx.strokeStyle = "rgba(255,255,255,0.45)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        drawBadge(eyeX, eyeY + 18, "👁 地上", { align: "center", size: fs(8), color: "#fde68a" });
+      }
+
+      function drawScatterChart(x, top, bot, w) {
+        var barH = 14;
+        var lblSize = fs(8);
+        var labelH = lblSize + 8;
+        var rowGap = 8;
+        var rowBlock = labelH + barH + rowGap;
+        var footerH = 32;
+        var bodyBot = bot - footerH;
+        var items = [
+          { lam: LAM_BLUE, name: "450nm（青）", hi: true },
+          { lam: LAM_RED, name: "650nm（赤）", hi: false }
+        ];
+        var blockH = items.length * rowBlock - rowGap;
+        var y0 = top + Math.max(10, (bodyBot - top - blockH) * 0.42);
+        var unitBlue = Math.pow(550 / LAM_BLUE, 4);
+        var scaleMax = unitBlue / 0.8;
+
+        items.forEach(function (item, i) {
+          var val = rayleighStrength(item.lam);
+          var rowY = y0 + i * rowBlock;
+          var trackY = rowY + labelH;
+          var col = wavelengthToRGB(item.lam);
+          var fillW = Math.max(item.hi ? 10 : 6, Math.min(w - 2, (val / scaleMax) * (w - 2)));
+
+          ctx.font = "700 " + lblSize + "px Noto Sans JP, sans-serif";
+          ctx.fillStyle = item.hi ? "#bae6fd" : "#fecaca";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText(item.name, x, rowY + lblSize);
+
+          roundRect(x, trackY, w, barH, 4);
+          ctx.fillStyle = "rgba(15,23,42,0.8)";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(148,163,184,0.3)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = rgbStr(col, item.hi ? 1 : 0.88);
+          roundRect(x + 1, trackY + 1, fillW, barH - 2, 3);
+          ctx.fill();
+          if (item.hi) {
+            ctx.strokeStyle = "rgba(253,224,71,0.55)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        });
+
+        var ratio = rayleighStrength(LAM_BLUE) / rayleighStrength(LAM_RED);
+        drawBadge(x + w / 2, bodyBot + 6, "青 ÷ 赤 = ×" + ratio.toFixed(1), {
+          align: "center", size: fs(9), color: "#7dd3fc",
+          bg: "rgba(12,74,110,0.85)", border: "rgba(56,189,248,0.45)"
+        });
+      }
+
+      function drawScatterMode() {
+        var pad = 12;
+        var headerH = 30;
+        var top = 4;
+        var mechH = ch * 0.54;
+        var viewH = ch - mechH - pad - top - headerH - 12;
+        var splitX = cw * 0.54;
+        var sunLow = sunAlt < 28;
+        var sky = skyColor();
+        var pf = pathFactor();
+        var atmStrength = scatterIntensityFactor();
+        var bal = scatterBalance();
+        var cBlue = wavelengthToRGB(LAM_BLUE);
+        var cRed = wavelengthToRGB(LAM_RED);
+        var scatterKey = [scatterMult, density, sunAlt].join(",");
+        if (scatterKey !== lastScatterKey) {
+          particles = [];
+          lastScatterKey = scatterKey;
+        }
+
+        ctx.fillStyle = "#04060c";
+        ctx.fillRect(0, 0, cw, ch);
+
+        drawSectionHeader(pad, top, "① 大気の中", "rgba(56,189,248,0.88)");
+        drawSectionHeader(splitX + 6, top, "② 散乱 ∝ 1/λ⁴", "rgba(251,191,36,0.85)");
+
+        var atmTop = top + headerH + 6;
+        var atmBot = top + mechH - 12;
+        var mechLeft = pad;
+        var mechW = splitX - pad - 6;
+        var atmH = atmBot - atmTop;
+        var atmAlpha = Math.min(0.72, 0.28 + atmStrength * 0.18);
+        var skyG = ctx.createLinearGradient(mechLeft, atmTop, mechLeft, atmBot);
+        skyG.addColorStop(0, rgbStr(sky.zenithUp, atmAlpha));
+        skyG.addColorStop(0.55, rgbStr(lerpColor(sky.zenithUp, sky.horizonUp, 0.4), atmAlpha * 0.9));
+        skyG.addColorStop(1, rgbStr(sky.horizonUp, atmAlpha * 0.75));
+        ctx.fillStyle = skyG;
+        ctx.fillRect(mechLeft, atmTop, mechW, atmH);
+        ctx.fillStyle = "#2d4a12";
+        ctx.fillRect(mechLeft, atmBot, mechW, top + mechH - atmBot);
+
+        var sunX = mechLeft + mechW * 0.88;
+        var sunY = atmTop + atmH * (0.08 + (1 - sunAlt / 90) * 0.72);
+        var eyeX = mechLeft + mechW * 0.12;
+        var eyeY = atmBot + 4;
+
+        var sunMix = Math.min(1, sky.t * 1.1);
+        var sunC = sky.sun;
+        var sunPulse = 0.82 + 0.18 * Math.sin(animT * 2.4);
+        ctx.save();
+        ctx.shadowColor = rgbStr(sunC);
+        ctx.shadowBlur = (20 + sunMix * 16) * sunPulse;
+        var sg = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, (16 + sunMix * 6) * sunPulse);
+        sg.addColorStop(0, "#fff");
+        sg.addColorStop(0.4, rgbStr(sunC));
+        sg.addColorStop(1, rgbStr(sunC, 0));
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 14 + sunMix * 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.restore();
+        drawBadge(sunX, sunY + 24, sunAlt + "°", { align: "center", size: fs(9), color: "#fde68a" });
+
+        var beamPts = [];
+        var steps = 8;
+        var beamEndX = mechLeft + mechW * 0.1;
+        var beamEndY = eyeY - 2;
+        for (var s = 0; s <= steps; s++) {
+          var t = s / steps;
+          beamPts.push({
+            x: sunX + (beamEndX - sunX) * t,
+            y: sunY + (beamEndY - sunY) * t
+          });
+        }
+
+        var beamPulse = 0.65 + 0.35 * Math.sin(animT * 3.6);
+        var splitIdx = Math.max(2, Math.min(beamPts.length - 2,
+          Math.round(beamPts.length * (0.52 - bal.pathNorm * 0.18))));
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255," + (0.08 + beamPulse * 0.08) + ")";
+        ctx.lineWidth = (10 + atmStrength * 4) * (0.9 + beamPulse * 0.15);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(beamPts[0].x, beamPts[0].y);
+        for (s = 1; s < beamPts.length; s++) ctx.lineTo(beamPts[s].x, beamPts[s].y);
+        ctx.stroke();
+        ctx.restore();
+
+        drawBeamFlow(beamPts, cBlue, bal.blueBurst * 0.85);
+        if (bal.redBurst > 0.12) {
+          drawBeamFlow(beamPts, cRed, bal.redBurst * 0.55);
+        }
+        drawScatterBursts(beamPts.slice(0, splitIdx + 1), cBlue, bal.blueBurst, 0);
+        if (bal.redBurst > 0.12) {
+          drawScatterBursts(beamPts.slice(splitIdx), cRed, bal.redBurst, 1.7);
+        }
+
+        drawArrow(beamPts[0].x - 4, beamPts[0].y, beamPts[splitIdx].x, beamPts[splitIdx].y,
+          rgbStr(cBlue, bal.blueDirect), 2 + bal.blueBurst * 2.5, 0.55 + bal.blueBurst * 0.4);
+        drawArrow(beamPts[splitIdx].x, beamPts[splitIdx].y, beamPts[beamPts.length - 1].x, beamPts[beamPts.length - 1].y,
+          rgbStr(cRed, bal.redDirect), 2 + bal.redDirect * 2.5, 0.45 + bal.redDirect * 0.45);
+
+        spawnScatterParticles(beamPts, eyeX, eyeY - 18, cBlue, bal.blueFrac, bal.eyeBlue);
+        if (bal.redBurst > 0.1) {
+          spawnScatterParticles(beamPts, eyeX, eyeY - 18, cRed, bal.redFrac * bal.redBurst, bal.eyeRed);
+        }
+        updateParticles();
+        drawParticles();
+
+        drawBadge(mechLeft + 6, atmTop + atmH * 0.2, "450nm 青↑", {
+          align: "left", size: fs(9), color: rgbStr(cBlue, 1),
+          bg: "rgba(2,6,23,0.82)", border: rgbStr(cBlue, 0.5)
+        });
+        if (bal.redBurst > 0.18) {
+          drawBadge(beamPts[splitIdx].x - 8, beamPts[splitIdx].y + 12, "650nm 赤↑", {
+            align: "center", size: fs(9), color: "#fca5a5",
+            bg: "rgba(69,10,10,0.65)", border: "rgba(239,68,68,0.45)"
+          });
+        } else {
+          drawBadge(beamPts[6].x - 10, beamPts[6].y + 14, "赤→直進", {
+            align: "center", size: fs(9), color: "#fca5a5",
+            bg: "rgba(69,10,10,0.65)", border: "rgba(239,68,68,0.45)"
+          });
+        }
+
+        if (pf > 1.2) {
+          drawBadge(mechLeft + mechW * 0.42, atmBot - 22, "道 ×" + pf.toFixed(1), {
+            align: "center", size: fs(9), color: "#fde68a",
+            bg: "rgba(69,26,3,0.7)", border: "rgba(251,191,36,0.45)"
+          });
+        }
+
+        drawEyeAndSkyView(eyeX, eyeY, atmTop, atmH, cBlue, cRed, bal);
+
+        ctx.strokeStyle = "rgba(148,163,184,0.2)";
+        ctx.beginPath();
+        ctx.moveTo(splitX, atmTop);
+        ctx.lineTo(splitX, atmBot);
+        ctx.stroke();
+
+        var chartX = splitX + 10;
+        var chartW = cw - chartX - pad;
+        drawScatterChart(chartX, atmTop + 10, atmBot - 6, chartW);
+
+        var viewTop = top + mechH + 10;
+        drawSectionHeader(pad, viewTop, "③ 見える空", "rgba(129,140,248,0.85)");
+        var vw = (cw - pad * 2 - 10) / 2;
+        var viewBoxTop = viewTop + headerH + 4;
+        var viewBoxH = Math.max(56, viewH - headerH - 4);
+        var skyLabel = sky.t < 0.25 ? "上＝青空" : sky.t < 0.55 ? "上＝青紫" : "上＝夕方";
+        var sunLabel = sunLow ? "太陽＝夕焼け" : sky.t > 0.35 ? "太陽＝橙" : "太陽＝白";
+        drawSkyRect(pad, viewBoxTop, vw, viewBoxH, sky, sunAlt, skyLabel);
+        drawSkyRect(pad + vw + 10, viewBoxTop, vw, viewBoxH, sky, sunAlt, sunLabel);
+      }
+
+      function drawPolarFlow(trans, incidentVertical, formulaNote, maxH) {
+        var H = maxH || ch;
+        var pad = 14;
+        var footerH = malusOn ? Math.max(56, Math.min(92, H * 0.26)) : 34;
+        var headH = 38;
+        var midTop = pad + headH;
+        var midBot = H - pad - footerH;
+        var stepW = (cw - pad * 2) / 3;
+        var compact = H < ch * 0.72;
+        var col3W = stepW - 12;
+        var gaugeH = Math.min(compact ? 54 : 62, (midBot - midTop) * 0.36);
+        var gaugeY = midBot - gaugeH - 8;
+        var y = midTop + (gaugeY - midTop) * 0.46;
+        var x1 = pad + stepW * 0.5;
+        var x2 = pad + stepW * 1.5;
+        var x3 = pad + stepW * 2.5;
+        var polW = Math.min(stepW * 0.58, H < ch * 0.7 ? 88 : 108);
+        var polH = H < ch * 0.7 ? 28 : 36;
+        var incAxis = incidentVertical ? 90 : 0;
+        var incAmp = Math.min(H < ch * 0.7 ? 20 : 26, (midBot - midTop) * 0.16);
+        var outAmp = incAmp * (malusOn ? Math.sqrt(Math.max(0, trans)) : 1);
+        var blockAmt = malusOn ? Math.max(0, 1 - trans) : 0;
+        var incCol = incidentVertical ? "#7dd3fc" : "#f8fafc";
+        var outRgb = incidentVertical
+          ? { r: 56, g: 189, b: 248 }
+          : { r: 56, g: 189, b: 248 };
+        var beamInA = 0.85;
+        var beamOutA = malusOn ? trans : 1;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, cw, H);
+        ctx.clip();
+
+        ctx.fillStyle = "rgba(30,41,59,0.28)";
+        roundRect(pad, midTop, stepW - 8, midBot - midTop, 10);
+        ctx.fill();
+        ctx.fillStyle = "rgba(49,46,129,0.22)";
+        roundRect(pad + stepW + 4, midTop, stepW - 8, midBot - midTop, 10);
+        ctx.fill();
+        ctx.fillStyle = "rgba(6,78,59,0.16)";
+        roundRect(pad + stepW * 2 + 8, midTop, stepW - 12, midBot - midTop, 10);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(148,163,184,0.16)";
+        ctx.setLineDash([4, 5]);
+        ctx.beginPath();
+        ctx.moveTo(pad + stepW, midTop + 2);
+        ctx.lineTo(pad + stepW, midBot - 2);
+        ctx.moveTo(pad + stepW * 2, midTop + 2);
+        ctx.lineTo(pad + stepW * 2, midBot - 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        drawSectionHeader(pad, 10, "① 入射光", "rgba(148,163,184,0.88)");
+        drawSectionHeader(pad + stepW + 8, 10, "② 偏光板", "rgba(129,140,248,0.88)");
+        drawSectionHeader(pad + stepW * 2 + 8, 10, "③ 透過光", "rgba(74,222,128,0.82)");
+
+        drawLightBeam(x1 - stepW * 0.12, y, x2 - polW * 0.55, y, incCol, beamInA, 10, 0);
+        drawLightBeam(x2 + polW * 0.55, y, x3 + stepW * 0.1, y, rgbStr(outRgb, 1), beamOutA, 6 + beamOutA * 8, 0.5);
+
+        drawEfieldOsc(x1, y, incAmp, incAxis, incCol, 0.95, 0);
+        drawBadge(x1, y + incAmp + 18, incidentVertical ? "E↕ 上下偏光" : "E↔ 水平偏光", {
+          align: "center", size: fs(9), color: "#e2e8f0",
+          bg: "rgba(2,6,23,0.82)", border: "rgba(148,163,184,0.35)"
+        });
+        if (!compact) {
+          drawBadge(x1, y + incAmp + 38, "I₀", {
+            align: "center", size: fs(8), color: "#fde68a",
+            bg: "rgba(49,46,129,0.65)", border: "rgba(251,191,36,0.35)"
+          });
+        }
+
+        drawPolarizerDetailed(x2, y, polW, polH, polarDeg);
+        drawBadge(x2, y + polH * 0.55 + 14, "透過軸 θ=" + polarDeg + "°", {
+          align: "center", size: fs(8), color: "#fde68a",
+          bg: "rgba(49,46,129,0.8)", border: "rgba(251,191,36,0.45)"
+        });
+
+        if (malusOn && !compact) {
+          drawFieldDecomposition(x2, y - polH * 0.95, incAmp * 0.82, incAxis, polarDeg, blockAmt);
+        } else if (malusOn && blockAmt > 0.08) {
+          drawEfieldOsc(x2, y - polH * 0.55, incAmp * 0.65, polarDeg + 90, "#f87171", blockAmt * 0.55, 2);
+        }
+
+        if (malusOn && trans > 0.06) {
+          drawEfieldOsc(x3, y, outAmp, polarDeg, rgbStr(outRgb, 1), 0.35 + trans * 0.65, 1.2);
+          drawBadge(x3, y + outAmp + 16, "E ∥ 軸", {
+            align: "center", size: fs(9), color: rgbStr(outRgb, 1),
+            bg: "rgba(2,6,23,0.85)", border: "rgba(56,189,248,0.4)"
+          });
+        } else if (!malusOn) {
+          drawEfieldOsc(x3, y, incAmp, incAxis, incCol, 0.9, 0.8);
+          drawBadge(x3, y + incAmp + 16, "マリュス OFF", {
+            align: "center", size: fs(9), color: "#94a3b8",
+            bg: "rgba(30,41,59,0.8)", border: "rgba(148,163,184,0.3)"
+          });
+        } else {
+          drawBadge(x3, y + 6, "ほぼ消える", {
+            align: "center", size: fs(9), color: "#94a3b8",
+            bg: "rgba(30,41,59,0.85)", border: "rgba(148,163,184,0.3)"
+          });
+        }
+
+        drawArrow(x1 + stepW * 0.14, y, x2 - polW * 0.58, y, "rgba(203,213,225,0.5)", 2, 0.6);
+        drawArrow(x2 + polW * 0.58, y, x3 - stepW * 0.12, y, rgbStr(outRgb, beamOutA), 2 + beamOutA * 3, beamOutA);
+
+        var col3Left = pad + stepW * 2 + 8;
+        var gaugeW = Math.min(col3W - 12, compact ? 66 : 74);
+        var gaugeX = col3Left + (col3W - gaugeW) / 2;
+        drawIntensityPair(gaugeX, gaugeY, gaugeW, gaugeH, trans);
+
+        var effTheta = incidentVertical ? (90 - polarDeg) : polarDeg;
+        var chartW = Math.min(compact ? 160 : 210, stepW * 1.05);
+        var chartH = Math.min(compact ? 52 : 74, footerH - 8);
+        if (malusOn && chartH >= 40) {
+          drawMalusMiniChart(pad + 4, H - pad - chartH, chartW, chartH, effTheta, trans);
+        }
+
+        if (formulaNote) {
+          var footerRight = pad + stepW * 2 + 2;
+          var formulaX = malusOn && chartH >= 40
+            ? pad + chartW + (footerRight - pad - chartW) / 2
+            : (pad + footerRight) / 2;
+          drawBadge(formulaX, H - pad - (malusOn && chartH >= 40 ? chartH * 0.42 : 10), formulaNote, {
+            align: "center", size: fs(compact ? 9 : 10), color: "#fde68a",
+            bg: "rgba(49,46,129,0.75)", border: "rgba(129,140,248,0.45)"
+          });
+        }
+        ctx.restore();
+      }
+
+      function drawPolarMode() {
+        ctx.fillStyle = "#04060c";
+        ctx.fillRect(0, 0, cw, ch);
+        var trans = transmission();
+        var note = malusOn
+          ? "θ=" + polarDeg + "° → I/I₀=" + trans.toFixed(2) + " = cos²" + polarDeg + "°"
+          : "マリュス OFF → 全透過";
+        drawPolarFlow(trans, false, note);
+      }
+
+      function drawCombinedMode() {
+        ctx.fillStyle = "#04060c";
+        ctx.fillRect(0, 0, cw, ch);
+        var sky = skyColor();
+        var trans = transmissionCombined();
+        var seenA = 0.25 + trans * 0.75;
+        var flowH = ch * 0.58;
+        var pad = 14;
+
+        drawPolarFlow(trans, true, malusOn
+          ? "I₀ cos²(90°−θ) → " + (trans * 100).toFixed(0) + "%"
+          : "マリュス OFF", flowH);
+
+        var cmpTop = flowH + 8;
+        drawSectionHeader(pad, cmpTop, "比較", "rgba(251,191,36,0.8)");
+        var half = (cw - pad * 2 - 10) / 2;
+        var chCmp = ch - cmpTop - 38;
+        drawSkyRect(pad, cmpTop + 32, half, chCmp, sky, sunAlt, "サングラスなし");
+        var dimSky = {
+          zenithUp: {
+            r: Math.round(sky.zenithUp.r * seenA), g: Math.round(sky.zenithUp.g * seenA), b: Math.round(sky.zenithUp.b * seenA)
+          },
+          horizonUp: {
+            r: Math.round(sky.horizonUp.r * seenA), g: Math.round(sky.horizonUp.g * seenA), b: Math.round(sky.horizonUp.b * seenA)
+          },
+          zenithToward: {
+            r: Math.round(sky.zenithToward.r * seenA), g: Math.round(sky.zenithToward.g * seenA), b: Math.round(sky.zenithToward.b * seenA)
+          },
+          horizonToward: {
+            r: Math.round(sky.horizonToward.r * seenA), g: Math.round(sky.horizonToward.g * seenA), b: Math.round(sky.horizonToward.b * seenA)
+          },
+          sun: {
+            r: Math.round(sky.sun.r * seenA), g: Math.round(sky.sun.g * seenA), b: Math.round(sky.sun.b * seenA)
+          },
+          t: sky.t,
+          r: Math.round(sky.r * seenA), g: Math.round(sky.g * seenA), b: Math.round(sky.b * seenA)
+        };
+        drawSkyRect(pad + half + 10, cmpTop + 32, half, chCmp, dimSky, sunAlt,
+          "θ=" + polarDeg + "° · " + (trans * 100).toFixed(0) + "%");
+      }
+
+      function syncUI() {
+        readParams();
+
+        document.getElementById("scatterVal").textContent = scatterMult.toFixed(1) + "×";
+        document.getElementById("sunVal").textContent = sunAlt + "°";
+        document.getElementById("densityVal").textContent = density.toFixed(1) + "×";
+        document.getElementById("polarVal").textContent = "θ=" + polarDeg + "°";
+
+        var sky = skyColor();
+        document.getElementById("readScatter").textContent =
+          (rayleighStrength(LAM_BLUE) / rayleighStrength(LAM_RED)).toFixed(1) + " 倍";
+        document.getElementById("readTrans").textContent =
+          (mode === "combined" ? transmissionCombined() : transmission()).toFixed(2);
+        document.getElementById("readSky").textContent =
+          sky.t < 0.25 ? "青空" : sky.t < 0.55 ? "青紫" : "夕焼け";
+
+        document.getElementById("cellScatter").classList.toggle("hidden", mode !== "scatter");
+        document.getElementById("cellSun").classList.toggle("hidden", mode === "polar");
+        document.getElementById("cellDensity").classList.toggle("hidden", mode === "polar");
+        document.getElementById("cellPolar").classList.toggle("hidden", mode === "scatter");
+        document.getElementById("malusRow").classList.toggle("hidden", mode === "scatter");
+        document.getElementById("cardScatter").style.display = mode === "scatter" ? "" : "none";
+
+        document.querySelectorAll(".mode-tab").forEach(function (btn) {
+          btn.classList.toggle("active", btn.getAttribute("data-mode") === mode);
+        });
+
+        var legend = document.getElementById("colorLegend");
+        var legendBar = document.getElementById("legendBar");
+        if (mode === "scatter") {
+          var bal = scatterBalance();
+          document.getElementById("readMode").textContent = "レイリー散乱";
+          document.getElementById("vizLabel").textContent = "レイリー散乱ビジュアル";
+          document.getElementById("badgeStory").textContent = "青↑散る → 上を見ると青";
+          document.getElementById("badgeFormula").textContent = "散乱 ∝ 1/λ⁴";
+          document.getElementById("vizFoot").innerHTML =
+            "左：太陽が<strong>低い</strong>ほど光の道が長く、<strong>赤も散る</strong>（赤い粒・赤矢印）。高いときは青↑が主で赤は直進。目に入る青/赤の割合も太陽の高さで変わる。";
+          document.getElementById("statusMsg").textContent =
+            "太陽 " + sunAlt + "° → 道 ×" + bal.pf.toFixed(1) +
+            " / 目に入る光 青" + Math.round(bal.eyeBlue * 100) + "%・赤" + Math.round(bal.eyeRed * 100) + "%";
+          legend.innerHTML =
+            '<span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>青（強く散乱）</span>' +
+            '<span><i class="color-chip" style="background:#ef4444;color:#ef4444"></i>赤（低いと↑散る）</span>' +
+            '<span><i class="color-chip" style="background:#fde68a;color:#fde68a"></i>太陽</span>';
+          legendBar.innerHTML =
+            '<span><span class="legend-dot" style="background:#38bdf8;box-shadow:0 0 8px #38bdf8"></span>散った青 → 上を見る</span>' +
+            '<span><span class="legend-dot" style="background:#ef4444;box-shadow:0 0 8px #ef4444"></span>夕方 → 赤だけ残る</span>';
+        } else if (mode === "polar") {
+          document.getElementById("readMode").textContent = "偏光板";
+          document.getElementById("vizLabel").textContent = "偏光板ビジュアル";
+          document.getElementById("badgeStory").textContent = "① 入射 → ② 板 → ③ 透過";
+          document.getElementById("badgeFormula").textContent = malusOn ? "I = I₀ cos²θ" : "OFF";
+          document.getElementById("vizFoot").innerHTML =
+            "入射光は<strong>水平</strong>に振動（E↔）。板の上で<strong>∥（金）と ⊥（赤）</strong>に分解され、⊥ は遮断。透過軸（金線）方向だけ残り <strong>I = I₀ cos²θ</strong>。";
+          document.getElementById("statusMsg").textContent =
+            malusOn
+              ? "θ = " + polarDeg + "° → I/I₀ = " + transmission().toFixed(2) +
+                (polarDeg < 12 ? "（軸と一致→最大）" : polarDeg > 78 ? "（直交→ほぼ0）" : "（cos²θ で減る）")
+              : "マリュス OFF — 偏光板があっても強度は減らない（比較用）";
+          legend.innerHTML =
+            '<span><i class="color-chip" style="background:#fff;color:#fff"></i>入射光（水平振動）</span>' +
+            '<span><i class="color-chip" style="background:#fde68a;color:#fde68a"></i>偏光板の軸</span>' +
+            '<span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>透過光</span>';
+          legendBar.innerHTML =
+            '<span><span class="legend-dot" style="background:#fff"></span>振動方向</span>' +
+            '<span><span class="legend-dot" style="background:#fde68a"></span>板の軸 θ</span>';
+        } else {
+          var tc = transmissionCombined();
+          document.getElementById("readMode").textContent = "空＋サングラス";
+          document.getElementById("vizLabel").textContent = "偏光サングラスビジュアル";
+          document.getElementById("badgeStory").textContent = "偏光した空 → サングラス → 見え方";
+          document.getElementById("badgeFormula").textContent = "I = I₀ cos²(90°−θ)";
+          document.getElementById("vizFoot").innerHTML =
+            "空の散乱光は<strong>上下</strong>に偏光。θ=0°（水平軸）で<strong>暗く</strong>、θ=90°（垂直軸）で<strong>明るい</strong>。下の比較を確認。";
+          document.getElementById("statusMsg").textContent =
+            "θ = " + polarDeg + "° → 見える明るさ " + (tc * 100).toFixed(0) + "%";
+          legend.innerHTML =
+            '<span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>空（上下偏光）</span>' +
+            '<span><i class="color-chip" style="background:#fde68a;color:#fde68a"></i>サングラス θ</span>' +
+            '<span><i class="color-chip" style="background:#64748b;color:#64748b"></i>見え方</span>';
+          legendBar.innerHTML =
+            '<span><span class="legend-dot" style="background:#38bdf8"></span>空の偏光方向（上下）</span>' +
+            '<span><span class="legend-dot" style="background:#fde68a"></span>板の軸を回す</span>';
+        }
+      }
+
+      function setMode(m) {
+        mode = m;
+        particles = [];
+        syncUI();
+      }
+
+      function render() {
+        readParams();
+        if (mode === "scatter") drawScatterMode();
+        else if (mode === "polar") drawPolarMode();
+        else drawCombinedMode();
+      }
+
+      document.querySelectorAll(".mode-tab").forEach(function (btn) {
+        btn.addEventListener("click", function () { setMode(btn.getAttribute("data-mode")); });
+      });
+      ["scatterSlider", "sunSlider", "densitySlider", "polarSlider"].forEach(function (id) {
+        var el = document.getElementById(id);
+        el.addEventListener("input", syncUI);
+        el.addEventListener("change", syncUI);
+      });
+      document.getElementById("malusToggle").addEventListener("change", syncUI);
+      window.addEventListener("resize", fitCanvas);
+
+      fitCanvas();
+      syncUI();
+      function loop(ts) {
+        animT = ts / 1000;
+        if (cw < 100 || ch < 100) fitCanvas();
+        render();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

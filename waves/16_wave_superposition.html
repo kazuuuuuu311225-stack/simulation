@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>16章 波の合成 — 重ね合わせ · 干渉</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #38bdf8; --accent-light: #7dd3fc;
+      --slate-bg: rgba(12, 18, 32, 0.82); --slate-border: rgba(56, 189, 248, 0.22);
+      --text: #e2e8f0; --muted: #94a3b8;
+      --wave-a: #38bdf8; --wave-b: #f87171; --wave-sum: #4ade80;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #050810 0%, #0c1524 45%, #0a1220 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.25), rgba(74,222,128,0.2));
+      border: 1px solid rgba(125,211,252,0.35); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px; color: #e0f2fe;
+      background: rgba(56,189,248,0.14); border: 1px solid rgba(125,211,252,0.38);
+      border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--slate-bg); border: 1px solid var(--slate-border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li { font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 12px; border-radius: 12px; text-align: center;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+      color: #bae6fd; font-variant-numeric: tabular-nums; font-size: 0.86rem;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #070b14; border: 1px solid rgba(56,189,248,0.2);
+    }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(240px, 32dvh); min-height: 190px; }
+    .canvas-wrap--tall canvas { height: min(340px, 44dvh); min-height: 300px; }
+    .canvas-caption { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+    .two-canvas { display: grid; gap: 10px; }
+    @media (min-width:720px) { .two-canvas { grid-template-columns: 1fr 1fr; } }
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 0.78rem; color: #cbd5e1;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+    .legend .wa { background: var(--wave-a); }
+    .legend .wb { background: var(--wave-b); }
+    .legend .ws { background: var(--wave-sum); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .btn-row button {
+      flex: 1 1 calc(50% - 4px); min-height: 42px; padding: 8px 12px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.3); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .btn-row button.active { background: rgba(56,189,248,0.22); color: #e0f2fe; }
+    .btn-row.compact button { min-height: 36px; font-size: 0.78rem; flex: 1 1 calc(50% - 4px); }
+    .dir-block { margin-top: 10px; }
+    .dir-block .dir-label { font-size: 0.82rem; color: #94a3b8; margin-bottom: 4px; }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width:640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width:860px) { .param-grid { grid-template-columns: repeat(4, 1fr); } }
+    label { display: block; font-size: 0.86rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.8rem; font-weight: 600; color: #7dd3fc; }
+    .readout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    @media (min-width:640px) { .readout-grid { grid-template-columns: repeat(6, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.18);
+    }
+    .readout .lbl { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .readout .val { font-size: 0.92rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+    .readout .val.hl { color: #86efac; }
+    .insight-box {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25);
+      font-size: 0.86rem; line-height: 1.7; color: #bbf7d0;
+    }
+    .summary-box {
+      padding: 14px; border-radius: 12px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1;
+    }
+    .summary-box ol { margin: 8px 0 0; padding-left: 1.2rem; }
+    #runStatus {
+      margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem;
+      text-align: center; background: rgba(56,189,248,0.1); color: #bae6fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">+</div>
+      <h2>16章 波の合成</h2>
+      <p class="chapter-label">重ね合わせ · 同位相 · 逆位相 · 進行方向</p>
+      <a id="back" href="../index.html">← メニューに戻る</a>
+      <p id="runStatus">読み込み中…</p>
+    </header>
+
+    <section class="panel">
+      <h3>1. 波の合成とは</h3>
+      <p>2つ以上の波が<strong>同じ場所</strong>を通ると、各点での変位は<strong>足し算</strong>で決まります。進行方向が逆でも、振動数が違っても、合成の原理は同じです。</p>
+      <ul>
+        <li>合成波：y = y<sub>A</sub> + y<sub>B</sub></li>
+        <li>右向き：sin(kx − ωt) &nbsp;|&nbsp; 左向き：sin(kx + ωt)</li>
+        <li><strong>同位相</strong> … 強め合い &nbsp;|&nbsp; <strong>逆位相</strong> … 弱め合い</li>
+      </ul>
+      <div class="formula-box">y = A₁ sin(k₁x ∓ ω₁t) + A₂ sin(k₂x ∓ ω₂t + φ) &nbsp;（∓ で進行方向）</div>
+    </section>
+
+    <section class="panel">
+      <h3>2. 2つの波（波A · 波B）</h3>
+      <p>青が<strong>波A</strong>、赤が<strong>波B</strong>。横軸は距離 x［m］、縦軸は変位 y［m］です。</p>
+      <div class="two-canvas">
+        <div class="canvas-wrap"><canvas id="waveACanvas"></canvas></div>
+        <div class="canvas-wrap"><canvas id="waveBCanvas"></canvas></div>
+      </div>
+      <p class="canvas-caption">左：波A &nbsp;|&nbsp; 右：波B — 進行方向はスライダー下のボタンで切り替え</p>
+      <div class="legend">
+        <span><i class="wa"></i> 波A（青）</span>
+        <span><i class="wb"></i> 波B（赤）</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>3. 合成波（A + B）のリアルタイム描画</h3>
+      <p>3本の波を重ねて表示します。緑の<strong>合成波</strong>は y = y<sub>A</sub> + y<sub>B</sub> です。</p>
+      <div class="canvas-wrap canvas-wrap--tall"><canvas id="superCanvas"></canvas></div>
+      <p class="canvas-caption">横軸 0〜6 m &nbsp;|&nbsp; 青 + 赤 = 緑</p>
+      <div class="legend">
+        <span><i class="wa"></i> 波A</span>
+        <span><i class="wb"></i> 波B</span>
+        <span><i class="ws"></i> 合成波</span>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="phaseInBtn" class="active">同位相（φ = 0）</button>
+        <button type="button" id="phaseOutBtn">逆位相（φ = π）</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>4. 同位相の合成（強め合い）</h3>
+      <p>位相 φ = 0。同方向・同 λ・同 f のとき、振幅 ≈ A₁ + A₂ になります。</p>
+      <div class="canvas-wrap canvas-wrap--tall"><canvas id="inPhaseCanvas"></canvas></div>
+      <div class="insight-box">同位相（同方向）：合成振幅 ≈ A₁ + A₂ = <strong id="ampConstruct">0.16</strong> m</div>
+    </section>
+
+    <section class="panel">
+      <h3>5. 逆位相の合成（弱め合い · 打ち消し）</h3>
+      <p>位相 φ = π。同方向・A₁ = A₂ なら<strong>完全に打ち消し</strong>。逆方向・同 f なら<strong>定常波</strong>になります。</p>
+      <div class="canvas-wrap"><canvas id="outPhaseCanvas"></canvas></div>
+      <div class="insight-box">逆位相（同方向）：合成振幅 ≈ |A₁ − A₂| = <strong id="ampDestruct">0.00</strong> m</div>
+    </section>
+
+    <section class="panel">
+      <h3>6. 波の基本量（スライダー操作）</h3>
+      <div class="param-grid">
+        <label>振幅 A₁（波A）
+          <input id="ampA1Slider" type="range" min="0.02" max="0.20" step="0.01" value="0.08">
+          <span class="slider-val" id="ampA1Val">0.08 m</span>
+        </label>
+        <label>振幅 A₂（波B）
+          <input id="ampA2Slider" type="range" min="0.02" max="0.20" step="0.01" value="0.08">
+          <span class="slider-val" id="ampA2Val">0.08 m</span>
+        </label>
+        <label>波長 λ₁（波A）
+          <input id="waveSlider" type="range" min="0.5" max="3.0" step="0.1" value="1.2">
+          <span class="slider-val" id="waveVal">1.2 m</span>
+        </label>
+        <label>波長 λ₂（波B）
+          <input id="waveBSlider" type="range" min="0.5" max="3.0" step="0.1" value="1.2">
+          <span class="slider-val" id="waveBVal">1.2 m</span>
+        </label>
+        <label>振動数 f₁（波A）
+          <input id="freqA1Slider" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
+          <span class="slider-val" id="freqA1Val">1.0 Hz</span>
+        </label>
+        <label>振動数 f₂（波B）
+          <input id="freqA2Slider" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
+          <span class="slider-val" id="freqA2Val">1.0 Hz</span>
+        </label>
+      </div>
+
+      <div class="two-canvas" style="margin-top:12px;">
+        <div class="dir-block">
+          <div class="dir-label">波A の進行方向</div>
+          <div class="btn-row compact">
+            <button type="button" id="dirARightBtn" class="active">右向き (+x)</button>
+            <button type="button" id="dirALeftBtn">左向き (−x)</button>
+          </div>
+        </div>
+        <div class="dir-block">
+          <div class="dir-label">波B の進行方向</div>
+          <div class="btn-row compact">
+            <button type="button" id="dirBRightBtn" class="active">右向き (+x)</button>
+            <button type="button" id="dirBLeftBtn">左向き (−x)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <div class="readout"><span class="lbl">A₁</span><span class="val" id="outA1">0.08</span></div>
+        <div class="readout"><span class="lbl">A₂</span><span class="val" id="outA2">0.08</span></div>
+        <div class="readout"><span class="lbl">λ₁ · λ₂</span><span class="val" id="outL">1.2</span></div>
+        <div class="readout"><span class="lbl">f₁ · f₂</span><span class="val" id="outF">1.0</span></div>
+        <div class="readout"><span class="lbl">v₁ = f₁λ₁</span><span class="val" id="outV1">1.2</span></div>
+        <div class="readout"><span class="lbl">v₂ = f₂λ₂</span><span class="val hl" id="outV2">1.2</span></div>
+      </div>
+      <div class="formula-box" id="vFormula">T₁ = 1.00 s · T₂ = 1.00 s &nbsp;|&nbsp; φ = 0 &nbsp;|&nbsp; 単位：m · Hz · m/s</div>
+    </section>
+
+    <section class="panel">
+      <h3>7. 高校生向けまとめ</h3>
+      <div class="summary-box">
+        <ol>
+          <li>波の合成は<strong>変位［m］の足し算</strong>。y = y<sub>A</sub> + y<sub>B</sub>。</li>
+          <li><strong>右向き</strong> sin(kx−ωt)、<strong>左向き</strong> sin(kx+ωt)。A・B それぞれ選べる。</li>
+          <li>同方向・同位相 → 強め合い。同方向・逆位相 → 弱め合い（A₁=A₂ で打ち消し）。</li>
+          <li>逆方向・同 f・同 λ → <strong>定常波</strong>（節と腹）。これも合成の一例。</li>
+          <li>v = fλ［m/s］、T = 1/f［s］。f₁ と f₂ は独立に設定できる。</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var X_MAX = 6.0; // 表示範囲［m］
+
+      var canvases = {
+        waveA: document.getElementById("waveACanvas"),
+        waveB: document.getElementById("waveBCanvas"),
+        super: document.getElementById("superCanvas"),
+        inPhase: document.getElementById("inPhaseCanvas"),
+        outPhase: document.getElementById("outPhaseCanvas")
+      };
+
+      // ── 波パラメータ（SI単位：m, Hz）──
+      var A1 = 0.08, A2 = 0.08;
+      var lambda1 = 1.2, lambda2 = 1.2;
+      var f1 = 1.0, f2 = 1.0;
+      var dirA = 1;  // +1 右向き, −1 左向き
+      var dirB = 1;
+      var phi = 0;
+      var t = 0, lastTs = 0;
+
+      var COL = { a: "#38bdf8", b: "#f87171", sum: "#4ade80" };
+
+      function k1() { return (2 * Math.PI) / lambda1; }
+      function k2() { return (2 * Math.PI) / lambda2; }
+      function omega1() { return 2 * Math.PI * f1; }
+      function omega2() { return 2 * Math.PI * f2; }
+
+      // ── 波A：進行方向 dirA ──
+      function waveA(xm, time) {
+        return A1 * Math.sin(k1() * xm - dirA * omega1() * time);
+      }
+
+      // ── 波B：進行方向 dirB + 位相 φ ──
+      function waveB(xm, time, phaseOverride) {
+        var ph = phaseOverride !== undefined ? phaseOverride : phi;
+        return A2 * Math.sin(k2() * xm - dirB * omega2() * time + ph);
+      }
+
+      // ── 合成波の計算 ──
+      function waveSum(xm, time, phaseOverride) {
+        return waveA(xm, time) + waveB(xm, time, phaseOverride);
+      }
+
+      function dirLabel(d) { return d === 1 ? "→ +x" : "← −x"; }
+
+      function fitCanvas(canvas) {
+        var wrap = canvas.parentElement;
+        var isTall = wrap.classList.contains("canvas-wrap--tall");
+        var w = wrap.clientWidth;
+        var hMin = isTall ? 300 : 190;
+        var hMax = isTall ? 340 : 240;
+        var hVh = isTall ? 0.44 : 0.3;
+        var h = Math.max(hMin, Math.min(hMax, window.innerHeight * hVh));
+        var dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.height = h + "px";
+        var ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx: ctx, w: w, h: h };
+      }
+
+      function yScale(h, ampMax) {
+        var maxA = (ampMax !== undefined ? ampMax : Math.max(A1, A2, 0.05)) * 1.35;
+        return (h * 0.42) / maxA;
+      }
+
+      function xmToPx(xm, w) { return (xm / X_MAX) * w; }
+      function ymToPx(ym, h, scale) { return h / 2 - ym * scale; }
+
+      function drawBaseline(ctx, w, h, scale) {
+        ctx.fillStyle = "#070b14";
+        ctx.fillRect(0, 0, w, h);
+
+        // 横軸目盛（m）
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        for (var xm = 0; xm <= X_MAX; xm += 1) {
+          var px = xmToPx(xm, w);
+          ctx.beginPath();
+          ctx.moveTo(px, h - 14);
+          ctx.lineTo(px, h - 8);
+          ctx.stroke();
+          if (xm % 2 === 0) ctx.fillText(xm + " m", px - 8, h - 2);
+        }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.3)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function plotWaveMeters(ctx, w, h, fn, color, lineW, ampMax) {
+        var scale = yScale(h, ampMax);
+        ctx.beginPath();
+        var step = X_MAX / (w * 0.5);
+        for (var xm = 0; xm <= X_MAX; xm += step) {
+          var px = xmToPx(xm, w);
+          var py = ymToPx(fn(xm), h, scale);
+          if (xm === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW || 2;
+        ctx.stroke();
+      }
+
+      function drawSingleWave(view, which) {
+        var ctx = view.ctx;
+        var w = view.w, h = view.h;
+        drawBaseline(ctx, w, h);
+        if (which === "A") {
+          plotWaveMeters(ctx, w, h, function (xm) { return waveA(xm, t); }, COL.a, 2.5);
+          ctx.fillStyle = COL.a;
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("波A " + dirLabel(dirA) + "  f₁=" + f1.toFixed(1) + " Hz", 8, 16);
+        } else {
+          plotWaveMeters(ctx, w, h, function (xm) { return waveB(xm, t); }, COL.b, 2.5);
+          ctx.fillStyle = COL.b;
+          ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("波B " + dirLabel(dirB) + "  φ=" + (phi === 0 ? "0" : "π"), 8, 16);
+        }
+      }
+
+      function drawSuperposition(view, phaseOverride, showAll) {
+        var ctx = view.ctx;
+        var w = view.w, h = view.h;
+        // 合成波は A₁+A₂ まで表示できるよう振幅スケールを確保
+        var ampMax = A1 + A2;
+        drawBaseline(ctx, w, h);
+        if (showAll !== false) {
+          plotWaveMeters(ctx, w, h, function (xm) { return waveA(xm, t); }, COL.a, 1.6, ampMax);
+          plotWaveMeters(ctx, w, h, function (xm) { return waveB(xm, t, phaseOverride); }, COL.b, 1.6, ampMax);
+        }
+        plotWaveMeters(ctx, w, h, function (xm) { return waveSum(xm, t, phaseOverride); }, COL.sum, 2.8, ampMax);
+      }
+
+      function fmtM(v) { return v.toFixed(2); }
+
+      function updateReadouts() {
+        document.getElementById("ampA1Val").textContent = fmtM(A1) + " m";
+        document.getElementById("ampA2Val").textContent = fmtM(A2) + " m";
+        document.getElementById("waveVal").textContent = lambda1.toFixed(1) + " m";
+        document.getElementById("waveBVal").textContent = lambda2.toFixed(1) + " m";
+        document.getElementById("freqA1Val").textContent = f1.toFixed(1) + " Hz";
+        document.getElementById("freqA2Val").textContent = f2.toFixed(1) + " Hz";
+        document.getElementById("outA1").textContent = fmtM(A1);
+        document.getElementById("outA2").textContent = fmtM(A2);
+        document.getElementById("outL").textContent = lambda1.toFixed(1) + " · " + lambda2.toFixed(1);
+        document.getElementById("outF").textContent = f1.toFixed(1) + " · " + f2.toFixed(1);
+        document.getElementById("outV1").textContent = (f1 * lambda1).toFixed(2);
+        document.getElementById("outV2").textContent = (f2 * lambda2).toFixed(2);
+        document.getElementById("vFormula").textContent =
+          "T₁ = " + (1 / f1).toFixed(2) + " s · T₂ = " + (1 / f2).toFixed(2) +
+          " s  |  φ = " + (phi === 0 ? "0" : "π") +
+          "  |  A:" + dirLabel(dirA) + "  B:" + dirLabel(dirB) +
+          "  |  単位：m · Hz · m/s";
+        document.getElementById("ampConstruct").textContent = fmtM(A1 + A2);
+        document.getElementById("ampDestruct").textContent = fmtM(Math.abs(A1 - A2));
+      }
+
+      function readParams() {
+        A1 = Number(document.getElementById("ampA1Slider").value);
+        A2 = Number(document.getElementById("ampA2Slider").value);
+        lambda1 = Number(document.getElementById("waveSlider").value);
+        lambda2 = Number(document.getElementById("waveBSlider").value);
+        f1 = Number(document.getElementById("freqA1Slider").value);
+        f2 = Number(document.getElementById("freqA2Slider").value);
+        updateReadouts();
+      }
+
+      ["ampA1Slider", "ampA2Slider", "waveSlider", "waveBSlider", "freqA1Slider", "freqA2Slider"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", readParams);
+      });
+
+      document.getElementById("phaseInBtn").addEventListener("click", function () {
+        phi = 0;
+        document.getElementById("phaseInBtn").classList.add("active");
+        document.getElementById("phaseOutBtn").classList.remove("active");
+        updateReadouts();
+      });
+      document.getElementById("phaseOutBtn").addEventListener("click", function () {
+        phi = Math.PI;
+        document.getElementById("phaseOutBtn").classList.add("active");
+        document.getElementById("phaseInBtn").classList.remove("active");
+        updateReadouts();
+      });
+
+      function setDir(which, dir) {
+        if (which === "A") {
+          dirA = dir;
+          document.getElementById("dirARightBtn").classList.toggle("active", dir === 1);
+          document.getElementById("dirALeftBtn").classList.toggle("active", dir === -1);
+        } else {
+          dirB = dir;
+          document.getElementById("dirBRightBtn").classList.toggle("active", dir === 1);
+          document.getElementById("dirBLeftBtn").classList.toggle("active", dir === -1);
+        }
+        updateReadouts();
+      }
+      document.getElementById("dirARightBtn").addEventListener("click", function () { setDir("A", 1); });
+      document.getElementById("dirALeftBtn").addEventListener("click", function () { setDir("A", -1); });
+      document.getElementById("dirBRightBtn").addEventListener("click", function () { setDir("B", 1); });
+      document.getElementById("dirBLeftBtn").addEventListener("click", function () { setDir("B", -1); });
+
+      function frame(ts) {
+        if (!lastTs) lastTs = ts;
+        t += Math.min((ts - lastTs) / 1000, 0.05);
+        lastTs = ts;
+
+        drawSingleWave(fitCanvas(canvases.waveA), "A");
+        drawSingleWave(fitCanvas(canvases.waveB), "B");
+        drawSuperposition(fitCanvas(canvases.super), phi, true);
+        drawSuperposition(fitCanvas(canvases.inPhase), 0, true);
+        drawSuperposition(fitCanvas(canvases.outPhase), Math.PI, true);
+
+        requestAnimationFrame(frame);
+      }
+
+      document.getElementById("runStatus").textContent =
+        "単位 m · Hz — 青＝波A · 赤＝波B · 緑＝合成 · 進行方向は各ボタンで切替";
+      readParams();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
