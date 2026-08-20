@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>physLabo — NEWS 管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/physlabo-landing.css?v=20260827">
+  <link rel="stylesheet" href="../assets/css/physlabo-landing-sim-theme.css?v=20260814">
+  <style>
+    body { min-height: 100dvh; background: #0f172a; color: #e2e8f0; }
+    .admin-wrap { width: min(920px, 94vw); margin: 0 auto; padding: 24px 0 48px; }
+    .admin-head { margin-bottom: 24px; }
+    .admin-head h1 { margin: 0 0 8px; font-size: 1.35rem; color: #fde68a; }
+    .admin-head p { margin: 0; font-size: 0.88rem; color: #94a3b8; line-height: 1.6; }
+    .admin-panel {
+      border-radius: 14px; padding: 20px 22px;
+      background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(251, 191, 36, 0.25);
+      margin-bottom: 18px;
+    }
+    .admin-panel h2 { margin: 0 0 14px; font-size: 1.05rem; color: #fcd34d; }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin: 12px 0 4px; }
+    input[type="text"], input[type="password"], input[type="date"], textarea {
+      width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(2, 6, 23, 0.8);
+      color: #f8fafc; font: inherit;
+    }
+    textarea { min-height: 120px; resize: vertical; line-height: 1.65; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .btn {
+      padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(30, 41, 59, 0.8); color: #e2e8f0; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .btn--primary { background: rgba(251, 191, 36, 0.18); border-color: rgba(251, 191, 36, 0.45); color: #fde68a; }
+    .btn--danger { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.4); color: #fecaca; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .msg { margin-top: 12px; font-size: 0.84rem; color: #86efac; min-height: 1.2em; }
+    .msg.is-error { color: #fca5a5; }
+    .article-list { list-style: none; margin: 0; padding: 0; }
+    .article-list li {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+      padding: 12px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    .article-list li:last-child { border-bottom: none; }
+    .article-meta { font-size: 0.78rem; color: #94a3b8; }
+    .article-title { flex: 1 1 200px; font-weight: 600; }
+    .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(52, 211, 153, 0.15); color: #6ee7b7; }
+    .badge.is-draft { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+    .check-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .check-row input { width: auto; }
+    .top-links { margin-top: 10px; font-size: 0.82rem; }
+    .top-links a { color: #7dd3fc; }
+    .hidden { display: none !important; }
+    .hint { margin: 8px 0 0; font-size: 0.76rem; color: #64748b; line-height: 1.5; }
+    .image-preview { margin-top: 12px; }
+    .image-preview img { max-width: min(100%, 360px); border-radius: 10px; border: 1px solid rgba(148, 163, 184, 0.25); }
+    input[type="file"] { width: 100%; color: #cbd5e1; font-size: 0.84rem; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <header class="admin-head">
+      <h1>physLabo NEWS 管理</h1>
+      <p>ID とパスワードでログインし、記事を保存すると <code>data/news.json</code> が更新され、トップページの NEWS に反映されます。<strong>削除は即 HP に反映されます。</strong> 編集内容は <strong>「HPに反映」</strong> を押してください。必ず <code>http://localhost:8790/admin/news.html</code> から開いてください。</p>
+      <p class="top-links"><a href="../00_physLabo_top.html#news">← トップページ（NEWS）</a></p>
+    </header>
+
+    <section class="admin-panel" id="loginPanel">
+      <h2>ログイン</h2>
+      <label for="loginId">ID</label>
+      <input id="loginId" type="text" autocomplete="username">
+      <label for="loginPassword">パスワード</label>
+      <input id="loginPassword" type="password" autocomplete="current-password">
+      <div class="row">
+        <button type="button" class="btn btn--primary" id="loginBtn">ログイン</button>
+      </div>
+      <p class="msg" id="loginMsg"></p>
+      <p style="margin-top:12px;font-size:0.78rem;color:#64748b">
+        初回は <code>node tools/news-server.mjs</code> を実行し、<code>data/news-admin.json</code> に ID/パスワードを設定してください。
+      </p>
+    </section>
+
+    <section class="admin-panel hidden" id="editorPanel">
+      <h2>記事を編集</h2>
+      <input type="hidden" id="editId">
+      <label for="editDate">日付</label>
+      <input id="editDate" type="date">
+      <label for="editTitle">タイトル</label>
+      <input id="editTitle" type="text" maxlength="120">
+      <label for="editImage">アイキャッチ画像（任意）</label>
+      <input id="editImage" type="text" readonly placeholder="アップロード後に表示されます">
+      <label for="editImageFile">画像ファイル</label>
+      <input id="editImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+      <div class="row">
+        <button type="button" class="btn" id="uploadImageBtn">画像をアップロード</button>
+        <button type="button" class="btn" id="insertImageBtn">本文に挿入</button>
+        <button type="button" class="btn" id="clearImageBtn">アイキャッチをクリア</button>
+      </div>
+      <div class="image-preview" id="editImagePreview"></div>
+      <p class="hint">本文への挿入形式: <code>![説明](data/news-images/ファイル名)</code>（1行1画像）</p>
+      <label for="editBody">本文</label>
+      <textarea id="editBody"></textarea>
+      <div class="check-row">
+        <input id="editPublished" type="checkbox" checked>
+        <label for="editPublished" style="margin:0">公開する</label>
+      </div>
+      <div class="row">
+        <button type="button" class="btn btn--primary" id="saveArticleBtn">記事を保存</button>
+        <button type="button" class="btn" id="newArticleBtn">新規</button>
+        <button type="button" class="btn btn--primary" id="publishBtn">HPに反映</button>
+        <button type="button" class="btn" id="logoutBtn">ログアウト</button>
+      </div>
+      <p class="msg" id="editorMsg"></p>
+    </section>
+
+    <section class="admin-panel hidden" id="listPanel">
+      <h2>記事一覧</h2>
+      <ul class="article-list" id="articleList"></ul>
+    </section>
+  </div>
+
+  <script src="news-admin.js"></script>
+</body>
+</html>
