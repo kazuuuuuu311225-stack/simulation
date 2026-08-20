@@ -1,64 +1,26 @@
 (function () {
   "use strict";
 
-  var TOKEN_KEY = "physlabo_news_admin_token";
-  var API_BASE = "";
+  var backend = window.physLaboNewsBackend;
+  if (!backend) return;
 
   var state = { items: [], editingId: null };
+  var isGitHub = backend.mode === "github";
 
   var loginPanel = document.getElementById("loginPanel");
   var editorPanel = document.getElementById("editorPanel");
   var listPanel = document.getElementById("listPanel");
   var loginMsg = document.getElementById("loginMsg");
   var editorMsg = document.getElementById("editorMsg");
+  var localLogin = document.getElementById("localLogin");
+  var githubLogin = document.getElementById("githubLogin");
+  var modeBadge = document.getElementById("modeBadge");
 
   function $(id) { return document.getElementById(id); }
 
   function setMsg(el, text, isError) {
     el.textContent = text || "";
     el.classList.toggle("is-error", !!isError);
-  }
-
-  function token() {
-    try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
-  }
-
-  function setToken(t) {
-    try {
-      if (t) sessionStorage.setItem(TOKEN_KEY, t);
-      else sessionStorage.removeItem(TOKEN_KEY);
-    } catch (e) { /* ignore */ }
-  }
-
-  function api(path, options) {
-    options = options || {};
-    var headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
-    if (token()) headers.Authorization = "Bearer " + token();
-    return fetch(API_BASE + path, {
-      method: options.method || "GET",
-      headers: headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (data) {
-        if (!r.ok) {
-          var err = new Error(data.error || "request_failed");
-          err.status = r.status;
-          throw err;
-        }
-        return data;
-      });
-    });
-  }
-
-  function todayIso() {
-    var d = new Date();
-    var m = String(d.getMonth() + 1).padStart(2, "0");
-    var day = String(d.getDate()).padStart(2, "0");
-    return d.getFullYear() + "-" + m + "-" + day;
-  }
-
-  function newId() {
-    return "news-" + Date.now().toString(36);
   }
 
   function showAuthed(show) {
@@ -174,6 +136,17 @@
     textarea.selectionStart = textarea.selectionEnd = start + text.length;
   }
 
+  function todayIso() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function newId() {
+    return "news-" + Date.now().toString(36);
+  }
+
   function uploadImage(file) {
     return new Promise(function (resolve, reject) {
       var reader = new FileReader();
@@ -181,10 +154,7 @@
         var result = String(reader.result || "");
         var comma = result.indexOf(",");
         var base64 = comma >= 0 ? result.slice(comma + 1) : result;
-        api("/api/news/upload", {
-          method: "POST",
-          body: { filename: file.name, data: base64 },
-        }).then(resolve).catch(reject);
+        backend.uploadImage(file, base64).then(resolve).catch(reject);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
@@ -213,20 +183,31 @@
   function saveItemsToServer(successPrefix) {
     $("publishBtn").disabled = true;
     setMsg(editorMsg, "保存中…");
-    return api("/api/news", { method: "PUT", body: { items: state.items } })
+    return backend.saveNews(state.items)
       .then(function (res) {
+        var tail = isGitHub
+          ? " GitHub に保存しました。1〜2分後にサイトを再読み込みしてください。"
+          : " トップページを再読み込み（F5）してください。";
         setMsg(
           editorMsg,
-          successPrefix + "（" + res.count + " 件 · " + res.updatedAt.slice(0, 19).replace("T", " ") +
-          "）。トップページを再読み込み（F5）してください。"
+          successPrefix + "（" + res.count + " 件 · " + res.updatedAt.slice(0, 19).replace("T", " ") + "）。" + tail
         );
       })
       .catch(function (err) {
-        var msg = err.status === 401
-          ? "ログインの有効期限が切れました。再ログインしてください。"
-          : "保存に失敗しました。news-server が起動しているか確認してください。";
+        var msg;
+        if (err.status === 401) {
+          msg = isGitHub
+            ? "GitHub トークンが無効です。再ログインしてください。"
+            : "ログインの有効期限が切れました。再ログインしてください。";
+          logout();
+        } else if (isGitHub && err.status === 404) {
+          msg = "リポジトリまたはパスが見つかりません。設定（owner / repo / repoPath）を確認してください。";
+        } else if (isGitHub) {
+          msg = "GitHub への保存に失敗しました: " + (err.message || "エラー");
+        } else {
+          msg = "保存に失敗しました。news-server が起動しているか確認してください。";
+        }
         setMsg(editorMsg, msg, true);
-        if (err.status === 401) logout();
       })
       .finally(function () { $("publishBtn").disabled = false; });
   }
@@ -240,53 +221,65 @@
   }
 
   function loadNews() {
-    return api("/api/news").then(function (data) {
+    return backend.loadNews().then(function (data) {
       state.items = (data && data.items) ? data.items.slice() : [];
       renderList();
     });
   }
 
   function logout() {
-    setToken("");
+    backend.logout();
     showAuthed(false);
     setMsg(loginMsg, "");
     setMsg(editorMsg, "");
   }
 
   function checkServerCapabilities() {
-    return api("/api/news/status")
-      .then(function (info) {
-        if (info && info.upload) return;
-        setMsg(
-          editorMsg,
-          "サーバーが古いバージョンです。tools/start-news-server.bat を再起動してください（画像アップロード不可）。",
-          true
-        );
-      })
-      .catch(function () { /* ignore */ });
+    return backend.checkCapabilities().then(function (info) {
+      if (info.upload) return;
+      setMsg(
+        editorMsg,
+        "サーバーが古いバージョンです。tools/start-news-server.bat を再起動してください（画像アップロード不可）。",
+        true
+      );
+    }).catch(function () { /* ignore */ });
   }
 
   function tryRestoreSession() {
-    if (!token()) return Promise.resolve(false);
-    return api("/api/news/session")
-      .then(function (r) {
-        if (!r.ok) { logout(); return false; }
-        showAuthed(true);
-        resetForm(true);
-        return loadNews()
-          .then(function () { return checkServerCapabilities().then(function () { return true; }); });
-      })
-      .catch(function () { logout(); return false; });
+    return backend.sessionOk().then(function (ok) {
+      if (!ok) return false;
+      showAuthed(true);
+      resetForm(true);
+      return loadNews().then(function () {
+        return isGitHub ? true : checkServerCapabilities().then(function () { return true; });
+      });
+    }).catch(function () { return false; });
+  }
+
+  function prefillGitHubForm() {
+    var cfg = backend.getConfig ? backend.getConfig() : (window.__PHYSLABO_NEWS_GITHUB__ || {});
+    if ($("ghOwner") && cfg.owner) $("ghOwner").value = cfg.owner;
+    if ($("ghRepo") && cfg.repo) $("ghRepo").value = cfg.repo;
+    if ($("ghBranch") && cfg.branch) $("ghBranch").value = cfg.branch;
+    if ($("ghRepoPath") && cfg.repoPath != null) $("ghRepoPath").value = cfg.repoPath;
+  }
+
+  function initModeUi() {
+    if (modeBadge) {
+      modeBadge.textContent = isGitHub ? "GitHub 公開サイトモード" : "PC ローカルモード";
+    }
+    if (localLogin) localLogin.classList.toggle("hidden", isGitHub);
+    if (githubLogin) githubLogin.classList.toggle("hidden", !isGitHub);
+    if (isGitHub) prefillGitHubForm();
   }
 
   $("loginBtn").addEventListener("click", function () {
     setMsg(loginMsg, "");
-    api("/api/news/login", {
-      method: "POST",
-      body: { id: $("loginId").value.trim(), password: $("loginPassword").value },
+    backend.login({
+      id: $("loginId").value.trim(),
+      password: $("loginPassword").value,
     })
-      .then(function (res) {
-        setToken(res.token);
+      .then(function () {
         showAuthed(true);
         resetForm(true);
         return loadNews().then(checkServerCapabilities);
@@ -294,6 +287,35 @@
       .then(function () { setMsg(loginMsg, ""); })
       .catch(function () {
         setMsg(loginMsg, "ID またはパスワードが正しくありません。", true);
+      });
+  });
+
+  $("githubLoginBtn").addEventListener("click", function () {
+    setMsg(loginMsg, "");
+    backend.login({
+      owner: $("ghOwner").value.trim(),
+      repo: $("ghRepo").value.trim(),
+      branch: $("ghBranch").value.trim() || "main",
+      repoPath: $("ghRepoPath").value.trim(),
+      token: $("ghToken").value.trim(),
+    })
+      .then(function (res) {
+        showAuthed(true);
+        resetForm(true);
+        $("ghToken").value = "";
+        return loadNews();
+      })
+      .then(function () {
+        setMsg(loginMsg, "GitHub にログインしました。");
+      })
+      .catch(function (err) {
+        var msg = "GitHub ログインに失敗しました。";
+        if (err && err.message === "missing_fields") {
+          msg += " ユーザー名・リポジトリ・トークンを入力してください。";
+        } else if (err && err.status === 401) {
+          msg += " トークンが正しくないか、権限が不足しています。";
+        }
+        setMsg(loginMsg, msg, true);
       });
   });
 
@@ -318,14 +340,21 @@
         if ($("editBody").value.indexOf(res.path) < 0) {
           insertAtCursor($("editBody"), "![image](" + res.path + ")\n");
         }
-        setMsg(editorMsg, "画像をアップロードしました。「HPに反映」を押すと HP に表示されます。");
+        setMsg(
+          editorMsg,
+          isGitHub
+            ? "画像を GitHub にアップロードしました。「HPに反映」を押してください。"
+            : "画像をアップロードしました。「HPに反映」を押すと HP に表示されます。"
+        );
       })
       .catch(function (err) {
         var msg = "画像のアップロードに失敗しました。";
-        if (err && err.message === "not_found") {
-          msg += " tools/start-news-server.bat を再起動してください（古いサーバーが動いています）。";
-        } else if (err && err.message === "invalid_upload") {
-          msg += " PNG / JPEG / GIF / WebP のファイルを選んでください（.heic 等は不可）。";
+        if (err && err.message === "invalid_upload") {
+          msg += " PNG / JPEG / GIF / WebP のファイルを選んでください。";
+        } else if (isGitHub) {
+          msg += " トークンに repo への書き込み権限があるか確認してください。";
+        } else if (err && err.message === "not_found") {
+          msg += " tools/start-news-server.bat を再起動してください。";
         } else {
           msg += " news-server が起動しているか確認してください。";
         }
@@ -354,7 +383,11 @@
   $("loginPassword").addEventListener("keydown", function (e) {
     if (e.key === "Enter") $("loginBtn").click();
   });
+  $("ghToken").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") $("githubLoginBtn").click();
+  });
 
+  initModeUi();
   tryRestoreSession().then(function (ok) {
     if (!ok) showAuthed(false);
   });
