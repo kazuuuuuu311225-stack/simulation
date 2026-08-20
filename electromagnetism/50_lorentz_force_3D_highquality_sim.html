@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>24章 電流と磁場 — ローレンツ力 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 45%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1100px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(96,165,250,0.4));
+      border: 1px solid rgba(129,140,248,0.4); font-size: 1.6rem;
+      box-shadow: 0 0 28px rgba(251,191,36,0.22);
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c7d2fe; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(129, 140, 248, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #a5b4fc; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(96,165,250,0.1));
+      border: 1px solid rgba(251,191,36,0.35);
+    }
+    .formula-main { font-size: 1.25rem; font-weight: 800; color: #fde68a; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud" "ctrl";
+    }
+    @media (min-width: 900px) {
+      .sim-grid { grid-template-columns: 1.15fr 0.85fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden; background: #111;
+      border: 1px solid rgba(251,191,36,0.3);
+      box-shadow: inset 0 0 40px rgba(251,191,36,0.05);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; font-weight: 600; color: #cbd5e1;
+    }
+    .color-chip {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; }
+    #field3dWrap {
+      width: 100%; height: min(480px, 52dvh); min-height: 320px;
+      cursor: grab; touch-action: none; background: #060a12;
+    }
+    #field3dWrap:active { cursor: grabbing; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn, .preset-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.is-active, .preset-btn.is-active {
+      background: rgba(6,182,212,0.22); color: #e0f2fe; border-color: rgba(6,182,212,0.6);
+    }
+    .preset-btn.is-active.b-preset { background: rgba(96,165,250,0.22); border-color: rgba(96,165,250,0.55); color: #bfdbfe; }
+    .hud-card {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.65rem; color: #94a3b8; }
+    .hud-card .num { font-size: 0.82rem; font-weight: 700; color: #fde68a; margin-top: 2px; line-height: 1.45; }
+    .hud-card.col-b .num { color: #93c5fd; }
+    .hud-card.col-v .num { color: #fdba74; }
+    .hud-card.col-f .num { color: #fde047; }
+    .hud-card.col-b { border-color: rgba(96,165,250,0.35); }
+    .hud-card.col-v { border-color: rgba(251,146,60,0.35); }
+    .hud-card.col-f { border-color: rgba(251,191,36,0.35); }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .formula-box {
+      padding: 10px; border-radius: 10px; text-align: center; margin: 8px 0;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #7dd3fc; line-height: 1.6;
+    }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+    .slider-val { color: #7dd3fc; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .hint-box {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; color: #ede9fe;
+      background: linear-gradient(135deg, rgba(49,46,129,0.45), rgba(30,27,75,0.35));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .ctrl-grid { display: grid; gap: 10px; }
+    @media (min-width: 700px) { .ctrl-grid { grid-template-columns: repeat(2, 1fr); } }
+    .ctrl-section { font-size: 0.72rem; color: #a5b4fc; font-weight: 700; margin: 8px 0 4px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">×</div>
+      <p class="chapter-label">第24章 ⑩ — 電流と磁場</p>
+      <h2>ローレンツ力 — 3Dベクトルラボ</h2>
+      <p class="tagline">F = q(v × B) · v・B・F の向きを3Dで体感</p>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-24">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>荷電粒子に働く <strong>ローレンツ力 F = q(v×B)</strong> を、3D空間でベクトルごとに観察します。
+        <strong style="color:#93c5fd">青＝磁場B</strong> · <strong style="color:#fdba74">橙＝速度v</strong> ·
+        <strong style="color:#fde047">黄＝力F</strong> · 正電荷は赤・負電荷は青の軌跡。
+        vとBの向きを変えて、円運動・直進・螺旋運動を確かめましょう。</p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">F = q (v × B)　　R = mv / (|q|B)</div>
+        <div class="formula-sub">|F| = |q| |v| |B| sinθ　v ⟂ B → 等速円運動 · 斜め → 螺旋</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">ローレンツ力と粒子軌道（3D）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>磁場 B（↑y）</span>
+              <span><i class="color-chip" style="background:#fb923c;color:#fb923c"></i>速度 v</span>
+              <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>力 F</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>正電荷軌跡</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>負電荷軌跡</span>
+            </div>
+            <p class="viz-legend">立方体ラボ枠 · 軌道は x–z 面 · 中心の v×B→F · 点線円＝R（粒子と同じ向きに回転）</p>
+            <div id="field3dWrap"></div>
+            <div class="viz-foot">
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnGuide" class="active">理論円 ON</button>
+              <button type="button" id="btnResetView">初期表示</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="formula-box" id="formulaLive">R = mv/(|q|B) · |F| = |q||v||B|sinθ</div>
+          <div class="hud-grid">
+            <div class="hud-card"><div class="lbl">電荷 q</div><div class="num" id="hudQ">+1.0</div></div>
+            <div class="hud-card"><div class="lbl">質量 m</div><div class="num" id="hudM">1.0</div></div>
+            <div class="hud-card col-v"><div class="lbl">初速度 v₀</div><div class="num" id="hudV0">5.0</div></div>
+            <div class="hud-card col-b"><div class="lbl">磁束密度 B</div><div class="num" id="hudB">1.0 T</div></div>
+            <div class="hud-card"><div class="lbl">sinθ</div><div class="num" id="hudSin">1.000</div></div>
+            <div class="hud-card col-f"><div class="lbl">理論半径 R</div><div class="num" id="hudR">5.00</div></div>
+            <div class="hud-card col-v"><div class="lbl">現在 |v|</div><div class="num" id="hudVnow">—</div></div>
+            <div class="hud-card col-f"><div class="lbl">現在 |F|</div><div class="num" id="hudFnow">—</div></div>
+            <div class="hud-card" style="grid-column:1/-1"><div class="lbl">軌道タイプ</div><div class="num" id="hudTrack" style="font-size:0.82rem;color:#a5f3fc">垂直入射 · 円運動</div></div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>電荷 q <span class="slider-val" id="valQ">+1.0</span></label>
+              <input type="range" id="slQ" min="-50" max="50" value="10" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>初速度 v₀ <span class="slider-val" id="valV0">5.0</span></label>
+              <input type="range" id="slV0" min="0" max="100" value="50" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>質量 m <span class="slider-val" id="valM">1.0</span></label>
+              <input type="range" id="slM" min="1" max="100" value="10" step="1">
+            </div>
+            <div class="ctrl-row" id="thetaRow">
+              <label>入射角 θ（vとB） <span class="slider-val" id="valTheta">90°</span></label>
+              <input type="range" id="slTheta" min="0" max="90" value="90" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>速度方向 φ（x–z面） <span class="slider-val" id="valPhi">90°</span></label>
+              <input type="range" id="slPhi" min="0" max="360" value="90" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>磁束密度 B <span class="slider-val" id="valB">1.0 T</span></label>
+              <input type="range" id="slB" min="2" max="50" value="10" step="1">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="act-btn is-active" id="btnPerp">垂直入射 ON</button>
+            <button type="button" class="act-btn" id="btnReset">粒子リセット</button>
+            <button type="button" class="act-btn" id="btnClear">軌跡クリア</button>
+          </div>
+          <div class="hint-box" id="hintText">v ⟂ B のとき等速円運動 · R=mv/(|q|B) · 正負電荷で回転方向が逆 · θを変えると螺旋へ</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const COL = { B: 0x60a5fa, V: 0xfb923c, F: 0xfbbf24, pos: 0xf87171, neg: 0x38bdf8 };
+      const INIT_ROT_X = 0.42, INIT_ROT_Y = 0.65, INIT_ZOOM = 3.4;
+      const SCENE = {
+        box: 1.15,
+        unit: 0.09,
+        particleR: 0.042,
+        bArrowLen: 0.11,
+        bOpacity: 0.9,
+        vecBase: 0.14,
+      };
+      const wrap = document.getElementById("field3dWrap");
+
+      const target = { q: 1, m: 1, v0: 5, B: 1, vTheta: 90, vPhi: 90 };
+      const smooth = { q: 1, m: 1, v0: 5, B: 1, vTheta: 90, vPhi: 90 };
+      let perpMode = true, autoSpin = true, showGuide = true, t = 0, needsBRebuild = true, bFieldBuiltB = -1;
+
+      let scene, camera, renderer, worldGroup;
+      let particleMesh, trailLine, guideRing, bMainArrow, bGridGroup, triadGroup;
+      let vArrow, fArrow, triadArrows;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM, dragging = false, lx = 0, ly = 0;
+
+      const state = {
+        pos: new THREE.Vector3(-4.5, 0, 0),
+        vel: new THREE.Vector3(5, 0, 0),
+      };
+      const trailPts = [];
+      const MAX_TRAIL = 800;
+      let lastOrbitSign = 1;
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function Bvec() { return new THREE.Vector3(0, smooth.B, 0); }
+
+      function effectiveTheta() { return perpMode ? 90 : smooth.vTheta; }
+
+      function initVelocity() {
+        const th = effectiveTheta() * Math.PI / 180;
+        const ph = smooth.vPhi * Math.PI / 180;
+        const sinT = Math.sin(th);
+        const cosT = Math.cos(th);
+        return new THREE.Vector3(
+          smooth.v0 * sinT * Math.cos(ph),
+          smooth.v0 * cosT,
+          smooth.v0 * sinT * Math.sin(ph)
+        );
+      }
+
+      function sinTheta() {
+        const v = initVelocity();
+        const B = Bvec();
+        const vm = v.length(), Bm = B.length();
+        if (vm < 1e-6 || Bm < 1e-6) return 0;
+        return clamp(v.clone().normalize().cross(B.clone().normalize()).length(), 0, 1);
+      }
+
+      function theoryR() {
+        const th = effectiveTheta() * Math.PI / 180;
+        const vPerp = smooth.v0 * Math.sin(th);
+        const qb = Math.abs(smooth.q) * Math.max(smooth.B, 0.02);
+        return smooth.m * vPerp / qb;
+      }
+
+      function theoryT() {
+        const qb = Math.abs(smooth.q) * Math.max(smooth.B, 0.02);
+        return 2 * Math.PI * smooth.m / qb;
+      }
+
+      function toScene(v) {
+        return v.clone().multiplyScalar(SCENE.unit);
+      }
+
+      function buildRefBox(group) {
+        const s = SCENE.box;
+        const boxGeo = new THREE.BoxGeometry(s, s, s);
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        group.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+          color: 0xc47a4a, transparent: true, opacity: 0.68,
+        })));
+        boxGeo.dispose();
+        edges.dispose();
+
+        const faceHalf = s * 0.5 + 0.006;
+        const faceSize = s * 0.97;
+        [
+          { pos: [-faceHalf, 0, 0], look: [-1, 0, 0] },
+          { pos: [faceHalf, 0, 0], look: [1, 0, 0] },
+          { pos: [0, -faceHalf, 0], look: [0, -1, 0] },
+          { pos: [0, faceHalf, 0], look: [0, 1, 0] },
+          { pos: [0, 0, -faceHalf], look: [0, 0, -1] },
+          { pos: [0, 0, faceHalf], look: [0, 0, 1] },
+        ].forEach(({ pos, look }) => {
+          const mesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(faceSize, faceSize),
+            new THREE.MeshBasicMaterial({
+              color: 0x38bdf8, transparent: true, opacity: 0.03,
+              side: THREE.DoubleSide, depthWrite: false,
+            })
+          );
+          mesh.position.set(pos[0], pos[1], pos[2]);
+          mesh.lookAt(look[0], look[1], look[2]);
+          group.add(mesh);
+        });
+
+        const grid = new THREE.GridHelper(s * 0.92, 8, 0x1e3a5f, 0x111827);
+        grid.position.y = -s * 0.5 + 0.01;
+        group.add(grid);
+      }
+
+      function makeArrow(dir, origin, len, color, headRatio) {
+        const hr = headRatio || 0.3;
+        const d = dir.lengthSq() > 0 ? dir.clone().normalize() : new THREE.Vector3(0, 1, 0);
+        const arr = new THREE.ArrowHelper(d, origin.clone(), len, color, len * hr, len * hr * 0.5);
+        arr.line.material.transparent = true;
+        arr.cone.material.transparent = true;
+        return arr;
+      }
+
+      function orbitVelocityForTriad() {
+        return perpMode && effectiveTheta() >= 80
+          ? perpendicularOrbitVelocity()
+          : initVelocity();
+      }
+
+      function buildTriad() {
+        clearGroup(triadGroup);
+        triadArrows = {};
+        const vb = SCENE.vecBase;
+        const vVec = orbitVelocityForTriad();
+        const vDir = vVec.clone().normalize();
+        const bDir = new THREE.Vector3(0, 1, 0);
+        const fRaw = new THREE.Vector3().crossVectors(vVec, Bvec()).multiplyScalar(smooth.q);
+        const fDir = fRaw.lengthSq() > 0 ? fRaw.clone().normalize() : new THREE.Vector3(0, 1, 0);
+
+        triadArrows.v = makeArrow(vDir, new THREE.Vector3(), vb * 0.95, COL.V, 0.28);
+        triadArrows.b = makeArrow(bDir, new THREE.Vector3(), vb * 0.85, COL.B, 0.28);
+        triadArrows.f = makeArrow(fDir, new THREE.Vector3(), vb * 0.75, COL.F, 0.3);
+        triadGroup.add(triadArrows.v, triadArrows.b, triadArrows.f);
+
+        const brace = new THREE.Mesh(
+          new THREE.TorusGeometry(vb * 0.35, 0.004, 8, 20, Math.PI / 2),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.45 })
+        );
+        brace.rotation.y = Math.PI / 2;
+        brace.rotation.x = Math.PI / 2;
+        triadGroup.add(brace);
+        triadGroup.userData.brace = brace;
+      }
+
+      function updateTriad() {
+        if (!triadArrows.v) return;
+        const active = smooth.B > 0.02 && smooth.v0 > 0.02 && sinTheta() > 0.02;
+        triadArrows.v.visible = active;
+        triadArrows.b.visible = active;
+        triadArrows.f.visible = active;
+        if (triadGroup.userData.brace) triadGroup.userData.brace.visible = active;
+        if (!active) return;
+
+        const vb = SCENE.vecBase;
+        const vDir = initVelocity().normalize();
+        const bDir = new THREE.Vector3(0, 0, 1);
+        const fRaw = new THREE.Vector3().crossVectors(vDir, bDir).multiplyScalar(smooth.q);
+        const fDir = fRaw.lengthSq() > 0 ? fRaw.normalize() : new THREE.Vector3(0, 1, 0);
+
+        triadArrows.v.setDirection(vDir);
+        triadArrows.v.setLength(vb * 0.95, vb * 0.27, vb * 0.13);
+        triadArrows.b.setDirection(bDir);
+        triadArrows.b.setLength(vb * 0.85, vb * 0.24, vb * 0.12);
+        triadArrows.f.setDirection(fDir);
+        triadArrows.f.setLength(vb * 0.75, vb * 0.23, vb * 0.11);
+      }
+
+      function resizeRenderer() {
+        if (!renderer || !camera || !wrap) return;
+        const rw = Math.max(wrap.clientWidth, 1);
+        const rh = Math.max(wrap.clientHeight, 320);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        camera.aspect = rw / rh;
+        camera.updateProjectionMatrix();
+      }
+
+      function resetView() {
+        rotX = INIT_ROT_X;
+        rotY = INIT_ROT_Y;
+        zoom = INIT_ZOOM;
+        resizeRenderer();
+      }
+
+      function particleColor() { return smooth.q >= 0 ? COL.pos : COL.neg; }
+
+      function trackType() {
+        const th = effectiveTheta();
+        if (th <= 1) return "直進（v ∥ B）";
+        if (th >= 89) return "垂直入射 · x–z面の円運動";
+        return "斜め入射 · y方向へ螺旋";
+      }
+
+      function perpendicularOrbitPosition() {
+        const R = theoryR();
+        const ph = smooth.vPhi * Math.PI / 180;
+        return new THREE.Vector3(R * Math.sin(ph), 0, -R * Math.cos(ph));
+      }
+
+      function perpendicularOrbitVelocity() {
+        const ph = smooth.vPhi * Math.PI / 180;
+        const v0 = smooth.v0;
+        if (smooth.q >= 0) {
+          return new THREE.Vector3(v0 * Math.cos(ph), 0, v0 * Math.sin(ph));
+        }
+        return new THREE.Vector3(-v0 * Math.cos(ph), 0, -v0 * Math.sin(ph));
+      }
+
+      function resetParticle() {
+        const R = theoryR();
+        const th = effectiveTheta();
+        if (th >= 80) {
+          state.pos.copy(perpendicularOrbitPosition());
+          state.vel.copy(perpendicularOrbitVelocity());
+        } else {
+          state.pos.set(-R * 1.2 - 1.5, 0, 0);
+          state.vel.copy(initVelocity());
+        }
+        trailPts.length = 0;
+        updateTrailGeo(true);
+        lastOrbitSign = smooth.q >= 0 ? 1 : -1;
+      }
+
+      function lorentzForce(v) {
+        return new THREE.Vector3().crossVectors(v, Bvec()).multiplyScalar(smooth.q);
+      }
+
+      function stepPhysics(dt) {
+        if (Math.abs(smooth.q) < 0.02 || smooth.B < 0.02 || smooth.v0 < 0.02) return;
+        const substeps = 4;
+        const h = dt / substeps;
+        for (let i = 0; i < substeps; i++) {
+          const a = lorentzForce(state.vel).divideScalar(smooth.m);
+          state.vel.addScaledVector(a, h);
+          state.pos.addScaledVector(state.vel, h);
+        }
+        trailPts.push(state.pos.clone());
+        if (trailPts.length > MAX_TRAIL) trailPts.shift();
+      }
+
+      function clearGroup(g) {
+        if (!g) return;
+        while (g.children.length) {
+          const c = g.children[0];
+          g.remove(c);
+          if (c.geometry) c.geometry.dispose();
+          if (c.material) {
+            if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose());
+            else c.material.dispose();
+          }
+        }
+      }
+
+      function buildBField() {
+        if (!bGridGroup) return;
+        clearGroup(bGridGroup);
+        const B = Math.max(smooth.B, 0);
+        const bEff = Math.max(B, 0.12);
+        const alen = SCENE.bArrowLen * (0.8 + bEff * 0.22);
+        const span = SCENE.box * 0.38;
+        const gridN = 5;
+        const opacity = SCENE.bOpacity * (0.7 + 0.3 * clamp(B / 2, 0, 1));
+        const yBase = -SCENE.box * 0.2;
+
+        for (let ix = 0; ix < gridN; ix++) {
+          for (let iz = 0; iz < gridN; iz++) {
+            const x = -span + (ix / (gridN - 1)) * span * 2;
+            const z = -span + (iz / (gridN - 1)) * span * 2;
+            const arrow = new THREE.ArrowHelper(
+              new THREE.Vector3(0, 1, 0), new THREE.Vector3(x, yBase, z),
+              alen, COL.B, alen * 0.35, alen * 0.18
+            );
+            arrow.line.material.opacity = opacity;
+            arrow.line.material.transparent = true;
+            arrow.cone.material.opacity = opacity;
+            arrow.cone.material.transparent = true;
+            arrow.frustumCulled = false;
+            bGridGroup.add(arrow);
+          }
+        }
+        const mainLen = SCENE.bArrowLen * (1.2 + bEff * 0.38);
+        bMainArrow = makeArrow(
+          new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3(0, -SCENE.box * 0.32, 0),
+          mainLen,
+          COL.B,
+          0.28
+        );
+        bMainArrow.line.material.opacity = 0.98;
+        bMainArrow.cone.material.opacity = 0.98;
+        bMainArrow.frustumCulled = false;
+        bGridGroup.add(bMainArrow);
+        bFieldBuiltB = smooth.B;
+      }
+
+      function buildGuideRing() {
+        if (!guideRing) return;
+        const Rs = theoryR() * SCENE.unit;
+        const col = particleColor();
+        const steps = 96;
+        const pts = [];
+        for (let i = 0; i <= steps; i++) {
+          const ang = (i / steps) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(ang) * Rs, 0, Math.sin(ang) * Rs));
+        }
+        guideRing.geometry.dispose();
+        guideRing.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+        guideRing.geometry.computeBoundingSphere();
+        guideRing.computeLineDistances();
+        guideRing.material.color.setHex(col);
+        guideRing.visible = showGuide && effectiveTheta() > 80 && Rs > 0.05;
+        updateGuideRingMotion();
+      }
+
+      function updateGuideRingMotion() {
+        if (!guideRing || !guideRing.visible || !guideRing.material) return;
+        if (effectiveTheta() <= 80) return;
+        const Rs = theoryR() * SCENE.unit;
+        if (Rs <= 0.05) return;
+        const posAng = Math.atan2(state.pos.z, state.pos.x);
+        guideRing.material.dashOffset = -posAng * Rs * 0.65;
+      }
+
+      function updateTrailGeo(clear) {
+        if (clear || trailPts.length < 2) {
+          trailLine.geometry.dispose();
+          trailLine.geometry = new THREE.BufferGeometry();
+          trailLine.visible = trailPts.length >= 2;
+          if (trailPts.length >= 2) {
+            trailLine.geometry.setFromPoints(trailPts.map((p) => toScene(p)));
+          }
+          return;
+        }
+        trailLine.geometry.setFromPoints(trailPts.map((p) => toScene(p)));
+        trailLine.visible = true;
+      }
+
+      function updateVisuals() {
+        const col = particleColor();
+        const pScene = toScene(state.pos);
+        particleMesh.material.color.setHex(col);
+        particleMesh.material.emissive.setHex(col);
+        particleMesh.position.copy(pScene);
+        trailLine.material.color.setHex(col);
+
+        const vmag = state.vel.length();
+        const F = lorentzForce(state.vel);
+        const Fmag = F.length();
+        const vb = SCENE.vecBase;
+
+        if (vmag > 0.01) {
+          vArrow.visible = true;
+          const vDir = state.vel.clone().normalize();
+          const vLen = clamp(vb * (0.55 + vmag / Math.max(smooth.v0, 0.1) * 0.45), vb * 0.4, vb * 1.1);
+          vArrow.position.copy(pScene);
+          vArrow.setDirection(vDir);
+          vArrow.setLength(vLen, vLen * 0.28, vLen * 0.14);
+        } else vArrow.visible = false;
+
+        if (Fmag > 0.01) {
+          fArrow.visible = true;
+          const fDir = F.clone().normalize();
+          const fLen = clamp(vb * (0.45 + Fmag / Math.max(Math.abs(smooth.q) * smooth.v0 * smooth.B, 0.1) * 0.4), vb * 0.35, vb * 1.0);
+          fArrow.position.copy(pScene);
+          fArrow.setDirection(fDir);
+          fArrow.setLength(fLen, fLen * 0.28, fLen * 0.14);
+        } else fArrow.visible = false;
+
+        buildGuideRing();
+        updateGuideRingMotion();
+        updateTriad();
+      }
+
+      function updateHUD() {
+        const R = theoryR();
+        const T = theoryT();
+        const vmag = state.vel.length();
+        const Fmag = lorentzForce(state.vel).length();
+        const s = sinTheta();
+        const th = effectiveTheta();
+
+        document.getElementById("valQ").textContent = (smooth.q >= 0 ? "+" : "") + smooth.q.toFixed(1);
+        document.getElementById("valM").textContent = smooth.m.toFixed(1);
+        document.getElementById("valV0").textContent = smooth.v0.toFixed(1);
+        document.getElementById("valB").textContent = smooth.B.toFixed(1) + " T";
+        document.getElementById("valTheta").textContent = th.toFixed(0) + "°";
+        document.getElementById("valPhi").textContent = smooth.vPhi.toFixed(0) + "°";
+        document.getElementById("hudQ").textContent = (smooth.q >= 0 ? "+" : "") + smooth.q.toFixed(1);
+        document.getElementById("hudM").textContent = smooth.m.toFixed(1);
+        document.getElementById("hudV0").textContent = smooth.v0.toFixed(1);
+        document.getElementById("hudB").textContent = smooth.B.toFixed(1) + " T";
+        document.getElementById("hudSin").textContent = s.toFixed(3);
+        document.getElementById("hudR").textContent = R.toFixed(2);
+        document.getElementById("hudVnow").textContent = vmag.toFixed(2);
+        document.getElementById("hudFnow").textContent = Fmag.toFixed(2);
+        document.getElementById("hudTrack").textContent = trackType();
+        document.getElementById("formulaLive").textContent =
+          `R = ${smooth.m.toFixed(1)}×${smooth.v0.toFixed(1)}sin${th.toFixed(0)}°/(|${smooth.q.toFixed(1)}|×${smooth.B.toFixed(1)}) = ${R.toFixed(2)}　|　T = ${T.toFixed(2)} s`;
+        document.getElementById("thetaRow").style.opacity = perpMode ? "0.4" : "1";
+        document.getElementById("slTheta").disabled = perpMode;
+        document.getElementById("hintText").textContent = perpMode
+          ? "v ⟂ B → x–z面で等速円運動 · B は +y · 正負電荷で回転が逆"
+          : "θ を変えると y 方向へ螺旋 · θ=90° で x–z面の円運動";
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060a12);
+        scene.fog = new THREE.FogExp2(0x060a12, 0.08);
+
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(42, w / h, 0.05, 50);
+        camera.position.set(0, 0, zoom);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.65));
+        const key = new THREE.DirectionalLight(0xffffff, 1.0);
+        key.position.set(3, 4, 5);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x22d3ee, 0.7, 12);
+        rim.position.set(-3, -2, 4);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        worldGroup.frustumCulled = false;
+        scene.add(worldGroup);
+
+        buildRefBox(worldGroup);
+
+        bGridGroup = new THREE.Group();
+        bGridGroup.frustumCulled = false;
+        triadGroup = new THREE.Group();
+        worldGroup.add(bGridGroup, triadGroup);
+
+        const col = COL.pos;
+        particleMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(SCENE.particleR, 20, 20),
+          new THREE.MeshStandardMaterial({
+            color: col, emissive: col, emissiveIntensity: 0.85,
+            metalness: 0.2, roughness: 0.3,
+          })
+        );
+        worldGroup.add(particleMesh);
+
+        trailLine = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.78 })
+        );
+        trailLine.frustumCulled = false;
+        worldGroup.add(trailLine);
+
+        guideRing = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineDashedMaterial({
+            color: col, transparent: true, opacity: 0.72,
+            dashSize: 0.022, gapSize: 0.014,
+          })
+        );
+        guideRing.frustumCulled = false;
+        worldGroup.add(guideRing);
+
+        vArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), SCENE.vecBase, COL.V, 0.28);
+        fArrow = makeArrow(new THREE.Vector3(0, 1, 0), new THREE.Vector3(), SCENE.vecBase * 0.9, COL.F, 0.28);
+        worldGroup.add(vArrow, fArrow);
+
+        worldGroup.add(new THREE.Mesh(
+          new THREE.SphereGeometry(0.028, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xffffff })
+        ));
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -1.1, 1.1);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, 2.2, 5.5);
+        }, { passive: false });
+        window.addEventListener("resize", resizeRenderer);
+
+        buildBField();
+        buildTriad();
+        resetParticle();
+        resetView();
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        t += dt;
+
+        const k = 1 - Math.pow(0.001, dt / 0.4);
+        smooth.q = lerp(smooth.q, target.q, k);
+        smooth.m = lerp(smooth.m, target.m, k);
+        smooth.v0 = lerp(smooth.v0, target.v0, k);
+        smooth.B = lerp(smooth.B, target.B, k);
+        smooth.vPhi = lerp(smooth.vPhi, target.vPhi, k);
+        if (!perpMode) smooth.vTheta = lerp(smooth.vTheta, target.vTheta, k);
+
+        if (perpMode && effectiveTheta() >= 80) {
+          const orbitSign = smooth.q >= 0 ? 1 : -1;
+          if (orbitSign !== lastOrbitSign) {
+            resetParticle();
+            buildTriad();
+          }
+        }
+
+        if (needsBRebuild || Math.abs(smooth.B - bFieldBuiltB) > 0.06) {
+          buildBField();
+          needsBRebuild = false;
+        }
+
+        const speedFactor = clamp(2 / Math.max(theoryT(), 0.5), 0.3, 8);
+        stepPhysics(dt * speedFactor);
+        updateVisuals();
+        updateTrailGeo(false);
+        updateHUD();
+
+        if (autoSpin && !dragging) rotY += dt * 0.2;
+
+        worldGroup.rotation.x = rotX;
+        worldGroup.rotation.y = rotY;
+        camera.position.set(0, 0, zoom);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      document.getElementById("slQ").addEventListener("input", (e) => {
+        target.q = +e.target.value * 0.1;
+        if (Math.abs(target.q) < 0.05) target.q = target.q >= 0 ? 0.1 : -0.1;
+        buildTriad();
+        if (perpMode) resetParticle();
+      });
+      document.getElementById("slM").addEventListener("input", (e) => {
+        target.m = +e.target.value * 0.1;
+        if (perpMode) resetParticle();
+      });
+      document.getElementById("slV0").addEventListener("input", (e) => {
+        target.v0 = +e.target.value * 0.1;
+        if (perpMode) resetParticle();
+      });
+      document.getElementById("slPhi").addEventListener("input", (e) => {
+        target.vPhi = +e.target.value;
+        buildTriad();
+        if (perpMode) resetParticle();
+      });
+      document.getElementById("slB").addEventListener("input", (e) => {
+        target.B = +e.target.value * 0.1;
+        needsBRebuild = true;
+        if (perpMode) resetParticle();
+      });
+      document.getElementById("slTheta").addEventListener("input", (e) => { target.vTheta = +e.target.value; buildTriad(); });
+
+      document.getElementById("btnPerp").addEventListener("click", function () {
+        perpMode = !perpMode;
+        this.classList.toggle("is-active", perpMode);
+        this.textContent = perpMode ? "垂直入射 ON" : "垂直入射 OFF";
+        if (perpMode) {
+          target.vTheta = 90;
+          document.getElementById("slTheta").value = 90;
+        }
+        buildTriad();
+        resetParticle();
+      });
+
+      document.getElementById("btnReset").addEventListener("click", resetParticle);
+      document.getElementById("btnClear").addEventListener("click", () => {
+        trailPts.length = 0;
+        updateTrailGeo(true);
+      });
+      document.getElementById("btnSpin").addEventListener("click", function () {
+        autoSpin = !autoSpin;
+        this.classList.toggle("active", autoSpin);
+      });
+      document.getElementById("btnGuide").addEventListener("click", function () {
+        showGuide = !showGuide;
+        this.classList.toggle("active", showGuide);
+        buildGuideRing();
+      });
+
+      document.getElementById("btnResetView").addEventListener("click", resetView);
+
+      try {
+        initThree();
+        updateHUD();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        wrap.innerHTML = "<p style='color:#f87171;padding:20px'>3D初期化エラー: " + err.message + "</p>";
+      }
+    })();
+  </script>
+</body>
+</html>

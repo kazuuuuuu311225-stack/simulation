@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>23章 電流 — ホイートストンブリッジ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --panel: rgba(10, 12, 28, 0.9); --border: rgba(251, 191, 36, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1628 42%, #101820 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(34,197,94,0.45), rgba(56,189,248,0.35));
+      border: 1px solid rgba(34,197,94,0.45); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25);
+      font-size: 0.86rem; color: #bbf7d0; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(34,197,94,0.22);
+      font-size: 0.86rem; color: #bbf7d0; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #060a14; border: 1px solid rgba(56,189,248,0.2);
+      box-shadow: inset 0 0 48px rgba(0,0,0,0.45), 0 4px 24px rgba(0,0,0,0.25);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(580px, 64dvh);
+      min-height: 420px; touch-action: none;
+    }
+    .step-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .step-btn {
+      flex: 1; min-width: 72px; padding: 10px 8px; border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
+      color: #cbd5e1; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .step-btn.is-active {
+      background: rgba(34,197,94,0.22); border-color: rgba(34,197,94,0.6); color: #bbf7d0;
+    }
+    .step-guide {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.28);
+      font-size: 0.84rem; color: #bbf7d0; line-height: 1.65;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    label.is-disabled { opacity: 0.45; }
+    input[type="range"] { width: 100%; accent-color: #22c55e; }
+    input[type="range"]:disabled { opacity: 0.35; cursor: not-allowed; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #bbf7d0; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-row button {
+      padding: 10px 16px; border-radius: 10px; font: inherit; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(251,191,36,0.35);
+      background: rgba(251,191,36,0.12); color: #fef08a;
+    }
+    .btn-row button#startBtn {
+      border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.18); color: #bae6fd;
+    }
+    .btn-row button#balanceBtn {
+      border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.15); color: #bbf7d0;
+    }
+    .btn-row button#balanceBtn.is-hidden { display: none; }
+    .btn-row button#balanceBtn.is-balanced {
+      border-color: rgba(34,197,94,0.75); background: rgba(34,197,94,0.28); color: #ecfdf5;
+    }
+    .run-status {
+      margin-top: 8px; padding: 8px 12px; border-radius: 10px; font-size: 0.78rem;
+      background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2); color: #94a3b8;
+    }
+    .run-status.running { color: #bbf7d0; border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); }
+    .run-status.balanced { color: #86efac; border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.12); }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px) { .readout-grid { grid-template-columns: repeat(5, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .readout.is-hidden { display: none; }
+    .readout.is-i dd { color: #bae6fd; }
+    .readout.is-i { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
+    .readout.is-r dd { color: #fde68a; }
+    .readout.is-r { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.28); }
+    .readout.is-g dd { color: #fef9c3; }
+    .readout.is-g { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.28); }
+    .readout.is-law { grid-column: 1 / -1; background: rgba(15,23,42,0.75); border-color: rgba(34,197,94,0.45); }
+    .readout.is-law dd { color: #bbf7d0; font-size: 0.9rem; line-height: 1.55; }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #eef2ff; }
+    .legend-row {
+      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+      font-size: 0.76rem; color: var(--muted);
+    }
+    .law-ok { color: #86efac; }
+    .answer-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.32);
+      font-size: 0.84rem; color: #bbf7d0; line-height: 1.65;
+    }
+    .answer-box ul { margin: 8px 0 0; padding-left: 1.2rem; color: #d1fae5; }
+    .btn-row button#answerBtn {
+      border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.15); color: #bbf7d0;
+    }
+    .btn-row button#answerBtn.is-match {
+      border-color: rgba(34,197,94,0.75); background: rgba(34,197,94,0.28); color: #ecfdf5;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚖</div>
+      <p class="chapter-label">第23章 — 電流</p>
+      <h2>ホイートストンブリッジ</h2>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>平衡条件 — R₁/R₂ = R₃/Rₓ</h3>
+      <p>
+        4 つの抵抗と検流計 G で構成されるブリッジ回路です。
+        平衡時は中央ブリッジに電流が流れず、<strong>R₁/R₂ = R₃/Rₓ</strong> が成り立ちます。
+      </p>
+      <div class="formula-box">
+        I<sub>top</sub> = V/(R₁+R₂) · I<sub>bottom</sub> = V/(R₃+Rₓ) ·
+        I<sub>g</sub> ∝ R₁/R₂ − R₃/Rₓ · 平衡時 I<sub>g</sub> = 0
+      </div>
+      <div class="answer-box">
+        <strong>正解の組み合わせ</strong>：R₁ = <strong>100 Ω</strong>　R₂ = <strong>200 Ω</strong>　R₃ = <strong>150 Ω</strong>　Rₓ = <strong>300 Ω</strong>　V = <strong>12 V</strong>
+        <ul>
+          <li><strong>理由① 平衡条件</strong> … R₁/R₂ = 100/200 = 0.5 ＝ R₃/Rₓ = 150/300 → <strong>I_g = 0</strong></li>
+          <li><strong>理由② 検流計</strong> … 中央ブリッジの電子が停止し、G の針が中央になる</li>
+          <li><strong>理由③ 電圧比</strong> … V<sub>C</sub> = V×R₁/(R₁+R₂) ＝ V<sub>D</sub> = V×R₃/(R₃+Rₓ) = 4 V</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション（操作手順モード）</h3>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas" width="900" height="500"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#38bdf8">● 青粒 ＝ 自由電子（A− → B+）</span>
+        <span style="color:#cbd5e1">— 導線（水平・垂直のみ）</span>
+        <span style="color:#fde68a">G ＝ 検流計（C↔D）</span>
+        <span>平衡時は中央ブリッジの電子停止</span>
+      </div>
+
+      <div class="step-row">
+        <button type="button" class="step-btn is-active" data-step="1">Step1<br>構造確認</button>
+        <button type="button" class="step-btn" data-step="2">Step2<br>電源ON</button>
+        <button type="button" class="step-btn" data-step="3">Step3<br>平衡調整</button>
+        <button type="button" class="step-btn" data-step="4">Step4<br>平衡の意味</button>
+        <button type="button" class="step-btn" data-step="5">Step5<br>正解設定</button>
+      </div>
+      <p class="step-guide" id="stepGuide">—</p>
+
+      <div class="param-grid">
+        <div>
+          <label for="r1Slider" id="r1Label" class="is-disabled">R1 <span class="slider-val" id="r1Val">100 Ω</span></label>
+          <input type="range" id="r1Slider" min="1" max="1000" value="100" step="1" disabled>
+        </div>
+        <div>
+          <label for="r2Slider" id="r2Label" class="is-disabled">R2 <span class="slider-val" id="r2Val">200 Ω</span></label>
+          <input type="range" id="r2Slider" min="1" max="1000" value="200" step="1" disabled>
+        </div>
+        <div>
+          <label for="r3Slider" id="r3Label" class="is-disabled">R3 <span class="slider-val" id="r3Val">150 Ω</span></label>
+          <input type="range" id="r3Slider" min="1" max="1000" value="150" step="1" disabled>
+        </div>
+        <div>
+          <label for="rxSlider" id="rxLabel" class="is-disabled">Rx <span class="slider-val" id="rxVal">400 Ω</span></label>
+          <input type="range" id="rxSlider" min="1" max="1000" value="400" step="1" disabled>
+        </div>
+        <div>
+          <label for="vSlider" id="vLabel" class="is-disabled">電源 V <span class="slider-val" id="vVal">0.0 V</span></label>
+          <input type="range" id="vSlider" min="0" max="240" value="0" step="1" disabled>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" id="startBtn">一時停止</button>
+        <button type="button" id="resetBtn">リセット</button>
+        <button type="button" id="answerBtn">正解の組み合わせ</button>
+        <button type="button" id="balanceBtn" class="is-hidden">平衡にする</button>
+      </div>
+      <p class="run-status" id="runStatus">—</p>
+
+      <div class="readout-grid">
+        <dl class="readout is-i is-hidden" id="readItopBox"><dt>I<sub>top</sub></dt><dd id="readItop">—</dd></dl>
+        <dl class="readout is-i is-hidden" id="readIbotBox"><dt>I<sub>bottom</sub></dt><dd id="readIbot">—</dd></dl>
+        <dl class="readout is-g is-hidden" id="readIgBox"><dt>検流計 I<sub>g</sub></dt><dd id="readIg">—</dd></dl>
+        <dl class="readout is-r is-hidden" id="readRatioBox"><dt>比較 R₁/R₂ · R₃/Rₓ</dt><dd id="readRatio">—</dd></dl>
+        <dl class="readout is-law is-hidden" id="readLawBox"><dt>平衡判定</dt><dd id="readLaw">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">—</div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const balanceBtn = document.getElementById("balanceBtn");
+    const answerBtn = document.getElementById("answerBtn");
+    const runStatus = document.getElementById("runStatus");
+    const stepGuide = document.getElementById("stepGuide");
+    const vSlider = document.getElementById("vSlider");
+    const vLabel = document.getElementById("vLabel");
+    const r1Slider = document.getElementById("r1Slider");
+    const r2Slider = document.getElementById("r2Slider");
+    const r3Slider = document.getElementById("r3Slider");
+    const rxSlider = document.getElementById("rxSlider");
+    const rLabels = [r1Label, r2Label, r3Label, rxLabel] = [
+      document.getElementById("r1Label"),
+      document.getElementById("r2Label"),
+      document.getElementById("r3Label"),
+      document.getElementById("rxLabel"),
+    ];
+    const rSliders = [r1Slider, r2Slider, r3Slider, rxSlider];
+
+    const REF_W = 900, REF_H = 500;
+    const DRIFT_K = 220;
+    const DRIFT_MIN = 90;
+    const DRIFT_MAX = 880;
+    const R_G = 100;
+    const BAL_TOL = 0.002;
+    const MAX_E = { top: 42, bottom: 42, galv: 16 };
+
+    const COL = {
+      electron: "#38bdf8",
+      electronCore: "#e0f2fe",
+      wire: "#64748b",
+      wireMain: "#e2e8f0",
+      wireGlow: "rgba(186,230,253,0.5)",
+      plus: "#f87171",
+      minus: "#38bdf8",
+      node: "#f8fafc",
+      nodeGlow: "rgba(253,224,71,0.22)",
+      rFill: "#1e293b",
+      rStroke: "#fbbf24",
+      rStrokeHi: "#fde68a",
+      galv: "#fde68a",
+      galvBal: "#86efac",
+      zoneTop: "rgba(56,189,248,0.07)",
+      zoneBot: "rgba(45,212,191,0.07)",
+      balanced: "#86efac",
+      unbalanced: "#fca5a5",
+      hudBg: "rgba(8,12,24,0.88)",
+      hudBorder: "rgba(56,189,248,0.35)",
+      batFill: "rgba(167,139,250,0.1)",
+      batStroke: "rgba(167,139,250,0.55)",
+    };
+
+    const STEP_GUIDES = [
+      "",
+      "Step1：R1・R2・R3・Rx と検流計 G の位置を確認（V=0 · 電子停止）。",
+      "Step2：V を上げ、電子が A→B に流れ始めます。不平衡時は G にも電子が流れます。",
+      "Step3：R1〜Rx を調整し、R₁/R₂ と R₃/Rₓ を比較。I_g→0 で平衡です。",
+      "Step4：平衡時は上支路・下支路の電圧比が一致し、電子の流れが左右対称になります。",
+      "Step5：「正解の組み合わせ」で平衡を一括設定し、I_g=0 を確認しましょう。",
+    ];
+
+    const ANSWER_R1 = 100, ANSWER_R2 = 200, ANSWER_R3 = 150, ANSWER_RX = 300;
+    const ANSWER_V_SLIDER = 120;
+
+    let canvasW = 900, canvasH = 500, dpr = 1;
+    let currentStep = 1;
+    let running = true;
+    let lastFrame = performance.now();
+    let electrons = [];
+    let electronSig = "";
+    let loopPhase = 0;
+
+    function getR1() { return +r1Slider.value; }
+    function getR2() { return +r2Slider.value; }
+    function getR3() { return +r3Slider.value; }
+    function getRx() { return +rxSlider.value; }
+    function getV() {
+      if (currentStep < 2) return 0;
+      return +vSlider.value / 10;
+    }
+
+    function getCircuit() {
+      const V = getV();
+      const R1 = getR1(), R2 = getR2(), R3 = getR3(), Rx = getRx();
+      const I_top = V > 0 ? V / (R1 + R2) : 0;
+      const I_bottom = V > 0 ? V / (R3 + Rx) : 0;
+      const ratioL = R1 / R2;
+      const ratioR = R3 / Rx;
+      const IgIndex = ratioL - ratioR;
+      const balanced = Math.abs(IgIndex) < BAL_TOL;
+      const Vc = V > 0 ? V * R1 / (R1 + R2) : 0;
+      const Vd = V > 0 ? V * R3 / (R3 + Rx) : 0;
+      const Ig = V > 0 && !balanced ? (Vc - Vd) / R_G : 0;
+      return { V, R1, R2, R3, Rx, I_top, I_bottom, ratioL, ratioR, IgIndex, Ig, balanced, Vc, Vd };
+    }
+
+    function fmtI(I) {
+      const a = Math.abs(I);
+      if (a >= 1) return I.toFixed(3) + " A";
+      if (a >= 1e-3) return (I * 1e3).toFixed(2) + " mA";
+      if (a < 1e-9) return "0 A";
+      return (I * 1e6).toFixed(1) + " μA";
+    }
+
+    function fmtRatio(r) { return r.toFixed(4); }
+
+    function getLayout(cw, ch) {
+      const sx = cw / REF_W, sy = ch / REF_H;
+      const sc = (x, y) => ({ x: x * sx, y: y * sy });
+      const mkR = (x, y, w, h, name) => ({
+        name, x: x * sx, y: y * sy, w: w * sx, h: h * sy,
+        cx: (x + w * 0.5) * sx, cy: (y + h * 0.5) * sy,
+        leftX: x * sx, rightX: (x + w) * sx,
+        midY: (y + h * 0.5) * sy,
+      });
+      return {
+        sx, sy, cw, ch,
+        A: sc(200, 250),
+        B: sc(700, 250),
+        C: sc(450, 150),
+        D: sc(450, 350),
+        CBus: sc(450, 160),
+        DBus: sc(450, 360),
+        R1: mkR(260, 150, 120, 20, "R1"),
+        R2: mkR(520, 150, 120, 20, "R2"),
+        R3: mkR(260, 350, 120, 20, "R3"),
+        Rx: mkR(520, 350, 120, 20, "Rx"),
+        G: sc(450, 250),
+      };
+    }
+
+    function addHoriz(segs, x1, x2, y, tag) {
+      if (Math.abs(x2 - x1) > 0.5) addSeg(segs, x1, y, x2, y, tag);
+    }
+
+    function addVert(segs, x, y1, y2, tag) {
+      if (Math.abs(y2 - y1) > 0.5) addSeg(segs, x, y1, x, y2, tag);
+    }
+
+    function wireHV(segs, x1, y1, x2, y2, tag) {
+      if (Math.abs(y2 - y1) > 0.5) addSeg(segs, x1, y1, x1, y2, tag);
+      if (Math.abs(x2 - x1) > 0.5) addSeg(segs, x1, y2, x2, y2, tag);
+    }
+
+    function addSeg(list, x1, y1, x2, y2, tag) {
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (len > 0.5) list.push({ x1, y1, x2, y2, len, tag });
+    }
+
+    function finalizePath(segments) {
+      return { segments, total: segments.reduce((a, s) => a + s.len, 0) };
+    }
+
+    function buildTopPath(L) {
+      const segs = [];
+      const R1 = L.R1, R2 = L.R2;
+      const y = R1.midY;
+      wireHV(segs, L.A.x, L.A.y, R1.leftX, y, "wire");
+      addSeg(segs, R1.leftX, y, R1.rightX, y, "r1");
+      addHoriz(segs, R1.rightX, L.CBus.x, y, "wire");
+      addHoriz(segs, L.CBus.x, R2.leftX, y, "wire");
+      addSeg(segs, R2.leftX, y, R2.rightX, y, "r2");
+      wireHV(segs, R2.rightX, y, L.B.x, L.B.y, "wire");
+      return finalizePath(segs);
+    }
+
+    function buildBottomPath(L) {
+      const segs = [];
+      const R3 = L.R3, Rx = L.Rx;
+      const y = R3.midY;
+      wireHV(segs, L.A.x, L.A.y, R3.leftX, y, "wire");
+      addSeg(segs, R3.leftX, y, R3.rightX, y, "r3");
+      addHoriz(segs, R3.rightX, L.DBus.x, y, "wire");
+      addHoriz(segs, L.DBus.x, Rx.leftX, y, "wire");
+      addSeg(segs, Rx.leftX, y, Rx.rightX, y, "rx");
+      wireHV(segs, Rx.rightX, y, L.B.x, L.B.y, "wire");
+      return finalizePath(segs);
+    }
+
+    function buildGalvPath(L, dir) {
+      const segs = [];
+      if (dir > 0) addSeg(segs, L.C.x, L.C.y, L.D.x, L.D.y, "galv");
+      else addSeg(segs, L.D.x, L.D.y, L.C.x, L.C.y, "galv");
+      return finalizePath(segs);
+    }
+
+    function pathPointAtDist(s, path) {
+      let dist = ((s % path.total) + path.total) % path.total;
+      for (let i = 0; i < path.segments.length; i++) {
+        const seg = path.segments[i];
+        if (dist <= seg.len + 1e-9) {
+          const u = seg.len > 0 ? dist / seg.len : 0;
+          return { x: seg.x1 + (seg.x2 - seg.x1) * u, y: seg.y1 + (seg.y2 - seg.y1) * u, tag: seg.tag };
+        }
+        dist -= seg.len;
+      }
+      const last = path.segments[path.segments.length - 1];
+      return { x: last.x2, y: last.y2, tag: last.tag };
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function heatColor(ratio) {
+      const t = Math.max(0, Math.min(1, ratio));
+      let r, g, b;
+      if (t < 0.5) {
+        const u = t / 0.5;
+        r = lerp(30, 56, u); g = lerp(58, 189, u); b = lerp(95, 248, u);
+      } else {
+        const u = (t - 0.5) / 0.5;
+        r = lerp(56, 251, u); g = lerp(189, 191, u); b = lerp(248, 36, u);
+      }
+      return "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + ")";
+    }
+
+    function branchDrift(tag) {
+      const c = getCircuit();
+      if (c.V <= 0) return 0;
+      const Rref = 100;
+      let I = c.I_top, R = Rref;
+      if (tag === "r1") R = c.R1;
+      else if (tag === "r2") R = c.R2;
+      else if (tag === "r3") { I = c.I_bottom; R = c.R3; }
+      else if (tag === "rx") { I = c.I_bottom; R = c.Rx; }
+      else if (tag === "wire_bot") I = c.I_bottom;
+      else if (tag === "galv") { I = Math.abs(c.Ig); R = R_G; }
+      const base = Math.max(DRIFT_MIN, Math.min(DRIFT_K * I, DRIFT_MAX));
+      const rScale = Math.sqrt(Rref / Math.max(R, 1));
+      return base * Math.max(0.35, Math.min(1.6, rScale));
+    }
+
+    function electronSignature(c) {
+      return [c.V, c.I_top, c.I_bottom, c.balanced, c.IgIndex >= 0].join(",");
+    }
+
+    function syncElectrons(L) {
+      const c = getCircuit();
+      const sig = electronSignature(c);
+      if (sig === electronSig && electrons.length > 0) return;
+      electronSig = sig;
+
+      if (c.V <= 0 || !running) { electrons = []; return; }
+
+      const nTop = Math.min(MAX_E.top, Math.max(8, Math.round(10 + c.I_top * 140)));
+      const nBot = Math.min(MAX_E.bottom, Math.max(8, Math.round(10 + c.I_bottom * 140)));
+      const nGalv = c.balanced ? 0 : Math.min(MAX_E.galv, Math.max(3, Math.round(4 + Math.abs(c.Ig) * 200)));
+
+      const topPath = buildTopPath(L);
+      const botPath = buildBottomPath(L);
+      const list = [];
+      for (let i = 0; i < nTop; i++) list.push({ branch: "top", s: Math.random() * topPath.total });
+      for (let i = 0; i < nBot; i++) list.push({ branch: "bottom", s: Math.random() * botPath.total });
+      if (nGalv > 0) {
+        const dir = c.IgIndex >= 0 ? 1 : -1;
+        const gp = buildGalvPath(L, dir);
+        for (let i = 0; i < nGalv; i++) list.push({ branch: "galv", dir, s: Math.random() * gp.total });
+      }
+      electrons = list;
+    }
+
+    function advanceElectrons(dt, L) {
+      const c = getCircuit();
+      if (c.V <= 0 || !running) return;
+      electrons.forEach((e) => {
+        let path;
+        if (e.branch === "top") path = buildTopPath(L);
+        else if (e.branch === "bottom") path = buildBottomPath(L);
+        else path = buildGalvPath(L, e.dir);
+        const pt = pathPointAtDist(e.s, path);
+        const tag = pt.tag === "wire" ? (e.branch === "top" ? "wire_top" : "wire_bot") : pt.tag;
+        e.s += dt * branchDrift(tag);
+      });
+    }
+
+    function setStep(step) {
+      currentStep = step;
+      document.querySelectorAll(".step-btn").forEach((btn) => {
+        const s = +btn.dataset.step;
+        btn.classList.toggle("is-active", s === step);
+        btn.classList.toggle("is-done", s < step);
+      });
+      stepGuide.textContent = STEP_GUIDES[step];
+
+      const vOn = step >= 2;
+      vSlider.disabled = !vOn;
+      vLabel.classList.toggle("is-disabled", !vOn);
+      if (!vOn) vSlider.value = 0;
+
+      const rOn = step >= 3;
+      rSliders.forEach((sl, i) => {
+        sl.disabled = !rOn;
+        rLabels[i].classList.toggle("is-disabled", !rOn);
+      });
+
+      balanceBtn.classList.toggle("is-hidden", step < 5);
+
+      ["readItopBox", "readIbotBox"].forEach((id) => {
+        document.getElementById(id).classList.toggle("is-hidden", step < 2);
+      });
+      ["readIgBox", "readRatioBox"].forEach((id) => {
+        document.getElementById(id).classList.toggle("is-hidden", step < 3);
+      });
+      document.getElementById("readLawBox").classList.toggle("is-hidden", step < 3);
+
+      electrons = [];
+      electronSig = "";
+      syncSliders();
+      updateReadouts();
+      updateStartBtn();
+      drawFrame();
+    }
+
+    function isAnswerMatch() {
+      return getR1() === ANSWER_R1 && getR2() === ANSWER_R2
+        && getR3() === ANSWER_R3 && Math.round(getRx()) === ANSWER_RX
+        && (currentStep < 2 || +vSlider.value === ANSWER_V_SLIDER);
+    }
+
+    function applyAnswerPreset() {
+      r1Slider.value = ANSWER_R1;
+      r2Slider.value = ANSWER_R2;
+      r3Slider.value = ANSWER_R3;
+      rxSlider.value = ANSWER_RX;
+      vSlider.value = ANSWER_V_SLIDER;
+      electrons = [];
+      electronSig = "";
+      running = true;
+      if (currentStep < 5) setStep(5);
+      else {
+        syncSliders();
+        updateReadouts();
+        updateStartBtn();
+        drawFrame();
+      }
+    }
+
+    function updateAnswerBtn() {
+      const match = isAnswerMatch();
+      answerBtn.classList.toggle("is-match", match);
+      answerBtn.textContent = match ? "✓ 正解の組み合わせ" : "正解の組み合わせ";
+    }
+
+    function answerNote() {
+      return isAnswerMatch()
+        ? "<br><strong style='color:#86efac'>→ 正解の組み合わせです。I_g = 0 · Balanced ✓</strong>" : "";
+    }
+
+    function applyBalance() {
+      const R1 = getR1(), R2 = getR2(), R3 = getR3();
+      if (R1 <= 0) return;
+      const Rx = R3 * (R2 / R1);
+      rxSlider.value = Math.max(1, Math.min(1000, Math.round(Rx * 10) / 10));
+      electrons = [];
+      syncSliders();
+      updateReadouts();
+      updateStartBtn();
+      drawFrame();
+    }
+
+    function syncSliders() {
+      document.getElementById("r1Val").textContent = getR1() + " Ω";
+      document.getElementById("r2Val").textContent = getR2() + " Ω";
+      document.getElementById("r3Val").textContent = getR3() + " Ω";
+      document.getElementById("rxVal").textContent = getRx().toFixed(1) + " Ω";
+      document.getElementById("vVal").textContent = getV().toFixed(1) + " V";
+    }
+
+    function updateReadouts() {
+      const c = getCircuit();
+      document.getElementById("readItop").textContent = fmtI(c.I_top);
+      document.getElementById("readIbot").textContent = fmtI(c.I_bottom);
+      document.getElementById("readIg").textContent = c.balanced
+        ? "0（平衡）"
+        : fmtIg(c.IgIndex) + " · " + fmtI(c.Ig);
+      document.getElementById("readRatio").textContent =
+        fmtRatio(c.ratioL) + " · " + fmtRatio(c.ratioR);
+
+      const lawEl = document.getElementById("readLaw");
+      if (c.balanced) {
+        lawEl.innerHTML = "<strong style='color:#86efac'>Balanced</strong> — R₁/R₂ = R₃/Rₓ = "
+          + fmtRatio(c.ratioL) + " <span class='law-ok'>✓ I_g = 0</span>"
+          + (isAnswerMatch() ? " <span class='law-ok'>· 正解の組み合わせ ✓</span>" : "");
+      } else {
+        lawEl.innerHTML = "<strong style='color:#fca5a5'>Unbalanced</strong> — R₁/R₂ "
+          + (c.ratioL > c.ratioR ? "&gt;" : "&lt;") + " R₃/Rₓ · I_g ≠ 0";
+      }
+
+      balanceBtn.classList.toggle("is-balanced", c.balanced && currentStep >= 5);
+      balanceBtn.textContent = c.balanced ? "✓ 平衡達成" : "平衡にする";
+      updateAnswerBtn();
+
+      let html = "R₁/R₂ = " + c.R1 + "/" + c.R2 + " = <strong>" + fmtRatio(c.ratioL) + "</strong>"
+        + " · R₃/Rₓ = " + c.R3 + "/" + c.Rx.toFixed(1) + " = <strong>" + fmtRatio(c.ratioR) + "</strong>";
+
+      if (currentStep >= 2 && c.V > 0) {
+        html += "<br>I<sub>top</sub> = V/(R₁+R₂) = <strong>" + fmtI(c.I_top) + "</strong>"
+          + " · I<sub>bottom</sub> = <strong>" + fmtI(c.I_bottom) + "</strong>";
+      }
+      if (currentStep >= 3) {
+        html += "<br>I<sub>g</sub> ∝ R₁/R₂ − R₃/Rₓ = <strong>" + fmtIg(c.IgIndex) + "</strong>";
+      }
+      if (currentStep >= 4 && c.balanced && c.V > 0) {
+        html += "<br><span class='law-ok'>平衡：V<sub>C</sub>/V<sub>D</sub> 比が一致 · 左右対称の電流分配</span>";
+        html += "<br>V<sub>C</sub> = " + c.Vc.toFixed(2) + " V · V<sub>D</sub> = " + c.Vd.toFixed(2) + " V";
+      }
+      html += answerNote();
+      formulaLive.innerHTML = html;
+    }
+
+    function fmtIg(v) {
+      const s = v >= 0 ? "+" : "";
+      return s + v.toFixed(4);
+    }
+
+    function updateStartBtn() {
+      const c = getCircuit();
+      if (!running) {
+        startBtn.textContent = "再開";
+        runStatus.textContent = "一時停止中";
+        runStatus.className = "run-status";
+        return;
+      }
+      startBtn.textContent = "一時停止";
+      if (c.V <= 0) {
+        runStatus.textContent = "V = 0 — 電子停止";
+        runStatus.className = "run-status";
+      } else if (c.balanced) {
+        runStatus.textContent = "通電中 — Balanced · I_g = 0 · 中央ブリッジ停止";
+        runStatus.className = "run-status balanced running";
+      } else {
+        runStatus.textContent = "通電中 — Unbalanced · I_g ≠ 0 · G に電子が流れる";
+        runStatus.className = "run-status running";
+      }
+    }
+
+    function drawBg(L, live) {
+      const g = ctx.createRadialGradient(L.cw * 0.5, L.ch * 0.45, 20, L.cw * 0.5, L.ch * 0.5, L.cw * 0.78);
+      g.addColorStop(0, live ? "#0c1628" : "#0a1220");
+      g.addColorStop(1, "#050810");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, L.cw, L.ch);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.05)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < L.cw; x += 36) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, L.ch); ctx.stroke();
+      }
+      for (let y = 0; y < L.ch; y += 36) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(L.cw, y); ctx.stroke();
+      }
+    }
+
+    function drawLabel(text, x, y, align, size, color, bg) {
+      const fs = size || 11;
+      ctx.font = (bg ? "700 " : "600 ") + fs + "px Inter, Noto Sans JP, sans-serif";
+      if (!bg) {
+        ctx.fillStyle = color || "rgba(226,232,240,0.95)";
+        ctx.textAlign = align || "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x, y);
+        ctx.textBaseline = "alphabetic";
+        ctx.textAlign = "left";
+        return;
+      }
+      const pad = 7;
+      const tw = ctx.measureText(text).width;
+      const w = tw + pad * 2, h = fs + 9;
+      let lx = align === "center" ? x - w * 0.5 : align === "right" ? x - w : x;
+      const top = y - h * 0.5;
+      ctx.fillStyle = bg;
+      ctx.strokeStyle = "rgba(148,163,184,0.2)";
+      ctx.lineWidth = 1;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(lx, top, w, h, 6); ctx.fill(); ctx.stroke();
+      } else { ctx.fillRect(lx, top, w, h); }
+      ctx.fillStyle = color || "#e2e8f0";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, lx + pad, y);
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawWireSeg(x1, y1, x2, y2, live, main) {
+      ctx.save();
+      if (live && main) {
+        ctx.shadowColor = COL.wireGlow;
+        ctx.shadowBlur = 8;
+      }
+      ctx.strokeStyle = live && main ? COL.wireMain : COL.wire;
+      ctx.lineWidth = live && main ? 3.6 : 2.8;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawWireHV(x1, y1, x2, y2, live, main) {
+      if (Math.abs(y2 - y1) > 0.5) drawWireSeg(x1, y1, x1, y2, live, main);
+      if (Math.abs(x2 - x1) > 0.5) drawWireSeg(x1, y2, x2, y2, live, main);
+    }
+
+    function drawResistor(box, label, value, live, dropRatio) {
+      const rad = Math.min(6, box.h * 0.3);
+      ctx.save();
+      if (live) {
+        ctx.shadowColor = "rgba(251,191,36,0.25)";
+        ctx.shadowBlur = 10;
+      }
+      ctx.fillStyle = live ? heatColor(dropRatio || 0.35) : COL.rFill;
+      ctx.strokeStyle = live ? COL.rStrokeHi : COL.rStroke;
+      ctx.lineWidth = 2.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, rad); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillRect(box.x, box.y, box.w, box.h);
+        ctx.strokeRect(box.x, box.y, box.w, box.h);
+      }
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(248,250,252,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      const zy = box.midY, z0 = box.x + box.w * 0.1, z1 = box.x + box.w * 0.9, step = (z1 - z0) / 7;
+      ctx.moveTo(z0, zy);
+      for (let i = 1; i <= 7; i++) {
+        ctx.lineTo(z0 + step * i, zy + (i % 2 ? -box.h * 0.28 : box.h * 0.28));
+      }
+      ctx.stroke();
+
+      if (live && dropRatio > 0.05) {
+        const barW = box.w * 0.72, barH = 4;
+        ctx.fillStyle = "rgba(15,23,42,0.45)";
+        ctx.fillRect(box.cx - barW * 0.5, box.y + box.h + 4, barW, barH);
+        ctx.fillStyle = heatColor(dropRatio);
+        ctx.fillRect(box.cx - barW * 0.5, box.y + box.h + 4, barW * dropRatio, barH);
+      }
+
+      drawLabel(label, box.cx, box.y - 12, "center", 12, "#fde68a");
+      drawLabel(value + " Ω", box.cx, box.y + box.h + (live ? 18 : 12), "center", 10, "#94a3b8");
+    }
+
+    function drawGalvanometer(L, c) {
+      const g = L.G;
+      const r = 14 * Math.min(L.sx, L.sy);
+      const bal = c.balanced;
+
+      ctx.save();
+      ctx.strokeStyle = bal ? COL.galvBal : COL.galv;
+      ctx.lineWidth = bal ? 2.5 : 3;
+      ctx.setLineDash(bal ? [6, 5] : []);
+      ctx.shadowColor = bal ? "rgba(134,239,172,0.35)" : "rgba(253,224,71,0.3)";
+      ctx.shadowBlur = bal ? 6 : 10;
+      ctx.beginPath();
+      ctx.moveTo(L.C.x, L.C.y);
+      ctx.lineTo(L.D.x, L.D.y);
+      ctx.stroke();
+      ctx.restore();
+
+      const hg = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r + 6);
+      hg.addColorStop(0, bal ? "rgba(134,239,172,0.35)" : "rgba(253,224,71,0.3)");
+      hg.addColorStop(1, "rgba(15,23,42,0.2)");
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, r + 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(15,23,42,0.75)";
+      ctx.strokeStyle = bal ? COL.galvBal : COL.galv;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      const needleAngle = bal ? 0 : Math.sin(loopPhase) * 0.55 + (c.IgIndex > 0 ? -0.35 : 0.35);
+      ctx.strokeStyle = bal ? "#bbf7d0" : "#fef08a";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(g.x, g.y);
+      ctx.lineTo(g.x + Math.sin(needleAngle) * (r - 3), g.y - Math.cos(needleAngle) * (r - 3));
+      ctx.stroke();
+
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawLabel("G", g.x, g.y + r + 14, "center", 11, bal ? "#86efac" : "#fde68a", "rgba(15,23,42,0.65)");
+    }
+
+    function drawBattery(L, V) {
+      const live = V > 0;
+      const midX = (L.A.x + L.B.x) * 0.5;
+      const by = L.A.y + 36;
+
+      ctx.fillStyle = live ? COL.batFill : "rgba(167,139,250,0.05)";
+      ctx.strokeStyle = COL.batStroke;
+      ctx.lineWidth = 2;
+      const bw = 88, bh = 28;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(midX - bw * 0.5, by - bh * 0.5, bw, bh, 8); ctx.fill(); ctx.stroke();
+      }
+
+      const ax = L.A.x - 32, ay = L.A.y;
+      ctx.strokeStyle = COL.minus;
+      ctx.lineWidth = 4.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ax - 11, ay);
+      ctx.lineTo(ax + 11, ay);
+      ctx.stroke();
+      drawLabel("A −", ax - 24, ay - 20, "center", 12, "#fca5a5");
+
+      const bx = L.B.x + 32;
+      ctx.strokeStyle = COL.plus;
+      ctx.lineWidth = live ? 5 : 3.5;
+      ctx.beginPath();
+      ctx.moveTo(bx - 15, L.B.y);
+      ctx.lineTo(bx + 15, L.B.y);
+      ctx.stroke();
+      drawLabel("B +", bx + 26, L.B.y - 20, "center", 12, "#7dd3fc");
+
+      if (live) {
+        drawLabel(V.toFixed(1) + " V", midX, by, "center", 12, "#ede9fe", "rgba(15,23,42,0.55)");
+      }
+    }
+
+    function drawNode(x, y, r, glow, label, lx, ly) {
+      if (glow) {
+        const ng = ctx.createRadialGradient(x, y, 0, x, y, r + 8);
+        ng.addColorStop(0, COL.nodeGlow);
+        ng.addColorStop(1, "rgba(253,224,71,0)");
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = COL.node;
+      ctx.strokeStyle = "rgba(148,163,184,0.5)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (label) drawLabel(label, lx, ly, "center", 11, "#cbd5e1");
+    }
+
+    function drawNodes(L, live) {
+      drawNode(L.A.x, L.A.y, 5.5, live, null);
+      drawNode(L.B.x, L.B.y, 5.5, live, null);
+      drawNode(L.C.x, L.C.y, 5, live, "C", L.C.x, L.C.y - 16);
+      drawNode(L.D.x, L.D.y, 5, live, "D", L.D.x, L.D.y + 16);
+      drawNode(L.CBus.x, L.CBus.y, 3.5, false, null);
+      drawNode(L.DBus.x, L.DBus.y, 3.5, false, null);
+    }
+
+    function drawBranchLabels(L, live) {
+      if (!live) return;
+      drawLabel("上支路 I_top →", (L.R1.cx + L.R2.cx) * 0.5, L.R1.y - 28, "center", 11, "#bae6fd", "rgba(15,23,42,0.55)");
+      drawLabel("下支路 I_bottom →", (L.R3.cx + L.Rx.cx) * 0.5, L.R3.y + L.R3.h + 28, "center", 11, "#5eead4", "rgba(15,23,42,0.55)");
+    }
+
+    function drawWires(L, live) {
+      const R1 = L.R1, R2 = L.R2, R3 = L.R3, Rx = L.Rx;
+      const yT = R1.midY;
+      const yB = R3.midY;
+
+      drawWireHV(L.A.x, L.A.y, R1.leftX, yT, live, true);
+      drawWireSeg(R1.rightX, yT, L.CBus.x, yT, live, true);
+      drawWireSeg(L.CBus.x, yT, R2.leftX, yT, live, true);
+      drawWireHV(R2.rightX, yT, L.B.x, L.B.y, live, true);
+
+      drawWireHV(L.A.x, L.A.y, R3.leftX, yB, live, true);
+      drawWireSeg(R3.rightX, yB, L.DBus.x, yB, live, true);
+      drawWireSeg(L.DBus.x, yB, Rx.leftX, yB, live, true);
+      drawWireHV(Rx.rightX, yB, L.B.x, L.B.y, live, true);
+
+      drawWireSeg(L.C.x, L.C.y, L.CBus.x, L.CBus.y, live, false);
+      drawWireSeg(L.D.x, L.D.y, L.DBus.x, L.DBus.y, live, false);
+    }
+
+    function drawHud(L, c) {
+      if (currentStep < 2 || c.V <= 0) return;
+      const w = Math.min(560, L.cw - 24), h = currentStep >= 4 && c.balanced ? 58 : 38;
+      const x = (L.cw - w) * 0.5, y = 10;
+      ctx.fillStyle = COL.hudBg;
+      ctx.strokeStyle = c.balanced ? "rgba(134,239,172,0.45)" : COL.hudBorder;
+      ctx.lineWidth = 1.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke();
+      } else { ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); }
+
+      const parts = ["I_top=" + fmtI(c.I_top), "I_bot=" + fmtI(c.I_bottom)];
+      if (currentStep >= 3) {
+        parts.push("I_g∝" + fmtIg(c.IgIndex));
+        parts.push(c.balanced ? "Balanced ✓" : "Unbalanced");
+      }
+      drawLabel(parts.join(" · "), L.cw * 0.5, y + 20, "center", 12, c.balanced ? "#86efac" : "#bae6fd");
+
+      if (currentStep >= 4 && c.balanced) {
+        drawLabel("V_C = V_D → 電圧比一致 · 左右対称", L.cw * 0.5, y + 42, "center", 10, "#bbf7d0");
+      }
+    }
+
+    function drawElectrons(L) {
+      const c = getCircuit();
+      if (c.V <= 0 || !running) return;
+      electrons.forEach((e) => {
+        let path;
+        if (e.branch === "top") path = buildTopPath(L);
+        else if (e.branch === "bottom") path = buildBottomPath(L);
+        else path = buildGalvPath(L, e.dir);
+        const pt = pathPointAtDist(e.s, path);
+        const glowR = e.branch === "galv" ? 11 : 9;
+        const g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, glowR);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.25, COL.electronCore);
+        g.addColorStop(0.55, COL.electron);
+        g.addColorStop(1, "rgba(56,189,248,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, e.branch === "galv" ? 4.5 : 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawFrame() {
+      const L = getLayout(canvasW, canvasH);
+      const c = getCircuit();
+      const live = c.V > 0;
+
+      drawBg(L, live);
+
+      if (currentStep >= 4 && c.balanced && live) {
+        ctx.fillStyle = COL.zoneTop;
+        ctx.fillRect(L.R1.x - 12, L.R1.y - 24, L.R2.rightX - L.R1.x + 24, L.R1.h + 48);
+        ctx.fillStyle = COL.zoneBot;
+        ctx.fillRect(L.R3.x - 12, L.R3.y - 24, L.Rx.rightX - L.R3.x + 24, L.R3.h + 48);
+      }
+
+      drawWires(L, live);
+      const topSum = c.R1 + c.R2, botSum = c.R3 + c.Rx;
+      drawResistor(L.R1, "R1", c.R1, live, live ? c.R1 / topSum : 0);
+      drawResistor(L.R2, "R2", c.R2, live, live ? c.R2 / topSum : 0);
+      drawResistor(L.R3, "R3", c.R3, live, live ? c.R3 / botSum : 0);
+      drawResistor(L.Rx, "Rx", c.Rx.toFixed(0), live, live ? c.Rx / botSum : 0);
+      drawGalvanometer(L, c);
+      drawBattery(L, c.V);
+      drawNodes(L, live);
+      drawBranchLabels(L, live);
+      drawHud(L, c);
+
+      if (currentStep >= 2) {
+        syncElectrons(L);
+        drawElectrons(L);
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(400, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      loopPhase += dt * 4;
+      if (running && currentStep >= 2 && getV() > 0) {
+        const L = getLayout(canvasW, canvasH);
+        advanceElectrons(dt, L);
+      }
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+
+    document.querySelectorAll(".step-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setStep(+btn.dataset.step));
+    });
+    [r1Slider, r2Slider, r3Slider, rxSlider, vSlider].forEach((sl) => {
+      sl.addEventListener("input", () => {
+        electrons = [];
+        electronSig = "";
+        syncSliders();
+        updateReadouts();
+        updateStartBtn();
+      });
+    });
+    startBtn.addEventListener("click", () => {
+      running = !running;
+      updateStartBtn();
+    });
+    resetBtn.addEventListener("click", () => {
+      r1Slider.value = 100;
+      r2Slider.value = 200;
+      r3Slider.value = 150;
+      rxSlider.value = 400;
+      vSlider.value = currentStep >= 2 ? 120 : 0;
+      electrons = [];
+      running = true;
+      syncSliders();
+      updateReadouts();
+      updateStartBtn();
+    });
+    balanceBtn.addEventListener("click", applyBalance);
+    answerBtn.addEventListener("click", applyAnswerPreset);
+
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    setStep(1);
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

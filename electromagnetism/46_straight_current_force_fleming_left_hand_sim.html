@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>24章 電流と磁場 — 直線電流の力とフレミング左手の法則</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 45%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1100px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(0,255,255,0.35));
+      border: 1px solid rgba(129,140,248,0.4); font-size: 1.6rem;
+      box-shadow: 0 0 28px rgba(251,191,36,0.25);
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c7d2fe; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(129, 140, 248, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #a5b4fc; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(56,189,248,0.1));
+      border: 1px solid rgba(251,191,36,0.35);
+    }
+    .formula-main { font-size: 1.35rem; font-weight: 800; color: #fde68a; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud" "ctrl";
+    }
+    @media (min-width: 900px) {
+      .sim-grid { grid-template-columns: 1.15fr 0.85fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden;
+      background: linear-gradient(180deg, rgba(8,14,24,0.98), rgba(4,8,16,0.99));
+      border: 1px solid rgba(6,182,212,0.35);
+      box-shadow: inset 0 0 40px rgba(6,182,212,0.06);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    #field3dWrap {
+      width: 100%; height: min(480px, 52dvh); min-height: 320px;
+      cursor: grab; touch-action: none;
+    }
+    #field3dWrap:active { cursor: grabbing; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .toggle-btn {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .toggle-btn.is-active {
+      background: rgba(6,182,212,0.22); color: #e0f2fe; border-color: rgba(6,182,212,0.6);
+    }
+    .vec-card {
+      padding: 14px 12px; border-radius: 12px; margin-bottom: 10px;
+      background: rgba(6, 10, 20, 0.85); border: 1px solid rgba(56, 189, 248, 0.28);
+      text-align: center;
+    }
+    .vec-card h4 { margin: 0 0 6px; font-size: 0.82rem; color: #a5b4fc; font-weight: 700; }
+    #vecSvg { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; }
+    .vec-caption { margin: 6px 0 0; font-size: 0.72rem; color: #94a3b8; }
+    .hud-card {
+      padding: 12px; border-radius: 12px; margin-bottom: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.65rem; color: #94a3b8; }
+    .hud-card .num { font-size: 1rem; font-weight: 700; color: #fde68a; margin-top: 2px; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .formula-box {
+      padding: 10px; border-radius: 10px; text-align: center; margin: 8px 0;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+      font-size: 0.78rem; font-weight: 700; color: #7dd3fc; line-height: 1.6;
+    }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+    .slider-val { color: #7dd3fc; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #38bdf8; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .hint-box {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; color: #ede9fe;
+      background: linear-gradient(135deg, rgba(49,46,129,0.45), rgba(30,27,75,0.35));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">↗</div>
+      <p class="chapter-label">第24章 — 電流と磁場</p>
+      <h2>直線電流の力 — フレミング左手の法則</h2>
+      <p class="tagline">3D空間で磁場を見える！ ドラッグで回転 · 光が磁場を流れる</p>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-24">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>電流が作る磁場ラボと同じ<strong>3D空間</strong>で、直線導線が受ける力を観察します。
+        黄色い光＝磁場 B の流れ、シアンの光点＝電流 I、黄色の太矢印＝力 F。
+        立方体を<strong>ドラッグで回転</strong>させ、右の<strong>ベクトル図</strong>（F・B・I）と照らし合わせましょう。</p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">F = I L B sinθ</div>
+        <div class="formula-sub">I：電流　L：導線長　B：磁束密度　θ：電流と磁場のなす角</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head">
+              <p class="viz-label">直線電流と磁場・力（3D）</p>
+            </div>
+            <p class="viz-legend">立方体ワイヤー枠 · ドラッグで回転 · 緑矢印＝力F · 青矢印＝磁場B · 橙光＝電流I · 黄色光＝Bの流れ</p>
+            <div id="field3dWrap"></div>
+            <div class="viz-foot">
+              <button type="button" id="btnFlow" class="active">磁場の流れ ON</button>
+              <button type="button" id="btnBVec" class="active">磁場矢印 ON</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="vec-card">
+            <h4>F · B · I ベクトル図</h4>
+            <svg id="vecSvg" viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="力・磁場・電流のベクトル図">
+              <rect x="0" y="0" width="300" height="220" fill="#0a0e18" rx="8"/>
+              <circle id="vecOrigin" cx="150" cy="118" r="4" fill="#e2e8f0"/>
+              <g id="axisGuide"></g>
+              <g id="angleMarks"></g>
+              <g id="arrowGroup"></g>
+              <g id="labelGroup"></g>
+            </svg>
+            <p class="vec-caption">3Dと同じ原点 · 互いに直角 · 3D回転と連動</p>
+          </div>
+          <div class="formula-box" id="formulaLive">F = 10.0 × 0.50 × 1.00 × sin90° = 5.00 N</div>
+          <div class="hud-grid">
+            <div class="hud-card"><div class="lbl">電流 I</div><div class="num" id="hudI">10.0 A</div></div>
+            <div class="hud-card"><div class="lbl">導線長 L</div><div class="num" id="hudL">0.50 m</div></div>
+            <div class="hud-card"><div class="lbl">磁束密度 B</div><div class="num" id="hudB">1.00 T</div></div>
+            <div class="hud-card"><div class="lbl">角度 θ</div><div class="num" id="hudTheta">90°</div></div>
+            <div class="hud-card"><div class="lbl">sinθ</div><div class="num" id="hudSin">1.000</div></div>
+            <div class="hud-card"><div class="lbl">力 F</div><div class="num" id="hudF">5.00 N</div></div>
+            <div class="hud-card"><div class="lbl">力の向き</div><div class="num" id="hudFdir" style="font-size:0.82rem;color:#fb923c">手前 ⊙</div></div>
+            <div class="hud-card"><div class="lbl">磁場の向き</div><div class="num" id="hudBdir" style="font-size:0.82rem;color:#38bdf8">↑ 上向き</div></div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <div class="btn-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px">
+            <div class="ctrl-row">
+              <label>電流 I <span class="slider-val" id="valI">10.0 A</span></label>
+              <input type="range" id="slI" min="0" max="200" value="100" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>導線長 L <span class="slider-val" id="valL">0.50 m</span></label>
+              <input type="range" id="slL" min="1" max="10" value="5" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>磁束密度 B <span class="slider-val" id="valB">1.00 T</span></label>
+              <input type="range" id="slB" min="0" max="200" value="100" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>角度 θ <span class="slider-val" id="valTheta">90°</span></label>
+              <input type="range" id="slTheta" min="0" max="180" value="90" step="1">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="toggle-btn is-active" id="btnCurA">電流 → +x</button>
+            <button type="button" class="toggle-btn" id="btnCurB">電流 ← −x</button>
+            <button type="button" class="toggle-btn is-active" id="btnBUp">磁場 ↑ 上</button>
+            <button type="button" class="toggle-btn" id="btnBDown">磁場 ↓ 下</button>
+            <button type="button" class="toggle-btn" id="btnBOut">磁場 ⊙ 手前</button>
+            <button type="button" class="toggle-btn" id="btnBIn">磁場 ⊗ 奥</button>
+          </div>
+          <div class="hint-box" id="hintText">F・B・I は互いに直角 · θ=90°で力最大 · 電流・磁場の向きを変えると F の向きが変わる</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const B_MODES = {
+        up:   { perp: new THREE.Vector3(0, 1, 0),  label: "↑ 上向き" },
+        down: { perp: new THREE.Vector3(0, -1, 0), label: "↓ 下向き" },
+        out:  { perp: new THREE.Vector3(0, 0, 1),  label: "⊙ 手前" },
+        in:   { perp: new THREE.Vector3(0, 0, -1), label: "⊗ 奥" },
+      };
+
+      const wrap = document.getElementById("field3dWrap");
+      const target = { I: 10, L: 0.5, B: 1.0, theta: 90 };
+      const smooth = { I: 10, L: 0.5, B: 1.0, theta: 90 };
+      let curDir = 1, bMode = "up", t = 0;
+      let showFlow = true, showBVec = true, autoSpin = true;
+      let needsRebuild = true;
+
+      let scene, camera, renderer, worldGroup, wireGroup, bArrowGroup, bFlowGroup, triadGroup;
+      let rotX = 0.38, rotY = 0.55, zoom = 3.5, dragging = false, lx = 0, ly = 0;
+      let flowParticles = [];
+      let wireMesh = null;
+
+      const TRIAD_ORIGIN = new THREE.Vector3(0, 0, 0);
+      const SVG_OX = 150, SVG_OY = 118;
+      const SVG_ARROW_LEN = 62;
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+
+      function getIUnit() { return new THREE.Vector3(curDir, 0, 0); }
+
+      function getBUnit() {
+        const th = smooth.theta * Math.PI / 180;
+        const Iu = getIUnit();
+        const Bp = B_MODES[bMode].perp.clone();
+        return Iu.clone().multiplyScalar(Math.cos(th)).add(Bp.multiplyScalar(Math.sin(th))).normalize();
+      }
+
+      function computeForce() {
+        const { Fmag, Fu, sinTheta } = getTriad();
+        return { Fmag, Fdir: Fu.clone(), sinTheta };
+      }
+
+      /** 互いに直角な3軸：I（電流）· B⊥（Iに垂直な磁場成分）· F=I×B */
+      function getTriad() {
+        const Iu = getIUnit();
+        const Bu = getBUnit();
+        const sinTheta = new THREE.Vector3().crossVectors(Iu, Bu).length();
+        const Fmag = smooth.I * smooth.L * smooth.B * sinTheta;
+        const Fu = new THREE.Vector3().crossVectors(Iu, Bu);
+        if (Fu.length() > 1e-6) Fu.normalize();
+        else Fu.set(0, 0, 0);
+
+        const Bperp = Bu.clone().sub(Iu.clone().multiplyScalar(Bu.dot(Iu)));
+        const BpU = new THREE.Vector3();
+        if (Bperp.length() > 1e-6) BpU.copy(Bperp.normalize());
+
+        return { Iu, BpU, Fu, Fmag, sinTheta };
+      }
+
+      function triadLengths() {
+        const { sinTheta, Fmag } = getTriad();
+        return {
+          iLen: 0.22 + smooth.I * 0.02,
+          bLen: sinTheta > 0.01 ? 0.18 + smooth.B * sinTheta * 0.15 : 0,
+          fLen: Fmag > 0.005 ? Math.min(0.75, 0.12 + Fmag * 0.1) : 0,
+        };
+      }
+
+      function rotateForView(v) {
+        return v.clone().applyEuler(new THREE.Euler(rotX, rotY, 0, "XYZ"));
+      }
+
+      function projectToSvg(v, len3d) {
+        const p = rotateForView(v.clone().multiplyScalar(len3d || 1));
+        const sc = 62;
+        return {
+          ox: SVG_OX, oy: SVG_OY,
+          x: SVG_OX + p.x * sc + p.z * sc * 0.62,
+          y: SVG_OY - p.y * sc + p.z * sc * 0.28,
+        };
+      }
+
+      function forceDirLabel(Fdir, Fmag) {
+        if (Fmag < 0.01) return "なし（θ=0°/180°）";
+        const ax = Math.abs(Fdir.x), ay = Math.abs(Fdir.y), az = Math.abs(Fdir.z);
+        if (az >= ax && az >= ay) return Fdir.z > 0 ? "手前 ⊙" : "奥 ⊗";
+        if (ay >= ax) return Fdir.y > 0 ? "上 ↑" : "下 ↓";
+        return Fdir.x > 0 ? "右 →" : "左 ←";
+      }
+
+      function clearGroup(g) {
+        if (!g) return;
+        while (g.children.length) {
+          const c = g.children[0];
+          g.remove(c);
+          if (c.geometry) c.geometry.dispose();
+          if (c.material) {
+            if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose());
+            else c.material.dispose();
+          }
+        }
+      }
+
+      function buildWireBox(group) {
+        const boxGeo = new THREE.BoxGeometry(1.75, 1.75, 1.75);
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        group.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+          color: 0xc47a4a, transparent: true, opacity: 0.72,
+        })));
+        boxGeo.dispose(); edges.dispose();
+        const faceHalf = 0.876;
+        [[-faceHalf,0,0], [faceHalf,0,0], [0,-faceHalf,0], [0,faceHalf,0], [0,0,-faceHalf], [0,0,faceHalf]].forEach(([fx,fy,fz]) => {
+          const mesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.7, 1.7),
+            new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.03, side: THREE.DoubleSide, depthWrite: false })
+          );
+          mesh.position.set(fx, fy, fz);
+          mesh.lookAt(fx * 2, fy * 2, fz * 2);
+          group.add(mesh);
+        });
+        const grid = new THREE.GridHelper(1.6, 8, 0x1e3a5f, 0x111827);
+        grid.position.y = -0.87;
+        group.add(grid);
+      }
+
+      function buildWire() {
+        const halfL = 0.25 + smooth.L * 0.55;
+        wireMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.035, 0.035, halfL * 2, 20),
+          new THREE.MeshBasicMaterial({ color: 0x00ffff })
+        );
+        wireMesh.rotation.z = Math.PI / 2;
+        wireGroup.add(wireMesh);
+        const glow = new THREE.PointLight(0x00ffff, 0.8 + smooth.I * 0.08, 2.5);
+        wireGroup.add(glow);
+        for (let i = 0; i < 12; i++) {
+          const ph = new THREE.Mesh(
+            new THREE.SphereGeometry(0.028, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+          );
+          ph.userData.phase = i / 12;
+          wireGroup.add(ph);
+        }
+      }
+
+      function buildBArrows() {
+        const Bu = getBUnit();
+        const alen = 0.08 + smooth.B * 0.1;
+        const grid = 5;
+        for (let ix = 0; ix < grid; ix++) {
+          for (let iy = 0; iy < grid; iy++) {
+            for (let iz = 0; iz < grid; iz++) {
+              const x = -0.65 + (ix / (grid - 1)) * 1.3;
+              const y = -0.65 + (iy / (grid - 1)) * 1.3;
+              const z = -0.65 + (iz / (grid - 1)) * 1.3;
+              if (Math.abs(y) < 0.08 && Math.abs(z) < 0.12) continue;
+              const t = smooth.B / 2;
+              const col = new THREE.Color().setRGB(lerp(0.12, 0.22, t), lerp(0.4, 0.86, t), lerp(0.78, 1, t));
+              const arrow = new THREE.ArrowHelper(Bu, new THREE.Vector3(x, y, z), alen, col.getHex(), alen * 0.4, alen * 0.22);
+              bArrowGroup.add(arrow);
+            }
+          }
+        }
+      }
+
+      function buildBFlow() {
+        flowParticles = [];
+        const Bu = getBUnit();
+        const perp1 = new THREE.Vector3();
+        const perp2 = new THREE.Vector3();
+        if (Math.abs(Bu.y) < 0.9) perp1.set(0, 1, 0);
+        else perp1.set(1, 0, 0);
+        perp2.crossVectors(Bu, perp1).normalize();
+        perp1.crossVectors(perp2, Bu).normalize();
+
+        const rows = 4, cols = 4, layers = 3;
+        for (let iz = 0; iz < layers; iz++) {
+          for (let iy = 0; iy < rows; iy++) {
+            for (let ix = 0; ix < cols; ix++) {
+              const u = (ix / (cols - 1) - 0.5) * 1.4;
+              const v = (iy / (rows - 1) - 0.5) * 1.2;
+              const w = (iz / (layers - 1) - 0.5) * 0.6;
+              const origin = perp1.clone().multiplyScalar(u).add(perp2.clone().multiplyScalar(v)).add(Bu.clone().multiplyScalar(w));
+              const pts = [];
+              for (let s = 0; s <= 20; s++) {
+                const along = (s / 20 - 0.5) * 1.1;
+                pts.push(origin.clone().add(Bu.clone().multiplyScalar(along)));
+              }
+              const geo = new THREE.BufferGeometry().setFromPoints(pts);
+              bFlowGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({
+                color: 0x38bdf8, transparent: true, opacity: 0.22 + smooth.B * 0.2,
+              })));
+              flowParticles.push({ pts, u: Math.random(), speed: 0.1 + smooth.B * 0.06 });
+            }
+          }
+        }
+        flowParticles.forEach((fp, i) => {
+          const dot = new THREE.Mesh(
+            new THREE.SphereGeometry(0.024, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xfde047 })
+          );
+          dot.userData.fpIdx = i;
+          bFlowGroup.add(dot);
+        });
+      }
+
+      function buildTriadArrows() {
+        const { Iu, BpU, Fu, Fmag, sinTheta } = getTriad();
+        const { iLen, bLen, fLen } = triadLengths();
+        const o = TRIAD_ORIGIN;
+
+        triadGroup.add(new THREE.Mesh(
+          new THREE.SphereGeometry(0.045, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xe2e8f0 })
+        ));
+
+        if (iLen > 0.01) {
+          triadGroup.add(new THREE.ArrowHelper(Iu, o, iLen, 0xe07a2f, iLen * 0.22, iLen * 0.12));
+        }
+        if (bLen > 0.01 && sinTheta > 0.01) {
+          triadGroup.add(new THREE.ArrowHelper(BpU, o, bLen, 0x3b6fc7, bLen * 0.22, bLen * 0.12));
+        }
+        if (fLen > 0.01 && Fmag > 0.005) {
+          triadGroup.add(new THREE.ArrowHelper(Fu, o, fLen, 0x2d9e6f, fLen * 0.22, fLen * 0.12));
+        }
+      }
+
+      function rebuildScene() {
+        if (!wireGroup || !triadGroup || !bArrowGroup || !bFlowGroup) return;
+        clearGroup(wireGroup);
+        clearGroup(bArrowGroup);
+        clearGroup(bFlowGroup);
+        clearGroup(triadGroup);
+        buildWire();
+        if (showBVec) buildBArrows();
+        if (showFlow) buildBFlow();
+        buildTriadArrows();
+        bArrowGroup.visible = showBVec;
+        bFlowGroup.visible = showFlow;
+        needsRebuild = false;
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060a12);
+        scene.fog = new THREE.FogExp2(0x060a12, 0.08);
+
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(42, w / h, 0.05, 50);
+        camera.position.set(0, 0, zoom);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.65));
+        const key = new THREE.DirectionalLight(0xffffff, 1.0);
+        key.position.set(3, 4, 5);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x22d3ee, 0.7, 12);
+        rim.position.set(-3, -2, 4);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildWireBox(worldGroup);
+
+        wireGroup = new THREE.Group();
+        bArrowGroup = new THREE.Group();
+        bFlowGroup = new THREE.Group();
+        triadGroup = new THREE.Group();
+        worldGroup.add(bFlowGroup);
+        worldGroup.add(bArrowGroup);
+        worldGroup.add(wireGroup);
+        worldGroup.add(triadGroup);
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-1.1, Math.min(1.1, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = Math.max(2.2, Math.min(5.5, zoom + e.deltaY * 0.004));
+        }, { passive: false });
+
+        window.addEventListener("resize", () => {
+          const rw = wrap.clientWidth, rh = wrap.clientHeight;
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+          renderer.setSize(rw, rh);
+        });
+      }
+
+      function updateWireParticles(dt) {
+        const halfL = 0.25 + smooth.L * 0.55;
+        const spd = 0.18 + smooth.I * 0.025;
+        wireGroup.children.forEach((c) => {
+          if (c.userData.phase === undefined) return;
+          c.userData.phase = (c.userData.phase + spd * dt * curDir) % 1;
+          const ph = ((c.userData.phase % 1) + 1) % 1;
+          c.position.set(lerp(-halfL, halfL, ph), 0, 0);
+        });
+      }
+
+      function updateFlowParticles(dt) {
+        bFlowGroup.children.forEach((dot) => {
+          if (dot.userData.fpIdx === undefined) return;
+          const fp = flowParticles[dot.userData.fpIdx];
+          if (!fp) return;
+          fp.u = (fp.u + fp.speed * dt) % 1;
+          const idx = fp.u * (fp.pts.length - 1);
+          const i0 = Math.floor(idx);
+          const i1 = Math.min(i0 + 1, fp.pts.length - 1);
+          const f = idx - i0;
+          const p0 = fp.pts[i0], p1 = fp.pts[i1];
+          dot.position.set(
+            p0.x + (p1.x - p0.x) * f,
+            p0.y + (p1.y - p0.y) * f,
+            p0.z + (p1.z - p0.z) * f
+          );
+        });
+      }
+
+      const SVG_NS = "http://www.w3.org/2000/svg";
+
+      function svgEl(tag, attrs) {
+        const el = document.createElementNS(SVG_NS, tag);
+        Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+        return el;
+      }
+
+      function appendSvgArrow(parent, ox, oy, ux, uy, len, color, width, glow) {
+        const gap = 7;
+        const x1 = ox + ux * gap, y1 = oy + uy * gap;
+        const x2 = ox + ux * len, y2 = oy + uy * len;
+        const g = svgEl("g", {});
+        const shaft = svgEl("line", {
+          x1, y1, x2, y2,
+          stroke: color, "stroke-width": String(width),
+          "stroke-linecap": "round",
+          opacity: glow ? "1" : "0.95",
+        });
+        if (glow) {
+          const glowLine = svgEl("line", {
+            x1, y1, x2, y2,
+            stroke: color, "stroke-width": String(width + 3),
+            "stroke-linecap": "round", opacity: "0.25",
+          });
+          g.appendChild(glowLine);
+        }
+        g.appendChild(shaft);
+        const hl = 9, hw = 5;
+        const px = -uy, py = ux;
+        const head = svgEl("polygon", {
+          points: [
+            x2, y2,
+            x2 - ux * hl + px * hw, y2 - uy * hl + py * hw,
+            x2 - ux * hl - px * hw, y2 - uy * hl - py * hw,
+          ].join(" "),
+          fill: color,
+        });
+        g.appendChild(head);
+        parent.appendChild(g);
+        return { x2, y2, ux, uy, px, py };
+      }
+
+      function appendSvgLabel(parent, x, y, text, color) {
+        const g = svgEl("g", {});
+        const pad = 4;
+        const txt = svgEl("text", {
+          x: String(x), y: String(y),
+          fill: color, "font-size": "12", "font-weight": "700",
+          "font-family": "Noto Sans JP, Inter, sans-serif",
+          "text-anchor": "middle", "dominant-baseline": "middle",
+        });
+        txt.textContent = text;
+        const bb = { w: text.length * 11 + pad * 2, h: 18 };
+        const rect = svgEl("rect", {
+          x: String(x - bb.w / 2), y: String(y - bb.h / 2),
+          width: String(bb.w), height: String(bb.h),
+          rx: "4", fill: "rgba(8,12,24,0.88)", stroke: color, "stroke-width": "1",
+          opacity: "0.95",
+        });
+        g.appendChild(rect);
+        g.appendChild(txt);
+        parent.appendChild(g);
+      }
+
+      function updateVecSvg() {
+        if (typeof THREE === "undefined") return;
+        const axisG = document.getElementById("axisGuide");
+        const angG = document.getElementById("angleMarks");
+        const arrowG = document.getElementById("arrowGroup");
+        const labelG = document.getElementById("labelGroup");
+        if (!axisG || !angG || !arrowG || !labelG) return;
+
+        const { Iu, BpU, Fu, Fmag, sinTheta } = getTriad();
+        const ox = SVG_OX, oy = SVG_OY;
+        axisG.innerHTML = "";
+        angG.innerHTML = "";
+        arrowG.innerHTML = "";
+        labelG.innerHTML = "";
+
+        [[new THREE.Vector3(0.35, 0, 0), "#475569", "x"],
+         [new THREE.Vector3(0, 0.35, 0), "#475569", "y"],
+         [new THREE.Vector3(0, 0, 0.35), "#475569", "z"]].forEach(([v, col, lbl]) => {
+          const tip = projectToSvg(v, 1);
+          const dx = tip.x - ox, dy = tip.y - oy;
+          const d = Math.hypot(dx, dy) || 1;
+          appendSvgArrow(axisG, ox, oy, dx / d, dy / d, 22, col, 1, false);
+          const tx = svgEl("text", {
+            x: String(tip.x + 4), y: String(tip.y + 3),
+            fill: "rgba(148,163,184,0.55)", "font-size": "9",
+            "font-family": "Noto Sans JP, sans-serif",
+          });
+          tx.textContent = lbl;
+          axisG.appendChild(tx);
+        });
+
+        const items = [
+          { u: Iu, label: "電流 I", color: "#e07a2f", active: true, glow: false, order: 1 },
+          { u: BpU, label: "磁場 B", color: "#60a5fa", active: sinTheta > 0.01, glow: false, order: 2 },
+          { u: Fu, label: "力 F", color: "#34d399", active: Fmag > 0.005, glow: true, order: 3 },
+        ].sort((a, b) => a.order - b.order);
+
+        const drawn = [];
+        items.forEach(({ u, label, color, active, glow }) => {
+          if (!active || u.lengthSq() < 0.01) return;
+          const tip = projectToSvg(u, 1);
+          const dx = tip.x - ox, dy = tip.y - oy;
+          const d = Math.hypot(dx, dy);
+          if (d < 10) return;
+          const ux = dx / d, uy = dy / d;
+          const arr = appendSvgArrow(arrowG, ox, oy, ux, uy, SVG_ARROW_LEN, color, 2.8, glow);
+          const lx = arr.x2 + arr.ux * 14 + arr.px * 10;
+          const ly = arr.y2 + arr.uy * 14 + arr.py * 10;
+          appendSvgLabel(labelG, lx, ly, label, color);
+          drawn.push({ ux, uy, x2: arr.x2, y2: arr.y2 });
+        });
+
+        if (drawn.length >= 3) {
+          const markLen = 12;
+          drawn.forEach((a, i) => {
+            const b = drawn[(i + 1) % drawn.length];
+            const path = svgEl("path", {
+              d: `M ${ox + a.ux * markLen} ${oy + a.uy * markLen} L ${ox + a.ux * markLen + b.ux * markLen} ${oy + a.uy * markLen + b.uy * markLen} L ${ox + b.ux * markLen} ${oy + b.uy * markLen}`,
+              fill: "none", stroke: "rgba(253,230,138,0.5)", "stroke-width": "1.2",
+            });
+            angG.appendChild(path);
+          });
+        }
+      }
+
+      function updateHUD() {
+        const { Fmag, Fdir, sinTheta } = computeForce();
+        document.getElementById("valI").textContent = smooth.I.toFixed(1) + " A";
+        document.getElementById("valL").textContent = smooth.L.toFixed(2) + " m";
+        document.getElementById("valB").textContent = smooth.B.toFixed(2) + " T";
+        document.getElementById("valTheta").textContent = smooth.theta.toFixed(0) + "°";
+        document.getElementById("hudI").textContent = smooth.I.toFixed(1) + " A";
+        document.getElementById("hudL").textContent = smooth.L.toFixed(2) + " m";
+        document.getElementById("hudB").textContent = smooth.B.toFixed(2) + " T";
+        document.getElementById("hudTheta").textContent = smooth.theta.toFixed(0) + "°";
+        document.getElementById("hudSin").textContent = sinTheta.toFixed(3);
+        document.getElementById("hudF").textContent = Fmag.toFixed(2) + " N";
+        document.getElementById("hudFdir").textContent = forceDirLabel(Fdir, Fmag);
+        document.getElementById("hudBdir").textContent = B_MODES[bMode].label;
+        document.getElementById("formulaLive").textContent =
+          `F = ${smooth.I.toFixed(1)} × ${smooth.L.toFixed(2)} × ${smooth.B.toFixed(2)} × sin${smooth.theta.toFixed(0)}° = ${Fmag.toFixed(2)} N`;
+        updateVecSvg();
+      }
+
+      function render(dt) {
+        if (!renderer || !wireGroup || !triadGroup || !worldGroup) return;
+        if (needsRebuild) rebuildScene();
+
+        const { Fmag, Fdir } = computeForce();
+        const shake = Fmag * 0.0035 * Math.sin(t * 14);
+        const shakeVec = Fdir.clone().multiplyScalar(shake);
+        wireGroup.position.copy(shakeVec);
+        triadGroup.position.copy(shakeVec);
+
+        if (autoSpin && !dragging) rotY += dt * 0.18;
+        worldGroup.rotation.x = rotX;
+        worldGroup.rotation.y = rotY;
+        camera.position.z = zoom;
+        camera.lookAt(0, 0, 0);
+
+        updateWireParticles(dt);
+        if (showFlow) updateFlowParticles(dt);
+        updateVecSvg();
+        renderer.render(scene, camera);
+      }
+
+      function setBMode(mode) {
+        bMode = mode;
+        ["btnBUp", "btnBDown", "btnBOut", "btnBIn"].forEach((id) => {
+          document.getElementById(id).classList.remove("is-active");
+        });
+        const map = { up: "btnBUp", down: "btnBDown", out: "btnBOut", in: "btnBIn" };
+        document.getElementById(map[mode]).classList.add("is-active");
+        needsRebuild = true;
+      }
+
+      document.getElementById("slI").addEventListener("input", (e) => { target.I = +e.target.value * 0.1; needsRebuild = true; });
+      document.getElementById("slL").addEventListener("input", (e) => { target.L = +e.target.value * 0.1; needsRebuild = true; });
+      document.getElementById("slB").addEventListener("input", (e) => { target.B = +e.target.value * 0.01; needsRebuild = true; });
+      document.getElementById("slTheta").addEventListener("input", (e) => { target.theta = +e.target.value; needsRebuild = true; });
+
+      document.getElementById("btnCurA").addEventListener("click", () => {
+        curDir = 1;
+        document.getElementById("btnCurA").classList.add("is-active");
+        document.getElementById("btnCurB").classList.remove("is-active");
+        needsRebuild = true;
+      });
+      document.getElementById("btnCurB").addEventListener("click", () => {
+        curDir = -1;
+        document.getElementById("btnCurB").classList.add("is-active");
+        document.getElementById("btnCurA").classList.remove("is-active");
+        needsRebuild = true;
+      });
+      document.getElementById("btnBUp").addEventListener("click", () => setBMode("up"));
+      document.getElementById("btnBDown").addEventListener("click", () => setBMode("down"));
+      document.getElementById("btnBOut").addEventListener("click", () => setBMode("out"));
+      document.getElementById("btnBIn").addEventListener("click", () => setBMode("in"));
+
+      document.getElementById("btnFlow").addEventListener("click", function () {
+        showFlow = !showFlow;
+        this.classList.toggle("active", showFlow);
+        needsRebuild = true;
+      });
+      document.getElementById("btnBVec").addEventListener("click", function () {
+        showBVec = !showBVec;
+        this.classList.toggle("active", showBVec);
+        needsRebuild = true;
+      });
+      document.getElementById("btnSpin").addEventListener("click", function () {
+        autoSpin = !autoSpin;
+        this.classList.toggle("active", autoSpin);
+      });
+
+      let last = null;
+      function loop(now) {
+        try {
+          if (last == null) last = now;
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          t += dt;
+          const k = 1 - Math.pow(0.001, dt / 0.35);
+          smooth.I = lerp(smooth.I, target.I, k);
+          smooth.L = lerp(smooth.L, target.L, k);
+          smooth.B = lerp(smooth.B, target.B, k);
+          smooth.theta = lerp(smooth.theta, target.theta, k);
+
+          if (needsRebuild) rebuildScene();
+
+          updateHUD();
+          render(dt);
+        } catch (err) {
+          console.error(err);
+          const hint = document.getElementById("hintText");
+          if (hint) hint.textContent = "表示エラー: " + err.message;
+        }
+        requestAnimationFrame(loop);
+      }
+
+      function boot() {
+        if (!wrap) {
+          document.getElementById("hintText").textContent = "表示領域が見つかりません。";
+          return;
+        }
+        if (typeof THREE === "undefined") {
+          document.getElementById("hintText").textContent = "Three.js を読み込めません。ネット接続を確認してください。";
+          return;
+        }
+        try {
+          initThree();
+          rebuildScene();
+          requestAnimationFrame(loop);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("hintText").textContent = "初期化エラー: " + err.message;
+        }
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+      else boot();
+    })();
+  </script>
+</body>
+</html>

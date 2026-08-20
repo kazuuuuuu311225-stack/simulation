@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>21章 静電気 — ガウス面と電束</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #818cf8;
+      --accent-light: #a5b4fc;
+      --panel: rgba(10, 12, 28, 0.9);
+      --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f1030 45%, #0a1628 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(129,140,248,0.45), rgba(251,191,36,0.3));
+      border: 1px solid rgba(129,140,248,0.4); font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.22);
+      font-size: 0.88rem; color: #c7d2fe; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(129,140,248,0.2);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      position: relative;
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #020617; border: 1px solid rgba(129,140,248,0.22);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%;
+      height: min(560px, 62dvh); min-height: 380px;
+    }
+    .canvas-hud {
+      position: absolute; top: 10px; right: 10px;
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(10, 18, 40, 0.85);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      font-size: 0.76rem; line-height: 1.55; color: #cbd5e1;
+      pointer-events: none; text-align: right;
+      max-width: min(260px, 58vw);
+    }
+    .canvas-hud strong { color: #fde68a; }
+    .canvas-hud.is-hidden { display: none; }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(2, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #c7d2fe; font-variant-numeric: tabular-nums; }
+    .toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .toggle-btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(129,140,248,0.3);
+      background: rgba(15,30,45,0.6); color: #cbd5e1;
+      font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    }
+    .toggle-btn.is-active {
+      background: rgba(129,140,248,0.22); border-color: rgba(129,140,248,0.55); color: #e0e7ff;
+    }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(129,140,248,0.06); border: 1px solid rgba(129,140,248,0.16);
+    }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #eef2ff; }
+    .hint { margin-top: 8px; font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚡</div>
+      <p class="chapter-label">第21章 — 静電気</p>
+      <h2>ガウス面と電束</h2>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-21">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>ガウスの法則のイメージ</h3>
+      <p>
+        点電荷 Q から出る<strong>電気力線の本数 N</strong>は Q に比例します。
+        点電荷を<strong>ガウス面</strong>（ここでは球面＝円）で囲むと、
+        面を<strong>貫く電気力線の本数</strong>は N に対応し、これが<strong>電束 Φ</strong>のイメージです。
+        高校物理では <strong>Φ ∝ Q</strong> · 半径 R を変えても Q が同じなら貫く本数は変わりません。
+      </p>
+      <div class="formula-box">Φ ∝ Q · N（力線本数）∝ Q · R を変えても Q 一定 → 貫通本数 N は一定</div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnLines">電気力線 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnShowN">本数 N 表示 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnGauss">ガウス面 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnVectors">電場ベクトル ON</button>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="qSlider">点電荷 Q <span class="slider-val" id="qVal">+5.0 μC</span></label>
+          <input type="range" id="qSlider" min="-100" max="100" value="50" step="5">
+        </div>
+        <div>
+          <label for="rSlider">ガウス面の半径 R <span class="slider-val" id="rVal">1.40 m</span></label>
+          <input type="range" id="rSlider" min="60" max="220" value="140" step="5">
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout"><dt>電荷 Q</dt><dd id="readQ">—</dd></dl>
+        <dl class="readout"><dt>力線本数 N</dt><dd id="readN">—</dd></dl>
+        <dl class="readout"><dt>ガウス面 R</dt><dd id="readR">—</dd></dl>
+        <dl class="readout"><dt>貫通本数</dt><dd id="readFlux">—</dd></dl>
+      </div>
+      <div class="formula-live" id="formulaLive">—</div>
+
+      <div class="canvas-wrap">
+        <canvas id="simCanvas" aria-label="ガウス面と電気力線のシミュレーション"></canvas>
+        <div class="canvas-hud" id="canvasHud"></div>
+      </div>
+      <div class="legend-row">
+        <span style="color:#f87171">＋Q</span> / <span style="color:#38bdf8">−Q</span> 点電荷
+        <span style="color:#fbbf24">○</span> ガウス面（球）
+        <span style="color:#fde047">●</span> 力線が面を貫く点
+        <span style="color:#c084fc">—</span> 電気力線
+      </div>
+      <p class="hint">R スライダーを動かしても Q が同じなら「ガウス面を貫く本数」は変わりません。Q を変えると N も比例して変化します。</p>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const K0 = 8.99e9;
+      const PX_TO_M = 0.01;
+      const CHARGE_R = 20;
+      const LINES_PER_UC = 2; // N = 2 × |Q[μC]|
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+      const formulaLive = document.getElementById("formulaLive");
+      const canvasHud = document.getElementById("canvasHud");
+
+      let canvasW = 800;
+      let canvasH = 500;
+      let animPhase = 0;
+
+      let qMicro = 5;
+      let gaussRPx = 140;
+
+      let showLines = true;
+      let showN = true;
+      let showGauss = true;
+      let showVectors = true;
+
+      let charge = { x: 0, y: 0 };
+
+      function qToC(qu) { return qu * 1e-6; }
+
+      function formatQ(qu) {
+        return (qu >= 0 ? "+" : "") + qu.toFixed(1) + " μC";
+      }
+
+      function pxToM(px) { return px * PX_TO_M; }
+      function formatDistM(m) { return m.toFixed(2) + " m"; }
+
+      /** Q に比例する電気力線の本数 */
+      function lineCount(q) {
+        return Math.max(2, Math.round(Math.abs(q) * LINES_PER_UC));
+      }
+
+      /** 点電荷の電場 [N/C] */
+      function fieldAt(x, y) {
+        const q = qToC(qMicro);
+        if (Math.abs(q) < 1e-14) return { ex: 0, ey: 0 };
+        const dx = x - charge.x;
+        const dy = y - charge.y;
+        const rPx = Math.hypot(dx, dy);
+        if (rPx < CHARGE_R + 2) return { ex: 0, ey: 0 };
+        const rM = Math.max(rPx * PX_TO_M, 0.01);
+        const eMag = K0 * q / (rM * rM);
+        return { ex: eMag * (dx / rPx), ey: eMag * (dy / rPx) };
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvasW = rect.width;
+        canvasH = rect.height;
+        charge.x = canvasW * 0.5;
+        charge.y = canvasH * 0.52;
+      }
+
+      function lineStyle() {
+        if (qMicro >= 0) {
+          return { stroke: "rgba(192,132,252,0.62)", glow: "rgba(192,132,252,0.45)", mark: "#fde047" };
+        }
+        return { stroke: "rgba(56,189,248,0.62)", glow: "rgba(56,189,248,0.45)", mark: "#fde047" };
+      }
+
+      function drawArrow(x1, y1, x2, y2, col, w) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 2) return;
+        ctx.strokeStyle = col;
+        ctx.fillStyle = col;
+        ctx.lineWidth = w || 1.3;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        const ah = Math.min(6, len * 0.3);
+        const ux = dx / len;
+        const uy = dy / len;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - ux * ah + uy * ah * 0.4, y2 - uy * ah - ux * ah * 0.4);
+        ctx.lineTo(x2 - ux * ah - uy * ah * 0.4, y2 - uy * ah + ux * ah * 0.4);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      /** ガウス面（球の断面＝円） */
+      function drawGaussSurface() {
+        if (!showGauss) return;
+        const rM = pxToM(gaussRPx);
+
+        ctx.fillStyle = "rgba(251,191,36,0.04)";
+        ctx.beginPath();
+        ctx.arc(charge.x, charge.y, gaussRPx, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(251,191,36,0.75)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.arc(charge.x, charge.y, gaussRPx, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#fbbf24";
+        ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("ガウス面（球） R = " + formatDistM(rM), charge.x + gaussRPx + 10, charge.y - 6);
+      }
+
+      /** 放射状の電気力線（点電荷 → 直線）とガウス面との交点 */
+      function drawFieldLines() {
+        if (!showLines || Math.abs(qMicro) < 0.05) return;
+        const n = lineCount(qMicro);
+        const outward = qMicro > 0;
+        const style = lineStyle();
+        const innerR = CHARGE_R + 4;
+        const outerR = Math.min(canvasW, canvasH) * 0.46;
+
+        ctx.save();
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = style.glow;
+        ctx.lineWidth = 1.3;
+
+        for (let i = 0; i < n; i++) {
+          const ang = (i / n) * Math.PI * 2 + animPhase * 0.01;
+          const ux = Math.cos(ang);
+          const uy = Math.sin(ang);
+
+          const xIn = charge.x + ux * innerR;
+          const yIn = charge.y + uy * innerR;
+          const xG = charge.x + ux * gaussRPx;
+          const yG = charge.y + uy * gaussRPx;
+          const xOut = charge.x + ux * outerR;
+          const yOut = charge.y + uy * outerR;
+
+          // ガウス面の内側（やや太く）
+          ctx.strokeStyle = outward ? "rgba(253,224,71,0.55)" : "rgba(125,211,252,0.55)";
+          ctx.beginPath();
+          ctx.moveTo(xIn, yIn);
+          ctx.lineTo(xG, yG);
+          ctx.stroke();
+
+          // ガウス面の外側
+          ctx.strokeStyle = style.stroke;
+          ctx.beginPath();
+          ctx.moveTo(xG, yG);
+          ctx.lineTo(xOut, yOut);
+          ctx.stroke();
+
+          // 貫通点マーカー
+          if (showGauss) {
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = style.mark;
+            ctx.beginPath();
+            ctx.arc(xG, yG, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 6;
+          }
+
+          // 外向き/内向きを示す矢印（外側）
+          const tip = outward
+            ? { x: charge.x + ux * (gaussRPx + 28), y: charge.y + uy * (gaussRPx + 28) }
+            : { x: charge.x + ux * (innerR + 18), y: charge.y + uy * (innerR + 18) };
+          const tail = outward
+            ? { x: charge.x + ux * (gaussRPx + 12), y: charge.y + uy * (gaussRPx + 12) }
+            : { x: charge.x + ux * (gaussRPx - 12), y: charge.y + uy * (gaussRPx - 12) };
+          drawArrow(tail.x, tail.y, tip.x, tip.y, style.stroke, 1.2);
+        }
+        ctx.restore();
+      }
+
+      /** 電場ベクトル格子 */
+      function drawFieldVectors() {
+        if (!showVectors || Math.abs(qMicro) < 0.05) return;
+        const step = 38;
+        const maxLen = 18;
+
+        for (let gx = step / 2; gx < canvasW; gx += step) {
+          for (let gy = step / 2; gy < canvasH; gy += step) {
+            if (Math.hypot(gx - charge.x, gy - charge.y) < CHARGE_R + 12) continue;
+            const f = fieldAt(gx, gy);
+            const mag = Math.hypot(f.ex, f.ey);
+            if (mag < 1e-4) continue;
+            const dLen = Math.min(maxLen, Math.log10(mag + 1) * 6);
+            drawArrow(gx, gy, gx + (f.ex / mag) * dLen, gy + (f.ey / mag) * dLen,
+              "rgba(52,211,153,0.4)", 1.1);
+          }
+        }
+      }
+
+      function drawCharge() {
+        const pos = qMicro >= 0;
+        const col = pos ? "#f87171" : "#38bdf8";
+        const pulse = 1 + Math.sin(animPhase * 1.8) * 0.05;
+
+        ctx.fillStyle = pos ? "rgba(248,113,113,0.35)" : "rgba(56,189,248,0.35)";
+        ctx.beginPath();
+        ctx.arc(charge.x, charge.y, CHARGE_R * pulse + 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(charge.x, charge.y, CHARGE_R, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "700 16px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(pos ? "+" : "−", charge.x, charge.y + 1);
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = col;
+        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("Q", charge.x, charge.y + CHARGE_R + 16);
+        ctx.fillText(formatQ(qMicro), charge.x, charge.y + CHARGE_R + 30);
+      }
+
+      function updateReadouts() {
+        const n = lineCount(qMicro);
+        const rM = pxToM(gaussRPx);
+        const fluxCount = showLines && Math.abs(qMicro) >= 0.05 ? n : 0;
+
+        document.getElementById("readQ").textContent = formatQ(qMicro);
+        document.getElementById("readQ").style.color = qMicro >= 0 ? "#f87171" : "#38bdf8";
+        document.getElementById("readN").textContent = n + " 本";
+        document.getElementById("readR").textContent = formatDistM(rM);
+        document.getElementById("readFlux").textContent = fluxCount + " 本（= N）";
+        document.getElementById("rVal").textContent = formatDistM(rM);
+
+        formulaLive.innerHTML =
+          "<strong>Φ ∝ Q</strong> · 電束は電気力線の本数 N に対応<br>"
+          + "Q = " + formatQ(qMicro) + " → N = <strong>" + n + " 本</strong><br>"
+          + "R = " + formatDistM(rM) + " でも <strong>貫通本数 = " + fluxCount + " 本</strong>（Q 一定なら不変）";
+
+        if (showN) {
+          canvasHud.classList.remove("is-hidden");
+          canvasHud.innerHTML =
+            "<strong>電束 Φ のイメージ</strong><br>"
+            + "力線 N = <strong>" + n + " 本</strong><br>"
+            + "ガウス面 R = " + formatDistM(rM) + "<br>"
+            + "貫通 = <strong>" + fluxCount + " 本</strong><br>"
+            + "<span style='color:#a5b4fc'>Φ ∝ Q · R↑ でも本数不変</span>";
+        } else {
+          canvasHud.classList.add("is-hidden");
+        }
+      }
+
+      function drawScene() {
+        if (canvasW < 10) return;
+
+        const grad = ctx.createRadialGradient(
+          charge.x, charge.y, CHARGE_R, charge.x, charge.y, canvasW * 0.5
+        );
+        grad.addColorStop(0, "#0f172a");
+        grad.addColorStop(1, "#020617");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvasW, canvasH);
+
+        drawGaussSurface();
+        drawFieldLines();
+        drawFieldVectors();
+        drawCharge();
+
+        if (showN && showGauss && showLines) {
+          const n = lineCount(qMicro);
+          ctx.fillStyle = "#fde68a";
+          ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(
+            "ガウス面を貫く力線 = " + n + " 本（= N ∝ Q）",
+            charge.x, charge.y - gaussRPx - 18
+          );
+        }
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("R を変えても Q 一定なら貫通本数は変わらない · 密度だけが変化", 12, canvasH - 10);
+
+        updateReadouts();
+      }
+
+      function loop() {
+        animPhase += 0.03;
+        drawScene();
+        requestAnimationFrame(loop);
+      }
+
+      document.getElementById("btnLines").addEventListener("click", () => {
+        showLines = !showLines;
+        const b = document.getElementById("btnLines");
+        b.textContent = showLines ? "電気力線 ON" : "電気力線 OFF";
+        b.classList.toggle("is-active", showLines);
+      });
+      document.getElementById("btnShowN").addEventListener("click", () => {
+        showN = !showN;
+        const b = document.getElementById("btnShowN");
+        b.textContent = showN ? "本数 N 表示 ON" : "本数 N 表示 OFF";
+        b.classList.toggle("is-active", showN);
+      });
+      document.getElementById("btnGauss").addEventListener("click", () => {
+        showGauss = !showGauss;
+        const b = document.getElementById("btnGauss");
+        b.textContent = showGauss ? "ガウス面 ON" : "ガウス面 OFF";
+        b.classList.toggle("is-active", showGauss);
+      });
+      document.getElementById("btnVectors").addEventListener("click", () => {
+        showVectors = !showVectors;
+        const b = document.getElementById("btnVectors");
+        b.textContent = showVectors ? "電場ベクトル ON" : "電場ベクトル OFF";
+        b.classList.toggle("is-active", showVectors);
+      });
+
+      document.getElementById("qSlider").addEventListener("input", (e) => {
+        qMicro = +e.target.value / 10;
+        document.getElementById("qVal").textContent = formatQ(qMicro);
+      });
+      document.getElementById("rSlider").addEventListener("input", (e) => {
+        gaussRPx = +e.target.value;
+      });
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

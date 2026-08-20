@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>23章 電流 — 端子電圧 V–I グラフ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #fbbf24; --accent-light: #fde68a;
+      --panel: rgba(10, 12, 28, 0.92); --border: rgba(251, 191, 36, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1628 42%, #101820 100%);
+      color: var(--text); min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.45), rgba(251,191,36,0.35));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.2rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px; padding: 16px 18px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
+    section.panel p, section.panel li {
+      font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0;
+    }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+      background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.25);
+      font-size: 0.86rem; color: #ddd6fe; text-align: center; line-height: 1.65;
+    }
+    .formula-live {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(251,191,36,0.22);
+      font-size: 0.86rem; color: #fde68a; line-height: 1.65; text-align: center;
+    }
+    .canvas-wrap {
+      border-radius: 12px; overflow: hidden; margin-top: 10px;
+      background: #060a14; border: 1px solid rgba(148,163,184,0.18);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.35);
+    }
+    .canvas-wrap canvas {
+      display: block; width: 100%; height: min(640px, 70dvh);
+      min-height: 480px; touch-action: none; cursor: crosshair;
+    }
+    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
+    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(3, 1fr); } }
+    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; accent-color: #a78bfa; }
+    .slider-val { font-size: 0.82rem; font-weight: 700; color: #fde68a; font-variant-numeric: tabular-nums; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-row button {
+      padding: 10px 16px; border-radius: 10px; font: inherit; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(167,139,250,0.4);
+      background: rgba(167,139,250,0.12); color: #e9d5ff;
+    }
+    .readout-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
+    }
+    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 900px) { .readout-grid { grid-template-columns: repeat(6, 1fr); } }
+    .readout {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .readout.is-emf dd { color: #c4b5fd; }
+    .readout.is-emf { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.35); }
+    .readout.is-r dd { color: #fca5a5; }
+    .readout.is-r { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.28); }
+    .readout.is-i dd { color: #bae6fd; }
+    .readout.is-i { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
+    .readout.is-v dd { color: #fde68a; }
+    .readout.is-v { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.28); }
+    .readout.is-law { grid-column: 1 / -1; background: rgba(15,23,42,0.75); border-color: rgba(167,139,250,0.4); }
+    .readout.is-law dd { color: #ede9fe; font-size: 0.9rem; line-height: 1.55; }
+    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
+    .readout dd { margin: 4px 0 0; font-size: 0.88rem; font-weight: 700; color: #eef2ff; }
+    .legend-row {
+      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+      font-size: 0.76rem; color: var(--muted);
+    }
+    .law-ok { color: #86efac; }
+    .hint { margin-top: 8px; font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">🔋</div>
+      <p class="chapter-label">第23章 — 電流</p>
+      <h2>端子電圧 — V–I グラフ</h2>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>V = E − rI — 電池の端子特性</h3>
+      <p>
+        起電力 <strong>E</strong>・内部抵抗 <strong>r</strong> の電池では、流れる電流 <strong>I</strong> が大きいほど
+        内部降下 <strong>rI</strong> が増え、端子電圧は <strong>V = E − rI</strong> と直線的に低下します。
+        負荷 <strong>R</strong> を変えると、グラフ上の動作点がこの直線上を移動します。
+      </p>
+      <ul>
+        <li>開回路（I = 0）… V = E（起電力そのもの）</li>
+        <li>短絡（V = 0）… I<sub>sc</sub> = E/r（最大電流）</li>
+        <li>負荷 R … I = E/(r+R) · V = E − rI = IR</li>
+      </ul>
+      <div class="formula-box">
+        V = E − rI · I = E/(r+R) · 傾き = −r · 切片 = E
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas" width="960" height="620"></canvas>
+      </div>
+
+      <div class="legend-row">
+        <span style="color:#a78bfa">— V = E − rI（端子特性）</span>
+        <span style="color:#38bdf8">● 現在の (I, V)</span>
+        <span style="color:#86efac">○ 開回路 (0, E)</span>
+        <span style="color:#fca5a5">○ 短絡 (E/r, 0)</span>
+        <span>上：回路図 · 下：V–I グラフ · グラフをクリックで R 変更</span>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="eSlider">起電力 E <span class="slider-val" id="eVal">12.0 V</span></label>
+          <input type="range" id="eSlider" min="1" max="24" value="12" step="0.5">
+        </div>
+        <div>
+          <label for="rSlider">内部抵抗 r <span class="slider-val" id="rVal">2.0 Ω</span></label>
+          <input type="range" id="rSlider" min="0.2" max="10" value="2" step="0.1">
+        </div>
+        <div>
+          <label for="RSlider">負荷 R <span class="slider-val" id="RVal">10.0 Ω</span></label>
+          <input type="range" id="RSlider" min="0.1" max="50" value="10" step="0.1">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" id="openBtn">開回路（R→∞）</button>
+        <button type="button" id="shortBtn">短絡付近（R→0）</button>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout is-emf"><dt>起電力 E</dt><dd id="readE">—</dd></dl>
+        <dl class="readout is-r"><dt>内部 r / 負荷 R</dt><dd id="readRR">—</dd></dl>
+        <dl class="readout is-i"><dt>電流 I</dt><dd id="readI">—</dd></dl>
+        <dl class="readout is-v"><dt>端子電圧 V</dt><dd id="readV">—</dd></dl>
+        <dl class="readout is-v"><dt>内部降下 rI</dt><dd id="readVint">—</dd></dl>
+        <dl class="readout is-i"><dt>短絡電流 I<sub>sc</sub></dt><dd id="readIsc">—</dd></dl>
+        <dl class="readout is-law"><dt>端子電圧の関係</dt><dd id="readLaw">—</dd></dl>
+      </div>
+
+      <div class="formula-live" id="formulaLive">—</div>
+      <p class="hint">横軸 I · 縦軸 V · 傾き −r · R↑ → 動作点は左（小電流・高電圧）へ</p>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const formulaLive = document.getElementById("formulaLive");
+    const eSlider = document.getElementById("eSlider");
+    const rSlider = document.getElementById("rSlider");
+    const RSlider = document.getElementById("RSlider");
+
+    const CIRCUIT_H = 168;
+
+    const COL = {
+      wire: "#cbd5e1",
+      emf: "#a78bfa",
+      batFill: "rgba(167,139,250,0.12)",
+      batStroke: "rgba(167,139,250,0.55)",
+      rInt: "#f87171",
+      rLoad: "#fbbf24",
+      curve: "#a78bfa",
+      curveGlow: "rgba(167,139,250,0.4)",
+      point: "#38bdf8",
+      openPt: "#86efac",
+      shortPt: "#f87171",
+      grid: "rgba(148,163,184,0.12)",
+      axis: "rgba(148,163,184,0.55)",
+      label: "#94a3b8",
+    };
+
+    let canvasW = 960, canvasH = 620, dpr = 1;
+    let graphLayout = null;
+
+    function getE() { return +eSlider.value; }
+    function getr() { return +rSlider.value; }
+    function getRload() { return +RSlider.value; }
+
+    function getCircuit() {
+      const E = getE(), r = getr(), R = getRload();
+      const denom = r + R;
+      const I = E > 0 && denom > 0 ? E / denom : 0;
+      const Vint = I * r;
+      const V = E - Vint;
+      const Isc = r > 0 ? E / r : 0;
+      const VR = I * R;
+      const okV = Math.abs(V - VR) < 0.02;
+      return { E, r, R, I, V, Vint, VR, Isc, okV };
+    }
+
+    function fmtI(I) {
+      const a = Math.abs(I);
+      if (a >= 1) return I.toFixed(3) + " A";
+      if (a >= 1e-3) return (I * 1e3).toFixed(2) + " mA";
+      return (I * 1e6).toFixed(1) + " μA";
+    }
+
+    function fmtV(V) { return V.toFixed(2) + " V"; }
+
+    function syncSliders() {
+      document.getElementById("eVal").textContent = getE().toFixed(1) + " V";
+      document.getElementById("rVal").textContent = getr().toFixed(1) + " Ω";
+      document.getElementById("RVal").textContent = getRload().toFixed(1) + " Ω";
+    }
+
+    function updateReadouts() {
+      const c = getCircuit();
+      document.getElementById("readE").textContent = fmtV(c.E);
+      document.getElementById("readRR").textContent = "r=" + c.r.toFixed(1) + " Ω · R=" + c.R.toFixed(1) + " Ω";
+      document.getElementById("readI").textContent = fmtI(c.I);
+      document.getElementById("readV").textContent = fmtV(c.V);
+      document.getElementById("readVint").textContent = fmtV(c.Vint);
+      document.getElementById("readIsc").textContent = fmtI(c.Isc);
+
+      document.getElementById("readLaw").innerHTML =
+        "V = E − rI = " + c.E.toFixed(1) + " − " + c.r.toFixed(1) + "×" + c.I.toFixed(3)
+        + " = <strong>" + fmtV(c.V) + "</strong>"
+        + (c.okV ? " ＝ IR = " + fmtV(c.VR) + " <span class='law-ok'>✓</span>" : "");
+
+      formulaLive.innerHTML = "I = E/(r+R) = " + c.E.toFixed(1) + "/(" + c.r.toFixed(1) + "+" + c.R.toFixed(1)
+        + ") = <strong>" + fmtI(c.I) + "</strong>"
+        + "<br><strong>V = E − rI = " + c.E.toFixed(1) + " − " + c.r.toFixed(1) + "×" + c.I.toFixed(3)
+        + " = " + c.V.toFixed(2) + " V</strong>"
+        + "<br>内部降下 rI = " + fmtV(c.Vint) + " · 傾き dV/dI = −" + c.r.toFixed(1) + " Ω";
+    }
+
+    function terminalV(E, r, I) {
+      return Math.max(0, E - r * I);
+    }
+
+    function getGraphLayout(cw, ch) {
+      const c = getCircuit();
+      const padL = 62, padR = 28, padT = CIRCUIT_H + 46, padB = 52;
+      const gw = cw - padL - padR;
+      const gh = ch - padT - padB;
+      const iMax = Math.max(c.Isc * 1.08, c.I * 1.15, 0.5);
+      const vMax = Math.max(c.E * 1.08, 1);
+      return {
+        padL, padR, padT, padB, gw, gh, cw, ch,
+        x0: padL, y0: padT, x1: padL + gw, y1: padT + gh,
+        iMax, vMax,
+        toX(I) { return padL + (I / iMax) * gw; },
+        toY(V) { return padT + gh - (V / vMax) * gh; },
+        fromX(px) {
+          const t = (px - padL) / gw;
+          return Math.max(0, Math.min(iMax, t * iMax));
+        },
+      };
+    }
+
+    function niceStep(maxVal) {
+      if (maxVal <= 2) return 0.5;
+      if (maxVal <= 6) return 1;
+      if (maxVal <= 15) return 2;
+      if (maxVal <= 30) return 5;
+      return 10;
+    }
+
+    function drawBg(L) {
+      const g = ctx.createRadialGradient(L.cw * 0.5, L.ch * 0.35, 0, L.cw * 0.5, L.ch * 0.35, L.cw * 0.75);
+      g.addColorStop(0, "rgba(167,139,250,0.07)");
+      g.addColorStop(1, "rgba(3,7,18,0)");
+      ctx.fillStyle = "#060a14";
+      ctx.fillRect(0, 0, L.cw, L.ch);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, L.cw, L.ch);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.06)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < L.cw; x += 32) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, L.ch); ctx.stroke();
+      }
+      for (let y = 0; y < L.ch; y += 32) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(L.cw, y); ctx.stroke();
+      }
+    }
+
+    function drawLabel(text, x, y, align, size, color, bg) {
+      ctx.font = (size >= 13 ? "700 " : "600 ") + size + "px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = align || "left";
+      ctx.textBaseline = "middle";
+      if (bg) {
+        const w = ctx.measureText(text).width + 10;
+        let lx = x;
+        if (align === "center") lx = x - w * 0.5;
+        else if (align === "right") lx = x - w;
+        ctx.fillStyle = bg;
+        ctx.fillRect(lx, y - size * 0.55, w, size * 1.15);
+      }
+      ctx.fillStyle = color || "#e2e8f0";
+      ctx.fillText(text, x, y);
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawCircuitDiagram(L) {
+      const c = getCircuit();
+      const cy = 78;
+      const batX = 88, batW = 130, batH = 72;
+      const rIntX = batX + 18, rIntW = 44, rIntH = 22;
+      const loadX = 380, loadW = 200, loadH = 52;
+      const rightX = L.cw - 72;
+      const leftX = batX;
+      const topY = cy - 8;
+      const botY = cy + 72;
+      const loadFrac = c.E > 0 ? c.V / c.E : 0;
+      const loadColor = "rgb(" + Math.round(56 + 197 * loadFrac) + "," + Math.round(189 - 76 * loadFrac)
+        + "," + Math.round(248 - 135 * loadFrac) + ")";
+
+      ctx.strokeStyle = COL.wire;
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(batX + batW, cy + 10);
+      ctx.lineTo(loadX, topY);
+      ctx.lineTo(loadX + loadW, topY);
+      ctx.lineTo(rightX, topY);
+      ctx.lineTo(rightX, botY);
+      ctx.lineTo(leftX, botY);
+      ctx.lineTo(leftX, cy + 36);
+      ctx.stroke();
+
+      ctx.fillStyle = COL.batFill;
+      ctx.strokeStyle = COL.batStroke;
+      ctx.lineWidth = 2.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(batX, cy - 28, batW, batH, 8); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillRect(batX, cy - 28, batW, batH);
+        ctx.strokeRect(batX, cy - 28, batW, batH);
+      }
+      drawLabel("電池 E=" + c.E.toFixed(1) + "V", batX + batW * 0.5, cy - 38, "center", 12, "#c4b5fd");
+
+      ctx.fillStyle = "rgba(248,113,113,0.25)";
+      ctx.strokeStyle = COL.rInt;
+      ctx.fillRect(rIntX, cy + 8, rIntW, rIntH);
+      ctx.strokeRect(rIntX, cy + 8, rIntW, rIntH);
+      drawLabel("r", rIntX + rIntW * 0.5, cy + 20, "center", 11, "#fca5a5");
+
+      ctx.fillStyle = loadColor;
+      ctx.strokeStyle = COL.rLoad;
+      ctx.lineWidth = 2.5;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(loadX, topY - loadH * 0.5, loadW, loadH, 6); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillRect(loadX, topY - loadH * 0.5, loadW, loadH);
+        ctx.strokeRect(loadX, topY - loadH * 0.5, loadW, loadH);
+      }
+      drawLabel("R = " + c.R.toFixed(1) + " Ω", loadX + loadW * 0.5, topY - loadH * 0.5 - 14, "center", 12, "#fde68a");
+      drawLabel("V = " + fmtV(c.V), loadX + loadW * 0.5, topY + loadH * 0.5 + 16, "center", 11, "#86efac");
+
+      drawLabel("I → " + fmtI(c.I), (loadX + rightX) * 0.5, topY - 28, "center", 11, "#bae6fd");
+
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = "rgba(148,163,184,0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(16, CIRCUIT_H + 4);
+      ctx.lineTo(L.cw - 16, CIRCUIT_H + 4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawEndpoint(x, y, color, label, lx, ly) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawLabel(label, lx, ly, "left", 10, color, "rgba(15,23,42,0.65)");
+    }
+
+    function drawGraph(L) {
+      const c = getCircuit();
+      const { x0, y0, x1, y1, iMax, vMax } = L;
+
+      drawLabel("V–I グラフ（端子電圧）", L.cw * 0.5, y0 - 18, "center", 13, "#ddd6fe");
+
+      ctx.strokeStyle = COL.grid;
+      ctx.lineWidth = 1;
+      const iStep = niceStep(iMax);
+      for (let I = 0; I <= iMax + 0.01; I += iStep) {
+        const x = L.toX(I);
+        ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+      }
+      const vStep = niceStep(vMax);
+      for (let V = 0; V <= vMax + 0.01; V += vStep) {
+        const y = L.toY(V);
+        ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      }
+
+      ctx.strokeStyle = COL.axis;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      ctx.fillStyle = COL.label;
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("I（A）", (x0 + x1) * 0.5, y1 + 34);
+      ctx.save();
+      ctx.translate(18, (y0 + y1) * 0.5);
+      ctx.rotate(-Math.PI * 0.5);
+      ctx.fillText("V（V）", 0, 0);
+      ctx.restore();
+
+      ctx.font = "500 10px Inter, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(148,163,184,0.75)";
+      for (let V = 0; V <= vMax + 0.01; V += vStep) {
+        ctx.fillText(V.toFixed(0), x0 - 8, L.toY(V) + 3);
+      }
+      ctx.textAlign = "center";
+      for (let I = 0; I <= iMax + 0.01; I += iStep) {
+        const label = I >= 1 ? I.toFixed(0) : I.toFixed(1);
+        ctx.fillText(label, L.toX(I), y1 + 16);
+      }
+
+      const xEnd = L.toX(c.Isc);
+      const yEnd = L.toY(0);
+      const xStart = L.toX(0);
+      const yStart = L.toY(c.E);
+
+      ctx.beginPath();
+      ctx.moveTo(xStart, yStart);
+      ctx.lineTo(xEnd, yEnd);
+      ctx.strokeStyle = COL.curveGlow;
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.strokeStyle = COL.curve;
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+
+      drawEndpoint(xStart, yStart, COL.openPt, "開回路 V=E", xStart + 8, yStart - 14);
+      if (c.Isc <= iMax) {
+        drawEndpoint(xEnd, yEnd, COL.shortPt, "短絡 Isc=E/r", xEnd - 72, yEnd - 14);
+      }
+
+      const midI = c.Isc * 0.45;
+      const midV = terminalV(c.E, c.r, midI);
+      drawLabel("傾き −r = −" + c.r.toFixed(1) + " Ω", L.toX(midI) + 10, L.toY(midV) - 10, "left", 10, "#c4b5fd", "rgba(15,23,42,0.55)");
+
+      const px = L.toX(c.I);
+      const py = L.toY(c.V);
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, 18);
+      glow.addColorStop(0, "rgba(56,189,248,0.55)");
+      glow.addColorStop(1, "rgba(56,189,248,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(px, py, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = COL.point;
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#e0f2fe";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "rgba(56,189,248,0.45)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px, y1);
+      ctx.moveTo(px, py);
+      ctx.lineTo(x0, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      drawLabel("I=" + fmtI(c.I), px, y1 + 30, "center", 10, "#bae6fd", "rgba(15,23,42,0.55)");
+      drawLabel("V=" + fmtV(c.V), x0 - 4, py, "right", 10, "#86efac", "rgba(15,23,42,0.55)");
+    }
+
+    function drawFrame() {
+      const L = getGraphLayout(canvasW, canvasH);
+      graphLayout = L;
+      drawBg(L);
+      drawCircuitDiagram(L);
+      drawGraph(L);
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      canvasW = Math.max(320, Math.round(rect.width));
+      canvasH = Math.max(480, Math.round(rect.height));
+      canvas.width = Math.round(canvasW * dpr);
+      canvas.height = Math.round(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function setRFromCurrent(I) {
+      const E = getE(), r = getr();
+      if (I <= 0.001) {
+        RSlider.value = (+RSlider.max).toFixed(1);
+      } else {
+        const R = E / I - r;
+        RSlider.value = Math.max(+RSlider.min, Math.min(+RSlider.max, R)).toFixed(1);
+      }
+      syncSliders();
+      updateReadouts();
+      drawFrame();
+    }
+
+    function setRFromPointer(clientX, clientY) {
+      if (!graphLayout) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      if (y < graphLayout.y0 - 8 || y > graphLayout.y1 + 40) return;
+      if (x < graphLayout.x0 - 8 || x > graphLayout.x1 + 8) return;
+      setRFromCurrent(graphLayout.fromX(x));
+    }
+
+    eSlider.addEventListener("input", () => { syncSliders(); updateReadouts(); drawFrame(); });
+    rSlider.addEventListener("input", () => { syncSliders(); updateReadouts(); drawFrame(); });
+    RSlider.addEventListener("input", () => { syncSliders(); updateReadouts(); drawFrame(); });
+
+    document.getElementById("openBtn").addEventListener("click", () => {
+      RSlider.value = (+RSlider.max).toFixed(1);
+      syncSliders(); updateReadouts(); drawFrame();
+    });
+    document.getElementById("shortBtn").addEventListener("click", () => {
+      RSlider.value = (+RSlider.min).toFixed(1);
+      syncSliders(); updateReadouts(); drawFrame();
+    });
+
+    canvas.addEventListener("pointerdown", (e) => {
+      canvas.setPointerCapture(e.pointerId);
+      setRFromPointer(e.clientX, e.clientY);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (e.buttons !== 1) return;
+      setRFromPointer(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("resize", () => { resizeCanvas(); drawFrame(); });
+
+    resizeCanvas();
+    syncSliders();
+    updateReadouts();
+    drawFrame();
+  </script>
+</body>
+</html>

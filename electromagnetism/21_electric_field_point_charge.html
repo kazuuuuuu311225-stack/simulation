@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script>(function(){var h=document.documentElement;h.classList.add('physlabo-unified-layout');if(h.querySelector('.chapter-list'))h.classList.add('chapters-mode');if('scrollRestoration' in history)history.scrollRestoration='manual';})();</script>
+<title>21章 静電気 — 電場と点電荷</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/physlabo-sim-base.css?v=20260826">
+  <style>:root {
+      --accent: #818cf8;
+      --accent-light: #a5b4fc;
+      --panel: rgba(10, 12, 28, 0.9);
+      --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --pos: #f87171;
+      --neg: #38bdf8;
+      --field-line: #a78bfa;
+      --field-glow: #c4b5fd;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f1030 45%, #0a1628 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .canvas-wrap canvas.is-dragging { cursor: grabbing; }
+    @media (min-width: 640px) {
+      }
+    .param-grid.is-hidden { display: none; }
+    @media (min-width: 640px) {
+      }</style>
+  <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260626">
+  <script src="../assets/js/physlabo-mobile.js?v=20260626" defer></script>
+  <script src="../assets/js/physlabo-a11y.js?v=20260810" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">⚡</div>
+      <p class="chapter-label">第21章 — 静電気</p>
+      <h2>電場と点電荷</h2>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-21">← 電磁気 · 第21章</a>
+    </header>
+
+    <section class="panel">
+      <h3>電場とは</h3>
+      <p>
+        電荷が周囲に作る「力の及ぶ空間」が<strong>電場</strong>です。試験電荷 <em>q</em> が受ける力 <em>F</em> から
+        <strong>E = F / q</strong> と定義します。正電荷の電場は外向き、負電荷は内向きです。
+      </p>
+      <div class="formula-box">E = F / q · 点電荷 Q の周りでは E = k|Q| / r²</div>
+    </section>
+
+    <section class="panel">
+      <h3>シミュレーション</h3>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn is-active" id="btnLines">電場線 ON</button>
+        <button type="button" class="toggle-btn is-active" id="btnVectors">電場ベクトル ON</button>
+        <button type="button" class="toggle-btn" id="btnMulti">複数電荷モード OFF</button>
+      </div>
+
+      <div class="param-grid" id="singleGrid">
+        <div>
+          <label for="qSlider">点電荷 Q <span class="slider-val" id="qVal">+5.0 μC</span></label>
+          <input type="range" id="qSlider" min="-100" max="100" value="50" step="5">
+        </div>
+        <div>
+          <label for="testSlider">試験電荷 q <span class="slider-val" id="testVal">+1.0 μC</span></label>
+          <input type="range" id="testSlider" min="-100" max="100" value="10" step="5">
+        </div>
+        <div>
+          <label for="rSlider">距離 r <span class="slider-val" id="rVal">1.20 m</span></label>
+          <input type="range" id="rSlider" min="10" max="300" value="120" step="5">
+        </div>
+      </div>
+
+      <div class="param-grid is-hidden" id="multiGrid">
+        <div>
+          <label for="q1Slider">電荷 Q₁ <span class="slider-val" id="q1Val">+6.0 μC</span></label>
+          <input type="range" id="q1Slider" min="-100" max="100" value="60" step="5">
+        </div>
+        <div>
+          <label for="q2Slider">電荷 Q₂ <span class="slider-val" id="q2Val">−6.0 μC</span></label>
+          <input type="range" id="q2Slider" min="-100" max="100" value="-60" step="5">
+        </div>
+        <div>
+          <label for="testSlider2">試験電荷 q <span class="slider-val" id="testVal2">+1.0 μC</span></label>
+          <input type="range" id="testSlider2" min="-100" max="100" value="10" step="5">
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <dl class="readout"><dt>電場 E</dt><dd id="readE">—</dd></dl>
+        <dl class="readout"><dt>力 F = qE</dt><dd id="readF">—</dd></dl>
+        <dl class="readout"><dt>距離 r</dt><dd id="readR">—</dd></dl>
+        <dl class="readout"><dt>方向</dt><dd id="readDir">—</dd></dl>
+      </div>
+      <div class="formula-live" id="formulaLive">—</div>
+
+      <div class="canvas-wrap">
+        <canvas id="simCanvas" aria-label="点電荷の電場シミュレーション"></canvas>
+      </div>
+      <div class="legend-row">
+        <span style="color:#f87171">＋</span> 正電荷
+        <span style="color:#38bdf8">−</span> 負電荷
+        <span style="color:#fde047">◎</span> 試験位置
+        <span style="color:#a78bfa">〜</span> 電場線
+        <span style="color:#34d399">→</span> 電場ベクトル
+      </div>
+      <p class="hint">点電荷・試験位置をドラッグして移動できます。複数電荷モードでは合成電場線が曲がります。</p>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const K = 8.99e9;          // クーロン定数 [N·m²/C²]
+      const PX_TO_M = 0.01;      // 1 px = 1 cm（Canvas 内部スケール）
+      const R_MIN_M = 0.10;
+      const R_MAX_M = 3.00;
+
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+      const formulaLive = document.getElementById("formulaLive");
+
+      let canvasW = 800;
+      let canvasH = 500;
+      let animPhase = 0;
+
+      let showLines = true;
+      let showVectors = true;
+      let multiMode = false;
+
+      let qMicro = 5;
+      let q1Micro = 6;
+      let q2Micro = -6;
+      let testMicro = 1;
+      let distM = 1.2;           // 点電荷から試験位置までの距離 [m]
+      let probeAngle = 0;
+
+      // 点電荷（ドラッグ可能）
+      let charges = [{ x: 0, y: 0, qMicro: 5 }];
+      let charge2 = { x: 0, y: 0, qMicro: -6 };
+      let probe = { x: 0, y: 0 };
+
+      let dragTarget = null; // "charge0" | "charge1" | "probe"
+
+      function qToC(qu) { return qu * 1e-6; }
+
+      function formatQ(qu) {
+        return (qu >= 0 ? "+" : "") + qu.toFixed(1) + " μC";
+      }
+
+      function pxToM(px) { return px * PX_TO_M; }
+      function mToPx(m) { return m / PX_TO_M; }
+      function formatDistM(m) { return m.toFixed(2) + " m"; }
+      function clampDistM(m) { return Math.max(R_MIN_M, Math.min(R_MAX_M, m)); }
+      function formatPhysics(val, unit) {
+        if (!Number.isFinite(val) || Math.abs(val) < 1e-12) return "0 " + unit;
+        if (Math.abs(val) >= 100 || (Math.abs(val) < 0.01 && Math.abs(val) > 0)) {
+          return val.toExponential(2) + " " + unit;
+        }
+        return val.toFixed(4).replace(/\.?0+$/, "") + " " + unit;
+      }
+
+      /** 複数点電荷による合成電場ベクトル [N/C]（Canvas 座標は px → m に換算） */
+      function fieldAt(x, y, list) {
+        let ex = 0;
+        let ey = 0;
+        list.forEach((c) => {
+          const q = qToC(c.qMicro);
+          if (Math.abs(q) < 1e-14) return;
+          const dx = x - c.x;
+          const dy = y - c.y;
+          const rPx = Math.sqrt(dx * dx + dy * dy);
+          if (rPx < 14) return;
+          const rM = Math.max(rPx * PX_TO_M, 0.01);
+          const eMag = K * q / (rM * rM);
+          ex += eMag * (dx / rPx);
+          ey += eMag * (dy / rPx);
+        });
+        return { ex, ey };
+      }
+
+      function activeCharges() {
+        if (!multiMode) return [{ x: charges[0].x, y: charges[0].y, qMicro: charges[0].qMicro }];
+        return [
+          { x: charges[0].x, y: charges[0].y, qMicro: q1Micro },
+          { x: charge2.x, y: charge2.y, qMicro: q2Micro }
+        ];
+      }
+
+      function nearestChargeDist() {
+        const list = activeCharges();
+        let minD = Infinity;
+        list.forEach((c) => {
+          const d = Math.hypot(probe.x - c.x, probe.y - c.y);
+          if (d < minD) minD = d;
+        });
+        return minD;
+      }
+
+      function syncLayout() {
+        const cy = canvasH * 0.52;
+        if (!multiMode) {
+          charges[0].x = canvasW * 0.42;
+          charges[0].y = cy;
+          charges[0].qMicro = qMicro;
+          probe.x = charges[0].x + mToPx(distM) * Math.cos(probeAngle);
+          probe.y = charges[0].y + mToPx(distM) * Math.sin(probeAngle);
+        } else {
+          charges[0].x = canvasW * 0.32;
+          charges[0].y = cy;
+          charge2.x = canvasW * 0.68;
+          charge2.y = cy;
+          if (dragTarget !== "probe") {
+            probe.x = canvasW * 0.5;
+            probe.y = cy - 90;
+          }
+        }
+      }
+
+      function updateProbeFromR() {
+        if (multiMode || dragTarget === "probe") return;
+        probe.x = charges[0].x + mToPx(distM) * Math.cos(probeAngle);
+        probe.y = charges[0].y + mToPx(distM) * Math.sin(probeAngle);
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvasW = rect.width;
+        canvasH = rect.height;
+        syncLayout();
+      }
+
+      /** 矢印描画 */
+      function drawArrow(x1, y1, x2, y2, col, width) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 2 || !Number.isFinite(len)) return;
+        ctx.strokeStyle = col;
+        ctx.fillStyle = col;
+        ctx.lineWidth = width || 1.5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        const ah = Math.min(7, len * 0.35);
+        const ux = dx / len;
+        const uy = dy / len;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - ux * ah + uy * ah * 0.45, y2 - uy * ah - ux * ah * 0.45);
+        ctx.lineTo(x2 - ux * ah - uy * ah * 0.45, y2 - uy * ah + ux * ah * 0.45);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      /** 点電荷の描画 */
+      function drawCharge(c, label) {
+        const pos = c.qMicro >= 0;
+        const col = pos ? "#f87171" : "#38bdf8";
+        const glow = pos ? "rgba(248,113,113,0.4)" : "rgba(56,189,248,0.4)";
+        const pulse = 1 + Math.sin(animPhase * 2) * 0.06;
+
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 30 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "700 18px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(pos ? "+" : "−", c.x, c.y + 1);
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = col;
+        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(label, c.x, c.y + 34);
+        ctx.fillText(formatQ(c.qMicro), c.x, c.y + 48);
+      }
+
+      /** 試験位置（試験電荷 q） */
+      function drawProbe() {
+        ctx.strokeStyle = "#fde047";
+        ctx.fillStyle = "rgba(253,224,71,0.15)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(probe.x, probe.y, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fde047";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("q", probe.x, probe.y + 4);
+        ctx.fillStyle = "#fef08a";
+        ctx.fillText(formatQ(testMicro), probe.x, probe.y + 28);
+      }
+
+      /** 電場ベクトル格子 */
+      function drawFieldVectors() {
+        if (!showVectors) return;
+        const list = activeCharges();
+        const step = multiMode ? 34 : 38;
+        const maxLen = 22;
+
+        for (let gx = step / 2; gx < canvasW; gx += step) {
+          for (let gy = step / 2; gy < canvasH; gy += step) {
+            let tooClose = false;
+            list.forEach((c) => {
+              if (Math.hypot(gx - c.x, gy - c.y) < 22) tooClose = true;
+            });
+            if (tooClose) continue;
+
+            const f = fieldAt(gx, gy, list);
+            const mag = Math.hypot(f.ex, f.ey);
+            if (mag < 1e-4) continue;
+
+            // 表示用に長さを圧縮（対数スケール）
+            const displayMag = Math.min(maxLen, Math.log10(mag + 1) * 6.5);
+            const ux = f.ex / mag;
+            const uy = f.ey / mag;
+            const alpha = 0.35 + 0.45 * (displayMag / maxLen);
+            drawArrow(
+              gx, gy,
+              gx + ux * displayMag,
+              gy + uy * displayMag,
+              "rgba(52,211,153," + alpha.toFixed(2) + ")",
+              1.4
+            );
+          }
+        }
+
+        // 試験位置の電場ベクトル（強調）
+        const pf = fieldAt(probe.x, probe.y, list);
+        const pm = Math.hypot(pf.ex, pf.ey);
+        if (pm > 1e-6) {
+          const plen = Math.min(55, Math.log10(pm + 1) * 12);
+          drawArrow(
+            probe.x, probe.y,
+            probe.x + (pf.ex / pm) * plen,
+            probe.y + (pf.ey / pm) * plen,
+            "#34d399",
+            3
+          );
+        }
+      }
+
+      /** 電場線（正→外向き、負→内向き） */
+      function drawFieldLines() {
+        if (!showLines) return;
+        const list = activeCharges();
+        const linesPerCharge = multiMode ? 14 : 18;
+        const stepLen = 5;
+        const maxSteps = multiMode ? 70 : 80;
+
+        ctx.save();
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(167,139,250,0.6)";
+        ctx.strokeStyle = "rgba(167,139,250,0.55)";
+        ctx.lineWidth = 1.2;
+
+        list.forEach((c) => {
+          if (Math.abs(c.qMicro) < 0.05) return;
+          const outward = c.qMicro > 0;
+
+          for (let i = 0; i < linesPerCharge; i++) {
+            const ang = (i / linesPerCharge) * Math.PI * 2 + animPhase * 0.02;
+            let x = c.x + Math.cos(ang) * 22;
+            let y = c.y + Math.sin(ang) * 22;
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            for (let s = 0; s < maxSteps; s++) {
+              const f = fieldAt(x, y, list);
+              const mag = Math.hypot(f.ex, f.ey);
+              if (mag < 1e-6) break;
+              const dir = outward ? 1 : -1;
+              const dx = (f.ex / mag) * stepLen * dir;
+              const dy = (f.ey / mag) * stepLen * dir;
+              x += dx;
+              y += dy;
+
+              if (x < 4 || x > canvasW - 4 || y < 4 || y > canvasH - 4) break;
+              let hit = false;
+              list.forEach((ch) => {
+                if (Math.hypot(x - ch.x, y - ch.y) < 18) hit = true;
+              });
+              if (hit) break;
+              ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          }
+        });
+        ctx.restore();
+      }
+
+      /** 単一電荷モード：距離 r の補助円 */
+      function drawDistanceGuide() {
+        if (multiMode) return;
+        const c = charges[0];
+        const rPx = mToPx(distM);
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, rPx, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y);
+        ctx.lineTo(probe.x, probe.y);
+        ctx.strokeStyle = "rgba(253,224,71,0.35)";
+        ctx.stroke();
+        ctx.fillStyle = "#fde047";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("r = " + formatDistM(distM), (c.x + probe.x) / 2, (c.y + probe.y) / 2 - 8);
+      }
+
+      function updateReadouts() {
+        const list = activeCharges();
+        const f = fieldAt(probe.x, probe.y, list);
+        const E = Math.hypot(f.ex, f.ey);
+        const rPx = multiMode ? nearestChargeDist() : Math.hypot(probe.x - charges[0].x, probe.y - charges[0].y);
+        const rM = multiMode ? clampDistM(pxToM(rPx)) : distM;
+        const F = E * Math.abs(qToC(testMicro));
+        const dirDeg = Math.atan2(f.ey, f.ex) * 180 / Math.PI;
+
+        document.getElementById("readE").textContent = formatPhysics(E, "N/C");
+        document.getElementById("readF").textContent = formatPhysics(F, "N");
+        document.getElementById("readR").textContent = formatDistM(rM);
+        document.getElementById("readDir").textContent = E > 1e-6 ? dirDeg.toFixed(0) + "°" : "—";
+
+        if (!multiMode && Math.abs(qMicro) > 0.05) {
+          const Etheory = K * Math.abs(qToC(qMicro)) / (rM * rM);
+          formulaLive.innerHTML =
+            "<strong>E = k|Q|/r²</strong> = 8.99×10⁹ × |" + qMicro + "×10⁻⁶| / (" + rM.toFixed(2) + ")² "
+            + "≈ <strong>" + Etheory.toExponential(2) + " N/C</strong><br>"
+            + "<strong>F = qE</strong> = " + formatQ(testMicro) + " × E ≈ <strong>" + F.toExponential(2) + " N</strong><br>"
+            + (qMicro > 0 ? "正電荷 → 電場は<strong>外向き</strong>" : "負電荷 → 電場は<strong>内向き</strong>")
+            + " · 電場線は交差しない";
+        } else {
+          formulaLive.innerHTML =
+            "<strong>E<sub>total</sub> = E₁ + E₂ + …</strong>（ベクトル和）<br>"
+            + "合成 E ≈ <strong>" + E.toExponential(2) + " N/C</strong> · "
+            + "F = qE ≈ <strong>" + F.toExponential(2) + " N</strong><br>"
+            + "＋と−の間では電場線が曲がり、密度が大きいほど電場が強い";
+        }
+
+        if (!multiMode) {
+          distM = clampDistM(pxToM(rPx));
+          document.getElementById("rVal").textContent = formatDistM(distM);
+          document.getElementById("rSlider").value = Math.round(mToPx(distM));
+        }
+      }
+
+      function drawScene() {
+        if (canvasW < 10) return;
+
+        // 背景
+        const grad = ctx.createRadialGradient(canvasW * 0.5, canvasH * 0.45, 40, canvasW * 0.5, canvasH * 0.5, canvasW * 0.7);
+        grad.addColorStop(0, "#0f172a");
+        grad.addColorStop(1, "#020617");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvasW, canvasH);
+
+        drawFieldLines();
+        drawFieldVectors();
+        drawDistanceGuide();
+
+        const list = activeCharges();
+        list.forEach((c, i) => drawCharge(c, multiMode ? ("Q" + (i + 1)) : "Q"));
+        drawProbe();
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(
+          multiMode ? "点電荷 Q₁・Q₂ と試験位置 q をドラッグ" : "点電荷 Q と試験位置 q をドラッグ · r スライダーで距離（m）変更",
+          12, canvasH - 10
+        );
+
+        updateReadouts();
+      }
+
+      function loop() {
+        animPhase += 0.03;
+        if (!multiMode && dragTarget !== "probe" && dragTarget !== "charge0") {
+          updateProbeFromR();
+        }
+        drawScene();
+        requestAnimationFrame(loop);
+      }
+
+      function canvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
+
+      function pickTarget(p) {
+        if (Math.hypot(p.x - probe.x, p.y - probe.y) < 18) return "probe";
+        if (Math.hypot(p.x - charges[0].x, p.y - charges[0].y) < 24) return "charge0";
+        if (multiMode && Math.hypot(p.x - charge2.x, p.y - charge2.y) < 24) return "charge1";
+        return null;
+      }
+
+      function onDown(e) {
+        e.preventDefault();
+        dragTarget = pickTarget(canvasPos(e));
+        canvas.classList.toggle("is-dragging", !!dragTarget);
+      }
+
+      function onMove(e) {
+        if (!dragTarget) return;
+        const p = canvasPos(e);
+        if (dragTarget === "probe") {
+          probe.x = Math.max(20, Math.min(canvasW - 20, p.x));
+          probe.y = Math.max(20, Math.min(canvasH - 20, p.y));
+          if (!multiMode) {
+            const dx = probe.x - charges[0].x;
+            const dy = probe.y - charges[0].y;
+            distM = clampDistM(pxToM(Math.hypot(dx, dy)));
+            probeAngle = Math.atan2(dy, dx);
+          }
+        } else if (dragTarget === "charge0") {
+          charges[0].x = Math.max(40, Math.min(canvasW - 40, p.x));
+          charges[0].y = Math.max(40, Math.min(canvasH - 40, p.y));
+          if (!multiMode) updateProbeFromR();
+        } else if (dragTarget === "charge1") {
+          charge2.x = Math.max(40, Math.min(canvasW - 40, p.x));
+          charge2.y = Math.max(40, Math.min(canvasH - 40, p.y));
+        }
+      }
+
+      function onUp() {
+        dragTarget = null;
+        canvas.classList.remove("is-dragging");
+      }
+
+      canvas.addEventListener("mousedown", onDown);
+      canvas.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+      canvas.addEventListener("touchstart", onDown, { passive: false });
+      canvas.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onUp);
+
+      document.getElementById("btnLines").addEventListener("click", () => {
+        showLines = !showLines;
+        const b = document.getElementById("btnLines");
+        b.textContent = showLines ? "電場線 ON" : "電場線 OFF";
+        b.classList.toggle("is-active", showLines);
+      });
+      document.getElementById("btnVectors").addEventListener("click", () => {
+        showVectors = !showVectors;
+        const b = document.getElementById("btnVectors");
+        b.textContent = showVectors ? "電場ベクトル ON" : "電場ベクトル OFF";
+        b.classList.toggle("is-active", showVectors);
+      });
+      document.getElementById("btnMulti").addEventListener("click", () => {
+        multiMode = !multiMode;
+        const b = document.getElementById("btnMulti");
+        b.textContent = multiMode ? "複数電荷モード ON" : "複数電荷モード OFF";
+        b.classList.toggle("is-active", multiMode);
+        document.getElementById("singleGrid").classList.toggle("is-hidden", multiMode);
+        document.getElementById("multiGrid").classList.toggle("is-hidden", !multiMode);
+        testMicro = multiMode ? +document.getElementById("testSlider2").value / 10 : +document.getElementById("testSlider").value / 10;
+        syncLayout();
+      });
+
+      document.getElementById("qSlider").addEventListener("input", (e) => {
+        qMicro = +e.target.value / 10;
+        charges[0].qMicro = qMicro;
+        document.getElementById("qVal").textContent = formatQ(qMicro);
+      });
+      document.getElementById("q1Slider").addEventListener("input", (e) => {
+        q1Micro = +e.target.value / 10;
+        document.getElementById("q1Val").textContent = formatQ(q1Micro);
+      });
+      document.getElementById("q2Slider").addEventListener("input", (e) => {
+        q2Micro = +e.target.value / 10;
+        document.getElementById("q2Val").textContent = formatQ(q2Micro);
+      });
+      document.getElementById("testSlider").addEventListener("input", (e) => {
+        testMicro = +e.target.value / 10;
+        document.getElementById("testVal").textContent = formatQ(testMicro);
+      });
+      document.getElementById("testSlider2").addEventListener("input", (e) => {
+        testMicro = +e.target.value / 10;
+        document.getElementById("testVal2").textContent = formatQ(testMicro);
+      });
+      document.getElementById("rSlider").addEventListener("input", (e) => {
+        distM = clampDistM(+e.target.value * PX_TO_M);
+        document.getElementById("rVal").textContent = formatDistM(distM);
+        updateProbeFromR();
+      });
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

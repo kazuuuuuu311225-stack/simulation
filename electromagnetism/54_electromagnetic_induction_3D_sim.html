@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>25章 電磁誘導 — Faradayの法則 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 45%, #1a0a2e 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1100px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(248,113,113,0.45), rgba(96,165,250,0.45));
+      border: 1px solid rgba(167,139,250,0.45); font-size: 1.6rem;
+      box-shadow: 0 0 28px rgba(167,139,250,0.25);
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #ddd6fe; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #c4b5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0e7ff; background: rgba(129,140,248,0.14);
+      border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(248,113,113,0.12), rgba(96,165,250,0.1));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .formula-main { font-size: 1.1rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 12px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud" "ctrl";
+    }
+    @media (min-width: 900px) {
+      .sim-grid { grid-template-columns: 1.15fr 0.85fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block {
+      border-radius: 14px; overflow: hidden; background: #111;
+      border: 1px solid rgba(167,139,250,0.32);
+      box-shadow: inset 0 0 40px rgba(167,139,250,0.06);
+    }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; font-weight: 600; color: #cbd5e1;
+    }
+    .color-chip {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(520px, 56dvh); min-height: 360px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6;
+      font-size: 0.9rem; text-align: center; pointer-events: none;
+    }
+    #simError.show { display: flex; }
+    #field3dWrap:active { cursor: grabbing; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.is-active {
+      background: rgba(139,92,246,0.25); color: #ede9fe; border-color: rgba(167,139,250,0.6);
+    }
+    .hud-card {
+      padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.65rem; color: #94a3b8; }
+    .hud-card .num { font-size: 0.82rem; font-weight: 700; color: #fde68a; margin-top: 2px; line-height: 1.45; }
+    .hud-card.col-b .num { color: #93c5fd; }
+    .hud-card.col-f .num { color: #a5f3fc; }
+    .hud-card.col-e .num { color: #fca5a5; }
+    .hud-card.col-i .num { color: #fde047; }
+    .hud-card.col-p .num { color: #c4b5fd; }
+    .hud-card.col-b { border-color: rgba(96,165,250,0.35); }
+    .hud-card.col-f { border-color: rgba(34,211,238,0.35); }
+    .hud-card.col-e { border-color: rgba(248,113,113,0.35); }
+    .hud-card.col-i { border-color: rgba(251,191,36,0.35); }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .formula-box {
+      padding: 10px; border-radius: 10px; text-align: center; margin: 8px 0;
+      background: rgba(139,92,246,0.1); border: 1px solid rgba(167,139,250,0.28);
+      font-size: 0.74rem; font-weight: 700; color: #c4b5fd; line-height: 1.6;
+    }
+    .ctrl-row { margin-bottom: 10px; }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+    .slider-val { color: #a78bfa; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #8b5cf6; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .hint-box {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; color: #ede9fe;
+      background: linear-gradient(135deg, rgba(76,29,149,0.45), rgba(30,27,75,0.35));
+      border: 1px solid rgba(167,139,250,0.35);
+    }
+    .ctrl-grid { display: grid; gap: 10px; }
+    @media (min-width: 700px) { .ctrl-grid { grid-template-columns: repeat(2, 1fr); } }
+    .graph-panel {
+      margin-top: 8px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.14);
+    }
+    .graph-title {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 0.68rem; font-weight: 700; color: #94a3b8; margin-bottom: 6px;
+    }
+    .graph-title .val { font-size: 0.76rem; }
+    .graph-title .val.col-e { color: #fca5a5; }
+    .graph-title .val.col-i { color: #fde047; }
+    .graph-wrap {
+      position: relative; width: 100%; height: 88px;
+      border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(148,163,184,0.1);
+    }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 3px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon" aria-hidden="true">Φ</div>
+      <p class="chapter-label">第25章 ① — 電磁誘導</p>
+      <h2>Faradayの法則 — 3Dラボ</h2>
+      <p class="tagline">Φ の変化 → 誘導起電力 𝓔 → 誘導電流（レンツの法則）</p>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-25">← 電磁気フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>やってみよう</h3>
+      <p>コイルを貫く<strong>磁束 Φ</strong>が変化すると、<strong style="color:#fca5a5">誘導起電力 𝓔</strong>が生じ、
+        コイル内の<strong style="color:#38bdf8">電子</strong>が動き出して<strong style="color:#fde047">誘導電流</strong>が流れます。
+        <strong>磁石を近づける</strong>・<strong>コイルを傾ける</strong>と Φ が変わり、
+        <strong>レンツの法則</strong>により電流の向きが自動で反転します。
+        3D空間でコイル内部の電子の動きを観察しながら、交流（AC）の原理を体感しましょう。</p>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">Φ = B·S·cosθ　　𝓔 = −dΦ/dt　　I<sub>ind</sub> = 𝓔/R</div>
+        <div class="formula-sub">磁束増加 → 𝓔&lt;0 · 磁束減少 → 𝓔&gt;0 · 電流は常に磁束変化を打ち消す向き（レンツ）</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">コイル・磁石・電子クラスタ（3D奥行き）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>磁場 B（↑z）</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>誘導起電力 𝓔</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>誘導電流 I</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子（←電流と逆向き）</span>
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>磁束 Φ</span>
+              <span><i class="color-chip" style="background:#b45309;color:#b45309"></i>銅コイル</span>
+            </div>
+            <p class="viz-legend">磁石を z 方向に動かす · コイルを傾ける · ドラッグ回転 · ホイールズーム · 内部電子を観察</p>
+            <div id="field3dWrap"><div id="simError"></div></div>
+            <div class="viz-foot">
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnFluxPlane" class="active">磁束面 ON</button>
+              <button type="button" id="btnResetView">初期表示</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="formula-box" id="formulaLive">Φ · 𝓔 · I</div>
+          <div class="hud-grid">
+            <div class="hud-card col-f"><div class="lbl">磁束 Φ</div><div class="num" id="hudPhi">0.000 Wb</div></div>
+            <div class="hud-card col-f"><div class="lbl">dΦ/dt</div><div class="num" id="hudDPhi">0.000 Wb/s</div></div>
+            <div class="hud-card col-e"><div class="lbl">誘導起電力 𝓔</div><div class="num" id="hudE">0.00 V</div></div>
+            <div class="hud-card col-i"><div class="lbl">誘導電流 I<sub>ind</sub></div><div class="num" id="hudI">0.00 A</div></div>
+            <div class="hud-card col-b"><div class="lbl">磁束密度 B</div><div class="num" id="hudB">0.00 T</div></div>
+            <div class="hud-card"><div class="lbl">コイル角度 θ</div><div class="num" id="hudTheta">0°</div></div>
+            <div class="hud-card col-p"><div class="lbl">電子速度 v<sub>e</sub></div><div class="num" id="hudVe">0.00</div></div>
+            <div class="hud-card"><div class="lbl">抵抗 R</div><div class="num" id="hudR">2.0 Ω</div></div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>誘導起電力 𝓔 [V]</span><span class="val col-e" id="graphValE">0.00 V</span></div>
+            <div class="graph-wrap"><canvas id="graphE"></canvas></div>
+            <div class="graph-axis">時間 →（右が最新）</div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>誘導電流 I<sub>ind</sub> [A]</span><span class="val col-i" id="graphValI">0.00 A</span></div>
+            <div class="graph-wrap"><canvas id="graphI"></canvas></div>
+            <div class="graph-axis">磁束変化で符号反転（レンツの法則）</div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <div class="btn-row">
+            <button type="button" class="act-btn is-active" id="btnAutoMag">磁束変化 ON</button>
+            <button type="button" class="act-btn" id="btnAutoRot">コイル回転 ON</button>
+            <button type="button" class="act-btn" id="btnFlipNS">N↔S 逆転</button>
+            <button type="button" class="act-btn" id="btnReset">初期化</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>磁石位置 z <span class="slider-val" id="valMagZ">0.0</span></label>
+              <input type="range" id="slMagZ" min="-100" max="100" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>コイル角度 θ <span class="slider-val" id="valTheta">0°</span></label>
+              <input type="range" id="slTheta" min="0" max="90" value="0" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>磁場強度 B<sub>0</sub> <span class="slider-val" id="valB0">1.5 T</span></label>
+              <input type="range" id="slB0" min="0" max="50" value="15" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>コイル抵抗 R <span class="slider-val" id="valR">2.0 Ω</span></label>
+              <input type="range" id="slR" min="5" max="100" value="20" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">磁束変化 ON で磁石が往復 → Φ が変化 → 電子がコイルを周回し始めます</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const COL = { B: 0x60a5fa, E: 0xf87171, I: 0xfde047, e: 0x38bdf8, flux: 0xa78bfa, coil: 0xb45309 };
+      const COIL_R = 0.55, COIL_TUBE = 0.065, COIL_S = Math.PI * COIL_R * COIL_R;
+      const N_PART = 400;
+      const INIT_ROT_X = 0.48, INIT_ROT_Y = 0.62, INIT_ZOOM = 4.6;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+
+      const target = { magZ: 0, theta: 0, B0: 1.5, R: 2 };
+      const smooth = { magZ: 0, theta: 0, B0: 1.5, R: 2 };
+      let autoMag = true, autoRot = false, autoSpin = true, showFluxPlane = true;
+      let bSign = 1;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0, t = 0;
+      let phiPrev = 0, dPhiDt = 0, emf = 0, iInd = 0, bAtCoil = 0, veAvg = 0;
+
+      let scene, camera, renderer, worldGroup, coilGroup, magnetGroup;
+      let coilMesh, fluxPlane, electronMesh, emfArrow, bMainArrow, bGridGroup, currentRing, currentArrowGroup;
+      let particles = [];
+      const HIST_LEN = 220;
+      const histE = [], histI = [];
+      let graphSampleAcc = 0;
+      const graphE = document.getElementById("graphE");
+      const graphI = document.getElementById("graphI");
+
+      function pushHistory() {
+        histE.push(emf);
+        histI.push(iInd);
+        if (histE.length > HIST_LEN) histE.shift();
+        if (histI.length > HIST_LEN) histI.shift();
+      }
+
+      function clearHistory() {
+        histE.length = 0;
+        histI.length = 0;
+        drawWaveGraph(graphE, [], "#f87171", "V");
+        drawWaveGraph(graphI, [], "#fde047", "A");
+      }
+
+      function drawWaveGraph(canvas, data, color, unit) {
+        if (!canvas) return;
+        const wrap = canvas.parentElement;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 1);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        const ctx = canvas.getContext("2d");
+        const cw = canvas.width, ch = canvas.height;
+        ctx.clearRect(0, 0, cw, ch);
+
+        ctx.fillStyle = "rgba(8,12,28,0.6)";
+        ctx.fillRect(0, 0, cw, ch);
+
+        let maxAbs = 0.05;
+        for (let i = 0; i < data.length; i++) maxAbs = Math.max(maxAbs, Math.abs(data[i]));
+        const margin = { l: 36 * dpr, r: 8 * dpr, t: 8 * dpr, b: 14 * dpr };
+        const plotW = cw - margin.l - margin.r;
+        const plotH = ch - margin.t - margin.b;
+        const midY = margin.t + plotH * 0.5;
+
+        ctx.strokeStyle = "rgba(148,163,184,0.18)";
+        ctx.lineWidth = 1 * dpr;
+        for (let g = -2; g <= 2; g++) {
+          const y = midY - (g / 2) * (plotH * 0.45);
+          ctx.beginPath();
+          ctx.moveTo(margin.l, y);
+          ctx.lineTo(cw - margin.r, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.45)";
+        ctx.beginPath();
+        ctx.moveTo(margin.l, midY);
+        ctx.lineTo(cw - margin.r, midY);
+        ctx.stroke();
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = `${9 * dpr}px Inter, sans-serif`;
+        ctx.textAlign = "right";
+        ctx.fillText("+" + maxAbs.toFixed(2), margin.l - 4 * dpr, margin.t + 8 * dpr);
+        ctx.fillText("0", margin.l - 4 * dpr, midY + 3 * dpr);
+        ctx.fillText("−" + maxAbs.toFixed(2), margin.l - 4 * dpr, margin.t + plotH - 2 * dpr);
+        ctx.fillText(unit, margin.l - 4 * dpr, ch - 2 * dpr);
+
+        if (data.length < 2) return;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2 * dpr;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = margin.l + (i / (HIST_LEN - 1)) * plotW;
+          const y = midY - (data[i] / maxAbs) * (plotH * 0.45);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        const grad = ctx.createLinearGradient(0, margin.t, 0, margin.t + plotH);
+        if (color === "#f87171") {
+          grad.addColorStop(0, "rgba(248,113,113,0.2)");
+          grad.addColorStop(1, "rgba(248,113,113,0)");
+        } else {
+          grad.addColorStop(0, "rgba(253,224,71,0.18)");
+          grad.addColorStop(1, "rgba(253,224,71,0)");
+        }
+        ctx.lineTo(margin.l + ((data.length - 1) / (HIST_LEN - 1)) * plotW, midY);
+        ctx.lineTo(margin.l, midY);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      function updateGraphs() {
+        document.getElementById("graphValE").textContent = (emf >= 0 ? "+" : "") + emf.toFixed(3) + " V";
+        document.getElementById("graphValI").textContent = (iInd >= 0 ? "+" : "") + iInd.toFixed(3) + " A";
+        drawWaveGraph(graphE, histE, "#f87171", "V");
+        drawWaveGraph(graphI, histI, "#fde047", "A");
+      }
+
+      function showSimError(msg) {
+        if (!errBox) return;
+        errBox.textContent = "3D初期化エラー: " + msg;
+        errBox.classList.add("show");
+      }
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      function deg2rad(d) { return d * Math.PI / 180; }
+
+      function magnetFieldAtCoil(z, B0) {
+        const dist = Math.abs(z);
+        const falloff = Math.exp(-dist * dist / 1.35) / (1 + dist * 0.35);
+        return B0 * falloff;
+      }
+
+      function calcFlux(magZ, thetaDeg, B0) {
+        bAtCoil = magnetFieldAtCoil(magZ, B0) * bSign;
+        const cosT = Math.cos(deg2rad(thetaDeg));
+        return bAtCoil * COIL_S * cosT;
+      }
+
+      function applyMagnetFlip() {
+        if (magnetGroup) magnetGroup.scale.z = bSign;
+        buildBGrid();
+        animate.lastB = bAtCoil * bSign;
+      }
+
+      function updateFlipButton() {
+        const btn = document.getElementById("btnFlipNS");
+        if (!btn) return;
+        btn.textContent = bSign > 0 ? "N↔S 逆転（N→+z）" : "N↔S 逆転（N→−z）";
+        btn.classList.toggle("is-active", bSign < 0);
+      }
+
+      function spawnElectron() {
+        const ang = Math.random() * Math.PI * 2;
+        const r = COIL_R + (Math.random() - 0.5) * COIL_TUBE * 1.6;
+        const h = (Math.random() - 0.5) * COIL_TUBE * 1.4;
+        return { ang, r, h, omega: 0 };
+      }
+
+      function resetElectrons() {
+        particles.length = 0;
+        for (let i = 0; i < N_PART; i++) particles.push(spawnElectron());
+      }
+
+      function makeArrow(dir, origin, len, color) {
+        const d = dir.clone().normalize();
+        const a = new THREE.ArrowHelper(d, origin.clone(), len, color, len * 0.28, len * 0.14);
+        a.line.material.transparent = true;
+        a.cone.material.transparent = true;
+        a.frustumCulled = false;
+        return a;
+      }
+
+      function buildCurrentRing() {
+        if (currentRing) {
+          coilGroup.remove(currentRing);
+          currentRing.geometry.dispose();
+          currentRing.material.dispose();
+        }
+        const nSeg = 24;
+        const pts = [];
+        for (let i = 0; i <= nSeg; i++) {
+          const a = (i / nSeg) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(a) * COIL_R, Math.sin(a) * COIL_R, 0));
+        }
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        currentRing = new THREE.Line(
+          geo,
+          new THREE.LineBasicMaterial({ color: COL.I, transparent: true, opacity: 0.85 })
+        );
+        currentRing.frustumCulled = false;
+        coilGroup.add(currentRing);
+      }
+
+      function buildBGrid() {
+        if (!bGridGroup) return;
+        while (bGridGroup.children.length) {
+          const c = bGridGroup.children[0];
+          bGridGroup.remove(c);
+          if (c.geometry) c.geometry.dispose();
+        }
+        const span = 1.0;
+        const n = 3;
+        const alen = 0.12 + Math.abs(bAtCoil) * 0.08;
+        const op = 0.45 + clamp(Math.abs(bAtCoil) / 2, 0, 0.5);
+        const bDir = new THREE.Vector3(0, 0, bSign);
+        for (let ix = 0; ix < n; ix++) {
+          for (let iy = 0; iy < n; iy++) {
+            const x = -span + (ix / (n - 1)) * span * 2;
+            const y = -span + (iy / (n - 1)) * span * 2;
+            const arrow = new THREE.ArrowHelper(
+              bDir, new THREE.Vector3(x, y, -0.35),
+              alen, COL.B, alen * 0.34, alen * 0.17
+            );
+            arrow.line.material.transparent = true;
+            arrow.line.material.opacity = op;
+            arrow.cone.material.transparent = true;
+            arrow.cone.material.opacity = op;
+            arrow.frustumCulled = false;
+            bGridGroup.add(arrow);
+          }
+        }
+        const mainLen = 0.28 + Math.abs(bAtCoil) * 0.14;
+        if (bMainArrow) bGridGroup.remove(bMainArrow);
+        bMainArrow = new THREE.ArrowHelper(
+          bDir, new THREE.Vector3(0.75, 0.55, -0.35),
+          mainLen, COL.B, mainLen * 0.28, mainLen * 0.14
+        );
+        bMainArrow.frustumCulled = false;
+        bGridGroup.add(bMainArrow);
+      }
+
+      function buildFloor(group) {
+        const grid = new THREE.GridHelper(6, 24, 0x334155, 0x1e293b);
+        grid.position.y = -0.85;
+        group.add(grid);
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 360);
+        camera = new THREE.PerspectiveCamera(55, w / h, 0.05, 80);
+        camera.position.set(0, 0.35, zoom);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x505070, 0.7));
+        const key = new THREE.DirectionalLight(0xffffff, 1.15);
+        key.position.set(3, 5, 4);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xa78bfa, 0.55, 14);
+        rim.position.set(-2.5, 1.5, 3);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        worldGroup.frustumCulled = false;
+        scene.add(worldGroup);
+        buildFloor(worldGroup);
+
+        coilGroup = new THREE.Group();
+        coilGroup.frustumCulled = false;
+        worldGroup.add(coilGroup);
+
+        coilMesh = new THREE.Mesh(
+          new THREE.TorusGeometry(COIL_R, COIL_TUBE, 20, 64),
+          new THREE.MeshStandardMaterial({
+            color: COL.coil, metalness: 0.75, roughness: 0.28,
+            transparent: true, opacity: 0.55, emissive: 0x5c2d0a, emissiveIntensity: 0.15,
+          })
+        );
+        coilGroup.add(coilMesh);
+
+        const coilEdge = new THREE.Mesh(
+          new THREE.TorusGeometry(COIL_R, COIL_TUBE * 0.35, 8, 64),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35 })
+        );
+        coilGroup.add(coilEdge);
+
+        fluxPlane = new THREE.Mesh(
+          new THREE.CircleGeometry(COIL_R * 0.88, 48),
+          new THREE.MeshBasicMaterial({
+            color: COL.flux, transparent: true, opacity: 0.22,
+            side: THREE.DoubleSide, depthWrite: false,
+          })
+        );
+        coilGroup.add(fluxPlane);
+
+        const eGeo = new THREE.SphereGeometry(0.014, 8, 8);
+        const eMat = new THREE.MeshStandardMaterial({
+          color: COL.e, emissive: COL.e, emissiveIntensity: 0.9,
+          metalness: 0.1, roughness: 0.25,
+        });
+        electronMesh = new THREE.InstancedMesh(eGeo, eMat, N_PART);
+        electronMesh.frustumCulled = false;
+        coilGroup.add(electronMesh);
+
+        buildCurrentRing();
+
+        currentArrowGroup = new THREE.Group();
+        currentArrowGroup.frustumCulled = false;
+        coilGroup.add(currentArrowGroup);
+
+        emfArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-0.15, 0, 0), 0.35, COL.E);
+        coilGroup.add(emfArrow);
+
+        bGridGroup = new THREE.Group();
+        worldGroup.add(bGridGroup);
+
+        magnetGroup = new THREE.Group();
+        worldGroup.add(magnetGroup);
+
+        const magH = 0.55, magR = 0.18;
+        const nPole = new THREE.Mesh(
+          new THREE.CylinderGeometry(magR, magR, magH * 0.5, 24),
+          new THREE.MeshStandardMaterial({ color: 0xf87171, metalness: 0.4, roughness: 0.35, emissive: 0x7f1d1d, emissiveIntensity: 0.2 })
+        );
+        nPole.position.z = magH * 0.25;
+        const sPole = new THREE.Mesh(
+          new THREE.CylinderGeometry(magR, magR, magH * 0.5, 24),
+          new THREE.MeshStandardMaterial({ color: 0x60a5fa, metalness: 0.4, roughness: 0.35, emissive: 0x1e3a8a, emissiveIntensity: 0.2 })
+        );
+        sPole.position.z = -magH * 0.25;
+        const magBody = new THREE.Mesh(
+          new THREE.CylinderGeometry(magR * 1.05, magR * 1.05, magH, 24),
+          new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.6, roughness: 0.4, transparent: true, opacity: 0.25 })
+        );
+        magnetGroup.add(magBody, nPole, sPole);
+
+        const nLabel = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: makeTextTex("N", "#fecaca", 48), transparent: true, depthTest: false,
+        }));
+        nLabel.scale.set(0.18, 0.18, 1);
+        nLabel.position.set(0, magR + 0.12, magH * 0.25);
+        const sLabel = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: makeTextTex("S", "#bfdbfe", 48), transparent: true, depthTest: false,
+        }));
+        sLabel.scale.set(0.18, 0.18, 1);
+        sLabel.position.set(0, magR + 0.12, -magH * 0.25);
+        magnetGroup.add(nLabel, sLabel);
+
+        wrap.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -1.0, 1.0);
+          lx = e.clientX; ly = e.clientY;
+        });
+        wrap.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, 2.8, 8);
+        }, { passive: false });
+        window.addEventListener("resize", () => { resizeRenderer(); updateGraphs(); });
+
+        buildBGrid();
+        resetElectrons();
+        updateFlipButton();
+        phiPrev = calcFlux(smooth.magZ, smooth.theta, smooth.B0);
+        resetView();
+      }
+
+      function makeTextTex(text, color, size) {
+        const c = document.createElement("canvas");
+        c.width = c.height = size;
+        const ctx = c.getContext("2d");
+        ctx.font = "bold " + (size * 0.55) + "px Inter, sans-serif";
+        ctx.fillStyle = color;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, size / 2, size / 2);
+        return new THREE.CanvasTexture(c);
+      }
+
+      function resizeRenderer() {
+        if (!renderer || !camera || !wrap) return;
+        const rw = Math.max(wrap.clientWidth, 1);
+        const rh = Math.max(wrap.clientHeight, 360);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        camera.aspect = rw / rh;
+        camera.updateProjectionMatrix();
+      }
+
+      function resetView() {
+        rotX = INIT_ROT_X;
+        rotY = INIT_ROT_Y;
+        zoom = INIT_ZOOM;
+        resizeRenderer();
+      }
+
+      function updatePhysics(dt) {
+        if (autoMag) {
+          target.magZ = Math.sin(t * 0.55) * 1.6;
+          document.getElementById("slMagZ").value = Math.round(target.magZ / 0.016);
+          document.getElementById("valMagZ").textContent = target.magZ.toFixed(2);
+        }
+        if (autoRot) {
+          target.theta = (Math.sin(t * 0.38) * 0.5 + 0.5) * 75;
+          document.getElementById("slTheta").value = Math.round(target.theta);
+          document.getElementById("valTheta").textContent = Math.round(target.theta) + "°";
+        }
+
+        const k = 1 - Math.pow(0.001, dt / 0.42);
+        smooth.magZ = lerp(smooth.magZ, target.magZ, k);
+        smooth.theta = lerp(smooth.theta, target.theta, k);
+        smooth.B0 = lerp(smooth.B0, target.B0, k);
+        smooth.R = lerp(smooth.R, target.R, k);
+
+        const phi = calcFlux(smooth.magZ, smooth.theta, smooth.B0);
+        const dPhiRaw = (phi - phiPrev) / Math.max(dt, 0.001);
+        dPhiDt = lerp(dPhiDt, dPhiRaw, 1 - Math.pow(0.001, dt / 0.12));
+        phiPrev = phi;
+
+        emf = -dPhiDt;
+        iInd = smooth.R > 0.01 ? emf / smooth.R : 0;
+
+        const omegaTarget = -iInd * 2.8;
+        let vSum = 0;
+        const dummy = new THREE.Object3D();
+        const glow = clamp(Math.abs(iInd) * 1.8, 0.08, 1.2);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.omega = lerp(p.omega, omegaTarget + (Math.random() - 0.5) * 0.04, 1 - Math.pow(0.03, dt));
+          p.ang += p.omega * dt;
+          vSum += Math.abs(p.omega * p.r);
+
+          const x = Math.cos(p.ang) * p.r;
+          const y = Math.sin(p.ang) * p.r;
+          dummy.position.set(x, y, p.h);
+          dummy.scale.setScalar(0.85 + glow * 0.35);
+          dummy.updateMatrix();
+          electronMesh.setMatrixAt(i, dummy.matrix);
+        }
+        electronMesh.instanceMatrix.needsUpdate = true;
+        electronMesh.material.emissiveIntensity = 0.45 + glow * 0.75;
+        veAvg = particles.length ? vSum / particles.length : 0;
+
+        coilGroup.rotation.x = deg2rad(smooth.theta);
+        magnetGroup.position.set(0, 0, smooth.magZ + 1.1);
+
+        if (Math.abs(bAtCoil - (animate.lastB || 0)) > 0.04) {
+          buildBGrid();
+          animate.lastB = bAtCoil;
+        }
+      }
+
+      function updateVisuals() {
+        const phi = calcFlux(smooth.magZ, smooth.theta, smooth.B0);
+        const phiNorm = clamp(Math.abs(phi) / (COIL_S * smooth.B0 + 0.001), 0, 1);
+
+        fluxPlane.visible = showFluxPlane;
+        fluxPlane.material.opacity = 0.08 + phiNorm * 0.38;
+        fluxPlane.material.color.setHex(phi >= 0 ? COL.flux : 0x6366f1);
+        fluxPlane.rotation.x = bSign < 0 ? Math.PI : 0;
+
+        const emfLen = clamp(Math.abs(emf) * 0.18 + 0.05, 0.05, 0.55);
+        const emfDir = emf >= 0 ? 1 : -1;
+        emfArrow.setDirection(new THREE.Vector3(emfDir, 0, 0));
+        emfArrow.setLength(emfLen, emfLen * 0.3, emfLen * 0.15);
+        emfArrow.visible = Math.abs(emf) > 0.02;
+        emfArrow.position.set(-COIL_R - 0.2, 0, 0);
+
+        if (currentRing) {
+          const iAbs = Math.abs(iInd);
+          currentRing.material.opacity = 0.2 + clamp(iAbs * 2.5, 0, 0.85);
+          currentRing.material.linewidth = 1;
+          currentRing.visible = iAbs > 0.01;
+        }
+
+        const nArrows = 8;
+        while (currentArrowGroup.children.length) {
+          const c = currentArrowGroup.children[0];
+          currentArrowGroup.remove(c);
+          if (c.line && c.line.geometry) c.line.geometry.dispose();
+        }
+        if (Math.abs(iInd) > 0.01) {
+          const iSign = Math.sign(iInd) || 1;
+          const aLen = 0.1 + clamp(Math.abs(iInd) * 0.35, 0, 0.22);
+          for (let i = 0; i < nArrows; i++) {
+            const baseAng = (i / nArrows) * Math.PI * 2;
+            const tangent = new THREE.Vector3(-Math.sin(baseAng) * iSign, Math.cos(baseAng) * iSign, 0);
+            const pos = new THREE.Vector3(Math.cos(baseAng) * COIL_R, Math.sin(baseAng) * COIL_R, 0.04);
+            const arr = makeArrow(tangent, pos, aLen, COL.I);
+            arr.line.material.opacity = 0.5 + clamp(Math.abs(iInd), 0, 0.5);
+            arr.cone.material.opacity = arr.line.material.opacity;
+            currentArrowGroup.add(arr);
+          }
+        }
+      }
+
+      function updateHUD() {
+        const phi = calcFlux(smooth.magZ, smooth.theta, smooth.B0);
+        document.getElementById("valMagZ").textContent = smooth.magZ.toFixed(2);
+        document.getElementById("valTheta").textContent = Math.round(smooth.theta) + "°";
+        document.getElementById("valB0").textContent = smooth.B0.toFixed(1) + " T";
+        document.getElementById("valR").textContent = smooth.R.toFixed(1) + " Ω";
+
+        document.getElementById("hudPhi").textContent = (phi >= 0 ? "+" : "") + phi.toFixed(4) + " Wb";
+        document.getElementById("hudDPhi").textContent = (dPhiDt >= 0 ? "+" : "") + dPhiDt.toFixed(4) + " Wb/s";
+        document.getElementById("hudE").textContent = (emf >= 0 ? "+" : "") + emf.toFixed(3) + " V";
+        document.getElementById("hudI").textContent = (iInd >= 0 ? "+" : "") + iInd.toFixed(3) + " A";
+        document.getElementById("hudB").textContent =
+          (bAtCoil >= 0 ? "Bz " : "Bz ") + (bAtCoil >= 0 ? "↑ " : "↓ ") + Math.abs(bAtCoil).toFixed(2) + " T";
+        document.getElementById("hudTheta").textContent = Math.round(smooth.theta) + "°";
+        document.getElementById("hudVe").textContent = veAvg.toFixed(3) + " m/s";
+        document.getElementById("hudR").textContent = smooth.R.toFixed(1) + " Ω";
+
+        document.getElementById("formulaLive").textContent =
+          `Φ=${phi.toFixed(3)} Wb　𝓔=${emf.toFixed(2)} V　I=${iInd.toFixed(2)} A`;
+
+        let hint;
+        const pol = bSign > 0 ? "N極→+z" : "N極→−z（S/N逆転）";
+        if (Math.abs(dPhiDt) < 0.002) {
+          hint = pol + " · Φ一定 → 𝓔≈0。磁石を動かすか N↔S を切り替えてみよう";
+        } else if (dPhiDt > 0) {
+          hint = pol + " · Φ増加 → 𝓔<0 · レンツの法則で電流は磁束増加を打ち消す向き";
+        } else {
+          hint = pol + " · Φ減少 → 𝓔>0 · レンツの法則で電流は磁束減少を打ち消す向き";
+        }
+        document.getElementById("hintText").textContent = hint;
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer || !worldGroup) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        t += dt;
+
+        updatePhysics(dt);
+        updateVisuals();
+        updateHUD();
+
+        graphSampleAcc += dt;
+        if (graphSampleAcc >= 0.05) {
+          graphSampleAcc = 0;
+          pushHistory();
+          updateGraphs();
+        }
+
+        if (autoSpin && !dragging) rotY += dt * 0.12;
+
+        worldGroup.rotation.set(rotX, rotY, 0);
+        camera.position.set(0, 0.3, zoom);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      document.getElementById("slMagZ").addEventListener("input", (e) => {
+        autoMag = false;
+        document.getElementById("btnAutoMag").classList.remove("is-active");
+        target.magZ = +e.target.value * 0.016;
+      });
+      document.getElementById("slTheta").addEventListener("input", (e) => {
+        autoRot = false;
+        document.getElementById("btnAutoRot").classList.remove("is-active");
+        target.theta = +e.target.value;
+      });
+      document.getElementById("slB0").addEventListener("input", (e) => {
+        target.B0 = +e.target.value * 0.1;
+      });
+      document.getElementById("slR").addEventListener("input", (e) => {
+        target.R = +e.target.value * 0.1;
+      });
+
+      document.getElementById("btnAutoMag").addEventListener("click", function () {
+        autoMag = !autoMag;
+        this.classList.toggle("is-active", autoMag);
+      });
+      document.getElementById("btnAutoRot").addEventListener("click", function () {
+        autoRot = !autoRot;
+        this.classList.toggle("is-active", autoRot);
+      });
+      document.getElementById("btnFlipNS").addEventListener("click", function () {
+        bSign *= -1;
+        applyMagnetFlip();
+        updateFlipButton();
+      });
+      document.getElementById("btnReset").addEventListener("click", () => {
+        target.magZ = 0; target.theta = 0;
+        smooth.magZ = 0; smooth.theta = 0;
+        bSign = 1;
+        dPhiDt = 0; emf = 0; iInd = 0;
+        document.getElementById("slMagZ").value = 0;
+        document.getElementById("slTheta").value = 0;
+        applyMagnetFlip();
+        updateFlipButton();
+        resetElectrons();
+        phiPrev = calcFlux(0, 0, smooth.B0);
+        clearHistory();
+      });
+      document.getElementById("btnSpin").addEventListener("click", function () {
+        autoSpin = !autoSpin;
+        this.classList.toggle("active", autoSpin);
+      });
+      document.getElementById("btnFluxPlane").addEventListener("click", function () {
+        showFluxPlane = !showFluxPlane;
+        this.classList.toggle("active", showFluxPlane);
+      });
+      document.getElementById("btnResetView").addEventListener("click", resetView);
+
+      try {
+        initThree();
+        clearHistory();
+        updateHUD();
+        requestAnimationFrame(animate);
+      } catch (err) {
+        showSimError(err.message);
+      }
+    })();
+  </script>
+</body>
+</html>
