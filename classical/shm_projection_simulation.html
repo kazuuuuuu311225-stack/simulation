@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>9章 — 円運動の射影と単振動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1814 45%, #0a1a18 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+      touch-action: manipulation; -webkit-text-size-adjust: 100%;
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(20,184,166,0.45), rgba(45,212,191,0.35));
+      border: 1px solid rgba(20,184,166,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #5eead4; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #99f6e4; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ccfbf1; background: rgba(20,184,166,0.16);
+      border: 1px solid rgba(45,212,191,0.42); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 14, 18, 0.92); border: 1px solid rgba(20, 184, 166, 0.3);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #5eead4; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(20,184,166,0.14), rgba(45,212,191,0.08));
+      border: 1px solid rgba(20,184,166,0.35);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #ccfbf1; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(20,184,166,0.32); margin-bottom: 10px; }
+    .viz-block:last-child { margin-bottom: 0; }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #99f6e4; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    .canvas-wrap { position: relative; background: #0a0e14; min-height: 180px; }
+    .canvas-wrap.tall { min-height: 240px; }
+    .canvas-wrap.short canvas { height: min(200px, 24dvh); min-height: 160px; }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(260px, 32dvh); min-height: 180px; touch-action: none; }
+    .canvas-wrap.tall canvas { height: min(300px, 36dvh); min-height: 220px; }
+    .canvas-caption { padding: 8px 14px 10px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; border-top: 1px solid rgba(148,163,184,0.08); }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(20,184,166,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(20,184,166,0.28); color: #ccfbf1; border-color: rgba(45,212,191,0.55); font-weight: 800; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(20,184,166,0.22);
+      display: flex; flex-direction: column; gap: 8px; max-height: min(820px, 85dvh); overflow-y: auto;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #5eead4; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(20,184,166,0.45); background: rgba(6,78,59,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #ccfbf1; }
+    .calc-block {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.22);
+      border-left: 3px solid rgba(20,184,166,0.55);
+    }
+    .calc-label { margin: 0 0 4px; font-size: 0.68rem; font-weight: 700; color: #2dd4bf; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .calc-line.sub { color: #94a3b8; font-size: 0.68rem; }
+    .num-a,.num-k,.num-m,.num-w,.num-t,.num-x,.num-v,.num-l,.num-th,.num-g,.num-u,.num-e { font-weight: 700; }
+    .num-a { color: #c4b5fd; } .num-k { color: #38bdf8; } .num-m { color: #5eead4; }
+    .num-w { color: #6ee7b7; } .num-t { color: #fbbf24; } .num-x { color: #38bdf8; }
+    .num-v { color: #6ee7b7; } .num-l { color: #c4b5fd; } .num-th { color: #7dd3fc; }
+    .num-g { color: #fbbf24; } .num-u { color: #38bdf8; } .num-e { color: #6ee7b7; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #14b8a6; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .warn-box {
+      padding: 8px 10px; border-radius: 10px; font-size: 0.72rem; font-weight: 600;
+      color: #fde68a; background: rgba(120,53,15,0.25); border: 1px solid rgba(251,191,36,0.35);
+      display: none; margin-top: 4px;
+    }
+    .warn-box.show { display: block; }
+    #runStatus.running { color: #6ee7b7; }
+    #runStatus.paused { color: #fde047; }
+
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">○</div>
+      <p class="chapter-label">第9章 — 単振動</p>
+      <h2>円運動の射影と単振動</h2>
+      <p class="tagline">等速円運動の y 成分が sin 波になる</p>
+      <a id="back" href="../00_folder_classical.html#chapter-9">← 力学フォルダへ戻る</a>
+    </header>
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">x(t) = A cos(ωt + φ)　　y(t) = A sin(ωt + φ)</div>
+        <div class="formula-sub">P の高さ → 縦軸 → グラフの y と連動します</div>
+      </div>
+      <div class="sim-grid">
+        <div class="area-viz"><div class="viz-block"><div class="viz-head"><p class="viz-label">円運動と y 射影（縦軸）</p></div><div class="canvas-wrap" id="circleWrap"><canvas id="circleCanvas"></canvas></div></div>
+            <div class="viz-block"><div class="viz-head"><p class="viz-label">y − y(0) のグラフ（横軸 t）</p></div><div class="color-legend"><span><i class="color-chip" style="background:#a78bfa"></i>円軌道</span><span><i class="color-chip" style="background:#fb7185"></i>点 P</span><span><i class="color-chip" style="background:#38bdf8"></i>sin 波</span></div><div class="canvas-wrap tall" id="graphWrap"><canvas id="graphCanvas"></canvas></div></div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="pauseBtn">停止</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div></div>
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">単振動 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">走行状態</div>
+              <div class="val big" id="runStatus">パラメータを設定して「スタート」</div>
+            </div>
+            <div class="calc-block">
+        <p class="calc-label">パラメータ</p>
+        <p class="calc-line">A = <span id="cA" class="num-a">—</span> px</p>
+        <p class="calc-line">ω = <span id="cW" class="num-w">—</span> rad/s</p>
+        <p class="calc-line">φ = <span id="cPhi" class="num-a">—</span> rad</p>
+        <p class="calc-line">T = 2π / ω = <span id="cT" class="num-t">—</span> s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">現在</p>
+        <p class="calc-line">t = <span id="cTime" class="num-t">—</span> s</p>
+        <p class="calc-line">y = <span id="cYRel" class="num-x">—</span> px</p>
+      </div>
+            <p class="hud-title" style="margin-top:4px">コントロール</p>
+            <div class="slider-row"><label>振幅 A <span id="aValue">100</span> px</label><input id="aSlider" type="range" min="50" max="200" step="5" value="100"></div>
+            <div class="slider-row"><label>角速度 ω <span id="wValue">2.0</span> rad/s</label><input id="wSlider" type="range" min="0.5" max="5" step="0.1" value="2.0"></div>
+            <div class="slider-row"><label>初期位相 φ <span id="phiValue">0</span> rad</label><input id="phiSlider" type="range" min="-3.14" max="3.14" step="0.05" value="0"></div>
+            
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list"><li>半径 A の等速円運動の y 成分は y = A sin(ωt + φ)</li><li>円上の点 P から y 軸への射影が単振動と一致する</li><li>ω を変えると周期 T = 2π/ω が変わる</li></ul>
+    </section>
+  </div>
+
+  <script>
+    const circleCanvas = document.getElementById("circleCanvas");
+    const circleCtx = circleCanvas.getContext("2d");
+    const graphCanvas = document.getElementById("graphCanvas");
+    const graphCtx = graphCanvas.getContext("2d");
+    const circleWrap = document.getElementById("circleWrap");
+    const graphWrap = document.getElementById("graphWrap");
+    const runStatus = document.getElementById("runStatus");
+    const startBtn = document.getElementById("startBtn");
+
+    const MAX_DT = 1 / 30;
+    const TWO_PI = Math.PI * 2;
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1218");
+      bg.addColorStop(1, "#0a1a18");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.48, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(20, 184, 166, 0.14)");
+      glow.addColorStop(0.45, "rgba(45, 212, 191, 0.06)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+      c.strokeStyle = "rgba(148, 163, 184, 0.05)";
+      c.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        c.beginPath(); c.moveTo(i, 0); c.lineTo(i, h); c.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        c.beginPath(); c.moveTo(0, j); c.lineTo(w, j); c.stroke();
+      }
+    }
+
+    const AXIS_X = 52;
+    const DEFAULTS = { A: 100, omega: 2, phi: 0 };
+
+    let phase = "idle";
+    let simTime = 0;
+    let yOrigin = 0;
+    let circleLayout = { w: 0, h: 0, dpr: 1 };
+    let graphLayout = { w: 0, h: 0, dpr: 1 };
+
+    function plotMetrics(w, h, amp) {
+      const padL = AXIS_X;
+      const padR = 18;
+      const padT = 22;
+      const padB = 30;
+      const plotW = Math.max(40, w - padL - padR);
+      const plotH = Math.max(40, h - padT - padB);
+      const yScale = Math.min(plotH * 0.4, amp * 0.95);
+      const midY = padT + plotH / 2;
+      return { padL, padR, padT, padB, plotW, plotH, yScale, midY };
+    }
+
+    function yScreen(yRel, m, amp) {
+      return m.midY - (yRel / amp) * m.yScale;
+    }
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getA() { return parseFloat(document.getElementById("aSlider").value); }
+    function getOmega() { return parseFloat(document.getElementById("wSlider").value); }
+    function getPhi() { return parseFloat(document.getElementById("phiSlider").value); }
+
+    function captureOrigin() {
+      yOrigin = getA() * Math.sin(getPhi());
+    }
+
+    function computePhysics(t) {
+      const A = getA();
+      const omega = getOmega();
+      const phi = getPhi();
+      const T = TWO_PI / omega;
+      const theta = omega * t + phi;
+      const x = A * Math.cos(theta);
+      const y = A * Math.sin(theta);
+      const yRel = y - yOrigin;
+      return { A, omega, phi, T, theta, x, y, yRel, yOrigin, t };
+    }
+
+    function setStatus(text, cls) {
+      runStatus.textContent = text;
+      runStatus.className = "val big" + (cls ? " " + cls : "");
+    }
+
+    function syncSliders() {
+      document.getElementById("aValue").textContent = fmt(getA(), 0);
+      document.getElementById("wValue").textContent = fmt(getOmega(), 1);
+      document.getElementById("phiValue").textContent = fmt(getPhi(), 2);
+    }
+
+    function updateCalcPanel(p) {
+      document.getElementById("cA").textContent = fmt(p.A, 0);
+      document.getElementById("cW").textContent = fmt(p.omega, 2);
+      document.getElementById("cPhi").textContent = fmt(p.phi, 2);
+      document.getElementById("cT").textContent = fmt(p.T, 3);
+      document.getElementById("cTime").textContent = fmt(p.t, 2);
+      document.getElementById("cYRel").textContent = fmt(p.yRel, 1);
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      simTime = 0;
+      syncSliders();
+      captureOrigin();
+      updateCalcPanel(computePhysics(0));
+      setStatus("パラメータを設定して「スタート」");
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      if (phase === "idle") captureOrigin();
+      phase = "running";
+      startBtn.textContent = "再開";
+      setStatus("円運動中 — y = A sin(ωt) と連動", "running");
+    }
+
+    function pauseSimulation() {
+      if (phase !== "running") return;
+      phase = "paused";
+      setStatus("一時停止 — 「再開」または「リセット」", "paused");
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      simTime += dt;
+    }
+
+    function resizeCanvas(canvas, wrap, key) {
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(260, Math.round(rect.width));
+      const h = Math.max(180, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      if (key === "circle") circleLayout = { w, h, dpr };
+      else graphLayout = { w, h, dpr };
+    }
+
+    function setupCtx(c, layout) {
+      c.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+      c.clearRect(0, 0, layout.w, layout.h);
+    }
+
+    function drawBezierCurve(c, pts) {
+      if (pts.length < 2) return;
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length - 1; i += 1) {
+        const xc = (pts[i].x + pts[i + 1].x) / 2;
+        const yc = (pts[i].y + pts[i + 1].y) / 2;
+        c.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      c.quadraticCurveTo(pts[pts.length - 2].x, pts[pts.length - 2].y, pts[pts.length - 1].x, pts[pts.length - 1].y);
+      c.stroke();
+    }
+
+    function drawYAxis(ctx, m, amp, labels, drawTAxis) {
+      const ax = m.padL;
+      const y0 = yScreen(0, m, amp);
+      ctx.strokeStyle = "rgba(0,80,150,0.45)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ax, m.padT);
+      ctx.lineTo(ax, m.padT + m.plotH);
+      ctx.stroke();
+      if (drawTAxis) {
+        ctx.strokeStyle = "rgba(0,80,150,0.3)";
+        ctx.beginPath();
+        ctx.moveTo(ax, y0);
+        ctx.lineTo(ax + m.plotW, y0);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#cc1133";
+      ctx.beginPath();
+      ctx.arc(ax, y0, 4, 0, TWO_PI);
+      ctx.fill();
+      if (labels) {
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#cc1133";
+        ctx.fillText("O", ax - 14, y0 + 4);
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("y", ax - 14, m.padT + 6);
+        ctx.font = "500 9px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("+A", ax - 22, yScreen(amp, m, amp) + 3);
+        ctx.fillText("−A", ax - 22, yScreen(-amp, m, amp) + 3);
+      }
+    }
+
+    function drawCircleView(p) {
+      resizeCanvas(circleCanvas, circleWrap, "circle");
+      const { w, h } = circleLayout;
+      setupCtx(circleCtx, circleLayout);
+
+      drawDarkBg(circleCtx, w, h);
+
+      const m = plotMetrics(w, h, p.A);
+      const R = Math.min(p.A, Math.min(m.plotW * 0.55, m.plotH * 0.88));
+      const axisX = m.padL;
+      const cy = m.midY;
+      const cx = axisX + 36 + R;
+      const theta = p.theta;
+      const px = cx + R * Math.cos(theta);
+      const py = cy - R * Math.sin(theta);
+
+      drawYAxis(circleCtx, m, p.A, true, false);
+
+      circleCtx.strokeStyle = "#66aaff";
+      circleCtx.lineWidth = 3;
+      circleCtx.beginPath();
+      circleCtx.arc(cx, cy, R, 0, TWO_PI);
+      circleCtx.stroke();
+
+      circleCtx.strokeStyle = "rgba(0,100,180,0.12)";
+      circleCtx.lineWidth = 1;
+      circleCtx.beginPath();
+      circleCtx.moveTo(cx - R, cy);
+      circleCtx.lineTo(cx + R, cy);
+      circleCtx.moveTo(cx, cy - R);
+      circleCtx.lineTo(cx, cy + R);
+      circleCtx.stroke();
+
+      circleCtx.strokeStyle = "rgba(0,100,180,0.35)";
+      circleCtx.lineWidth = 2;
+      circleCtx.beginPath();
+      circleCtx.moveTo(cx, cy);
+      circleCtx.lineTo(px, py);
+      circleCtx.stroke();
+
+      circleCtx.strokeStyle = "rgba(0,136,221,0.55)";
+      circleCtx.lineWidth = 1.5;
+      circleCtx.setLineDash([6, 4]);
+      circleCtx.beginPath();
+      circleCtx.moveTo(px, py);
+      circleCtx.lineTo(axisX, py);
+      circleCtx.stroke();
+      circleCtx.setLineDash([]);
+
+      circleCtx.fillStyle = "#ee4455";
+      circleCtx.beginPath();
+      circleCtx.arc(axisX, py, 8, 0, TWO_PI);
+      circleCtx.fill();
+      circleCtx.strokeStyle = "#fff";
+      circleCtx.lineWidth = 2;
+      circleCtx.stroke();
+
+      circleCtx.fillStyle = "#ee4455";
+      circleCtx.beginPath();
+      circleCtx.arc(px, py, 11, 0, TWO_PI);
+      circleCtx.fill();
+      circleCtx.fillStyle = "#fff";
+      circleCtx.font = "700 10px Inter, sans-serif";
+      circleCtx.textAlign = "center";
+      circleCtx.fillText("P", px, py + 4);
+      circleCtx.textAlign = "left";
+
+      circleCtx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      circleCtx.fillStyle = "#94a3b8";
+      circleCtx.fillText("y 射影", axisX - 8, h - 8);
+    }
+
+    function getTimeWindow(t, T, runPhase) {
+      const windowT = T * 2;
+      if (runPhase === "idle" || t <= 0) {
+        return { tStart: 0, tEnd: windowT, tNow: 0, growing: true };
+      }
+      if (t <= windowT) {
+        return { tStart: 0, tEnd: windowT, tNow: t, growing: true };
+      }
+      return { tStart: t - windowT, tEnd: t, tNow: t, growing: false };
+    }
+
+    function drawGraph(p) {
+      resizeCanvas(graphCanvas, graphWrap, "graph");
+      const { w, h } = graphLayout;
+      setupCtx(graphCtx, graphLayout);
+
+      drawDarkBg(graphCtx, w, h);
+
+      const m = plotMetrics(w, h, p.A);
+      const T = p.T;
+      const amp = p.A;
+      const axisX = m.padL;
+      const y0 = yScreen(0, m, amp);
+      const tw = getTimeWindow(p.t, T, phase);
+      const span = tw.tEnd - tw.tStart;
+
+      const tx = (t) => axisX + ((t - tw.tStart) / span) * m.plotW;
+      const yRelAt = (t) => amp * Math.sin(p.omega * t + p.phi) - p.yOrigin;
+
+      drawYAxis(graphCtx, m, amp, true, true);
+
+      const sampleCurve = (tFrom, tTo, steps) => {
+        const pts = [];
+        const range = tTo - tFrom;
+        if (range <= 0) return pts;
+        for (let i = 0; i <= steps; i += 1) {
+          const t = tFrom + (i / steps) * range;
+          pts.push({ x: tx(t), y: yScreen(yRelAt(t), m, amp) });
+        }
+        return pts;
+      };
+
+      const steps = Math.max(80, Math.round(m.plotW * 0.8));
+      const fullPts = sampleCurve(tw.tStart, tw.tEnd, steps);
+      const liveEnd = tw.growing ? tw.tNow : tw.tEnd;
+      const livePts = tw.tNow > 0.001
+        ? sampleCurve(tw.tStart, liveEnd, Math.max(2, Math.round(steps * ((liveEnd - tw.tStart) / span))))
+        : [];
+
+      graphCtx.lineCap = "round";
+      graphCtx.lineJoin = "round";
+      graphCtx.strokeStyle = "rgba(0,136,221,0.18)";
+      graphCtx.lineWidth = 2.5;
+      drawBezierCurve(graphCtx, fullPts);
+
+      if (livePts.length >= 2) {
+        graphCtx.strokeStyle = "#0088dd";
+        graphCtx.lineWidth = 3;
+        drawBezierCurve(graphCtx, livePts);
+      }
+
+      const curX = tx(tw.tNow);
+      const curY = yScreen(p.yRel, m, amp);
+
+      graphCtx.strokeStyle = "rgba(204,17,51,0.4)";
+      graphCtx.lineWidth = 1.5;
+      graphCtx.setLineDash([4, 4]);
+      graphCtx.beginPath();
+      graphCtx.moveTo(curX, m.padT);
+      graphCtx.lineTo(curX, m.padT + m.plotH);
+      graphCtx.stroke();
+      graphCtx.setLineDash([]);
+
+      graphCtx.fillStyle = "#0088dd";
+      graphCtx.beginPath();
+      graphCtx.arc(curX, curY, 6, 0, TWO_PI);
+      graphCtx.fill();
+
+      graphCtx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      graphCtx.fillStyle = "#94a3b8";
+      graphCtx.fillText("t", axisX + m.plotW - 2, y0 + 14);
+      graphCtx.fillText(fmt(tw.tStart, 1), axisX - 10, y0 + 26);
+      if (tw.growing && T <= tw.tEnd) {
+        graphCtx.fillText("T", tx(T) - 3, y0 + 14);
+      } else if (!tw.growing) {
+        graphCtx.fillText(fmt(tw.tEnd, 1), axisX + m.plotW - 28, y0 + 26);
+      }
+    }
+
+    function draw() {
+      const p = computePhysics(simTime);
+      updateCalcPanel(p);
+      drawCircleView(p);
+      drawGraph(p);
+    }
+
+    ["aSlider", "wSlider", "phiSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase === "idle") captureOrigin();
+        if (phase !== "running") updateCalcPanel(computePhysics(simTime));
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("aSlider").value = DEFAULTS.A;
+      document.getElementById("wSlider").value = DEFAULTS.omega;
+      document.getElementById("phiSlider").value = DEFAULTS.phi;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(circleWrap);
+      ro.observe(graphWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  
+  </script>
+</body>
+</html>

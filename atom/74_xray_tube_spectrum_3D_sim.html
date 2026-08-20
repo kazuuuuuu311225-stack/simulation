@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 原子の構造 — X線管スペクトル 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1220px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(96,165,250,0.35));
+      border: 1px solid rgba(244,114,182,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbcfe8; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(96,165,250,0.1));
+      border: 1px solid rgba(244,114,182,0.32);
+    }
+    .formula-main { font-size: 0.88rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 960px) {
+      .sim-grid { grid-template-columns: 1.2fr 0.8fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #111; border: 1px solid rgba(244,114,182,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(600px, 68dvh); min-height: 400px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; font-size: 0.9rem; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); border: 1px solid rgba(244,114,182,0.45);
+      font-size: 0.74rem; font-weight: 700; color: #fbcfe8; line-height: 1.5; white-space: pre-line;
+    }
+    .status-badge {
+      position: absolute; top: 12px; right: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); border: 1px solid rgba(96,165,250,0.4);
+      font-size: 0.72rem; font-weight: 700; color: #93c5fd; line-height: 1.55;
+    }
+    .status-badge.on { border-color: rgba(255,255,255,0.5); color: #f8fafc; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .metal-btn {
+      flex: 1; min-width: 68px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .metal-btn.active { background: rgba(244,114,182,0.25); color: #fce7f3; border-color: rgba(244,114,182,0.55); }
+    .viz-foot button.active { background: rgba(244,114,182,0.22); color: #fce7f3; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px) { .hud-grid { grid-template-columns: repeat(7, 1fr); } }
+    .hud-card {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #94a3b8; line-height: 1.3; }
+    .hud-card .num { font-size: 0.8rem; font-weight: 700; color: #fde68a; margin-top: 3px; }
+    .hud-card.col-e .num { color: #60a5fa; }
+    .hud-card.col-x .num { color: #f8fafc; }
+    .hud-card.col-k .num { color: #fbbf24; }
+    .hud-card.highlight .num { color: #f472b6; }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(253,224,71,0.08); border: 1px solid rgba(253,224,71,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; flex: 1;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.18);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px; }
+    .graph-legend-row i.dash { background: repeating-linear-gradient(90deg,#94a3b8 0 4px,transparent 4px 7px); height: 3px; }
+    .volt-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      padding: 8px 14px 10px; border-bottom: 1px solid rgba(148,163,184,0.1);
+      background: rgba(96,165,250,0.06);
+    }
+    .volt-row label { font-size: 0.74rem; font-weight: 700; color: #93c5fd; white-space: nowrap; }
+    .volt-row input[type="range"] { flex: 1; min-width: 120px; accent-color: #60a5fa; }
+    .volt-row .slider-val { color: #fde68a; font-weight: 800; font-size: 0.82rem; min-width: 52px; text-align: right; }
+    .compare-btn {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(148,163,184,0.45); background: rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .compare-btn.active { border-color: rgba(148,163,184,0.7); color: #f8fafc; background: rgba(148,163,184,0.22); }
+    .compare-note { font-size: 0.64rem; color: #86efac; width: 100%; }
+    .graph-wrap {
+      position: relative; width: 100%; height: min(420px, 52dvh); min-height: 280px;
+      border-radius: 8px; background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: right; }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #f472b6; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fbcfe8; margin-bottom: 4px; font-size: 0.78rem; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚡</div>
+      <p class="chapter-label">第27章 ⑤ — 原子の構造</p>
+      <h2>X線管 — 連続X線＋固有X線スペクトル 3Dラボ</h2>
+      <p class="tagline">電子加速 → ターゲット衝突 → 制動放射と特性X線</p>
+      <a id="back" href="../00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — X線管の仕組み</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 加速</strong>陰極から電子が放出 · E<sub>e</sub>=eV</div>
+        <div class="journey-step" id="step2"><strong>Step 2 衝突</strong>ターゲット金属に高速衝突</div>
+        <div class="journey-step" id="step3"><strong>Step 3 連続X線</strong>制動放射 · λ<sub>min</sub>=hc/(eV)</div>
+        <div class="journey-step" id="step4"><strong>Step 4 固有X線</strong>内殻電子が飛び出し · Kα,Kβピーク</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">E<sub>e</sub> = eV · λ<sub>min</sub> = hc/(eV) · 連続X線（制動放射）＋ 固有X線（Kα, Kβ）</div>
+        <div class="formula-sub">電圧↑ → λ<sub>min</sub>が短く · 金属を変えると固有X線のピーク位置が変わる（金属の指紋）</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">X線管 — 3Dビュー</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>加速電子</span>
+              <span><i class="color-chip" style="background:#f8fafc;color:#f8fafc"></i>連続X線</span>
+              <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>固有X線 Kα,Kβ</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>ターゲット</span>
+            </div>
+            <p class="viz-legend" id="vizLegend">左の陰極から青い電子が加速 · 右のターゲットに衝突してX線が放射</p>
+            <div class="volt-row">
+              <label for="slV3d">加速電圧 V</label>
+              <input type="range" id="slV3d" min="0" max="100" value="40" step="1">
+              <span class="slider-val" id="valV3d">40 kV</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">V — kV · λ<sub>min</sub> —</div>
+              <div class="status-badge" id="statusBadge">電圧を上げて開始</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="metal-btn active" data-metal="Cu">Cu ターゲット</button>
+              <button type="button" class="metal-btn" data-metal="Mo">Mo ターゲット</button>
+              <button type="button" class="metal-btn" data-metal="W">W ターゲット</button>
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+              <button type="button" id="btnSnap" class="compare-btn">変化前を記録</button>
+              <button type="button" id="btnClearSnap" class="compare-btn">比較クリア</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graph-panel">
+            <div class="graph-title"><span>X線スペクトル I(λ)</span><span id="graphValI">—</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#f8fafc"></i>白い実線（連続X線の丘＋固有X線の鋭い山）</span>
+              <span><i class="dash"></i>変化前</span>
+            </div>
+            <div id="compareNote" class="compare-note" style="display:none;padding:0 0 6px"></div>
+            <div class="graph-wrap"><canvas id="graphSpectrum"></canvas></div>
+            <div class="graph-axis">横軸：波長 · 縦軸：X線の強さ（教科書型スペクトル）</div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム物理量</p>
+            <div class="formula-box" id="formulaLive">E<sub>e</sub> = eV · λ<sub>min</sub> = hc/(eV)</div>
+            <div class="hud-grid">
+              <div class="hud-card highlight"><div class="lbl">加速電圧 V</div><div class="num" id="hudV">—</div></div>
+              <div class="hud-card col-e"><div class="lbl">電子エネルギー E<sub>e</sub></div><div class="num" id="hudEe">—</div></div>
+              <div class="hud-card col-x"><div class="lbl">最短波長 λ<sub>min</sub></div><div class="num" id="hudLamMin">—</div></div>
+              <div class="hud-card col-k"><div class="lbl">Kα 波長</div><div class="num" id="hudKa">—</div></div>
+              <div class="hud-card col-k"><div class="lbl">Kβ 波長</div><div class="num" id="hudKb">—</div></div>
+              <div class="hud-card"><div class="lbl">電子電流</div><div class="num" id="hudCur">—</div></div>
+              <div class="hud-card col-x"><div class="lbl">X線強度</div><div class="num" id="hudInt">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>加速電圧 V <span class="slider-val" id="valV">40 kV</span></label>
+              <input type="range" id="slV" min="0" max="100" value="40" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>電子電流 <span class="slider-val" id="valCur">中</span></label>
+              <input type="range" id="slCur" min="1" max="10" value="5" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">1.0×</span></label>
+              <input type="range" id="slSpeed" min="2" max="20" value="10" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">加速電圧 V を上げると電子が速くなり、λ<sub>min</sub> が短くなります。ターゲット金属を変えると固有X線のピーク位置が変わります。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li><strong>連続X線（制動放射）</strong>：電子が原子核付近で減速 · 波長が連続分布 · λ<sub>min</sub>=hc/(eV)</li>
+        <li><strong>固有X線（特性X線）</strong>：内殻電子が飛び出し、上の軌道から落ちる · Kα,Kβ の鋭いピーク</li>
+        <li>固有X線の位置は<strong>金属固有の指紋</strong>（Cu, Mo, W でピークが違う）</li>
+        <li>電圧を上げると λ<sub>min</sub> が左（短波長）へ移動し、連続スペクトルが伸びる</li>
+        <li>電子電流を上げると<strong>強度</strong>が増える（ピーク位置は変わらない）</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const HC_EV_NM = 1.240; // hc in eV·nm (1240 pm·eV → 1.24 nm·keV)
+      const E_CHARGE = 1.602e-19;
+      const M_E = 9.109e-31;
+      const VIS_SMOOTH = 0.22;
+      const MAX_ELECTRONS = 160;
+      const MAX_RAYS = 60;
+      const MAX_CHAR = 20;
+      const MAX_TRAILS = 200;
+      const INIT_ROT_X = 0.22, INIT_ROT_Y = 0.55, INIT_ZOOM = 5.5;
+      const ZOOM_MIN = 3.5, ZOOM_MAX = 9;
+      const CATHODE_X = -2.0, TARGET_X = 1.6;
+
+      const TARGETS = {
+        Cu: {
+          name: "銅 Cu", color: 0xb87333, Z: 29,
+          Ka: 0.154, Kb: 0.139, kEdge: 8.98,
+          graphMax: 0.22,
+        },
+        Mo: {
+          name: "モリブデン Mo", color: 0x708090, Z: 42,
+          Ka: 0.071, Kb: 0.063, kEdge: 20.0,
+          graphMax: 0.12,
+        },
+        W: {
+          name: "タングステン W", color: 0x9ca3af, Z: 74,
+          Ka: 0.021, Kb: 0.018, kEdge: 69.5,
+          graphMax: 0.04,
+        },
+      };
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphSpectrum = document.getElementById("graphSpectrum");
+
+      let paused = false, autoSpin = true, timeScale = 1;
+      let metalKey = "Cu";
+      const target = { vKv: 40, current: 5, speed: 1 };
+      const smooth = { vKv: 40, current: 5, speed: 1 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+      let hitCount = 0, xrayIntensity = 0;
+      let prevSnapshot = null;
+
+      let scene, camera, renderer, worldGroup;
+      let cathode, targetPlate, tubeShell, fieldGroup, accelBeam;
+      let electronMesh, rayGroup, trailGroup;
+      const electrons = [], rays = [], charEvents = [], trails = [];
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function lamMinNm(vKv) {
+        if (vKv < 0.5) return Infinity;
+        return HC_EV_NM / vKv;
+      }
+
+      function electronEnergyKeV(vKv) { return vKv; }
+
+      function electronSpeedVis(vKv) {
+        const eV = Math.max(vKv, 0.5) * 1000;
+        const v = Math.sqrt(2 * eV * E_CHARGE / M_E);
+        return Math.max(v * 2.8e-6, 0.35);
+      }
+
+      function charVisibleFor(vKv, metal) {
+        const t = TARGETS[metal];
+        return vKv > t.kEdge * 0.95;
+      }
+
+      function charVisible(vKv) {
+        return charVisibleFor(vKv, metalKey);
+      }
+
+      function takeSnapshot() {
+        prevSnapshot = {
+          vKv: target.vKv,
+          metal: metalKey,
+          current: target.current,
+        };
+        document.getElementById("btnSnap").classList.add("active");
+        document.getElementById("compareNote").style.display = "block";
+        document.getElementById("compareNote").textContent =
+          "変化前を記録: V=" + prevSnapshot.vKv.toFixed(0) + " kV（" + TARGETS[prevSnapshot.metal].name + "）→ スライダーで V を変えて比較";
+      }
+
+      function clearSnapshot() {
+        prevSnapshot = null;
+        document.getElementById("btnSnap").classList.remove("active");
+        document.getElementById("compareNote").style.display = "none";
+      }
+
+      function graphLamMax(vKv, metal) {
+        const t = TARGETS[metal];
+        const lmin = lamMinNm(vKv);
+        return Math.max(t.Ka * 1.55, isFinite(lmin) ? lmin * 12 : 0, 0.16);
+      }
+
+      function buildCombinedCurve(vKv, metal, curScale, lamMax) {
+        const t = TARGETS[metal];
+        const pts = new Set();
+        const steps = 320;
+        for (let i = 0; i <= steps; i++) pts.add((lamMax * i) / steps);
+        if (charVisibleFor(vKv, metal)) {
+          [t.Kb, t.Ka].forEach((lam) => {
+            for (let d = -0.0035; d <= 0.0035; d += 0.00004) pts.add(lam + d);
+          });
+        }
+        const sorted = Array.from(pts).filter((l) => l >= 0 && l <= lamMax).sort((a, b) => a - b);
+        return sorted.map((lam) => ({ lam, I: spectrumAt(lam, vKv, metal, curScale) }));
+      }
+
+      function buildBremCurve(vKv, metal, curScale, lamMax) {
+        const steps = 240;
+        const curve = [];
+        for (let i = 0; i <= steps; i++) {
+          const lam = (lamMax * i) / steps;
+          curve.push({ lam, I: bremOnly(lam, vKv, metal, curScale) });
+        }
+        return curve;
+      }
+
+      function addTrail(x, y, z) {
+        const idx = trails.findIndex((t) => !t.active);
+        const slot = idx >= 0 ? idx : (trails.length < MAX_TRAILS ? trails.length : -1);
+        if (slot < 0) return;
+        trails[slot] = { active: true, x, y, z, life: 0.22, age: 0 };
+      }
+
+      function bremIntensity(lam, vKv, Z) {
+        const lmin = lamMinNm(vKv);
+        if (lam <= lmin || !isFinite(lmin)) return 0;
+        // クレーマー則（高校向け近似）: I ∝ Z·(λ−λmin)/λ³
+        return Z * (lam - lmin) / (lam * lam * lam);
+      }
+
+      function bremOnly(lam, vKv, metal, curScale) {
+        return bremIntensity(lam, vKv, TARGETS[metal].Z) * curScale;
+      }
+
+      function charPeakSharp(lam, center, width, amp) {
+        const d = (lam - center) / width;
+        return amp * Math.exp(-d * d * 8);
+      }
+
+      function charOnly(lam, vKv, metal, curScale) {
+        if (!charVisibleFor(vKv, metal)) return 0;
+        const t = TARGETS[metal];
+        const bKb = bremOnly(t.Kb, vKv, metal, curScale);
+        const bKa = bremOnly(t.Ka, vKv, metal, curScale);
+        const w = 0.00026;
+        return charPeakSharp(lam, t.Kb, w, Math.max(bKb * 5.5, 0.4) * curScale)
+             + charPeakSharp(lam, t.Ka, w, Math.max(bKa * 9, 0.6) * curScale);
+      }
+
+      function charPeak(lam, center, width, amp) {
+        const d = (lam - center) / width;
+        return amp * Math.exp(-d * d * 0.5);
+      }
+
+      function spectrumAt(lam, vKv, metal, curScale) {
+        return bremOnly(lam, vKv, metal, curScale) + charOnly(lam, vKv, metal, curScale);
+      }
+
+      function curveMax(curve, lmin) {
+        let m = 0;
+        curve.forEach((pt) => {
+          if (pt.lam >= lmin && pt.I > m) m = pt.I;
+        });
+        return m;
+      }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.vKv = lerp(smooth.vKv, target.vKv, k);
+        smooth.current = lerp(smooth.current, target.current, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+      }
+
+      function spawnElectron() {
+        if (smooth.vKv < 1) return;
+        const idx = electrons.findIndex((e) => !e.active);
+        const slot = idx >= 0 ? idx : (electrons.length < MAX_ELECTRONS ? electrons.length : -1);
+        if (slot < 0) return;
+        const spd = electronSpeedVis(smooth.vKv);
+        electrons[slot] = {
+          active: true,
+          x: CATHODE_X + 0.1,
+          y: (Math.random() - 0.5) * 0.35,
+          z: (Math.random() - 0.5) * 0.25,
+          vx: spd,
+        };
+      }
+
+      function spawnBremRay(x, y, z) {
+        const idx = rays.findIndex((r) => !r.active);
+        const slot = idx >= 0 ? idx : (rays.length < MAX_RAYS ? rays.length : -1);
+        if (slot < 0) return;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = (Math.random() - 0.5) * Math.PI * 0.6;
+        rays[slot] = {
+          active: true,
+          type: "brem",
+          x, y, z,
+          dir: new THREE.Vector3(Math.cos(theta) * Math.cos(phi), Math.sin(phi), Math.sin(theta) * Math.cos(phi)).normalize(),
+          life: 0.35 + Math.random() * 0.25,
+          age: 0,
+        };
+      }
+
+      function spawnCharRay(x, y, z, isBeta) {
+        const idx = rays.findIndex((r) => !r.active);
+        const slot = idx >= 0 ? idx : (rays.length < MAX_RAYS ? rays.length : -1);
+        if (slot < 0) return;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = (Math.random() - 0.5) * Math.PI * 0.4;
+        rays[slot] = {
+          active: true,
+          type: isBeta ? "kb" : "ka",
+          x, y, z,
+          dir: new THREE.Vector3(Math.cos(theta) * Math.cos(phi) * 0.6 + 0.4, Math.sin(phi) + 0.3, Math.sin(theta)).normalize(),
+          life: 0.5 + Math.random() * 0.2,
+          age: 0,
+        };
+      }
+
+      function spawnCharEvent(x, y, z) {
+        const idx = charEvents.findIndex((c) => !c.active);
+        const slot = idx >= 0 ? idx : (charEvents.length < MAX_CHAR ? charEvents.length : -1);
+        if (slot < 0) return;
+        charEvents[slot] = {
+          active: true,
+          x, y, z,
+          phase: 0,
+          life: 0.8,
+          age: 0,
+        };
+      }
+
+      function stepParticles(dt) {
+        const moveDt = dt * timeScale;
+        if (smooth.vKv >= 1) {
+          const rate = smooth.current * 3.2;
+          if (Math.random() < rate * moveDt) spawnElectron();
+        }
+
+        electrons.forEach((e) => {
+          if (!e.active) return;
+          const px = e.x, py = e.y, pz = e.z;
+          e.x += e.vx * moveDt;
+          if (Math.random() < 0.55) addTrail(px, py, pz);
+          if (e.x >= TARGET_X - 0.05) {
+            e.active = false;
+            hitCount++;
+            const y = e.y, z = e.z;
+            const bursts = 2 + Math.floor(smooth.current * 0.5);
+            for (let i = 0; i < bursts; i++) spawnBremRay(TARGET_X, y, z);
+            if (charVisible(smooth.vKv) && Math.random() < 0.35) {
+              spawnCharEvent(TARGET_X, y, z);
+              spawnCharRay(TARGET_X, y, z, Math.random() < 0.3);
+              spawnCharRay(TARGET_X, y, z, true);
+            }
+          }
+        });
+
+        rays.forEach((r) => {
+          if (!r.active) return;
+          r.age += moveDt;
+          if (r.age > r.life) r.active = false;
+        });
+
+        charEvents.forEach((c) => {
+          if (!c.active) return;
+          c.age += moveDt;
+          c.phase = c.age / c.life;
+          if (c.age > c.life) c.active = false;
+        });
+
+        trails.forEach((tr) => {
+          if (!tr.active) return;
+          tr.age += moveDt;
+          if (tr.age > tr.life) tr.active = false;
+        });
+
+        xrayIntensity = lerp(xrayIntensity, smooth.current * smooth.vKv * 0.02 + hitCount * 0.001, 0.05);
+      }
+
+      function buildFieldLines(g) {
+        fieldGroup = new THREE.Group();
+        const nLines = 7;
+        for (let i = 0; i < nLines; i++) {
+          const y = (i - (nLines - 1) / 2) * 0.14;
+          const pts = [];
+          for (let x = CATHODE_X + 0.2; x <= TARGET_X - 0.1; x += 0.18) {
+            pts.push(new THREE.Vector3(x, y, 0));
+          }
+          const geo = new THREE.BufferGeometry().setFromPoints(pts);
+          const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
+            color: 0x38bdf8, transparent: true, opacity: 0.35,
+          }));
+          line.userData.baseOpacity = 0.35;
+          fieldGroup.add(line);
+          const cone = new THREE.Mesh(
+            new THREE.ConeGeometry(0.03, 0.08, 6),
+            new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.45 })
+          );
+          cone.rotation.z = -Math.PI / 2;
+          cone.position.set(TARGET_X - 0.2, y, 0);
+          fieldGroup.add(cone);
+        }
+        g.add(fieldGroup);
+
+        accelBeam = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.28, TARGET_X - CATHODE_X - 0.3, 16, 1, true),
+          new THREE.MeshBasicMaterial({
+            color: 0x38bdf8, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false,
+          })
+        );
+        accelBeam.rotation.z = Math.PI / 2;
+        accelBeam.position.set((CATHODE_X + TARGET_X) / 2, 0, 0);
+        g.add(accelBeam);
+      }
+
+      function buildScene3D() {
+        const g = new THREE.Group();
+
+        tubeShell = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.55, 0.55, 4.2, 24, 1, true),
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.4, side: THREE.DoubleSide, transparent: true, opacity: 0.25 })
+        );
+        tubeShell.rotation.z = Math.PI / 2;
+        g.add(tubeShell);
+
+        cathode = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15, 0.2, 0.2, 16),
+          new THREE.MeshStandardMaterial({ color: 0x475569, emissive: 0x334155, emissiveIntensity: 0.3, metalness: 0.8, roughness: 0.3 })
+        );
+        cathode.rotation.z = Math.PI / 2;
+        cathode.position.set(CATHODE_X, 0, 0);
+        g.add(cathode);
+
+        const t = TARGETS[metalKey];
+        targetPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.9, 0.7),
+          new THREE.MeshStandardMaterial({ color: t.color, metalness: 0.9, roughness: 0.25, emissive: 0x222222, emissiveIntensity: 0.1 })
+        );
+        targetPlate.position.set(TARGET_X, 0, 0);
+        g.add(targetPlate);
+
+        const anodeStem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.06, 0.8, 12),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.35 })
+        );
+        anodeStem.rotation.z = Math.PI / 2;
+        anodeStem.position.set(TARGET_X + 0.5, 0, 0);
+        g.add(anodeStem);
+
+        electronMesh = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 10, 10),
+          new THREE.MeshPhysicalMaterial({
+            color: 0x60a5fa, emissive: 0x0ea5e9, emissiveIntensity: 1.2,
+            transparent: true, opacity: 0.95, roughness: 0.1, metalness: 0.1,
+          }),
+          MAX_ELECTRONS
+        );
+        electronMesh.frustumCulled = false;
+        g.add(electronMesh);
+
+        rayGroup = new THREE.Group();
+        g.add(rayGroup);
+        trailGroup = new THREE.Group();
+        g.add(trailGroup);
+
+        buildFieldLines(g);
+
+        const grid = new THREE.GridHelper(5, 20, 0x334155, 0x1e293b);
+        grid.position.y = -1.0;
+        g.add(grid);
+
+        worldGroup.add(g);
+      }
+
+      function updateTrailMeshes() {
+        while (trailGroup.children.length) trailGroup.remove(trailGroup.children[0]);
+        trails.forEach((tr) => {
+          if (!tr.active) return;
+          const fade = 1 - tr.age / tr.life;
+          const s = 0.018 + fade * 0.025;
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(s, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: fade * 0.75 })
+          );
+          m.position.set(tr.x, tr.y, tr.z);
+          trailGroup.add(m);
+        });
+      }
+
+      function updateRayMeshes() {
+        while (rayGroup.children.length) rayGroup.remove(rayGroup.children[0]);
+        rays.forEach((r) => {
+          if (!r.active) return;
+          const fade = 1 - r.age / r.life;
+          const len = 0.4 + fade * 0.5;
+          const col = r.type === "brem" ? 0xf8fafc : 0xfbbf24;
+          const geo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(r.x, r.y, r.z),
+            new THREE.Vector3(r.x + r.dir.x * len, r.y + r.dir.y * len, r.z + r.dir.z * len),
+          ]);
+          const mat = new THREE.LineBasicMaterial({
+            color: col,
+            transparent: true,
+            opacity: fade * (r.type === "brem" ? 0.7 : 0.95),
+            linewidth: 2,
+          });
+          rayGroup.add(new THREE.Line(geo, mat));
+        });
+
+        charEvents.forEach((c) => {
+          if (!c.active || c.phase < 0.15) return;
+          const s = 0.08 + c.phase * 0.12;
+          const orb = new THREE.Mesh(
+            new THREE.SphereGeometry(s, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xf87171, transparent: true, opacity: (1 - c.phase) * 0.8 })
+          );
+          orb.position.set(c.x - 0.05, c.y + 0.1 * c.phase, c.z);
+          rayGroup.add(orb);
+          if (c.phase > 0.4) {
+            const drop = new THREE.Mesh(
+              new THREE.SphereGeometry(0.04, 6, 6),
+              new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: (1 - c.phase) * 0.9 })
+            );
+            drop.position.set(c.x, c.y + 0.2 - c.phase * 0.15, c.z);
+            rayGroup.add(drop);
+          }
+        });
+      }
+
+      function updateVisuals() {
+        const t = TARGETS[metalKey];
+        const vKv = smooth.vKv;
+        const fieldOn = vKv >= 3;
+        if (targetPlate) {
+          targetPlate.material.color.setHex(t.color);
+          targetPlate.material.emissiveIntensity = vKv > 5 ? 0.25 + smooth.current * 0.04 : 0.08;
+        }
+        if (cathode) {
+          cathode.material.emissive.setHex(0x38bdf8);
+          cathode.material.emissiveIntensity = fieldOn ? 0.55 + vKv * 0.008 : 0.12;
+        }
+        if (fieldGroup) {
+          fieldGroup.visible = fieldOn;
+          fieldGroup.children.forEach((ch) => {
+            if (ch.material) ch.material.opacity = (ch.userData.baseOpacity || 0.35) * Math.min(1, vKv / 25);
+          });
+        }
+        if (accelBeam) {
+          accelBeam.visible = fieldOn;
+          accelBeam.material.opacity = 0.05 + Math.min(0.14, vKv * 0.002);
+          accelBeam.scale.y = 0.6 + vKv * 0.01;
+        }
+
+        const eScale = 0.045 + Math.min(0.03, vKv * 0.0004);
+        const dummy = new THREE.Object3D();
+        for (let i = 0; i < MAX_ELECTRONS; i++) {
+          const e = electrons[i];
+          if (!e || !e.active) {
+            dummy.position.set(0, -5, 0);
+            dummy.scale.setScalar(0.001);
+          } else {
+            dummy.position.set(e.x, e.y, e.z);
+            dummy.scale.setScalar(eScale);
+            electronMesh.setColorAt(i, new THREE.Color(0x7dd3fc));
+          }
+          dummy.updateMatrix();
+          electronMesh.setMatrixAt(i, dummy.matrix);
+        }
+        electronMesh.instanceMatrix.needsUpdate = true;
+        if (electronMesh.instanceColor) electronMesh.instanceColor.needsUpdate = true;
+        updateTrailMeshes();
+        updateRayMeshes();
+      }
+
+      function drawCurve(ctx, curve, lmin, lamMax, M, pw, ph, iMax, color, lineWidth, dashed) {
+        function xMap(lam) { return M.l + (lam / lamMax) * pw; }
+        function yMap(I) {
+          const y = M.t + ph * (1 - I / iMax);
+          return clamp(y, M.t, M.t + ph);
+        }
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        if (dashed) ctx.setLineDash([6, 4]); else ctx.setLineDash([]);
+        let started = false;
+        let lastX = 0, lastY = 0;
+        curve.forEach((pt) => {
+          if (pt.lam < lmin - 1e-9) return;
+          const x = xMap(pt.lam), y = yMap(pt.I);
+          if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+          lastX = x; lastY = y;
+        });
+        if (started && !dashed) {
+          const tailI = curve[curve.length - 1] ? curve[curve.length - 1].I : 0;
+          const yEnd = yMap(tailI);
+          ctx.lineTo(xMap(lamMax), yEnd);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function drawSpectrum() {
+        if (!graphSpectrum) return;
+        const parent = graphSpectrum.parentElement;
+        const w = Math.max(parent ? parent.clientWidth : 0, 200);
+        const h = Math.max(parent ? parent.clientHeight : 0, 260);
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        graphSpectrum.width = Math.round(w * dpr);
+        graphSpectrum.height = Math.round(h * dpr);
+        const ctx = graphSpectrum.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        const M = { l: 52, r: 14, t: 18, b: 36 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(15,23,42,0.65)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+
+        const t = TARGETS[metalKey];
+        const vKv = smooth.vKv;
+        const curScale = smooth.current / 5;
+
+        if (vKv < 1) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+          ctx.fillText("加速電圧 V を上げると電子が飛び、X線スペクトルが現れます", M.l + 12, h / 2);
+          return;
+        }
+
+        const lmin = lamMinNm(vKv);
+        let lamMax = graphLamMax(vKv, metalKey);
+        if (prevSnapshot) {
+          lamMax = Math.max(lamMax, graphLamMax(prevSnapshot.vKv, prevSnapshot.metal));
+        }
+        const curveNow = buildCombinedCurve(vKv, metalKey, curScale, lamMax);
+        let curvePrev = null;
+        let iMax = curveMax(curveNow, lmin) * 1.06;
+
+        if (prevSnapshot) {
+          const ps = prevSnapshot;
+          const prevScale = ps.current / 5;
+          curvePrev = buildCombinedCurve(ps.vKv, ps.metal, prevScale, lamMax);
+          iMax = Math.max(iMax, curveMax(curvePrev, lamMinNm(ps.vKv)) * 1.06);
+        }
+        iMax = Math.max(iMax, 0.08);
+
+        function xMap(lam) { return M.l + (lam / lamMax) * pw; }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.2)";
+        ctx.lineWidth = 1;
+        for (let g = 0; g <= 4; g++) {
+          const y = M.t + (ph * g) / 4;
+          ctx.beginPath(); ctx.moveTo(M.l, y); ctx.lineTo(M.l + pw, y); ctx.stroke();
+        }
+
+        if (curvePrev) {
+          const lminPrev = lamMinNm(prevSnapshot.vKv);
+          drawCurve(ctx, curvePrev, lminPrev, lamMax, M, pw, ph, iMax, "rgba(148,163,184,0.85)", 2, true);
+          if (isFinite(lminPrev) && prevSnapshot.vKv >= 1) {
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "10px Inter, sans-serif";
+            ctx.fillText("前λmin", xMap(lminPrev) + 2, M.t + ph - 4);
+          }
+        }
+
+        drawCurve(ctx, curveNow, lmin, lamMax, M, pw, ph, iMax, "#f8fafc", 2.5, false);
+
+        if (isFinite(lmin) && lmin < lamMax) {
+          const xMin = xMap(lmin);
+          ctx.strokeStyle = "rgba(244,114,182,0.55)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(xMin, M.t);
+          ctx.lineTo(xMin, M.t + ph);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.strokeStyle = "rgba(148,163,184,0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(M.l, M.t + ph);
+        ctx.lineTo(M.l + pw, M.t + ph);
+        ctx.moveTo(M.l, M.t);
+        ctx.lineTo(M.l, M.t + ph);
+        ctx.stroke();
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "11px Noto Sans JP, Inter, sans-serif";
+        ctx.fillText("波長 λ", M.l + pw - 36, M.t + ph + 22);
+        ctx.save();
+        ctx.translate(16, M.t + ph / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("X線の強さ", 0, 0);
+        ctx.restore();
+      }
+
+      function updateHUD() {
+        const vKv = smooth.vKv;
+        const t = TARGETS[metalKey];
+        const lmin = lamMinNm(vKv);
+        const Ee = electronEnergyKeV(vKv);
+        const curLabel = ["弱", "やや弱", "弱め", "やや中", "中", "やや強", "強め", "やや強+", "強", "最強"][Math.round(smooth.current) - 1] || "中";
+
+        document.getElementById("hudV").textContent = vKv.toFixed(0) + " kV";
+        document.getElementById("hudEe").textContent = Ee.toFixed(1) + " keV";
+        document.getElementById("hudLamMin").textContent = vKv >= 1 ? (lmin * 1000).toFixed(1) + " pm" : "—";
+        document.getElementById("hudKa").textContent = (t.Ka * 1000).toFixed(0) + " pm";
+        document.getElementById("hudKb").textContent = (t.Kb * 1000).toFixed(0) + " pm";
+        document.getElementById("hudCur").textContent = curLabel;
+        document.getElementById("hudInt").textContent = xrayIntensity.toFixed(1);
+
+        document.getElementById("valV").textContent = vKv.toFixed(0) + " kV";
+        document.getElementById("valV3d").textContent = vKv.toFixed(0) + " kV";
+        document.getElementById("valCur").textContent = curLabel;
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        const badge = document.getElementById("statusBadge");
+        if (vKv < 1) {
+          badge.textContent = "加速電圧 V を上げて電子を放出";
+          badge.className = "status-badge";
+        } else if (vKv < 8) {
+          badge.textContent = "加速電子 飛行中 · 電圧↑で高速化";
+          badge.className = "status-badge on";
+        } else if (charVisible(vKv)) {
+          badge.textContent = "加速電子＋連続X線＋固有X線 発生中";
+          badge.className = "status-badge on";
+        } else {
+          badge.textContent = "加速電子＋連続X線（電圧↑で固有X線）";
+          badge.className = "status-badge on";
+        }
+
+        document.getElementById("modeBadge").textContent =
+          "V=" + vKv.toFixed(0) + " kV · Ee=" + Ee.toFixed(1) + " keV\n" +
+          (vKv >= 1 ? "λmin=" + (lmin * 1000).toFixed(1) + " pm" : "λmin —") + "\n" +
+          t.name + " · Kα=" + (t.Ka * 1000).toFixed(0) + " pm";
+
+        let formulaHtml;
+        if (vKv < 1) {
+          formulaHtml = "E<sub>e</sub> = eV · λ<sub>min</sub> = hc/(eV)";
+        } else {
+          formulaHtml = "E<sub>e</sub>=" + Ee.toFixed(1) + " keV · λ<sub>min</sub>=" + (lmin * 1000).toFixed(1) + " pm · Kα=" + (t.Ka * 1000).toFixed(0) + " pm";
+        }
+        document.getElementById("formulaLive").innerHTML = formulaHtml;
+
+        let hintMsg;
+        if (vKv < 5) {
+          hintMsg = "加速電圧 V を上げてください。電子がターゲットに衝突すると<strong>連続X線（制動放射）</strong>が発生します。";
+        } else if (!charVisible(vKv)) {
+          hintMsg = "現在は<strong>連続X線のみ</strong>（白い曲線）。V を " + Math.ceil(t.kEdge) + " kV 以上にすると、白い曲線に <strong>Kα,Kβ の山</strong> が盛り上がります。";
+        } else {
+          hintMsg = prevSnapshot
+            ? "<strong>比較モード</strong>：白い実線の山＝固有X線 Kα,Kβ · 灰色破線＝変化前"
+            : "<strong>白い実線</strong>が教科書と同じ形です。なだらかな丘（連続X線）の上に、固有X線 Kβ→Kα の<strong>鋭い山</strong>が2つ立ちます。";
+        }
+        document.getElementById("hintText").innerHTML = hintMsg;
+
+        document.getElementById("step1").classList.toggle("active", vKv >= 5);
+        document.getElementById("step2").classList.toggle("active", hitCount > 0);
+        document.getElementById("step3").classList.toggle("active", vKv >= 10);
+        document.getElementById("step4").classList.toggle("active", charVisible(vKv));
+
+        document.getElementById("graphValI").textContent = prevSnapshot
+          ? "前 " + prevSnapshot.vKv.toFixed(0) + " kV → 現 " + vKv.toFixed(0) + " kV"
+          : "現在 " + vKv.toFixed(0) + " kV";
+        drawSpectrum();
+      }
+
+      function setVoltage(v) {
+        target.vKv = clamp(v, 0, 100);
+        document.getElementById("slV").value = target.vKv;
+        document.getElementById("slV3d").value = target.vKv;
+      }
+
+      function setMetal(key) {
+        metalKey = key;
+        document.querySelectorAll(".metal-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.metal === key);
+        });
+        if (targetPlate) targetPlate.material.color.setHex(TARGETS[key].color);
+      }
+
+      function resetSim() {
+        electrons.forEach((e) => { if (e) e.active = false; });
+        rays.forEach((r) => { if (r) r.active = false; });
+        charEvents.forEach((c) => { if (c) c.active = false; });
+        hitCount = 0;
+        xrayIntensity = 0;
+        target.vKv = 40; target.current = 5; target.speed = 1;
+        smooth.vKv = 40; smooth.current = 5; smooth.speed = 1;
+        setMetal("Cu");
+        clearSnapshot();
+        document.getElementById("slV").value = 40;
+        document.getElementById("slV3d").value = 40;
+        document.getElementById("slCur").value = 5;
+        document.getElementById("slSpeed").value = 10;
+      }
+
+      function bindControls() {
+        const onVInput = (v) => setVoltage(+v);
+        document.getElementById("slV").addEventListener("input", (e) => onVInput(e.target.value));
+        document.getElementById("slV3d").addEventListener("input", (e) => onVInput(e.target.value));
+        document.getElementById("slV").addEventListener("pointerdown", () => {
+          if (!prevSnapshot) takeSnapshot();
+        });
+        document.getElementById("slV3d").addEventListener("pointerdown", () => {
+          if (!prevSnapshot) takeSnapshot();
+        });
+        document.getElementById("slCur").addEventListener("input", (e) => { target.current = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.querySelectorAll(".metal-btn").forEach((b) => {
+          b.addEventListener("click", () => setMetal(b.dataset.metal));
+        });
+        document.getElementById("btnSnap").addEventListener("click", takeSnapshot);
+        document.getElementById("btnClearSnap").addEventListener("click", clearSnapshot);
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 50);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.65));
+        const key = new THREE.DirectionalLight(0xffffff, 1.15);
+        key.position.set(3, 4, 2);
+        scene.add(key);
+        const fill = new THREE.PointLight(0x93c5fd, 0.4, 8);
+        fill.position.set(-2, 1, 1);
+        scene.add(fill);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.85, 0.85);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, ZOOM_MIN, ZOOM_MAX);
+        }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        if (!paused) stepParticles(dt);
+        updateVisuals();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.035;
+        const d = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * d, Math.sin(rotX) * d + 0.1, Math.cos(rotY) * Math.cos(rotX) * d);
+        camera.lookAt(0.2, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        setMetal("Cu");
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

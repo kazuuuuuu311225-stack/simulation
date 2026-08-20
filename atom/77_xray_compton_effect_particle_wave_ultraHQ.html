@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 — コンプトン効果 · 光子運動量 p=hν/c 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1280px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(253,224,71,0.25), rgba(96,165,250,0.35));
+      border: 1px solid rgba(244,114,182,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbcfe8; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(96,165,250,0.12));
+      border: 1px solid rgba(244,114,182,0.32);
+    }
+    .formula-main { font-size: 0.9rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.25fr 0.75fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; display: flex; flex-direction: column; gap: 10px; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #181c28; border: 1px solid rgba(244,114,182,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.35); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(620px, 70dvh); min-height: 420px;
+      cursor: grab; touch-action: none; background: #181c28;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.72rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(253,224,71,0.75); color: #fef08a; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(125,211,252,0.65); color: #bae6fd; }
+    .status-badge.hit { border-color: rgba(253,224,71,0.85); color: #fef9c3; background: rgba(30,25,5,0.96); }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active { background: rgba(244,114,182,0.22); color: #fce7f3; }
+    .answer-btn {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 10px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(74,222,128,0.45); background: rgba(74,222,128,0.12); color: #86efac;
+    }
+    .answer-btn.active { background: rgba(74,222,128,0.28); color: #dcfce7; border-color: rgba(74,222,128,0.7); }
+    .answer-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .answer-label { width: 100%; font-size: 0.66rem; font-weight: 700; color: #86efac; margin-bottom: 2px; }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; flex: 1;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.18);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #cbd5e1; margin-bottom: 5px; }
+    .graph-wrap {
+      position: relative; width: 100%; border-radius: 8px; background: rgba(8,12,24,0.92);
+      border: 1px solid rgba(148,163,184,0.28); overflow: hidden;
+    }
+    .graph-wrap.spec { height: min(320px, 36dvh); min-height: 220px; }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #94a3b8; margin-top: 4px; text-align: right; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1000px) { .hud-grid { grid-template-columns: repeat(6, 1fr); } }
+    .hud-card {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #cbd5e1; }
+    .hud-card .num { font-size: 0.78rem; font-weight: 700; color: #fef08a; margin-top: 3px; text-shadow: 0 0 8px rgba(254,240,138,0.25); }
+    .hud-card.col-y .num { color: #fde047; }
+    .hud-card.col-b .num { color: #7dd3fc; }
+    .hud-card.col-w .num { color: #f8fafc; }
+    .hud-card.highlight .num { color: #86efac; }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #60a5fa; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fbcfe8; margin-bottom: 4px; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚡</div>
+      <p class="chapter-label">第27章 ⑦ — 原子の構造</p>
+      <h2>コンプトン効果 — 光子運動量 p = hν/c 3Dラボ</h2>
+      <p class="tagline">X線の粒子性 · 光子と電子の衝突 · 波長シフト Δλ</p>
+      <a id="back" href="../00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — コンプトン散乱の流れ</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 入射</strong>X線光子（波＋粒子）が電子へ</div>
+        <div class="journey-step" id="step2"><strong>Step 2 衝突</strong>運動量 p=hν/c を電子に伝える</div>
+        <div class="journey-step" id="step3"><strong>Step 3 散乱</strong>角度 θ で λ→λ' に変化</div>
+        <div class="journey-step" id="step4"><strong>Step 4 反跳</strong>電子が別方向へ飛び出す</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">λ' − λ = (h/mc)(1 − cosθ) ≒ 2.4×10⁻¹² m · p = hν/c</div>
+        <div class="formula-sub">入射光子 → 自由電子と衝突 → 散乱光子（λ'）＋反跳電子</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">コンプトン散乱 — 3D衝突ビュー</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#facc15;color:#facc15"></i>入射光子</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>散乱光子</span>
+              <span><i class="color-chip" style="background:#e0f2fe;color:#e0f2fe"></i>X線の波</span>
+              <span><i class="color-chip" style="background:#3b82f6;color:#3b82f6"></i>自由電子</span>
+              <span><i class="color-chip" style="background:#fef08a;color:#fef08a"></i>衝突発光</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">λ — · θ —</div>
+              <div class="status-badge" id="statusBadge">衝突待機</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graph-panel">
+            <div class="graph-title"><span>スペクトル I(λ) — 入射と散乱</span><span id="specVal">—</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#facc15;width:10px;height:10px;border-radius:50%"></i>入射 λ</span>
+              <span><i style="background:#38bdf8;width:10px;height:10px;border-radius:50%"></i>散乱 λ'</span>
+              <span>θ↑ → λ' が長波長側へ</span>
+            </div>
+            <div class="graph-wrap spec"><canvas id="graphSpec"></canvas></div>
+            <div class="graph-axis">横軸：波長 · 縦軸：X線の強さ · Δλ でピークが分離</div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム物理量</p>
+            <div class="formula-box" id="formulaLive">λ' − λ = (h/mc)(1 − cosθ)</div>
+            <div class="hud-grid">
+              <div class="hud-card col-y"><div class="lbl">波長 λ</div><div class="num" id="hudLam">—</div></div>
+              <div class="hud-card col-w"><div class="lbl">振動数 ν</div><div class="num" id="hudNu">—</div></div>
+              <div class="hud-card col-y"><div class="lbl">エネルギー E=hν</div><div class="num" id="hudE">—</div></div>
+              <div class="hud-card col-y"><div class="lbl">運動量 p=hν/c</div><div class="num" id="hudP">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">散乱角 θ</div><div class="num" id="hudTheta">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">散乱波長 λ'</div><div class="num" id="hudLamP">—</div></div>
+              <div class="hud-card highlight"><div class="lbl">Δλ = λ'−λ</div><div class="num" id="hudDelta">—</div></div>
+              <div class="hud-card"><div class="lbl">h/mc</div><div class="num" id="hudLambdaC">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">電子速度 v_e</div><div class="num" id="hudVe">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">電子運動量 p_e</div><div class="num" id="hudPe">—</div></div>
+              <div class="hud-card"><div class="lbl">光子数（強度）</div><div class="num" id="hudInt">—</div></div>
+              <div class="hud-card"><div class="lbl">1−cosθ</div><div class="num" id="hudCos">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>入射波長 λ <span class="slider-val" id="valLam">154 pm</span></label>
+              <input type="range" id="slLam" min="50" max="200" value="154" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>散乱角 θ <span class="slider-val" id="valTheta">90°</span></label>
+              <input type="range" id="slTheta" min="0" max="180" value="90" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>光子数（強度） <span class="slider-val" id="valInt">中</span></label>
+              <input type="range" id="slInt" min="1" max="10" value="6" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">0.4×</span></label>
+              <input type="range" id="slSpeed" min="1" max="12" value="4" step="1">
+            </div>
+          </div>
+          <div class="answer-row">
+            <span class="answer-label">● コンプトン効果の代表例（θ を自動設定）</span>
+            <button type="button" class="answer-btn" data-answer="90">● θ=90° 正解</button>
+            <button type="button" class="answer-btn" data-answer="180">● θ=180° 正解</button>
+            <button type="button" class="answer-btn" data-answer="45">● θ=45° 正解</button>
+          </div>
+          <div class="hint-box" id="hintText">X線光子が自由電子にぶつかると、散乱角 θ に応じて波長が長くなります。θ を大きくすると Δλ が増えます。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>X線は<strong>光子（粒子）</strong>— 運動量 p = hν/c = h/λ を持つ</li>
+        <li>自由電子と衝突すると<strong>コンプトン散乱</strong>が起こる</li>
+        <li><strong>λ' − λ = (h/mc)(1 − cosθ)</strong> — θ が大きいほど波長が長くなる</li>
+        <li><strong>h/mc ≒ 2.4×10⁻¹² m</strong>（コンプトン波長）がスケールを決める</li>
+        <li>波動（波）と粒子（光子）の<strong>二重性</strong>を同時に観察できる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const H = 6.62607015e-34;
+      const C = 299792458;
+      const ME = 9.1093837015e-31;
+      const E_CHARGE = 1.602176634e-19;
+      const LAMBDA_C = H / (ME * C);
+      const VIS_SMOOTH = 0.22;
+      const WAVE_ANIM = 0.7;
+      const INIT_ROT_X = 0.42, INIT_ROT_Y = 0.55, INIT_ZOOM = 10;
+      const COLLISION_X = 0;
+      const INCIDENT_START = -5.8;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphSpec = document.getElementById("graphSpec");
+
+      let paused = false, autoSpin = true, simTime = 0, cycleT = 0, timeScale = 0.4;
+      const target = { lam: 0.154, theta: 90, intensity: 6, speed: 0.4 };
+      const smooth = { lam: 0.154, theta: 90, intensity: 6, speed: 0.4 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let electronMesh, flashMesh, incidentGroup, scatteredGroup;
+      let incidentPhoton, scatteredPhoton, electronTrail;
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      function deg2rad(d) { return d * Math.PI / 180; }
+
+      function comptonDeltaLam(thetaDeg) {
+        return LAMBDA_C * (1 - Math.cos(deg2rad(thetaDeg)));
+      }
+
+      function lambdaPrimeNm(lamNm, thetaDeg) {
+        return lamNm + comptonDeltaLam(thetaDeg) * 1e9;
+      }
+
+      function photonEnergyEv(lamNm) {
+        return (H * C) / (lamNm * 1e-9) / E_CHARGE;
+      }
+
+      function photonMomentum(lamNm) {
+        return H / (lamNm * 1e-9);
+      }
+
+      function electronRecoil(lamNm, lamPrimeNm, thetaDeg) {
+        const p = photonMomentum(lamNm);
+        const pPrime = photonMomentum(lamPrimeNm);
+        const th = deg2rad(thetaDeg);
+        const px = p - pPrime * Math.cos(th);
+        const py = -pPrime * Math.sin(th);
+        const pe = Math.sqrt(px * px + py * py);
+        const ve = pe / ME;
+        const phi = Math.atan2(py, px);
+        return { pe, ve, phi, px, py };
+      }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.lam = lerp(smooth.lam, target.lam, k);
+        smooth.theta = lerp(smooth.theta, target.theta, k);
+        smooth.intensity = lerp(smooth.intensity, target.intensity, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+      }
+
+      function buildWaveRibbons(group, waveColor) {
+        for (let i = 0; i < 8; i++) {
+          const geo = new THREE.PlaneGeometry(0.38, 2.0);
+          const mat = new THREE.MeshBasicMaterial({
+            color: waveColor, transparent: true, opacity: 0.28,
+            side: THREE.DoubleSide, depthWrite: false,
+          });
+          const m = new THREE.Mesh(geo, mat);
+          m.userData.phase = i * 0.55;
+          group.add(m);
+        }
+      }
+
+      function buildPhotonMesh(color, glowColor) {
+        const g = new THREE.Group();
+        const core = new THREE.Mesh(
+          new THREE.SphereGeometry(0.16, 16, 16),
+          new THREE.MeshPhysicalMaterial({
+            color: color, emissive: color, emissiveIntensity: 2.2,
+            transparent: true, opacity: 1, roughness: 0.05,
+          })
+        );
+        g.add(core);
+        const glow = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 14, 14),
+          new THREE.MeshBasicMaterial({ color: glowColor || color, transparent: true, opacity: 0.42 })
+        );
+        g.add(glow);
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.2, 0.26, 24),
+          new THREE.MeshBasicMaterial({ color: glowColor || color, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+        );
+        g.add(ring);
+        return g;
+      }
+
+      function buildScene3D() {
+        const g = new THREE.Group();
+
+        electronMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 24, 24),
+          new THREE.MeshPhysicalMaterial({
+            color: 0x3b82f6, emissive: 0x60a5fa, emissiveIntensity: 1.6,
+            metalness: 0.15, roughness: 0.15, transparent: true, opacity: 1,
+          })
+        );
+        g.add(electronMesh);
+        const electronHalo = new THREE.Mesh(
+          new THREE.SphereGeometry(0.42, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 })
+        );
+        electronHalo.name = "electronHalo";
+        g.add(electronHalo);
+
+        flashMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.55, 20, 20),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0 })
+        );
+        g.add(flashMesh);
+
+        incidentGroup = new THREE.Group();
+        scatteredGroup = new THREE.Group();
+        incidentPhoton = buildPhotonMesh(0xfacc15, 0xfde047);
+        scatteredPhoton = buildPhotonMesh(0x38bdf8, 0x7dd3fc);
+        incidentGroup.add(incidentPhoton);
+        scatteredGroup.add(scatteredPhoton);
+        buildWaveRibbons(incidentGroup, 0xe0f2fe);
+        buildWaveRibbons(scatteredGroup, 0x7dd3fc);
+        g.add(incidentGroup);
+        g.add(scatteredGroup);
+
+        const thetaArc = new THREE.ArcCurve(0, 0, 1.8, 0, Math.PI / 2, false);
+        const arcPts = thetaArc.getPoints(32);
+        const arcGeo = new THREE.BufferGeometry().setFromPoints(
+          arcPts.map((p) => new THREE.Vector3(p.x, p.y, 0))
+        );
+        const arcLine = new THREE.Line(
+          arcGeo,
+          new THREE.LineBasicMaterial({ color: 0xf9a8d4, transparent: true, opacity: 0.92 })
+        );
+        arcLine.name = "thetaArc";
+        g.add(arcLine);
+
+        const incArrow = new THREE.ArrowHelper(
+          new THREE.Vector3(1, 0, 0), new THREE.Vector3(-2.2, 0, 0), 1.8, 0xfacc15, 0.28, 0.16
+        );
+        incArrow.name = "incArrow";
+        g.add(incArrow);
+
+        const scatArrow = new THREE.ArrowHelper(
+          new THREE.Vector3(0, 1, 0), new THREE.Vector3(0.2, 0.2, 0), 1.6, 0x38bdf8, 0.26, 0.15
+        );
+        scatArrow.name = "scatArrow";
+        g.add(scatArrow);
+
+        const eArrow = new THREE.ArrowHelper(
+          new THREE.Vector3(-1, -0.3, 0).normalize(), new THREE.Vector3(0.15, -0.1, 0), 1.2, 0x60a5fa, 0.22, 0.13
+        );
+        eArrow.name = "eArrow";
+        g.add(eArrow);
+
+        const grid = new THREE.GridHelper(12, 24, 0x475569, 0x334155);
+        grid.position.y = -1.5;
+        g.add(grid);
+
+        worldGroup.add(g);
+      }
+
+      function updateWaves(group, dir, lamScale, t) {
+        const ws = lamScale * 1.6;
+        group.children.forEach((m) => {
+          if (!m.userData.phase && m.userData.phase !== 0) return;
+          const phase = m.userData.phase + t * WAVE_ANIM * timeScale;
+          const offset = (phase % 1) * ws;
+          const pos = dir.clone().multiplyScalar(offset - ws * 0.5);
+          m.position.copy(pos);
+          m.lookAt(pos.clone().add(dir));
+          m.material.opacity = 0.2 + (smooth.intensity / 10) * 0.18;
+        });
+      }
+
+      function getAnimState() {
+        const cycle = (cycleT * timeScale * 0.35) % 1;
+        const approach = clamp(cycle / 0.38, 0, 1);
+        const hit = cycle > 0.36 && cycle < 0.48;
+        const scatter = clamp((cycle - 0.42) / 0.5, 0, 1);
+        return { cycle, approach, hit, scatter };
+      }
+
+      function updateCollisionAnim() {
+        const lam = smooth.lam;
+        const lamP = lambdaPrimeNm(lam, smooth.theta);
+        const theta = deg2rad(smooth.theta);
+        const recoil = electronRecoil(lam, lamP, smooth.theta);
+        const { approach, hit, scatter } = getAnimState();
+
+        const incDir = new THREE.Vector3(1, 0, 0);
+        const scatDir = new THREE.Vector3(Math.cos(theta), Math.sin(theta), 0).normalize();
+        const eDir = new THREE.Vector3(Math.cos(recoil.phi), Math.sin(recoil.phi), 0).normalize();
+
+        const incX = lerp(INCIDENT_START, COLLISION_X - 0.35, approach);
+        incidentGroup.position.set(incX, 0, 0);
+        incidentGroup.visible = scatter < 0.98;
+        incidentPhoton.visible = true;
+        updateWaves(incidentGroup, incDir, lam * 14, simTime);
+
+        const scatDist = scatter * 4.5;
+        scatteredGroup.position.set(
+          COLLISION_X + scatDir.x * scatDist,
+          scatDir.y * scatDist,
+          0
+        );
+        scatteredGroup.visible = scatter > 0.02;
+        scatteredPhoton.rotation.set(0, 0, 0);
+        updateWaves(scatteredGroup, scatDir, lamP * 14, simTime);
+
+        const eDist = scatter * Math.min(recoil.ve * 1.2e-6, 2.8);
+        electronMesh.position.set(
+          eDir.x * eDist,
+          eDir.y * eDist - 0.05 * (1 - scatter),
+          0
+        );
+        const eGlow = 1.4 + scatter * 1.0;
+        electronMesh.material.emissiveIntensity = eGlow;
+        electronMesh.scale.setScalar(1 + scatter * 0.15);
+        const halo = worldGroup.getObjectByName("electronHalo");
+        if (halo) {
+          halo.position.copy(electronMesh.position);
+          halo.material.opacity = 0.18 + scatter * 0.25;
+          halo.scale.setScalar(1 + scatter * 0.2);
+        }
+
+        flashMesh.position.set(0, 0, 0);
+        flashMesh.material.opacity = hit ? 0.9 : Math.max(0, 0.35 - scatter * 0.3);
+        flashMesh.scale.setScalar(hit ? 1.6 : 0.6 + scatter * 0.3);
+
+        const arc = worldGroup.getObjectByName("thetaArc");
+        if (arc) {
+          arc.rotation.z = 0;
+          arc.scale.setScalar(0.9 + smooth.theta / 180);
+          arc.material.opacity = 0.55 + scatter * 0.35;
+        }
+        const incArrow = worldGroup.getObjectByName("incArrow");
+        if (incArrow) incArrow.setDirection(incDir);
+        const scatArrow = worldGroup.getObjectByName("scatArrow");
+        if (scatArrow) {
+          scatArrow.setDirection(scatDir);
+          scatArrow.position.set(0.15, 0.1, 0);
+          scatArrow.visible = scatter > 0.05;
+        }
+        const eArrow = worldGroup.getObjectByName("eArrow");
+        if (eArrow) {
+          eArrow.setDirection(eDir);
+          eArrow.position.copy(electronMesh.position);
+          eArrow.visible = scatter > 0.12;
+        }
+      }
+
+      function drawSpectrum() {
+        if (!graphSpec) return;
+        const parent = graphSpec.parentElement;
+        const w = Math.max(parent.clientWidth, 200), h = Math.max(parent.clientHeight, 200);
+        const dpr = Math.min(devicePixelRatio, 2);
+        graphSpec.width = Math.round(w * dpr);
+        graphSpec.height = Math.round(h * dpr);
+        const ctx = graphSpec.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const lam = smooth.lam;
+        const lamP = lambdaPrimeNm(lam, smooth.theta);
+        const delta = lamP - lam;
+        const inten = smooth.intensity / 10;
+
+        const M = { l: 48, r: 12, t: 16, b: 32 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(8,14,32,0.95)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.strokeRect(M.l, M.t, pw, ph);
+
+        const pad = Math.max(delta * 8, 0.008);
+        const xMin = lam - pad;
+        const xMax = lamP + pad;
+        const xMap = (x) => M.l + ((x - xMin) / (xMax - xMin)) * pw;
+        const yBase = M.t + ph;
+
+        function drawPeak(cxNm, color, label, amp, labelColor) {
+          const cx = xMap(cxNm);
+          const sigma = Math.max(pw * 0.018, 4);
+          const grd = ctx.createLinearGradient(cx - sigma * 3, 0, cx + sigma * 3, 0);
+          grd.addColorStop(0, "rgba(0,0,0,0)");
+          grd.addColorStop(0.3, color.replace("0.95)", "0.45)"));
+          grd.addColorStop(0.5, color);
+          grd.addColorStop(0.7, color.replace("0.95)", "0.45)"));
+          grd.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.moveTo(cx - sigma * 3, yBase);
+          for (let i = -3; i <= 3; i += 0.2) {
+            const x = cx + i * sigma;
+            const g = Math.exp(-0.5 * Math.pow(i, 2));
+            ctx.lineTo(x, yBase - g * ph * 0.72 * amp * inten);
+          }
+          ctx.lineTo(cx + sigma * 3, yBase);
+          ctx.closePath();
+          ctx.fill();
+          ctx.font = "bold 11px Inter, sans-serif";
+          ctx.strokeStyle = "rgba(0,0,0,0.75)";
+          ctx.lineWidth = 3;
+          ctx.strokeText(label, cx - 10, M.t + 14);
+          ctx.fillStyle = labelColor;
+          ctx.fillText(label, cx - 10, M.t + 14);
+        }
+
+        drawPeak(lam, "rgba(250,204,21,0.95)", "λ 入射", 1, "#fef08a");
+        drawPeak(lamP, "rgba(56,189,248,0.95)", "λ' 散乱", 0.88, "#7dd3fc");
+
+        if (delta > 0.0001) {
+          const x1 = xMap(lam), x2 = xMap(lamP);
+          ctx.strokeStyle = "rgba(244,114,182,0.85)";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 3]);
+          ctx.beginPath();
+          ctx.moveTo(x1, yBase - 10);
+          ctx.lineTo(x2, yBase - 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.font = "bold 10px Inter, sans-serif";
+          ctx.strokeStyle = "rgba(0,0,0,0.7)";
+          ctx.lineWidth = 3;
+          ctx.strokeText("Δλ", (x1 + x2) / 2 - 8, yBase - 14);
+          ctx.fillStyle = "#fbcfe8";
+          ctx.fillText("Δλ", (x1 + x2) / 2 - 8, yBase - 14);
+        }
+
+        ctx.strokeStyle = "rgba(203,213,225,0.55)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(M.l, yBase);
+        ctx.lineTo(M.l + pw, yBase);
+        ctx.stroke();
+
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "10px Noto Sans JP, sans-serif";
+        ctx.fillText("波長 λ (pm)", M.l + pw - 52, h - 8);
+        ctx.save();
+        ctx.translate(14, M.t + ph / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("X線の強さ", 0, 0);
+        ctx.restore();
+      }
+
+      function updateHUD() {
+        const lam = smooth.lam;
+        const theta = smooth.theta;
+        const lamP = lambdaPrimeNm(lam, theta);
+        const deltaM = comptonDeltaLam(theta);
+        const deltaPm = deltaM * 1e12;
+        const nu = C / (lam * 1e-9);
+        const Eev = photonEnergyEv(lam);
+        const p = photonMomentum(lam);
+        const recoil = electronRecoil(lam, lamP, theta);
+        const cosFac = 1 - Math.cos(deg2rad(theta));
+        const { hit, scatter } = getAnimState();
+
+        document.getElementById("hudLam").textContent = (lam * 1000).toFixed(0) + " pm";
+        document.getElementById("hudNu").textContent = (nu / 1e18).toFixed(2) + "×10¹⁸ Hz";
+        document.getElementById("hudE").textContent = Eev.toFixed(0) + " eV";
+        document.getElementById("hudP").textContent = (p * 1e24).toFixed(2) + "×10⁻²⁴ kg·m/s";
+        document.getElementById("hudTheta").textContent = theta.toFixed(0) + "°";
+        document.getElementById("hudLamP").textContent = (lamP * 1000).toFixed(3) + " pm";
+        document.getElementById("hudDelta").textContent = deltaPm.toFixed(3) + " pm";
+        document.getElementById("hudLambdaC").textContent = "2.43×10⁻¹² m";
+        document.getElementById("hudVe").textContent = (recoil.ve / 1000).toFixed(1) + " km/s";
+        document.getElementById("hudPe").textContent = (recoil.pe * 1e24).toFixed(2) + "×10⁻²⁴ kg·m/s";
+        document.getElementById("hudCos").textContent = cosFac.toFixed(4);
+        document.getElementById("hudInt").textContent =
+          ["弱", "やや弱", "弱め", "やや中", "中", "やや強", "強め", "やや強+", "強", "最強"][Math.round(smooth.intensity) - 1] || "中";
+
+        document.getElementById("valLam").textContent = (lam * 1000).toFixed(0) + " pm";
+        document.getElementById("valTheta").textContent = theta.toFixed(0) + "°";
+        document.getElementById("valInt").textContent = document.getElementById("hudInt").textContent;
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("formulaLive").innerHTML =
+          "λ'−λ = " + deltaPm.toFixed(3) + " pm = (h/mc)×(1−cos" + theta.toFixed(0) + "°) = " +
+          (2.43 * cosFac).toFixed(3) + " pm";
+
+        const badge = document.getElementById("statusBadge");
+        if (hit) {
+          badge.textContent = "衝突！エネルギー交換中";
+          badge.className = "status-badge hit";
+        } else if (scatter > 0.1) {
+          badge.textContent = "散乱光子 λ' · 反跳電子";
+          badge.className = "status-badge on";
+        } else {
+          badge.textContent = "入射光子が電子へ接近中";
+          badge.className = "status-badge";
+        }
+
+        document.getElementById("modeBadge").textContent =
+          "λ=" + (lam * 1000).toFixed(0) + " pm · θ=" + theta.toFixed(0) + "°\n" +
+          "λ'=" + (lamP * 1000).toFixed(2) + " pm · Δλ=" + deltaPm.toFixed(2) + " pm";
+
+        document.getElementById("specVal").textContent = "Δλ=" + deltaPm.toFixed(2) + " pm";
+
+        document.getElementById("step1").classList.toggle("active", scatter < 0.2);
+        document.getElementById("step2").classList.toggle("active", hit);
+        document.getElementById("step3").classList.toggle("active", scatter > 0.15);
+        document.getElementById("step4").classList.toggle("active", scatter > 0.5);
+
+        drawSpectrum();
+      }
+
+      function applyAnswerTheta(deg) {
+        target.theta = deg;
+        document.getElementById("slTheta").value = deg;
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.classList.toggle("active", +b.dataset.answer === deg);
+        });
+        const deltaPm = comptonDeltaLam(deg) * 1e12;
+        document.getElementById("hintText").innerHTML =
+          "<strong>θ=" + deg + "° 正解</strong> — 1−cosθ=" + (1 - Math.cos(deg2rad(deg))).toFixed(3) +
+          " · Δλ=" + deltaPm.toFixed(3) + " pm · λ' が入射より長波長側へシフト";
+      }
+
+      function resetSim() {
+        simTime = 0; cycleT = 0;
+        target.lam = 0.154; target.theta = 90; target.intensity = 6; target.speed = 0.4;
+        smooth.lam = 0.154; smooth.theta = 90; smooth.intensity = 6; smooth.speed = 0.4;
+        document.getElementById("slLam").value = 154;
+        document.getElementById("slTheta").value = 90;
+        document.getElementById("slInt").value = 6;
+        document.getElementById("slSpeed").value = 4;
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+      }
+
+      function bindControls() {
+        document.getElementById("slLam").addEventListener("input", (e) => {
+          target.lam = +e.target.value / 1000;
+          document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        });
+        document.getElementById("slTheta").addEventListener("input", (e) => {
+          target.theta = +e.target.value;
+          document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        });
+        document.getElementById("slInt").addEventListener("input", (e) => { target.intensity = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.addEventListener("click", () => applyAnswerTheta(+b.dataset.answer));
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x181c28);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x607090, 0.65));
+        const key = new THREE.DirectionalLight(0xffffff, 1.25);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xfacc15, 0.65, 20);
+        rim.position.set(-4, 2, 2);
+        scene.add(rim);
+        const fill = new THREE.PointLight(0x38bdf8, 0.45, 18);
+        fill.position.set(3, -1, 2);
+        scene.add(fill);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.006, 6, 18);
+        }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        if (!paused) {
+          simTime += dt * timeScale;
+          cycleT += dt;
+        }
+        updateCollisionAnim();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.025;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 1.0,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>2物体の万有引力 — 粒子モデル · 10章</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --accent: #60a5fa;
+      --accent-light: #93c5fd;
+      --panel: rgba(12, 18, 32, 0.82);
+      --border: rgba(96, 165, 250, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #050810 0%, #0a1220 40%, #0f172a 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell {
+      width: min(960px, 96vw);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(239, 68, 68, 0.35));
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      font-size: 1.3rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    #back {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 9px 16px;
+      color: #dbeafe;
+      background: rgba(59, 130, 246, 0.14);
+      border: 1px solid rgba(96, 165, 250, 0.38);
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 14px;
+      padding: 16px 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+    }
+    section.panel h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: var(--accent-light);
+    }
+    section.panel p, section.panel li {
+      font-size: 0.88rem;
+      line-height: 1.75;
+      color: #cbd5e1;
+    }
+    section.panel ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .formula-box {
+      margin: 10px 0 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #bfdbfe;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+    .canvas-wrap {
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 10px;
+      background: radial-gradient(ellipse at center, #0c1830 0%, #060a14 70%);
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      box-shadow: inset 0 0 48px rgba(0, 0, 0, 0.55);
+    }
+    .canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: min(360px, 46dvh);
+      min-height: 260px;
+    }
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .legend-row span { font-weight: 600; }
+    .legend-m1 { color: #60a5fa; }
+    .legend-m2 { color: #f87171; }
+    .param-grid {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    @media (min-width: 640px) {
+      .param-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    label {
+      display: block;
+      font-size: 0.86rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-val {
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .slider-val.m1 { color: #93c5fd; }
+    .slider-val.m2 { color: #fca5a5; }
+    .slider-val.r { color: #fde68a; }
+    .readout-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+    @media (min-width: 640px) {
+      .readout-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    .readout {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+    .readout .lbl {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .readout .val {
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .readout .val.f-val {
+      transition: color 0.2s;
+      text-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+    }
+    .insight-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(96, 165, 250, 0.25);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: #bfdbfe;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">🪐</div>
+      <h2>10章 2物体の万有引力 — 粒子モデル</h2>
+      <p class="chapter-label">質量 · 距離 · 力の向きと大きさ</p>
+      <a id="back" href="../00_folder_classical.html#chapter-10">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>1. 万有引力とは</h3>
+      <p>
+        2つの質量 <strong>m₁</strong> と <strong>m₂</strong> が距離 <strong>r</strong> だけ離れているとき、
+        互いに<strong>引き合う力</strong>（万有引力）が働きます。
+      </p>
+      <ul>
+        <li>質量が大きいほど、力は強くなる（m₁ m₂ に比例）</li>
+        <li>距離が遠いほど、力は弱くなる（1/r² に反比例）</li>
+        <li>力の向きは常に<strong>2物体を結ぶ方向</strong>（ここでは m₁ → m₂、m₂ → m₁）</li>
+      </ul>
+      <p class="formula-box">F = G m₁ m₂ / r²</p>
+    </section>
+
+    <section class="panel">
+      <h3>2. 粒子モデル — 質量で大きさが変わる</h3>
+      <p>2つの粒子（丸）の質量と距離を変え、万有引力の大きさと向きを矢印で確認します。</p>
+
+      <div class="canvas-wrap"><canvas id="gravCanvas"></canvas></div>
+
+      <div class="legend-row">
+        <span class="legend-m1">● m₁（青）</span>
+        <span class="legend-m2">● m₂（赤）</span>
+        <span>⇄ つながり = 万有引力（近い=太い・明るい · 遠い=細い・薄い）</span>
+      </div>
+
+      <div class="param-grid">
+        <div>
+          <label for="m1Slider">質量 m₁</label>
+          <input type="range" id="m1Slider" min="1" max="100" step="1" value="50">
+          <div class="slider-val m1" id="m1Val">m₁ = 50</div>
+        </div>
+        <div>
+          <label for="m2Slider">質量 m₂</label>
+          <input type="range" id="m2Slider" min="1" max="100" step="1" value="50">
+          <div class="slider-val m2" id="m2Val">m₂ = 50</div>
+        </div>
+        <div>
+          <label for="rSlider">距離 r [px]</label>
+          <input type="range" id="rSlider" min="50" max="400" step="1" value="200">
+          <div class="slider-val r" id="rVal">r = 200 px</div>
+        </div>
+      </div>
+
+      <div class="readout-grid">
+        <div class="readout">
+          <span class="lbl">m₁</span>
+          <span class="val" id="readM1" style="color:#93c5fd">50</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">m₂</span>
+          <span class="val" id="readM2" style="color:#fca5a5">50</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">距離 r</span>
+          <span class="val" id="readR">200 px</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">万有引力 F</span>
+          <span class="val f-val" id="readF">—</span>
+        </div>
+      </div>
+
+      <div class="insight-box" id="insightBox">
+        m₁ と m₂ を大きくするほど F が増え、r を大きくすると F は急速に小さくなります（1/r²）。
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var canvas = document.getElementById("gravCanvas");
+      var ctx = canvas.getContext("2d");
+      var m1Slider = document.getElementById("m1Slider");
+      var m2Slider = document.getElementById("m2Slider");
+      var rSlider = document.getElementById("rSlider");
+      var m1Val = document.getElementById("m1Val");
+      var m2Val = document.getElementById("m2Val");
+      var rVal = document.getElementById("rVal");
+      var readM1 = document.getElementById("readM1");
+      var readM2 = document.getElementById("readM2");
+      var readR = document.getElementById("readR");
+      var readF = document.getElementById("readF");
+      var insightBox = document.getElementById("insightBox");
+
+      // 見える化用の万有引力定数（0.005〜0.01 の範囲）
+      var G_VISUAL = 0.008;
+      var BASE_SIZE = 10;
+      var SIZE_FACTOR = 0.3;
+      var pulsePhase = 0;
+      var animId = 0;
+
+      var m1 = 50;
+      var m2 = 50;
+      var r = 200;
+      var cw = 0;
+      var ch = 0;
+
+      function particleRadius(mass) {
+        return BASE_SIZE + mass * SIZE_FACTOR;
+      }
+
+      function calcForce(m1, m2, rPx) {
+        var rSafe = Math.max(rPx, 1);
+        return G_VISUAL * m1 * m2 / (rSafe * rSafe);
+      }
+
+      function forceRatio(F) {
+        var Fmax = G_VISUAL * m1 * m2 / (50 * 50);
+        return Math.min(1, Math.max(0, F / Fmax));
+      }
+
+      // 力の大きさ → 矢印の色（青=弱 · 黄=中 · 赤=強）
+      function forceColor(F) {
+        var t = Math.sqrt(forceRatio(F));
+        var red = Math.round(255 * Math.min(1, t * 2));
+        var green = Math.round(255 * (t < 0.5 ? t * 2 : 2 - t * 2));
+        var blue = Math.round(255 * (1 - t));
+        return "rgb(" + red + ", " + green + ", " + blue + ")";
+      }
+
+      // 距離 r が大きいほど矢印・つながりは短く細く（1/r² を強調）
+      function arrowLength(F, gapPx) {
+        var t = forceRatio(F);
+        var maxLen = Math.max(8, Math.min(100, gapPx * 0.42));
+        return Math.max(3, maxLen * Math.pow(t, 0.85));
+      }
+
+      function rgbaFromRgb(rgb, alpha) {
+        var m = rgb.match(/\d+/g);
+        if (!m) return "rgba(255,255,255," + alpha + ")";
+        return "rgba(" + m[0] + "," + m[1] + "," + m[2] + "," + alpha + ")";
+      }
+
+      // 2粒子間の「力のつながり」— 距離が近いほど太く明るく
+      function drawForceBridge(x1, x2, cy, r1, r2, F, col, t) {
+        var left = x1 + r1 + 2;
+        var right = x2 - r2 - 2;
+        var gap = right - left;
+        if (gap < 4) return { gap: gap, left: left, right: right };
+
+        var pulse = 0.85 + 0.15 * Math.sin(pulsePhase);
+        var alpha = (0.08 + t * 0.72) * pulse;
+        var bandH = 6 + t * 34;
+
+        var grad = ctx.createLinearGradient(left, cy, right, cy);
+        grad.addColorStop(0, rgbaFromRgb("rgb(147, 197, 253)", alpha * 0.7));
+        grad.addColorStop(0.5, rgbaFromRgb(col, alpha));
+        grad.addColorStop(1, rgbaFromRgb("rgb(252, 165, 165)", alpha * 0.7));
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse((left + right) * 0.5, cy, gap * 0.5, bandH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // 距離に沿った力の流れ（近い=矢印が長く届く / 遠い=短い）
+        var flowLen = arrowLength(F, gap);
+        var mid = (left + right) * 0.5;
+        var lineW = 1.5 + t * 5;
+
+        ctx.setLineDash(t < 0.2 ? [5, 7] : []);
+        ctx.strokeStyle = rgbaFromRgb(col, 0.25 + t * 0.55);
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        ctx.moveTo(left, cy);
+        ctx.lineTo(right, cy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 中央の双方向引っ張り矢印（⇄ 力が働いている様子）
+        drawArrow(mid - flowLen * 0.5, cy, mid - 4, cy, col, lineW);
+        drawArrow(mid + flowLen * 0.5, cy, mid + 4, cy, col, lineW);
+
+        ctx.restore();
+        return { gap: gap, left: left, right: right };
+      }
+
+      // 距離 r の目盛り＋その位置での力の強さバー
+      function drawDistanceForceBar(cx, y, rPx, F, col, t) {
+        var barW = Math.min(cw * 0.72, 420);
+        var x0 = cx - barW * 0.5;
+        var x1 = cx + barW * 0.5;
+
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x1, y);
+        ctx.stroke();
+
+        // r の現在位置（50〜400 をバー上にマッピング）
+        var rNorm = (rPx - 50) / 350;
+        var markerX = x0 + rNorm * barW;
+
+        ctx.fillStyle = "rgba(148, 163, 184, 0.5)";
+        ctx.font = "600 10px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("50", x0, y + 14);
+        ctx.fillText("400", x1, y + 14);
+
+        // 力の強さバー（r が小さいほど長い）
+        var forceBarW = barW * (0.08 + t * 0.92);
+        ctx.fillStyle = rgbaFromRgb(col, 0.35 + t * 0.45);
+        ctx.fillRect(x0, y - 10, forceBarW, 8);
+
+        ctx.beginPath();
+        ctx.arc(markerX, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = col;
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "600 11px Inter, sans-serif";
+        ctx.fillText("r = " + rPx + " px", markerX, y - 16);
+        ctx.fillStyle = col;
+        ctx.fillText("F ∝ 1/r²  →  " + (t > 0.65 ? "強い" : t > 0.25 ? "中程度" : "弱い"), cx, y + 28);
+      }
+
+      // 矢印を (x1,y1) から (x2,y2) 方向に描画
+      function drawArrow(x1, y1, x2, y2, color, lineW) {
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        var len = Math.hypot(dx, dy) || 1;
+        var ux = dx / len;
+        var uy = dy / len;
+        var head = 10;
+
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = lineW || 3;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        var hx = x2 - ux * head;
+        var hy = y2 - uy * head;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(hx - uy * head * 0.55, hy + ux * head * 0.55);
+        ctx.lineTo(hx + uy * head * 0.55, hy - ux * head * 0.55);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+      }
+
+      function drawParticle(x, y, radius, fill, stroke) {
+        var grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+        grad.addColorStop(0, fill);
+        grad.addColorStop(1, stroke);
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      function fitCanvas() {
+        var dpr = window.devicePixelRatio || 1;
+        var rect = canvas.getBoundingClientRect();
+        cw = rect.width || canvas.clientWidth || 600;
+        ch = rect.height || canvas.clientHeight || 280;
+        canvas.width = Math.floor(cw * dpr);
+        canvas.height = Math.floor(ch * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function render() {
+        var r1 = particleRadius(m1);
+        var r2 = particleRadius(m2);
+        var cy = ch * 0.42;
+        var cx = cw * 0.5;
+
+        // 中心間距離 r で左右に配置（スライダー r と画面上の距離が一致）
+        var x1 = cx - r * 0.5;
+        var x2 = cx + r * 0.5;
+
+        var F = calcForce(m1, m2, r);
+        var col = forceColor(F);
+        var t = forceRatio(F);
+        var gapSurf = Math.max(0, x2 - x1 - r1 - r2);
+        var alen = arrowLength(F, Math.max(gapSurf, r * 0.5));
+
+        ctx.clearRect(0, 0, cw, ch);
+
+        // 粒子 m₁（青系）・ m₂（赤系）
+        drawParticle(x1, cy, r1, "#93c5fd", "#2563eb");
+        drawParticle(x2, cy, r2, "#fca5a5", "#dc2626");
+
+        // 2粒子間の力のつながり（距離が近いほど目立つ）
+        var bridge = drawForceBridge(x1, x2, cy, r1, r2, F, col, t);
+
+        ctx.fillStyle = "#93c5fd";
+        ctx.font = "700 13px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("m₁=" + m1, x1, cy - r1 - 10);
+        ctx.fillStyle = "#fca5a5";
+        ctx.fillText("m₂=" + m2, x2, cy - r2 - 10);
+
+        // 各粒子から相手へ引く力（矢印の長さ ∝ F、最大は隙間の40%程度）
+        var dir1x = (x2 - x1) / r;
+        var dir2x = (x1 - x2) / r;
+        var start1x = x1 + dir1x * (r1 + 6);
+        var start2x = x2 + dir2x * (r2 + 6);
+        var lineW = 2 + t * 4;
+
+        drawArrow(start1x, cy, start1x + dir1x * alen, cy, col, lineW);
+        drawArrow(start2x, cy, start2x + dir2x * alen, cy, col, lineW);
+
+        // 粒子縁の「引っ張られている」強調（近いほど強い輪郭）
+        if (t > 0.08) {
+          ctx.save();
+          ctx.strokeStyle = rgbaFromRgb(col, 0.2 + t * 0.5);
+          ctx.lineWidth = 2 + t * 6;
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 6 + t * 22;
+          ctx.beginPath();
+          ctx.arc(x1, cy, r1 + 2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x2, cy, r2 + 2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 中央に F のラベル
+        ctx.fillStyle = col;
+        ctx.font = "700 14px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.shadowColor = col;
+        ctx.shadowBlur = t > 0.3 ? 12 : 0;
+        ctx.fillText("F = " + F.toFixed(4), cx, cy - Math.max(r1, r2) - 24);
+        ctx.shadowBlur = 0;
+
+        // 距離 r と力の強さの対応バー
+        drawDistanceForceBar(cx, cy + Math.max(r1, r2) + 52, r, F, col, t);
+
+        updateReadouts(F, col, t);
+      }
+
+      function updateReadouts(F, col, t) {
+        m1Val.textContent = "m₁ = " + m1;
+        m2Val.textContent = "m₂ = " + m2;
+        rVal.textContent = "r = " + r + " px";
+        readM1.textContent = String(m1);
+        readM2.textContent = String(m2);
+        readR.textContent = r + " px";
+        readF.textContent = F.toFixed(4);
+        readF.style.color = col;
+
+        var fIfHalf = calcForce(m1, m2, Math.max(50, r * 0.5));
+        if (t > 0.55) {
+          insightBox.innerHTML =
+            "距離 r = <strong>" + r + " px</strong>（近い）— つながりが<strong>太く明るく脈打つ</strong>。r を2倍にすると F は約 <strong>1/4</strong>。";
+        } else if (t > 0.2) {
+          insightBox.innerHTML =
+            "距離 r = <strong>" + r + " px</strong> — 中程度の引力。r を半分（" + Math.max(50, Math.round(r * 0.5)) + " px）にすると F ≈ <strong>" + fIfHalf.toFixed(4) + "</strong>（約 " + (fIfHalf / F).toFixed(1) + " 倍）。";
+        } else {
+          insightBox.innerHTML =
+            "距離 r = <strong>" + r + " px</strong>（遠い）— つながりは<strong>細く点線</strong>で弱い。r を半分にすると F は約 <strong>" + (fIfHalf / F).toFixed(1) + " 倍</strong> になります。";
+        }
+      }
+
+      function onInput() {
+        m1 = parseInt(m1Slider.value, 10);
+        m2 = parseInt(m2Slider.value, 10);
+        r = parseInt(rSlider.value, 10);
+      }
+
+      function tick(ts) {
+        pulsePhase += 0.06;
+        render();
+        animId = requestAnimationFrame(tick);
+      }
+
+      m1Slider.addEventListener("input", onInput);
+      m2Slider.addEventListener("input", onInput);
+      rSlider.addEventListener("input", onInput);
+      window.addEventListener("resize", function () {
+        fitCanvas();
+      });
+
+      fitCanvas();
+      onInput();
+      animId = requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>

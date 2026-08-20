@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 素粒子・反粒子・4つの力 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f0720 45%, #1a0a2e 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(167,139,250,0.35), rgba(192,132,252,0.35));
+      border: 1px solid rgba(167,139,250,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c4b5fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #a78bfa; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ede9fe; background: rgba(167,139,250,0.14);
+      border: 1px solid rgba(167,139,250,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(167, 139, 250, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(167,139,250,0.1));
+      border: 1px solid rgba(167,139,250,0.32);
+    }
+    .formula-main { font-size: 0.84rem; font-weight: 800; color: #ede9fe; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 1000px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(167,139,250,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #ede9fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(480px, 52dvh); min-height: 360px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { position: absolute; top: 0; left: 0; z-index: 0; display: block; width: 100% !important; height: 100% !important; }
+    /* 説明はキャンバスの外（下）に集約 — 3Dを隠さない */
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,10,10,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .explain-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; }
+    .mode-badge-inline {
+      display: inline-block; padding: 5px 10px; border-radius: 8px;
+      background: rgba(76,29,149,0.35); border: 1px solid rgba(167,139,250,0.55);
+      color: #ede9fe; font-size: 0.68rem; font-weight: 800; line-height: 1.4; white-space: pre-line;
+    }
+    #eventFlash {
+      flex: 1; min-width: 120px; padding: 5px 12px; border-radius: 8px; text-align: center;
+      font-size: 0.78rem; font-weight: 800; color: #fde047;
+      background: rgba(120,53,15,0.25); border: 1px solid rgba(253,224,71,0.45);
+      opacity: 0; transform: translateY(4px); transition: opacity 0.25s, transform 0.25s;
+    }
+    #eventFlash.show { opacity: 1; transform: translateY(0); }
+    #eventFlash.em { color: #93c5fd; border-color: rgba(59,130,246,0.55); background: rgba(30,58,138,0.25); }
+    #eventFlash.strong { color: #fca5a5; border-color: rgba(248,113,113,0.55); background: rgba(127,29,29,0.25); }
+    #eventFlash.weak { color: #86efac; border-color: rgba(74,222,128,0.55); background: rgba(20,83,45,0.25); }
+    #animPhase {
+      padding: 8px 12px; border-radius: 10px; text-align: left;
+      background: rgba(2,6,23,0.8); border: 1px solid rgba(167,139,250,0.45);
+      font-size: 0.8rem; font-weight: 700; color: #c4b5fd; line-height: 1.5;
+    }
+    #animPhase .phase-num {
+      display: inline-block; background: #a78bfa; color: #1e1b4b; border-radius: 6px;
+      padding: 2px 8px; margin-right: 6px; font-size: 0.72rem; font-weight: 800;
+    }
+    #eqBanner { display: none; padding: 8px 12px; border-radius: 10px; text-align: center; background: rgba(0,0,0,0.35); border: 1px solid rgba(167,139,250,0.3); }
+    #eqBanner.show { display: block; }
+    #eqBanner .eq { font-size: 0.92rem; font-weight: 800; color: #fff; line-height: 1.4; }
+    #eqBanner .eq .hl { color: #fde047; }
+    #eqBanner .sub { font-size: 0.72rem; color: #86efac; margin-top: 4px; font-weight: 600; }
+    #bigExplain { padding: 8px 12px; border-radius: 10px; background: rgba(76,29,149,0.2); border: 1px solid rgba(167,139,250,0.35); }
+    #bigExplain .be-main { font-size: 0.88rem; font-weight: 800; color: #fde047; line-height: 1.4; }
+    #bigExplain .be-sub { font-size: 0.72rem; color: #c4b5fd; margin-top: 4px; font-weight: 600; line-height: 1.45; }
+    #bigExplain.empty { display: none; }
+    .info-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    #classPanel, #forcePanel {
+      flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 10px; font-size: 0.62rem; line-height: 1.5;
+    }
+    #classPanel { background: rgba(2,6,23,0.7); border: 1px solid rgba(167,139,250,0.35); color: #94a3b8; }
+    #forcePanel { background: rgba(2,6,23,0.7); border: 1px solid rgba(74,222,128,0.35); }
+    #classPanel .cp-title { font-weight: 800; color: #c4b5fd; margin-bottom: 4px; font-size: 0.64rem; }
+    #classPanel .cp-item.hl { color: #fde68a; font-weight: 700; }
+    #forcePanel .fp-title { font-weight: 800; color: #86efac; margin-bottom: 4px; }
+    #antiPanel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); background: #0A0A0A;
+    }
+    .anti-title { font-size: 0.72rem; font-weight: 800; color: #fde047; margin-bottom: 8px; }
+    .anti-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: center; }
+    .anti-box {
+      padding: 8px 12px; border-radius: 10px; text-align: center; min-width: 90px;
+      background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.3);
+    }
+    .anti-box.particle { border-color: rgba(59,130,246,0.5); }
+    .anti-box.antip { border-color: rgba(253,224,71,0.6); background: rgba(120,53,15,0.15); }
+    .anti-box .ab-l { font-size: 0.58rem; color: #94a3b8; font-weight: 700; }
+    .anti-box .ab-v { font-size: 0.82rem; color: #f1f5f9; font-weight: 800; }
+    .anti-arrow { color: #a78bfa; font-size: 1.1rem; font-weight: 800; }
+    #forceGraph { padding: 8px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); background: #0A0A0A; }
+    #forceGraph canvas { display: block; width: 100%; height: 88px; border-radius: 8px; }
+    .graph-title { font-size: 0.68rem; font-weight: 800; color: #c4b5fd; margin-bottom: 6px; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 8; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 68px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.62rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(167,139,250,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(167,139,250,0.28); color: #ede9fe; border-color: rgba(167,139,250,0.6); font-weight: 800; }
+    .act-btn.active { background: rgba(74,222,128,0.2); color: #86efac; border-color: rgba(74,222,128,0.5); }
+    .act-btn.guided { background: linear-gradient(135deg, rgba(167,139,250,0.35), rgba(192,132,252,0.2)); color: #fff; border-color: #c4b5fd; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(167,139,250,0.2);
+      display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: min(860px, 90dvh);
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #c4b5fd; }
+    .hud-section { font-size: 0.66rem; font-weight: 800; color: #a78bfa; margin: 4px 0 2px; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(167,139,250,0.45); background: rgba(76,29,149,0.15); }
+    .hud-card.force { border-color: rgba(74,222,128,0.45); background: rgba(20,83,45,0.12); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1rem; color: #fde68a; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #a78bfa; }
+    .hint-box, .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; }
+    .hint-box { padding: 12px 14px; border-radius: 12px; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.22); }
+    .edu-list { margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .guide-callout {
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 10px; text-align: center;
+      background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(192,132,252,0.08));
+      border: 2px solid rgba(167,139,250,0.45);
+      font-size: 0.82rem; font-weight: 700; color: #ede9fe; line-height: 1.55;
+      animation: calloutPulse 2s ease-in-out infinite;
+    }
+    @keyframes calloutPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.3); } 50% { box-shadow: 0 0 18px 4px rgba(167,139,250,0.2); } }
+    .guide-bar { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; justify-content: center; }
+    .guide-step {
+      flex: 1; min-width: 72px; padding: 7px 6px; border-radius: 9px; text-align: center;
+      background: rgba(15,23,42,0.6); border: 1px solid rgba(148,163,184,0.25);
+      font-size: 0.62rem; font-weight: 700; color: #64748b; transition: all 0.35s;
+    }
+    .guide-step .gs-num { display: block; font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+    .guide-step.active { color: #ede9fe; border-color: rgba(167,139,250,0.7); background: rgba(76,29,149,0.4); box-shadow: 0 0 12px rgba(167,139,250,0.25); }
+    .guide-step.done { color: #86efac; border-color: rgba(74,222,128,0.5); background: rgba(20,83,45,0.2); }
+    .act-btn.pulse { animation: btnPulse 1.2s ease-in-out infinite; }
+    @keyframes btnPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.5); } 50% { box-shadow: 0 0 14px 3px rgba(167,139,250,0.4); transform: scale(1.04); } }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚛</div>
+      <p class="chapter-label">第28章 ⑩ — 素粒子・反粒子・4つの力</p>
+      <h2>素粒子物理学 — 分類・反粒子・自然界の4つの力 3D</h2>
+      <p class="tagline">レプトン · ハドロン · 対消滅 · 電磁気·強い·弱い·重力</p>
+      <a id="back" href="../00_folder_atom.html">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">物質の最小単位<strong>素粒子</strong> · 電荷が逆の<strong>反粒子</strong> · 自然界を支配する<strong>4つの力</strong></div>
+        <div class="formula-sub">電磁気力(γ) · 強い力(グルーオン) · 弱い力(W,Z) · 重力(重力子?)</div>
+      </div>
+      <div class="guide-callout" id="guideCallout">👇 まず <strong>「はじめから体験する」</strong> — 素粒子→反粒子→4つの力を順番に見よう</div>
+      <div class="guide-bar" id="guideBar">
+        <div class="guide-step active" data-step="1"><span class="gs-num">①</span>分類</div>
+        <div class="guide-step" data-step="2"><span class="gs-num">②</span>反粒子</div>
+        <div class="guide-step" data-step="3"><span class="gs-num">③</span>対消滅</div>
+        <div class="guide-step" data-step="4"><span class="gs-num">④</span>電磁気</div>
+        <div class="guide-step" data-step="5"><span class="gs-num">⑤</span>強い力</div>
+        <div class="guide-step" data-step="6"><span class="gs-num">⑥</span>弱い力</div>
+        <div class="guide-step" data-step="7"><span class="gs-num">⑦</span>重力</div>
+        <div class="guide-step" data-step="8"><span class="gs-num">⑧</span>4力比較</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">素粒子分類 · 粒子模型 · 力の相互作用</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#3b82f6;color:#3b82f6"></i>電子</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>陽子</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>中性子</span>
+              <span><i class="color-chip" style="background:#f8fafc;color:#f8fafc"></i>ν</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>反粒子</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+            </div>
+            <div class="explain-panel" id="explainPanel">
+              <div class="explain-top">
+                <span class="mode-badge-inline" id="modeBadge">素粒子ラボ — 待機中</span>
+                <div id="eventFlash"></div>
+              </div>
+              <div id="animPhase"><span class="phase-num">START</span>「はじめから体験する」を押して始めよう</div>
+              <div id="eqBanner">
+                <div class="eq" id="eqText"></div>
+                <div class="sub" id="eqSub"></div>
+              </div>
+              <div id="bigExplain" class="empty">
+                <div class="be-main" id="beMain"></div>
+                <div class="be-sub" id="beSub"></div>
+              </div>
+              <div class="info-chips">
+                <div id="classPanel">
+                  <div class="cp-title">素粒子分類</div>
+                  <div class="cp-item" id="cpLepton">レプトン: e⁻ ν</div>
+                  <div class="cp-item" id="cpBaryon">バリオン: p n</div>
+                  <div class="cp-item" id="cpMeson">メソン: π</div>
+                </div>
+                <div id="forcePanel">
+                  <div class="fp-title">4つの力</div>
+                  <div id="fpList">電磁気 γ · 強い グルーオン · 弱い W,Z · 重力 ?</div>
+                </div>
+              </div>
+            </div>
+            <div id="antiPanel">
+              <div class="anti-title">粒子 ↔ 反粒子（電荷が逆）</div>
+              <div class="anti-flow">
+                <div class="anti-box particle"><div class="ab-l">電子</div><div class="ab-v" id="abE">e⁻ (−1)</div></div>
+                <span class="anti-arrow">↔</span>
+                <div class="anti-box antip"><div class="ab-l">陽電子</div><div class="ab-v" id="abP">e⁺ (+1)</div></div>
+                <span class="anti-arrow">→</span>
+                <div class="anti-box antip"><div class="ab-l">対消滅</div><div class="ab-v" id="abAn">γ + γ</div></div>
+              </div>
+            </div>
+            <div id="forceGraph">
+              <div class="graph-title">4つの力 — 強さと作用距離（相対・高校物理用）</div>
+              <canvas id="forceCanvas"></canvas>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn guided" id="btnGuided">▶ はじめから体験する</button>
+              <button type="button" class="act-btn primary" id="btnClass">素粒子分類</button>
+              <button type="button" class="act-btn primary" id="btnAnti">反粒子表示</button>
+              <button type="button" class="act-btn" id="btnAnnih">対消滅</button>
+              <button type="button" class="act-btn" id="btnEM">電磁気力 γ</button>
+              <button type="button" class="act-btn" id="btnStrong">強い力</button>
+              <button type="button" class="act-btn" id="btnWeak">弱い力 β</button>
+              <button type="button" class="act-btn" id="btnGravity">重力</button>
+              <button type="button" class="act-btn" id="btnCompare">4力比較</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnPause" class="active">一時停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">素粒子 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">モード</div>
+              <div class="val big" id="hudMode">待機中</div>
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">粒子名</div>
+              <div class="val big" id="hudName">—</div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">分類</div><div class="val" id="hudCat">—</div></div>
+              <div class="hud-card"><div class="lbl">電荷</div><div class="val" id="hudCharge">—</div></div>
+              <div class="hud-card"><div class="lbl">質量(相対)</div><div class="val" id="hudMass">—</div></div>
+              <div class="hud-card"><div class="lbl">構成</div><div class="val" id="hudComp">—</div></div>
+            </div>
+            <p class="hud-section">力の情報</p>
+            <div class="hud-card force"><div class="lbl">力の種類</div><div class="val big" id="hudForce">—</div></div>
+            <div class="hud-card force"><div class="lbl">媒介粒子</div><div class="val" id="hudMediator">—</div></div>
+            <div class="hud-card"><div class="lbl">強さ(相対)</div><div class="val" id="hudStrength">—</div></div>
+            <div class="hud-card"><div class="lbl">作用距離</div><div class="val" id="hudRange">—</div></div>
+            <p class="hud-section">コントロール</p>
+            <div class="slider-row">
+              <label>粒子サイズ <span id="lblSize">1.0×</span></label>
+              <input type="range" id="slSize" min="0.6" max="2" step="0.1" value="1.3">
+            </div>
+            <div class="slider-row">
+              <label>力の強さ表示 <span id="lblFStr">1.4×</span></label>
+              <input type="range" id="slFStr" min="0.5" max="2" step="0.1" value="1.4">
+            </div>
+            <div class="slider-row">
+              <label>アニメ速度 <span id="lblSpd">0.9×</span></label>
+              <input type="range" id="slSpd" min="0.4" max="2.5" step="0.1" value="0.85">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>使い方（まずここから！）</h3>
+      <div class="hint-box">
+        <strong>▶ はじめから体験する</strong> を押すと、①分類→②反粒子→③対消滅→④〜⑧の4つの力まで自動で見られます。<br>
+        中央に<strong>大きな説明</strong>が出るので、何が起きているか追いやすくなっています。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li><strong>レプトン</strong>（e⁻, ν）は点粒子 · <strong>ハドロン</strong>はクォークでできている</li>
+        <li><strong>反粒子</strong>は電荷が逆 → 衝突すると<strong>対消滅</strong>して光子γが出る（E=mc²）</li>
+        <li><strong>4つの力</strong>が自然界を支配：化学=電磁気力、原子核=強い力、β崩壊=弱い力、宇宙=重力</li>
+        <li>β崩壊 n → p + e⁻ + ν̄ は<strong>弱い力</strong>の代表例</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const FORCES = {
+        em: { name: "電磁気力", mediator: "光子 γ", strength: "10³⁹ (基準)", range: "∞（無限に届く）", color: 0x3b82f6 },
+        strong: { name: "強い力", mediator: "グルーオン", strength: "1（最強）", range: "〜10⁻¹⁵ m", color: 0xf87171 },
+        weak: { name: "弱い力", mediator: "W⁺, W⁻, Z⁰", strength: "10⁻⁶", range: "〜10⁻¹⁸ m", color: 0x4ade80 },
+        gravity: { name: "重力", mediator: "重力子(未確認)", strength: "10⁻³⁹", range: "∞", color: 0xe2e8f0 },
+      };
+
+      const PARTICLES = {
+        electron: { name: "電子 e⁻", cat: "レプトン", charge: "−1", mass: "0.511 MeV/c²", comp: "点粒子", color: 0x3b82f6, emissive: 0x2563eb, scale: 0.35 },
+        positron: { name: "陽電子 e⁺", cat: "反レプトン", charge: "+1", mass: "0.511 MeV/c²", comp: "点粒子", color: 0xfde047, emissive: 0xfbbf24, scale: 0.35, anti: true },
+        proton: { name: "陽子 p (uud)", cat: "バリオン", charge: "+1", mass: "938 MeV/c²", comp: "u+u+d", color: 0xf87171, emissive: 0xef4444, scale: 0.55, quarks: ["u","u","d"] },
+        neutron: { name: "中性子 n (udd)", cat: "バリオン", charge: "0", mass: "940 MeV/c²", comp: "u+d+d", color: 0x94a3b8, emissive: 0x64748b, scale: 0.55, quarks: ["u","d","d"] },
+        antiproton: { name: "反陽子 p̄", cat: "反バリオン", charge: "−1", mass: "938 MeV/c²", comp: "ū+ū+d̄", color: 0xfde047, emissive: 0xfbbf24, scale: 0.55, anti: true },
+        neutrino: { name: "ニュートリノ ν", cat: "レプトン", charge: "0", mass: "≈0", comp: "点粒子", color: 0xf8fafc, emissive: 0xcbd5e1, scale: 0.2 },
+        antineutrino: { name: "反ニュートリノ ν̄", cat: "反レプトン", charge: "0", mass: "≈0", comp: "点粒子", color: 0xfde047, emissive: 0xfbbf24, scale: 0.2, anti: true },
+        pion: { name: "π⁺中間子", cat: "メソン", charge: "+1", mass: "140 MeV/c²", comp: "u+d̄", color: 0xa78bfa, emissive: 0x8b5cf6, scale: 0.4, quarks: ["u","anti_d"] },
+      };
+
+      const Q_COLORS = { u: 0xf87171, d: 0x3b82f6, anti_u: 0xfde047, anti_d: 0xfde047 };
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const fCanvas = document.getElementById("forceCanvas");
+      const fCtx = fCanvas.getContext("2d");
+
+      let paused = false, animating = false, mode = "idle";
+      let pSize = 1.3, fStr = 1.4, animSpd = 0.85;
+      let rotX = 0.15, rotY = 0.5, zoom = 13, dragging = false, lx = 0, ly = 0;
+      let targetRotX = 0.15, targetRotY = 0.5, targetZoom = 13;
+      let simTime = 0;
+      let scene, camera, renderer, worldGroup;
+      let particleMeshes = {}, forceObjects = [], bursts = [], mediators = [], glowRings = [];
+      let activeForce = null, classifyIdx = 0, classifyTimer = null, guidedTimers = [];
+
+      const CLASSIFY_SEQ = [
+        { key: "electron", panel: "cpLepton", explain: "電子 e⁻", sub: "レプトン＝軽い素粒子（クォークでできていない）", eq: "レプトン例: <span class='hl'>e⁻</span> · ν" },
+        { key: "neutrino", panel: "cpLepton", explain: "ニュートリノ ν", sub: "電荷ゼロ · ほとんど質量なし · レプトン", eq: "レプトン例: e⁻ · <span class='hl'>ν</span>" },
+        { key: "proton", panel: "cpBaryon", explain: "陽子 p = u+u+d", sub: "バリオン＝3つのクォークでできた重い粒子", eq: "バリオン: <span class='hl'>p</span> = u+u+d" },
+        { key: "neutron", panel: "cpBaryon", explain: "中性子 n = u+d+d", sub: "電荷ゼロのバリオン · 原子核の中にいる", eq: "バリオン: <span class='hl'>n</span> = u+d+d" },
+        { key: "pion", panel: "cpMeson", explain: "π⁺ 中間子", sub: "メソン＝クォーク2つ（u + 反d）", eq: "メソン: <span class='hl'>π⁺</span> = u + d̄" },
+      ];
+
+      function setGuideStep(n) {
+        document.querySelectorAll(".guide-step").forEach((el) => {
+          const s = +el.dataset.step;
+          el.classList.remove("active", "done");
+          if (s < n) el.classList.add("done");
+          else if (s === n) el.classList.add("active");
+        });
+      }
+      function setModeBadge(t) { document.getElementById("modeBadge").textContent = (t || "").replace(/\n/g, " · "); }
+      function setEq(eq, sub) {
+        const b = document.getElementById("eqBanner");
+        document.getElementById("eqText").innerHTML = eq || "";
+        document.getElementById("eqSub").textContent = sub || "";
+        b.classList.toggle("show", !!(eq || sub));
+      }
+      function showBigExplain(main, sub, dur) {
+        const el = document.getElementById("bigExplain");
+        if (!main && !sub) { el.classList.add("empty"); return; }
+        document.getElementById("beMain").textContent = main;
+        document.getElementById("beSub").textContent = sub || "";
+        el.classList.remove("empty");
+        clearTimeout(showBigExplain._t);
+        if (dur) showBigExplain._t = setTimeout(() => el.classList.add("empty"), dur);
+      }
+      function focusCamera(rx, ry, z) {
+        targetRotX = rx; targetRotY = ry; targetZoom = z;
+      }
+      function pulseBtn(id) {
+        document.querySelectorAll(".act-btn.pulse").forEach((b) => b.classList.remove("pulse"));
+        const b = document.getElementById(id);
+        if (b) b.classList.add("pulse");
+      }
+      function dimParticles(except) {
+        Object.keys(particleMeshes).forEach((k) => {
+          const m = particleMeshes[k];
+          if (!m) return;
+          const on = !except || except.includes(k);
+          m.traverse((c) => {
+            if (c.material) {
+              c.material.opacity = on ? 1 : 0.15;
+              c.material.transparent = true;
+            }
+          });
+          m.scale.setScalar(on ? (except && except[0] === k ? 1.35 : 1) : 0.7);
+        });
+      }
+      function resetDim() {
+        Object.values(particleMeshes).forEach((m) => {
+          m.traverse((c) => { if (c.material) { c.material.opacity = 1; } });
+          m.scale.setScalar(1);
+        });
+      }
+
+      function setPhase(n, t) {
+        document.getElementById("animPhase").innerHTML = '<span class="phase-num">' + n + '</span>' + t;
+      }
+      function flashEvent(t, cls) {
+        const el = document.getElementById("eventFlash");
+        if (!t) { el.className = ""; el.textContent = ""; return; }
+        el.textContent = t;
+        el.className = "show" + (cls ? " " + cls : "");
+        clearTimeout(flashEvent._t);
+        flashEvent._t = setTimeout(() => { el.classList.remove("show"); el.className = cls || ""; }, 2200);
+      }
+      function setHUD(p, force) {
+        if (p) {
+          document.getElementById("hudName").textContent = p.name;
+          document.getElementById("hudCat").textContent = p.cat;
+          document.getElementById("hudCharge").textContent = p.charge;
+          document.getElementById("hudMass").textContent = p.mass;
+          document.getElementById("hudComp").textContent = p.comp;
+        }
+        if (force) {
+          document.getElementById("hudForce").textContent = force.name;
+          document.getElementById("hudMediator").textContent = force.mediator;
+          document.getElementById("hudStrength").textContent = force.strength;
+          document.getElementById("hudRange").textContent = force.range;
+        }
+      }
+      function highlightClass(id) {
+        ["cpLepton","cpBaryon","cpMeson"].forEach((x) => document.getElementById(x).classList.remove("hl"));
+        if (id) document.getElementById(id).classList.add("hl");
+      }
+
+      function drawForceGraph(highlight) {
+        const dpr = Math.min(devicePixelRatio, 2);
+        const w = fCanvas.clientWidth, h = fCanvas.clientHeight;
+        if (w < 10) return;
+        fCanvas.width = w * dpr; fCanvas.height = h * dpr;
+        fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        fCtx.clearRect(0, 0, w, h);
+        fCtx.fillStyle = "rgba(15,23,42,0.6)";
+        fCtx.fillRect(0, 0, w, h);
+        const data = [
+          { key: "strong", label: "強い", rel: 1, range: 0.15, color: "#f87171" },
+          { key: "em", label: "電磁気", rel: 0.007, range: 1, color: "#3b82f6" },
+          { key: "weak", label: "弱い", rel: 0.000001, range: 0.05, color: "#4ade80" },
+          { key: "gravity", label: "重力", rel: 0.000000000000000000000000000001, range: 1, color: "#e2e8f0" },
+        ];
+        const barW = (w - 40) / data.length - 6;
+        data.forEach((d, i) => {
+          const x = 20 + i * (barW + 6);
+          const isHL = highlight === d.key || highlight === "compare";
+          const strH = Math.log10(d.rel * 1e39 + 1) / Math.log10(1e39 + 1) * (h - 36);
+          const rngH = d.range * (h - 36);
+          fCtx.fillStyle = isHL ? d.color : "rgba(100,116,139,0.4)";
+          fCtx.fillRect(x, h - 16 - strH, barW / 2 - 1, strH);
+          fCtx.fillStyle = isHL ? d.color + "88" : "rgba(100,116,139,0.2)";
+          fCtx.fillRect(x + barW / 2 + 1, h - 16 - rngH, barW / 2 - 1, rngH);
+          fCtx.fillStyle = isHL ? "#ede9fe" : "#64748b";
+          fCtx.font = (isHL ? "700 " : "") + "7px Inter,sans-serif";
+          fCtx.textAlign = "center";
+          fCtx.fillText(d.label, x + barW / 2, h - 4);
+        });
+        fCtx.fillStyle = "#64748b"; fCtx.font = "6px Inter,sans-serif";
+        fCtx.fillText("左=強さ(対数) 右=距離", 4, 10);
+      }
+
+      function makeSphere(color, emissive, r) {
+        const g = new THREE.Group();
+        const core = new THREE.Mesh(
+          new THREE.SphereGeometry(r, 24, 24),
+          new THREE.MeshPhysicalMaterial({ color, emissive, emissiveIntensity: 1.1, metalness: 0.35, roughness: 0.2 })
+        );
+        g.add(core);
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(r * 1.15, r * 1.45, 32),
+          new THREE.MeshBasicMaterial({ color: emissive, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+        );
+        ring.rotation.x = Math.PI / 2;
+        g.add(ring);
+        g.userData = { core, ring, baseR: r };
+        return g;
+      }
+
+      function makeQuarkNucleus(quarks, scale, bodyColor) {
+        const g = new THREE.Group();
+        const shell = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28 * scale, 20, 20),
+          new THREE.MeshPhysicalMaterial({ color: bodyColor, emissive: bodyColor, emissiveIntensity: 0.7, metalness: 0.35, roughness: 0.3, transparent: true, opacity: 0.35 })
+        );
+        g.add(shell);
+        g.userData.shell = shell;
+        const positions = [{ x: 0.12, y: 0.08, z: 0 }, { x: -0.1, y: -0.06, z: 0.08 }, { x: -0.02, y: -0.02, z: -0.1 }];
+        quarks.forEach((q, i) => {
+          const isAnti = q.startsWith("anti");
+          const qc = Q_COLORS[isAnti ? q : q] || 0xffffff;
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1 * scale, 16, 16),
+            new THREE.MeshPhysicalMaterial({ color: qc, emissive: qc, emissiveIntensity: 1, metalness: 0.3, roughness: 0.25 })
+          );
+          m.position.set(positions[i].x * scale, positions[i].y * scale, positions[i].z * scale);
+          m.userData = { phase: Math.random() * 6.28, base: { x: positions[i].x * scale, y: positions[i].y * scale, z: positions[i].z * scale }, scale };
+          g.add(m);
+        });
+        return g;
+      }
+
+      function makeMeson(quarks, scale) {
+        const g = new THREE.Group();
+        quarks.forEach((q, i) => {
+          const isAnti = q.includes("anti");
+          const key = isAnti ? q : q;
+          const qc = Q_COLORS[key] || 0xa78bfa;
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.14 * scale, 18, 18),
+            new THREE.MeshPhysicalMaterial({ color: qc, emissive: qc, emissiveIntensity: 1, metalness: 0.3, roughness: 0.25 })
+          );
+          m.position.set((i === 0 ? -0.18 : 0.18) * scale, 0, 0);
+          m.userData = { phase: Math.random() * 6.28, base: { x: (i === 0 ? -0.18 : 0.18) * scale, y: 0, z: 0 } };
+          g.add(m);
+        });
+        return g;
+      }
+
+      function clearForces() {
+        forceObjects.forEach((o) => { worldGroup.remove(o); o.geometry?.dispose(); o.material?.dispose(); });
+        forceObjects = [];
+        mediators.forEach((m) => {
+          worldGroup.remove(m.mesh);
+          m.mesh.geometry?.dispose(); m.mesh.material?.dispose();
+        });
+        mediators = [];
+      }
+
+      function addArrow(from, to, color, thickness) {
+        const dir = new THREE.Vector3().subVectors(to, from);
+        const len = dir.length();
+        const mid = new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5);
+        const arrow = new THREE.Mesh(
+          new THREE.CylinderGeometry(thickness, thickness * 1.4, len, 8),
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
+        );
+        arrow.position.copy(mid);
+        arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        arrow.userData = { pulse: true, baseOp: 0.9 };
+        worldGroup.add(arrow);
+        forceObjects.push(arrow);
+        const cone = new THREE.Mesh(
+          new THREE.ConeGeometry(thickness * 2.5, thickness * 6, 8),
+          new THREE.MeshBasicMaterial({ color })
+        );
+        cone.position.copy(to);
+        cone.quaternion.copy(arrow.quaternion);
+        cone.position.add(dir.clone().normalize().multiplyScalar(-thickness * 3));
+        worldGroup.add(cone);
+        forceObjects.push(cone);
+      }
+
+      function addSpring(a, b, color, coils) {
+        const pts = [];
+        const steps = 32;
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = a.x + (b.x - a.x) * t;
+          const y = a.y + (b.y - a.y) * t + Math.sin(t * Math.PI * coils + simTime * 4) * 0.18 * fStr;
+          const z = a.z + (b.z - a.z) * t;
+          pts.push(new THREE.Vector3(x, y, z));
+        }
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, linewidth: 4 }));
+        line.userData = { spring: true, a: a.clone(), b: b.clone(), coils, color };
+        worldGroup.add(line);
+        forceObjects.push(line);
+      }
+
+      function showEM() {
+        clearForces(); mode = "em"; activeForce = FORCES.em;
+        resetDim();
+        setHUD(PARTICLES.electron, FORCES.em);
+        document.getElementById("hudMode").textContent = "電磁気力";
+        setModeBadge("④ 電磁気力\n光子γが飛ぶ");
+        setPhase("④", "電子と陽子を引き合わせる力 · 化学反応の主役");
+        setEq("電磁気力 · 媒介粒子 <span class='hl'>γ</span>", "クーロン力＝電荷同士が引き・斥し合う");
+        showBigExplain("光子 γ が飛び交う！", "電子と陽子の間を光の粒が行き来 → 引き合い・斥し合い");
+        flashEvent("化学反応はこの力！", "em");
+        highlightClass("cpBaryon");
+        focusCamera(0.1, -0.3, 11);
+        const e = particleMeshes.electron, p = particleMeshes.proton;
+        if (!e || !p) return;
+        dimParticles(["electron", "proton"]);
+        for (let i = 0; i < 10; i++) {
+          const m = makeSphere(0xfde047, 0xfbbf24, 0.09);
+          m.position.lerpVectors(e.position, p.position, Math.random());
+          worldGroup.add(m);
+          mediators.push({ mesh: m, from: e.position.clone(), to: p.position.clone(), t: Math.random(), spd: 0.25 + Math.random() * 0.35, trail: true });
+        }
+        addArrow(e.position, p.position, 0x3b82f6, 0.05 * fStr);
+        addArrow(p.position, e.position, 0x60a5fa, 0.035 * fStr);
+        drawForceGraph("em");
+        pulseBtn("btnEM");
+      }
+
+      function showStrong() {
+        clearForces(); mode = "strong"; activeForce = FORCES.strong;
+        resetDim();
+        setHUD(PARTICLES.proton, FORCES.strong);
+        document.getElementById("hudMode").textContent = "強い力";
+        setModeBadge("⑤ 強い力\nクォークを束縛");
+        setPhase("⑤", "原子核の中だけ · グルーオンがクォークをくっつける");
+        setEq("強い力 · 媒介 <span class='hl'>グルーオン</span>", "陽子と中性子もこの力で結合（原子核）");
+        showBigExplain("最も強い力！", "クォーク同士をバネのように結びつける");
+        flashEvent("原子核はこの力でまとまる", "strong");
+        highlightClass("cpBaryon");
+        focusCamera(0.2, 0.2, 10);
+        const p = particleMeshes.proton, n = particleMeshes.neutron;
+        dimParticles(["proton", "neutron"]);
+        if (p && n) addSpring(p.position, n.position, 0xf87171, 5 * fStr);
+        [particleMeshes.proton, particleMeshes.neutron].forEach((g) => {
+          if (!g) return;
+          g.children.forEach((c, i) => {
+            if (i === 0) return;
+            const c2 = g.children[(i % (g.children.length - 1)) + 1];
+            if (c2) addSpring(c.position, c2.position, 0xef4444, 4);
+          });
+        });
+        for (let i = 0; i < 6; i++) {
+          const gl = makeSphere(0xfca5a5, 0xf87171, 0.05);
+          gl.position.set((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0);
+          worldGroup.add(gl);
+          mediators.push({ mesh: gl, orbit: true, center: new THREE.Vector3(0, -0.05, 0), r: 0.35 + Math.random() * 0.25, ang: Math.random() * 6.28 });
+        }
+        drawForceGraph("strong");
+        pulseBtn("btnStrong");
+      }
+
+      function showWeak() {
+        clearForces(); mode = "weak"; activeForce = FORCES.weak;
+        resetDim();
+        setHUD(PARTICLES.neutron, FORCES.weak);
+        document.getElementById("hudMode").textContent = "弱い力（β崩壊）";
+        setModeBadge("⑥ 弱い力\nβ崩壊");
+        setPhase("⑥", "中性子が陽子に変わる · 電子と反ニュートリノが飛び出す");
+        setEq("n → <span class='hl'>p</span> + e⁻ + ν̄", "β崩壊＝弱い力の代表例");
+        showBigExplain("中性子が変身！", "n → p + e⁻ + ν̄（原子核の中で起きる）");
+        flashEvent("β崩壊は弱い力", "weak");
+        highlightClass("cpBaryon");
+        focusCamera(0.15, 0.35, 10);
+        dimParticles(["neutron", "proton", "electron", "antineutrino"]);
+        drawForceGraph("weak");
+        playBetaDecay();
+        pulseBtn("btnWeak");
+      }
+
+      function showGravity() {
+        clearForces(); mode = "gravity"; activeForce = FORCES.gravity;
+        resetDim();
+        setHUD(PARTICLES.proton, FORCES.gravity);
+        document.getElementById("hudMode").textContent = "重力";
+        setModeBadge("⑦ 重力\nいちばん弱い");
+        setPhase("⑦", "質量のあるもの同士が引き合う · でも超微弱");
+        setEq("重力 · 媒介 <span class='hl'>重力子?</span>", "強さは電磁気力の 10⁻³⁹ 倍！");
+        showBigExplain("いちばん弱い力", "日常では電磁気力にかなわない · 宇宙の大きなスケールで効く");
+        const keys = ["proton","neutron","electron"];
+        keys.forEach((a, i) => {
+          keys.forEach((b, j) => {
+            if (i >= j) return;
+            const ma = particleMeshes[a], mb = particleMeshes[b];
+            if (ma && mb) addArrow(ma.position, mb.position, 0xe2e8f0, 0.012 * fStr);
+          });
+        });
+        flashEvent("10⁻³⁹ と超微弱", "");
+        focusCamera(0.25, 0.6, 12);
+        drawForceGraph("gravity");
+        pulseBtn("btnGravity");
+      }
+
+      function showCompare() {
+        clearForces(); mode = "compare"; activeForce = null;
+        resetDim();
+        document.getElementById("hudMode").textContent = "4つの力 比較";
+        setModeBadge("⑧ 4力比較\n強さと距離");
+        setPhase("⑧", "強い ≫ 電磁気 ≫ 弱い ≫ 重力");
+        setEq("4つの力を<span class='hl'>同時比較</span>", "左のグラフ＝強さ（対数）· 右＝届く距離");
+        showBigExplain("4つの力まとめ", "化学=電磁気 · 原子核=強い · β崩壊=弱い · 宇宙=重力");
+        setHUD(PARTICLES.proton, FORCES.strong);
+        document.getElementById("hudForce").textContent = "4力同時比較";
+        document.getElementById("hudMediator").textContent = "γ · グルーオン · W,Z · 重力子?";
+        const p = particleMeshes.proton, e = particleMeshes.electron, n = particleMeshes.neutron;
+        if (p && e) { addArrow(p.position, e.position, 0x3b82f6, 0.04 * fStr); addSpring(p.position, e.position, 0xf87171, 3); }
+        if (p && n) addSpring(p.position, n.position, 0xf87171, 5 * fStr);
+        if (n) {
+          const w = makeSphere(0x4ade80, 0x22c55e, 0.1);
+          w.position.copy(n.position);
+          worldGroup.add(w);
+          mediators.push({ mesh: w, orbit: true, center: n.position.clone(), r: 0.55, ang: 0 });
+        }
+        if (p && n) addArrow(p.position, n.position, 0xe2e8f0, 0.01 * fStr);
+        focusCamera(0.18, 0.45, 11);
+        drawForceGraph("compare");
+        pulseBtn("btnCompare");
+      }
+
+      function buildScene() {
+        worldGroup = new THREE.Group();
+        const positions = {
+          electron: [-2.5, 0.3, 0.5], positron: [-2.5, -0.8, 0.5],
+          proton: [0, 0.4, 0], neutron: [0, -0.5, 0],
+          antiproton: [0.5, -1.5, 0.8], neutrino: [2.2, 0.8, 0.6],
+          antineutrino: [2.6, 0.8, 0.6], pion: [2.5, -0.3, 0],
+        };
+        Object.keys(PARTICLES).forEach((key) => {
+          const d = PARTICLES[key];
+          let mesh;
+          if (d.quarks && d.quarks.length === 3) mesh = makeQuarkNucleus(d.quarks, d.scale * pSize, d.color);
+          else if (d.quarks && d.quarks.length === 2) mesh = makeMeson(d.quarks, d.scale * pSize);
+          else { mesh = makeSphere(d.color, d.emissive, d.scale * pSize * 0.42); }
+          mesh.position.set(...(positions[key] || [0, 0, 0]));
+          mesh.visible = key !== "positron" && key !== "antiproton" && key !== "antineutrino";
+          worldGroup.add(mesh);
+          particleMeshes[key] = mesh;
+        });
+        scene.add(worldGroup);
+      }
+
+      function stopClassifyDemo() {
+        if (classifyTimer) { clearInterval(classifyTimer); classifyTimer = null; }
+      }
+
+      function playClassifyDemo() {
+        stopClassifyDemo();
+        classifyIdx = 0;
+        const step = () => {
+          const item = CLASSIFY_SEQ[classifyIdx];
+          dimParticles([item.key]);
+          highlightClass(item.panel);
+          setHUD(PARTICLES[item.key], null);
+          setEq(item.eq, item.sub);
+          showBigExplain(item.explain, item.sub, 2200);
+          flashEvent(item.explain);
+          classifyIdx = (classifyIdx + 1) % CLASSIFY_SEQ.length;
+        };
+        step();
+        classifyTimer = setInterval(step, 2800);
+      }
+
+      function showClassify() {
+        mode = "classify"; animating = false;
+        clearForces(); resetDim();
+        stopClassifyDemo();
+        Object.keys(particleMeshes).forEach((k) => {
+          particleMeshes[k].visible = !["positron","antiproton","antineutrino"].includes(k);
+        });
+        document.getElementById("hudMode").textContent = "素粒子分類";
+        setModeBadge("① 素粒子分類\nレプトンとハドロン");
+        setHUD(PARTICLES.proton, null);
+        setPhase("①", "1つずつ見ていこう · レプトン(軽い) vs ハドロン(クォークでできた)");
+        setEq("素粒子の<span class='hl'>3グループ</span>", "レプトン · バリオン · メソン");
+        showBigExplain("素粒子を分類しよう", "下のリストが光るたびに、上の3Dを見てね");
+        focusCamera(0.12, 0.55, 12);
+        playClassifyDemo();
+        pulseBtn("btnClass");
+        drawForceGraph(null);
+      }
+
+      function showAnti() {
+        stopClassifyDemo();
+        mode = "anti"; clearForces(); resetDim();
+        particleMeshes.positron.visible = true;
+        particleMeshes.antiproton.visible = true;
+        particleMeshes.antineutrino.visible = true;
+        particleMeshes.positron.position.set(-2.2, -0.5, 0.6);
+        particleMeshes.antiproton.position.set(0.5, -1.2, 0.5);
+        document.getElementById("hudMode").textContent = "反粒子";
+        setModeBadge("② 反粒子\n電荷が逆！");
+        setHUD(PARTICLES.positron, null);
+        setPhase("②", "反粒子は電荷が逆 · 黄色で表示される");
+        setEq("e⁻ ↔ <span class='hl'>e⁺</span> · p ↔ <span class='hl'>p̄</span>", "電荷の符号がちょうど逆");
+        showBigExplain("反粒子＝電荷が逆", "電子e⁻(−)の反粒子は陽電子e⁺(+)");
+        document.getElementById("abE").textContent = "e⁻ (−1)";
+        document.getElementById("abP").textContent = "e⁺ (+1)";
+        document.getElementById("abAn").textContent = "衝突→ γ+γ";
+        dimParticles(["electron", "positron", "proton", "antiproton"]);
+        focusCamera(0.1, -0.15, 11);
+        flashEvent("電荷が逆！");
+        pulseBtn("btnAnti");
+        drawForceGraph(null);
+      }
+
+      function addBurst(x, y, z) {
+        for (let i = 0; i < 5; i++) {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2 + i * 0.25, 16, 16),
+            new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfde047 : 0xffffff, transparent: true, opacity: 0.95 })
+          );
+          m.position.set(x, y, z);
+          worldGroup.add(m);
+          bursts.push({ mesh: m, life: 1.5 - i * 0.12, max: 1.5 });
+        }
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2;
+          const g = makeSphere(0xfde047, 0xfbbf24, 0.07);
+          g.position.set(x, y, z);
+          worldGroup.add(g);
+          const spd = 1.2 + Math.random() * 0.5;
+          bursts.push({ mesh: g, life: 1.2, max: 1.2, fly: true, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * 0.4, vz: Math.sin(ang) * spd * 0.3 });
+        }
+        const pl = new THREE.PointLight(0xfde047, 8, 16);
+        pl.position.set(x, y, z);
+        worldGroup.add(pl);
+        bursts.push({ mesh: pl, life: 1.2, max: 1.2, isLight: true });
+      }
+
+      function playAnnihilate() {
+        if (animating) return;
+        stopClassifyDemo();
+        animating = true; mode = "annihilate";
+        showAnti();
+        document.getElementById("hudMode").textContent = "対消滅";
+        setModeBadge("③ 対消滅\nE=mc²");
+        setHUD(PARTICLES.electron, null);
+        setPhase("③", "e⁻ と e⁺ がぶつかる → 光（γ）に変わる");
+        setEq("e⁻ + e⁺ → <span class='hl'>γ + γ</span>", "質量がエネルギーに変わる（E=mc²）");
+        showBigExplain("対消滅！", "粒子と反粒子が消えて、光のエネルギーになる");
+        dimParticles(["electron", "positron"]);
+        focusCamera(0.08, -0.2, 10);
+        pulseBtn("btnAnnih");
+        const e = particleMeshes.electron, p = particleMeshes.positron;
+        const mid = new THREE.Vector3(-2.35, -0.1, 0.55);
+        e.position.set(-2.5, 0.3, 0.5);
+        p.position.set(-2.2, -0.5, 0.6);
+        e.visible = p.visible = true;
+        let t = 0;
+        const iv = setInterval(() => {
+          if (paused) return;
+          t += 0.035 * animSpd;
+          const ease = t < 0.7 ? t / 0.7 : 1;
+          const ease2 = ease * ease;
+          e.position.lerpVectors(new THREE.Vector3(-2.5, 0.3, 0.5), mid, ease2);
+          p.position.lerpVectors(new THREE.Vector3(-2.2, -0.5, 0.6), mid, ease2);
+          e.scale.setScalar(1 + Math.sin(t * 8) * 0.08);
+          p.scale.setScalar(1 + Math.sin(t * 8) * 0.08);
+          if (t >= 0.75 && t < 0.8) flashEvent("もうすぐ衝突！");
+          if (t >= 1) {
+            clearInterval(iv);
+            e.visible = false; p.visible = false;
+            addBurst(mid.x, mid.y, mid.z);
+            flashEvent("対消滅！ 光が出た");
+            document.getElementById("abAn").textContent = "γ + γ (E=mc²)";
+            showBigExplain("E = mc²", "消えた質量が光のエネルギーになった");
+            animating = false;
+          }
+        }, 45);
+      }
+
+      function playBetaDecay() {
+        if (animating) return;
+        animating = true; mode = "beta";
+        const n = particleMeshes.neutron, p = particleMeshes.proton;
+        const e = particleMeshes.electron, v = particleMeshes.antineutrino;
+        n.visible = true; p.visible = false;
+        e.visible = true; v.visible = true;
+        e.position.set(0.3, 0.1, 0.5);
+        v.position.set(0.6, 0.4, 0.7);
+        e.scale.set(0.01, 0.01, 0.01);
+        v.scale.set(0.01, 0.01, 0.01);
+        let stage = 0;
+        let t = 0;
+        const iv = setInterval(() => {
+          if (paused) return;
+          t += 0.03 * animSpd;
+          if (stage === 0 && t > 0.8) {
+            stage = 1;
+            setPhase("⑥-a", "ステップ1: 中性子が「弱い力」で変化し始める");
+            showBigExplain("変化の始まり", "中性子の中で弱い力が働く");
+            if (n.userData?.shell) n.userData.shell.material.emissive.setHex(0x4ade80);
+          }
+          if (stage === 1 && t > 2) {
+            stage = 2;
+            n.visible = false; p.visible = true;
+            p.position.copy(n.position);
+            flashEvent("n → p に変化！");
+            setPhase("⑥-b", "ステップ2: 中性子が陽子に変わった！");
+            showBigExplain("中性子 → 陽子", "原子核の中の1粒子が入れ替わった");
+            if (p.userData?.shell) p.userData.shell.material.emissive.setHex(0xf87171);
+          }
+          if (stage === 2 && t > 3.2) {
+            stage = 3;
+            setPhase("⑥-c", "ステップ3: 電子 e⁻ と反ニュートリノ ν̄ が飛び出す");
+            showBigExplain("粒子が飛び出す！", "e⁻ と ν̄ が原子核から放出される");
+          }
+          if (stage >= 2) {
+            const s = Math.min(1, (t - 2) * 0.8);
+            e.scale.setScalar(Math.max(0.01, s) * pSize * 0.42);
+            v.scale.setScalar(Math.max(0.01, s * 0.85) * pSize * 0.42);
+            e.position.x += 0.018 * animSpd;
+            e.position.y += 0.008 * animSpd;
+            v.position.x += 0.014 * animSpd;
+            v.position.y += 0.012 * animSpd;
+          }
+          if (t > 5.5) { clearInterval(iv); animating = false; setPhase("⑥", "β崩壊完了: n → p + e⁻ + ν̄"); }
+        }, 50);
+      }
+
+      function resetVisual(clearGuided) {
+        animating = false; activeForce = null;
+        stopClassifyDemo();
+        if (clearGuided) {
+          guidedTimers.forEach(clearTimeout);
+          guidedTimers = [];
+        }
+        bursts.forEach((b) => {
+          worldGroup?.remove(b.mesh);
+          if (b.mesh.geometry) b.mesh.geometry.dispose();
+          if (b.mesh.material) b.mesh.material.dispose();
+        });
+        bursts = [];
+        glowRings.forEach((g) => {
+          worldGroup?.remove(g.mesh);
+          g.mesh.geometry?.dispose();
+          g.mesh.material?.dispose();
+        });
+        glowRings = [];
+        clearForces();
+        worldGroup?.clear();
+        particleMeshes = {};
+        buildScene();
+      }
+
+      function resetAll() {
+        mode = "idle";
+        resetVisual(true);
+        document.querySelectorAll(".act-btn.active, .act-btn.pulse").forEach((b) => b.classList.remove("active", "pulse"));
+        document.getElementById("hudMode").textContent = "待機中";
+        setHUD(null, null);
+        document.getElementById("hudName").textContent = "—";
+        document.getElementById("hudCat").textContent = "—";
+        document.getElementById("hudCharge").textContent = "—";
+        document.getElementById("hudForce").textContent = "—";
+        setPhase("START", "「はじめから体験する」を押して始めよう");
+        setModeBadge("素粒子ラボ\n待機中");
+        setEq("", "");
+        showBigExplain("", "");
+        highlightClass(null);
+        setGuideStep(1);
+        focusCamera(0.15, 0.5, 13);
+        drawForceGraph(null);
+      }
+
+      function startGuided() {
+        resetAll();
+        paused = false;
+        document.getElementById("btnPause").classList.add("active");
+        document.getElementById("btnPause").textContent = "一時停止";
+        document.getElementById("btnGuided").classList.add("active");
+        document.getElementById("guideCallout").style.display = "none";
+
+        const schedule = (ms, fn) => { guidedTimers.push(setTimeout(fn, ms)); };
+
+        setGuideStep(1);
+        showClassify();
+        setPhase("①", "まず素粒子の分類 — 1つずつ光るよ");
+
+        schedule(6000, () => {
+          setGuideStep(2);
+          showAnti();
+          setPhase("②", "反粒子 — 電荷の符号が逆（黄色）");
+        });
+        schedule(10000, () => {
+          setGuideStep(3);
+          playAnnihilate();
+          setPhase("③", "対消滅 — ぶつかって光になる");
+        });
+        schedule(16000, () => {
+          resetVisual(false);
+          document.getElementById("btnGuided").classList.add("active");
+          setGuideStep(4);
+          showEM();
+          setPhase("④", "電磁気力 — 日常の化学はこの力");
+        });
+        schedule(21000, () => {
+          setGuideStep(5);
+          showStrong();
+          setPhase("⑤", "強い力 — 原子核をまとめる");
+        });
+        schedule(26000, () => {
+          setGuideStep(6);
+          showWeak();
+          setPhase("⑥", "弱い力 — β崩壊を見てみよう");
+        });
+        schedule(33000, () => {
+          setGuideStep(7);
+          showGravity();
+          setPhase("⑦", "重力 — いちばん弱い力");
+        });
+        schedule(37000, () => {
+          setGuideStep(8);
+          showCompare();
+          setPhase("⑧", "4つの力をまとめて比較");
+        });
+        schedule(41000, () => {
+          setPhase("OK", "体験完了！ 各ボタンで自由に見てみよう");
+          showBigExplain("おつかれさま！", "ボタンを押して、もう一度見られるよ", 3500);
+          document.getElementById("btnGuided").classList.remove("active");
+          document.getElementById("guideCallout").style.display = "";
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 300);
+        camera = new THREE.PerspectiveCamera(42, rw / rh, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        wrap.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0x404060, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(5, 8, 4);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xa78bfa, 0.5, 22);
+        rim.position.set(0, 3, 6);
+        scene.add(rim);
+        const grid = new THREE.GridHelper(10, 20, 0x2e1065, 0x1e1b4b);
+        grid.position.y = -1.8;
+        scene.add(grid);
+        buildScene();
+        wrap.addEventListener("wheel", (e) => { e.preventDefault(); zoom = Math.max(8, Math.min(18, zoom + e.deltaY * 0.006)); }, { passive: false });
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008; rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-0.6, Math.min(0.6, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        new ResizeObserver(() => {
+          const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 300);
+          renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+          drawForceGraph(mode === "compare" ? "compare" : activeForce ? Object.keys(FORCES).find((k) => FORCES[k] === activeForce) : null);
+        }).observe(wrap);
+      }
+
+      function bindControls() {
+        document.getElementById("btnGuided").addEventListener("click", startGuided);
+        document.getElementById("btnClass").addEventListener("click", showClassify);
+        document.getElementById("btnAnti").addEventListener("click", showAnti);
+        document.getElementById("btnAnnih").addEventListener("click", playAnnihilate);
+        document.getElementById("btnEM").addEventListener("click", showEM);
+        document.getElementById("btnStrong").addEventListener("click", showStrong);
+        document.getElementById("btnWeak").addEventListener("click", showWeak);
+        document.getElementById("btnGravity").addEventListener("click", showGravity);
+        document.getElementById("btnCompare").addEventListener("click", showCompare);
+        document.getElementById("btnReset").addEventListener("click", resetAll);
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").classList.toggle("active", !paused);
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("slSize").addEventListener("input", (e) => {
+          pSize = +e.target.value;
+          document.getElementById("lblSize").textContent = pSize.toFixed(1) + "×";
+          resetAll();
+        });
+        document.getElementById("slFStr").addEventListener("input", (e) => {
+          fStr = +e.target.value;
+          document.getElementById("lblFStr").textContent = fStr.toFixed(1) + "×";
+          if (mode === "em") showEM();
+          else if (mode === "strong") showStrong();
+          else if (mode === "gravity") showGravity();
+          else if (mode === "compare") showCompare();
+        });
+        document.getElementById("slSpd").addEventListener("input", (e) => {
+          animSpd = +e.target.value;
+          document.getElementById("lblSpd").textContent = animSpd.toFixed(1) + "×";
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = paused ? 0 : Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        simTime += dt;
+
+        rotX += (targetRotX - rotX) * 0.04;
+        rotY += (targetRotY - rotY) * 0.04;
+        zoom += (targetZoom - zoom) * 0.04;
+
+        Object.values(particleMeshes).forEach((g) => {
+          g.children.forEach((c) => {
+            if (!c.userData?.base) return;
+            const b = c.userData.base, ph = simTime * 1.2 + (c.userData.phase || 0);
+            const s = c.userData.scale || 1;
+            c.position.set(b.x + Math.sin(ph) * 0.04 * s, b.y + Math.cos(ph) * 0.04 * s, b.z || 0);
+          });
+          if (g.userData?.ring) {
+            g.userData.ring.rotation.z += dt * 1.5;
+            g.userData.ring.material.opacity = 0.3 + Math.sin(simTime * 3) * 0.15;
+          }
+        });
+
+        forceObjects.forEach((o) => {
+          if (o.userData?.pulse && o.material) {
+            o.material.opacity = o.userData.baseOp * (0.65 + Math.sin(simTime * 4) * 0.35);
+          }
+          if (o.userData?.spring) {
+            const { a, b, coils, color } = o.userData;
+            const pts = [];
+            const steps = 32;
+            for (let i = 0; i <= steps; i++) {
+              const t = i / steps;
+              pts.push(new THREE.Vector3(
+                a.x + (b.x - a.x) * t,
+                a.y + (b.y - a.y) * t + Math.sin(t * Math.PI * coils + simTime * 5) * 0.18 * fStr,
+                a.z + (b.z - a.z) * t
+              ));
+            }
+            o.geometry.setFromPoints(pts);
+          }
+        });
+
+        mediators.forEach((m) => {
+          if (m.orbit) {
+            m.ang += dt * 2.2 * animSpd;
+            m.mesh.position.set(m.center.x + Math.cos(m.ang) * m.r, m.center.y + Math.sin(m.ang) * 0.25, m.center.z + Math.sin(m.ang) * 0.15);
+            if (m.mesh.userData?.ring) m.mesh.rotation.y += dt * 3;
+          } else {
+            m.t += dt * m.spd * animSpd;
+            if (m.t > 1) m.t = 0;
+            m.mesh.position.lerpVectors(m.from, m.to, m.t);
+            if (m.mesh.userData?.core) m.mesh.userData.core.scale.setScalar(1 + Math.sin(m.t * Math.PI) * 0.3);
+          }
+        });
+
+        glowRings.forEach((g) => {
+          if (g.target) g.mesh.position.copy(g.target.position);
+          g.mesh.rotation.z += dt * 2;
+          g.mesh.material.opacity = 0.4 + Math.sin(simTime * 4) * 0.2;
+        });
+
+        bursts = bursts.filter((b) => {
+          b.life -= dt;
+          if (b.fly) {
+            b.mesh.position.x += b.vx * dt;
+            b.mesh.position.y += b.vy * dt;
+            b.mesh.position.z += b.vz * dt;
+          }
+          if (b.isLight) b.mesh.intensity = (b.life / b.max) * 8;
+          else {
+            b.mesh.material.opacity = (b.life / b.max) * 0.95;
+            b.mesh.scale.setScalar(1 + (1 - b.life / b.max) * 4);
+          }
+          if (b.life <= 0) {
+            worldGroup.remove(b.mesh);
+            if (b.mesh.geometry) b.mesh.geometry.dispose();
+            if (b.mesh.material) b.mesh.material.dispose();
+            return false;
+          }
+          return true;
+        });
+
+        if (!dragging) rotY += dt * 0.004;
+        const dist = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * dist, Math.sin(rotX) * dist + 0.4, Math.cos(rotY) * Math.cos(rotX) * dist);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        resetAll();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

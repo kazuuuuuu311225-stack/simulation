@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>電車と慣性 — 人と風船</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      min-height: 100dvh;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #4a7099; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: min(520px, 92vw);
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label { font-size: 15px; font-weight: 500; }
+    input[type="range"] { width: 100%; height: 30px; }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+      line-height: 1.55;
+    }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-row button {
+      flex: 1 1 calc(33% - 8px);
+      min-width: 88px;
+      padding: 14px 10px;
+      min-height: 48px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn { background: #00aaff; color: white; border: none; box-shadow: 0 0 10px #66d0ff; }
+
+    #pauseBtn, #resetBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+    }
+
+    #statusPanel {
+      width: min(520px, 92vw);
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      border: 2px solid rgba(0, 140, 220, 0.2);
+      color: #004c99;
+    }
+
+    .canvas-section { width: 95vw; max-width: 100%; margin-top: 8px; }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(380px, 50dvh);
+      min-height: 280px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 16px rgba(0, 150, 255, 0.25);
+    }
+
+    .legend {
+      width: min(520px, 92vw);
+      margin: 10px 0 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.45);
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: #4a7099;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>電車の中の慣性</h2>
+    <p class="chapter-label">4章　慣性の法則 — 人と風船</p>
+    <a id="back" href="../index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <label>
+      電車の加速度 a (m/s²):
+      <input id="aSlider" type="range" min="-5" max="5" step="0.1" value="0">
+      <span id="aValue">0.0</span>
+    </label>
+
+    <p class="hint">
+      加速（a &gt; 0）→ 人は後ろに傾き、風船は前へ。<br>
+      減速（a &lt; 0）→ 人は前に傾き、風船は後ろへ。等速（a = 0）→ 直立。
+    </p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="statusPanel">スライダーで加速度を変え、慣性の様子を確認</div>
+
+  <div class="canvas-section">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="legend">
+    人は慣性で加速度と<strong>逆方向</strong>に傾きます。風船は車内の空気が押されるため、人と<strong>逆</strong>に動きます。
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const aSlider = document.getElementById("aSlider");
+
+    const MAX_DT = 1 / 30;
+    const TILT_PER_A = 4.2;
+    const MAX_TILT = 22;
+    const SMOOTH = 8;
+
+    let trainV = 0;
+    let personTilt = 0;
+    let balloonTilt = 0;
+    let running = false;
+    let paused = false;
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getA() {
+      return parseFloat(aSlider.value);
+    }
+
+    function syncSliders() {
+      document.getElementById("aValue").textContent = fmt(getA(), 1);
+    }
+
+    function resetSimulation() {
+      aSlider.value = 0;
+      trainV = 0;
+      personTilt = 0;
+      balloonTilt = 0;
+      running = false;
+      paused = false;
+      syncSliders();
+      statusPanel.textContent = "スライダーで加速度を変え、慣性の様子を確認";
+    }
+
+    function startSimulation() {
+      running = true;
+      paused = false;
+    }
+
+    function pauseSimulation() {
+      if (!running) return;
+      paused = !paused;
+      statusPanel.textContent = paused ? "一時停止中" : statusPanel.textContent;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(240, Math.round(rect.height));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    aSlider.addEventListener("input", syncSliders);
+    aSlider.addEventListener("change", syncSliders);
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      pauseSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      resetSimulation();
+    });
+
+    function update(dt) {
+      const a = getA();
+      const targetPerson = Math.max(-MAX_TILT, Math.min(MAX_TILT, -a * TILT_PER_A));
+      const targetBalloon = Math.max(-MAX_TILT, Math.min(MAX_TILT, a * TILT_PER_A));
+      const k = 1 - Math.exp(-SMOOTH * dt);
+      personTilt += (targetPerson - personTilt) * k;
+      balloonTilt += (targetBalloon - balloonTilt) * k;
+
+      if (running && !paused) {
+        trainV += a * dt;
+      }
+    }
+
+    function drawArrow(x, y, dx, dy, color, label) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 4) return;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + dx, y + dy);
+      ctx.stroke();
+      const ang = Math.atan2(dy, dx);
+      const head = 9;
+      const tx = x + dx;
+      const ty = y + dy;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+      if (label) {
+        ctx.font = "bold 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(label, tx + 4, ty - 4);
+      }
+    }
+
+    function drawTrainInterior(w, h, a) {
+      const pad = 20;
+      const carL = pad + 8;
+      const carR = w - pad - 8;
+      const carT = h * 0.22;
+      const carB = h * 0.82;
+      const floorY = carB - 18;
+      const frontX = carR - 28;
+
+      ctx.fillStyle = "#eef5fc";
+      ctx.fillRect(carL, carT, carR - carL, carB - carT);
+      ctx.strokeStyle = "#5599cc";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(carL, carT, carR - carL, carB - carT);
+
+      ctx.fillStyle = "rgba(170, 210, 255, 0.35)";
+      ctx.fillRect(carL + 6, carT + 6, carR - carL - 12, floorY - carT - 12);
+
+      ctx.strokeStyle = "#88aacc";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(carL, floorY);
+      ctx.lineTo(carR, floorY);
+      ctx.stroke();
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("前 →", frontX, carT + 20);
+
+      const px = w * 0.38;
+      const footX = px;
+      const footY = floorY;
+      const personH = h * 0.28;
+      const rad = (personTilt * Math.PI) / 180;
+      const headX = footX + Math.sin(rad) * personH;
+      const headY = footY - Math.cos(rad) * personH;
+      const shoulderY = footY - personH * 0.72;
+      const shoulderX = footX + Math.sin(rad) * personH * 0.72;
+      const handX = shoulderX + Math.cos(rad) * 18;
+      const handY = shoulderY + Math.sin(rad) * 18;
+
+      ctx.strokeStyle = "#334455";
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(footX, footY);
+      ctx.lineTo(headX, headY);
+      ctx.stroke();
+
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(shoulderX, shoulderY);
+      ctx.lineTo(shoulderX - Math.cos(rad) * 22, shoulderY + Math.sin(rad) * 22);
+      ctx.moveTo(shoulderX, shoulderY);
+      ctx.lineTo(handX, handY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(headX, headY - 10, 11, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const anchorX = px + 10;
+      const anchorY = carT + 24;
+      const stringLen = h * 0.18;
+      const balRad = (balloonTilt * Math.PI) / 180;
+      const balloonX = anchorX + Math.sin(balRad) * stringLen;
+      const balloonY = anchorY + Math.cos(balRad) * stringLen;
+
+      ctx.strokeStyle = "#666";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(anchorX, anchorY);
+      ctx.lineTo(balloonX, balloonY);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255, 100, 120, 0.85)";
+      ctx.strokeStyle = "#cc4455";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(balloonX, balloonY, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath();
+      ctx.arc(balloonX - 5, balloonY - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (Math.abs(a) > 0.15) {
+        const inertLen = a * 8;
+        drawArrow(headX, headY - 8, -inertLen, 0, "#ee4455", "慣性");
+        drawArrow(balloonX, balloonY, inertLen, 0, "#22aa55", "空気");
+      }
+
+      return { carL, carT, carR, carB, frontX };
+    }
+
+    function drawHud(a) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.93)";
+      ctx.fillRect(12, 12, 168, 96);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.15)";
+      ctx.strokeRect(12, 12, 168, 96);
+      ctx.fillStyle = "#004c99";
+      ctx.font = "600 13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText(`a = ${fmt(a, 1)} m/s²`, 22, 34);
+      ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(`v = ${fmt(trainV, 1)} m/s`, 22, 54);
+      ctx.fillText(`人 ${fmt(personTilt, 1)}°`, 22, 74);
+      ctx.fillText(`風船 ${fmt(balloonTilt, 1)}°`, 22, 94);
+    }
+
+    function draw() {
+      syncSliders();
+      const w = canvas.width;
+      const h = canvas.height;
+      const a = getA();
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#f8fcff";
+      ctx.fillRect(0, 0, w, h);
+
+      drawTrainInterior(w, h, a);
+      drawHud(a);
+
+      if (Math.abs(a) < 0.05) {
+        statusPanel.textContent = "a = 0 → 等速。人は直立、風船も真下";
+      } else if (a > 0) {
+        statusPanel.textContent = "加速中 → 人は後ろへ、風船は前へ";
+      } else {
+        statusPanel.textContent = "減速中 → 人は前へ、風船は後ろへ";
+      }
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

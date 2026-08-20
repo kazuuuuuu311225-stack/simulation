@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 原子模型の歴史 トムソン・長岡・ラザフォード 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #1a0f0a 40%, #451a03 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.35), rgba(248,113,113,0.35));
+      border: 1px solid rgba(252,211,77,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fde68a; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fcd34d; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.14);
+      border: 1px solid rgba(252,211,77,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251, 191, 36, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fde68a; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(251,191,36,0.1));
+      border: 1px solid rgba(252,211,77,0.32);
+    }
+    .formula-main { font-size: 0.88rem; font-weight: 800; color: #fef08a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud" "ctrl";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(252,211,77,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fef3c7; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(640px, 72dvh); min-height: 440px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.7rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(252,211,77,0.7); color: #fde68a; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(248,113,113,0.65); color: #fecaca; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .mode-btn {
+      flex: 1; min-width: 88px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(252,211,77,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .mode-btn.active { background: rgba(251,191,36,0.28); color: #fef3c7; border-color: rgba(251,191,36,0.65); }
+    .viz-foot button.active { background: rgba(248,113,113,0.22); color: #fecaca; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.2);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fde68a; }
+    .hud-year { font-size: 0.72rem; color: #fcd34d; font-weight: 600; }
+    .hud-card {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+    .hud-card .txt { font-size: 0.76rem; color: #e2e8f0; line-height: 1.55; }
+    .hud-card.warn { border-color: rgba(248,113,113,0.45); background: rgba(127,29,29,0.2); }
+    .hud-card.warn .txt { color: #fecaca; }
+    .hud-card.ok { border-color: rgba(74,222,128,0.4); background: rgba(20,83,45,0.15); }
+    .hud-card.ok .txt { color: #bbf7d0; }
+    .timeline {
+      display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;
+    }
+    .timeline .tl-btn {
+      flex: 1; min-width: 52px; text-align: center; padding: 6px 4px; border-radius: 8px;
+      font-size: 0.62rem; font-weight: 700; color: #94a3b8;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+      font-family: inherit; cursor: pointer;
+    }
+    .timeline .tl-btn.active { color: #fde68a; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12); }
+    .timeline .tl-btn.bohr.active { color: #bae6fd; border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.12); }
+    .timeline .tl-btn.quantum.active { color: #c4b5fd; border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.12); }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fde68a; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2);
+      font-size: 0.74rem; color: #cbd5e1; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fde68a; margin-bottom: 4px; }
+    .journey-step.active { border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚛</div>
+      <p class="chapter-label">第28章 ① — 原子核と放射線</p>
+      <h2>原子模型の歴史 — トムソン・長岡・ラザフォード 3D</h2>
+      <p class="tagline">ブドウパン → 土星型 → 有核模型 · 実験が模型を変えた</p>
+      <a id="back" href="../00_folder_atom.html#chapter-28">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — 原子模型の進化</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>1904 トムソン</strong>正電荷が球全体に</div>
+        <div class="journey-step" id="step2"><strong>1904 長岡</strong>中心＋電子リング</div>
+        <div class="journey-step" id="step3"><strong>1911 ラザフォード</strong>α線散乱→原子核</div>
+        <div class="journey-step" id="step4"><strong>1913 ボーア</strong>量子化された軌道</div>
+        <div class="journey-step" id="step5"><strong>1920s 量子</strong>電子雲・確率</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">実験の結果が模型を更新する — トムソン（均一）→ 長岡（環）→ ラザフォード（核）</div>
+        <div class="formula-sub">青＝電子 · 赤＝正電荷 · 黄＝α粒子（ラザフォード模式）</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">原子模型 — 3Dアニメーション比較</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子（e⁻）</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>正電荷</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>α粒子</span>
+              <span><i class="color-chip" style="background:#86efac;color:#86efac"></i>電子軌道リング</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">モデル —</div>
+              <div class="status-badge" id="statusBadge">ドラッグで回転 · スクロールで拡大</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="mode-btn active" data-model="thomson">トムソン模型</button>
+              <button type="button" class="mode-btn" data-model="nagaoka">長岡半太郎模型</button>
+              <button type="button" class="mode-btn" data-model="rutherford">ラザフォード模型</button>
+              <button type="button" class="mode-btn" data-model="compare">3モデル比較</button>
+              <button type="button" class="mode-btn" data-model="bohr">ボーア模型</button>
+              <button type="button" class="mode-btn" data-model="quantum">量子力学模型</button>
+              <button type="button" id="btnAlpha">α線散乱デモ</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title" id="hudName">—</p>
+            <p class="hud-year" id="hudYear">—</p>
+            <div class="hud-card ok">
+              <div class="lbl">正電荷の分布</div>
+              <div class="txt" id="hudCharge">—</div>
+            </div>
+            <div class="hud-card ok">
+              <div class="lbl">電子の配置</div>
+              <div class="txt" id="hudElectron">—</div>
+            </div>
+            <div class="hud-card">
+              <div class="lbl">実験的根拠</div>
+              <div class="txt" id="hudEvidence">—</div>
+            </div>
+            <div class="hud-card warn">
+              <div class="lbl">問題点（なぜ破綻？）</div>
+              <div class="txt" id="hudProblem">—</div>
+            </div>
+            <div class="timeline">
+              <button type="button" class="tl-btn active" data-model="thomson" id="tl1">トムソン</button>
+              <button type="button" class="tl-btn" data-model="nagaoka" id="tl2">長岡</button>
+              <button type="button" class="tl-btn" data-model="rutherford" id="tl3">ラザフォード</button>
+              <button type="button" class="tl-btn bohr" data-model="bohr" id="tl4">ボーア</button>
+              <button type="button" class="tl-btn quantum" data-model="quantum" id="tl5">量子</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">比較のポイント（高校生向け）</p>
+          <div class="hint-box" id="hintText">
+            <strong>トムソン模型</strong>は「正電荷がふんわり広がり、電子が中に埋まっている」イメージ。でも<strong>α線が大きく曲がる</strong>実験結果と合いませんでした。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>原子模型は<strong>思いつき</strong>ではなく、<strong>実験結果</strong>でどんどん更新されていった</li>
+        <li>トムソン（1904）— 電子発見後の「ブドウパン」：正電荷が球全体に広がる</li>
+        <li>長岡半太郎（1904）— 土星型：中心に正電荷、電子は<strong>輪のように</strong>回る（日本発！）</li>
+        <li>ラザフォード（1911）— α線散乱で<strong>原子核</strong>の存在が判明、有核模型へ</li>
+        <li>どの古典模型も「電子が回転すると電磁波を出して崩壊する」問題を抱え、<strong>量子論</strong>へつながる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const MODEL_DATA = {
+        thomson: {
+          name: "トムソン模型（ブドウパンモデル）",
+          year: "1904年 · J.J. トムソン",
+          charge: "正電荷が球状に均一に広がる（プリンのようなイメージ）",
+          electron: "電子（青）が正電荷の中にランダムに散在 · 弱く振動",
+          evidence: "陰極線で電子を発見（e/m の測定）· 電気を帯びた粒子が原子の部品",
+          problem: "α線散乱実験と矛盾 — 正電荷が広がっているなら、α粒子はほとんど曲がらないはず",
+          hint: "<strong>トムソン模型</strong>は「正電荷がふんわり広がり、電子が中に埋まっている」イメージ。でも<strong>α線が大きく曲がる</strong>実験結果と合いませんでした。",
+        },
+        nagaoka: {
+          name: "長岡半太郎の土星型模型",
+          year: "1904年 · 長岡半太郎（日本）",
+          charge: "正電荷が中心に集中（原子核の先駆け）",
+          electron: "電子（青）が環状軌道を高速回転 — 土星の輪のように",
+          evidence: "トムソン模型の問題を克服しようとした力学的模型 · スペクトル線の研究",
+          problem: "回転する電子は電磁波を放出し続ける → エネルギーを失い<strong>原子は崩壊</strong>するはず（古典論）",
+          hint: "<strong>長岡模型</strong>は正電荷を中心に集め、電子を輪で回す。土星に似ている！でも古典論では電子が電磁波を出して崩壊してしまう。",
+        },
+        rutherford: {
+          name: "ラザフォード模型（有核原子模型）",
+          year: "1911年 · アーネスト・ラザフォード",
+          charge: "正電荷が中心の<strong>ごく小さな原子核</strong>に集中",
+          electron: "電子（青）が核の周りを回転 — 太陽系のような配置",
+          evidence: "<strong>α線散乱実験</strong> — ごく少数のα粒子が大角度に反射 → 核の存在",
+          problem: "やはり回転電子は電磁波を放出して崩壊する（古典論）→ <strong>ボーア模型</strong>へ",
+          hint: "<strong>ラザフォード模型</strong>はα線散乱で証明された！正電荷は中心の小さな核に。電子はその周りを回る。「α線散乱デモ」ボタンでイメージを確認。",
+        },
+        compare: {
+          name: "3モデル比較モード",
+          year: "歴史的変遷を一覧",
+          charge: "左：球全体 / 中：中心集中 / 右：原子核に集中",
+          electron: "左：内部散在 / 中：環状回転 / 右：核の周りを回転",
+          evidence: "実験が進むごとに正電荷の分布が「中心へ」移動",
+          problem: "すべて古典論では電子の安定性に問題 → ボーア模型へ",
+          hint: "<strong>比較モード</strong> — 3つの古典模型を並べて、正電荷の分布と電子の配置の違いを一目で比較できます。",
+        },
+        bohr: {
+          name: "ボーア模型（量子化された軌道）",
+          year: "1913年 · ニールス・ボーア",
+          charge: "正電荷は中心の原子核に集中（ラザフォードと同じ）",
+          electron: "電子は<strong>決まった軌道</strong>（n=1,2,3…）だけを回る · 軌道間でジャンプ",
+          evidence: "水素の<strong>線スペクトル</strong> — 光の波長が飛び飛び（E=hν）と一致",
+          problem: "多電子原子やスペクトルの細かい構造は説明できない → <strong>量子力学</strong>へ",
+          hint: "<strong>ボーア模型</strong> — 電子は好きな場所を回れない！n=1,2,3 の<strong>決まった軌道</strong>だけ。光を吸収・放出するときだけ軌道がジャンプする。",
+        },
+        quantum: {
+          name: "量子力学模型（電子雲）",
+          year: "1920年代〜 · シュレーディンガーなど",
+          charge: "正電荷は原子核に集中",
+          electron: "電子は<strong>確率雲</strong>として存在 — |ψ|² が見つかる確率",
+          evidence: "ボーア模型では説明できなかった現象 · 電子回折 · 不確定性原理",
+          problem: "（現代の標準模型）— さらに相対論効果・スピンなどで精緻化",
+          hint: "<strong>量子力学</strong> — 電子は「ここを回っている」とは言えない。<strong>電子雲</strong>の中に見つかる確率が高い。現代の化学の基礎！",
+        },
+      };
+
+      const INIT_ROT_X = 0.35, INIT_ROT_Y = 0.45, INIT_ZOOM = 11;
+      const BLEND = 0.14;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+
+      let model = "thomson";
+      let targetModel = "thomson";
+      let blend = 1;
+      let simTime = 0;
+      let autoSpin = true;
+      let alphaDemo = false;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let thomsonGroup, nagaokaGroup, rutherfordGroup, bohrGroup, quantumGroup;
+      let alphaParticles = [];
+      let electronData = [];
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function makeElectronMesh() {
+        return new THREE.Mesh(
+          new THREE.SphereGeometry(0.08, 12, 12),
+          new THREE.MeshPhysicalMaterial({
+            color: 0x38bdf8, emissive: 0x60a5fa, emissiveIntensity: 1.4,
+            metalness: 0.3, roughness: 0.2,
+          })
+        );
+      }
+
+      function buildThomson(parent, scale) {
+        const g = new THREE.Group();
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(1.2 * scale, 32, 32),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xf87171, emissive: 0xef4444, emissiveIntensity: 0.35,
+            transparent: true, opacity: 0.38, metalness: 0.1, roughness: 0.5,
+          })
+        );
+        g.add(sphere);
+        const electrons = [];
+        for (let i = 0; i < 14; i++) {
+          const e = makeElectronMesh();
+          const th = Math.random() * Math.PI * 2;
+          const ph = Math.acos(2 * Math.random() - 1);
+          const r = 0.3 + Math.random() * 0.75;
+          e.userData = {
+            type: "thomson",
+            baseR: r * scale,
+            th: th, ph: ph,
+            phase: Math.random() * Math.PI * 2,
+            amp: 0.04 + Math.random() * 0.06,
+          };
+          g.add(e);
+          electrons.push(e);
+        }
+        g.userData.electrons = electrons;
+        parent.add(g);
+        return g;
+      }
+
+      function buildNagaoka(parent, scale) {
+        const g = new THREE.Group();
+        const core = new THREE.Mesh(
+          new THREE.SphereGeometry(0.35 * scale, 24, 24),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xf87171, emissive: 0xdc2626, emissiveIntensity: 0.8,
+            metalness: 0.35, roughness: 0.25,
+          })
+        );
+        g.add(core);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x86efac, transparent: true, opacity: 0.25, side: THREE.DoubleSide,
+        });
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1 * scale, 0.03, 8, 64), ringMat);
+        ring.rotation.x = Math.PI / 2;
+        g.add(ring);
+        const electrons = [];
+        for (let i = 0; i < 8; i++) {
+          const e = makeElectronMesh();
+          e.userData = {
+            type: "nagaoka",
+            angle: (i / 8) * Math.PI * 2,
+            speed: 1.8 + (i % 3) * 0.3,
+            radius: 1.1 * scale,
+            tilt: 0.12 * Math.sin(i),
+          };
+          g.add(e);
+          electrons.push(e);
+        }
+        g.userData.electrons = electrons;
+        parent.add(g);
+        return g;
+      }
+
+      function buildRutherford(parent, scale) {
+        const g = new THREE.Group();
+        const nucleus = new THREE.Mesh(
+          new THREE.SphereGeometry(0.18 * scale, 20, 20),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xf87171, emissive: 0xff4444, emissiveIntensity: 1.2,
+            metalness: 0.4, roughness: 0.15,
+          })
+        );
+        g.add(nucleus);
+        const orbitMat = new THREE.LineBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.4 });
+        const electrons = [];
+        const orbits = [0.7, 1.0, 1.35];
+        orbits.forEach((r, oi) => {
+          const pts = [];
+          for (let i = 0; i <= 48; i++) {
+            const t = (i / 48) * Math.PI * 2;
+            pts.push(new THREE.Vector3(Math.cos(t) * r * scale, Math.sin(t) * r * scale * 0.35, Math.sin(t) * r * scale * 0.2));
+          }
+          g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), orbitMat));
+        });
+        for (let i = 0; i < 6; i++) {
+          const e = makeElectronMesh();
+          const orbit = orbits[i % 3];
+          e.userData = {
+            type: "rutherford",
+            angle: (i / 6) * Math.PI * 2,
+            speed: 1.2 + (i % 3) * 0.4,
+            radius: orbit * scale,
+            plane: i % 3,
+          };
+          g.add(e);
+          electrons.push(e);
+        }
+        g.userData.electrons = electrons;
+        g.userData.nucleus = nucleus;
+        parent.add(g);
+        return g;
+      }
+
+      function buildBohr(parent, scale) {
+        const g = new THREE.Group();
+        const nucleus = new THREE.Mesh(
+          new THREE.SphereGeometry(0.16 * scale, 20, 20),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xf87171, emissive: 0xff4444, emissiveIntensity: 1.3,
+            metalness: 0.4, roughness: 0.15,
+          })
+        );
+        g.add(nucleus);
+        const orbitRadii = [0.55, 0.95, 1.35];
+        const orbitColors = [0x38bdf8, 0x4ade80, 0xfbbf24];
+        const electrons = [];
+        orbitRadii.forEach((r, oi) => {
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(r * scale, 0.022, 8, 64),
+            new THREE.MeshBasicMaterial({
+              color: orbitColors[oi], transparent: true, opacity: 0.55, side: THREE.DoubleSide,
+            })
+          );
+          ring.rotation.x = Math.PI / 2;
+          g.add(ring);
+          const e = makeElectronMesh();
+          e.userData = {
+            type: "bohr",
+            orbit: oi,
+            radius: r * scale,
+            angle: oi * 1.4,
+            speed: 1.4 - oi * 0.25,
+            jumpPhase: oi * 2.1,
+          };
+          g.add(e);
+          electrons.push(e);
+        });
+        g.userData.electrons = electrons;
+        parent.add(g);
+        return g;
+      }
+
+      function buildQuantum(parent, scale) {
+        const g = new THREE.Group();
+        const nucleus = new THREE.Mesh(
+          new THREE.SphereGeometry(0.14 * scale, 20, 20),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xf87171, emissive: 0xff4444, emissiveIntensity: 1.2,
+            metalness: 0.4, roughness: 0.15,
+          })
+        );
+        g.add(nucleus);
+        const cloudShell = new THREE.Mesh(
+          new THREE.SphereGeometry(1.15 * scale, 32, 32),
+          new THREE.MeshPhysicalMaterial({
+            color: 0x818cf8, emissive: 0x6366f1, emissiveIntensity: 0.25,
+            transparent: true, opacity: 0.12, metalness: 0.1, roughness: 0.7,
+          })
+        );
+        g.add(cloudShell);
+        g.userData.cloudShell = cloudShell;
+        const electrons = [];
+        for (let i = 0; i < 72; i++) {
+          const u = Math.random();
+          const r = -Math.log(Math.max(u, 0.02)) * 0.32 * scale;
+          const th = Math.random() * Math.PI * 2;
+          const ph = Math.acos(2 * Math.random() - 1);
+          const dot = new THREE.Mesh(
+            new THREE.SphereGeometry(0.035, 6, 6),
+            new THREE.MeshPhysicalMaterial({
+              color: 0x818cf8, emissive: 0xa5b4fc, emissiveIntensity: 0.9,
+              transparent: true, opacity: 0.55 + Math.random() * 0.35,
+            })
+          );
+          dot.userData = {
+            type: "quantum",
+            r: r, th: th, ph: ph,
+            phase: Math.random() * Math.PI * 2,
+            drift: 0.02 + Math.random() * 0.03,
+          };
+          g.add(dot);
+          electrons.push(dot);
+        }
+        g.userData.electrons = electrons;
+        parent.add(g);
+        return g;
+      }
+
+      function buildScene3D() {
+        thomsonGroup = buildThomson(worldGroup, 1);
+        nagaokaGroup = buildNagaoka(worldGroup, 1);
+        rutherfordGroup = buildRutherford(worldGroup, 1);
+        bohrGroup = buildBohr(worldGroup, 1);
+        quantumGroup = buildQuantum(worldGroup, 1);
+        nagaokaGroup.visible = false;
+        rutherfordGroup.visible = false;
+        bohrGroup.visible = false;
+        quantumGroup.visible = false;
+
+        const grid = new THREE.GridHelper(14, 28, 0x475569, 0x1e293b);
+        grid.position.y = -1.6;
+        worldGroup.add(grid);
+      }
+
+      function setModelVisual() {
+        const active = blend < 1 ? targetModel : model;
+        const isCompare = active === "compare";
+
+        if (isCompare) {
+          thomsonGroup.visible = true;
+          nagaokaGroup.visible = true;
+          rutherfordGroup.visible = true;
+          bohrGroup.visible = false;
+          quantumGroup.visible = false;
+          thomsonGroup.position.set(-2.8, 0, 0);
+          nagaokaGroup.position.set(0, 0, 0);
+          rutherfordGroup.position.set(2.8, 0, 0);
+          thomsonGroup.scale.setScalar(0.55);
+          nagaokaGroup.scale.setScalar(0.55);
+          rutherfordGroup.scale.setScalar(0.55);
+        } else {
+          const s = 0.2 + blend * 0.8;
+          thomsonGroup.position.set(0, 0, 0);
+          nagaokaGroup.position.set(0, 0, 0);
+          rutherfordGroup.position.set(0, 0, 0);
+          bohrGroup.position.set(0, 0, 0);
+          quantumGroup.position.set(0, 0, 0);
+          thomsonGroup.visible = active === "thomson";
+          nagaokaGroup.visible = active === "nagaoka";
+          rutherfordGroup.visible = active === "rutherford";
+          bohrGroup.visible = active === "bohr";
+          quantumGroup.visible = active === "quantum";
+          thomsonGroup.scale.setScalar(active === "thomson" ? s : 0.001);
+          nagaokaGroup.scale.setScalar(active === "nagaoka" ? s : 0.001);
+          rutherfordGroup.scale.setScalar(active === "rutherford" ? s : 0.001);
+          bohrGroup.scale.setScalar(active === "bohr" ? s : 0.001);
+          quantumGroup.scale.setScalar(active === "quantum" ? s : 0.001);
+        }
+      }
+
+      function spawnAlpha() {
+        alphaParticles = [];
+        for (let i = 0; i < 5; i++) {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 10, 10),
+            new THREE.MeshPhysicalMaterial({
+              color: 0xfde047, emissive: 0xfbbf24, emissiveIntensity: 1.5,
+            })
+          );
+          m.userData = {
+            x: -5 + i * 0.3,
+            z: (Math.random() - 0.5) * 0.5,
+            vx: 0.045 + Math.random() * 0.01,
+            vz: 0,
+            scattered: false,
+            life: 0,
+          };
+          worldGroup.add(m);
+          alphaParticles.push(m);
+        }
+        alphaDemo = true;
+      }
+
+      function updateElectrons(t) {
+        function updateGroup(grp) {
+          if (!grp || !grp.userData.electrons) return;
+          grp.userData.electrons.forEach((e) => {
+            const d = e.userData;
+            if (d.type === "thomson") {
+              const wob = d.amp * Math.sin(t * 2 + d.phase);
+              const r = d.baseR + wob;
+              e.position.set(
+                r * Math.sin(d.ph) * Math.cos(d.th + t * 0.15),
+                r * Math.cos(d.ph) + wob * 0.5,
+                r * Math.sin(d.ph) * Math.sin(d.th + t * 0.15)
+              );
+            } else if (d.type === "nagaoka") {
+              const ang = d.angle + t * d.speed;
+              e.position.set(
+                Math.cos(ang) * d.radius,
+                Math.sin(ang) * d.tilt,
+                Math.sin(ang) * d.radius
+              );
+            } else if (d.type === "rutherford") {
+              const ang = d.angle + t * d.speed;
+              const yf = d.plane === 0 ? 0.35 : d.plane === 1 ? 0.55 : 0.2;
+              const zf = d.plane === 0 ? 0.2 : d.plane === 1 ? 0.1 : 0.45;
+              e.position.set(
+                Math.cos(ang) * d.radius,
+                Math.sin(ang) * d.radius * yf,
+                Math.sin(ang) * d.radius * zf
+              );
+            } else if (d.type === "bohr") {
+              const ang = d.angle + t * d.speed;
+              const jump = 0.08 * Math.sin(t * 0.7 + d.jumpPhase);
+              const r = d.radius + jump;
+              e.position.set(Math.cos(ang) * r, 0, Math.sin(ang) * r);
+            } else if (d.type === "quantum") {
+              const wob = d.drift * Math.sin(t * 1.6 + d.phase);
+              const r = d.r + wob;
+              e.position.set(
+                r * Math.sin(d.ph) * Math.cos(d.th + t * 0.12),
+                r * Math.cos(d.ph),
+                r * Math.sin(d.ph) * Math.sin(d.th + t * 0.12)
+              );
+            }
+          });
+        }
+        updateGroup(thomsonGroup);
+        updateGroup(nagaokaGroup);
+        updateGroup(rutherfordGroup);
+        updateGroup(bohrGroup);
+        updateGroup(quantumGroup);
+        if (quantumGroup && quantumGroup.userData.cloudShell) {
+          const shell = quantumGroup.userData.cloudShell;
+          shell.material.opacity = 0.1 + 0.06 * Math.sin(t * 1.2);
+          shell.scale.setScalar(1 + 0.04 * Math.sin(t * 0.9));
+        }
+      }
+
+      function updateAlpha(dt) {
+        if (!alphaDemo) return;
+        const nucX = model === "compare" ? 2.8 : 0;
+        alphaParticles.forEach((p) => {
+          const d = p.userData;
+          d.life += dt;
+          if (!d.scattered && d.x > nucX - 0.5 && Math.random() < 0.08) {
+            d.scattered = true;
+            d.vx = -0.02 - Math.random() * 0.03;
+            d.vz = (Math.random() - 0.5) * 0.06;
+          }
+          if (d.scattered && d.x < nucX + 0.3 && Math.random() < 0.03) {
+            d.vx = 0.04;
+            d.vz = (Math.random() - 0.5) * 0.08;
+          }
+          d.x += d.vx;
+          d.z += d.vz;
+          p.position.set(d.x, 0.2, d.z);
+          if (d.life > 12) {
+            d.x = -5;
+            d.z = (Math.random() - 0.5) * 0.5;
+            d.vx = 0.045;
+            d.vz = 0;
+            d.scattered = false;
+            d.life = 0;
+          }
+        });
+      }
+
+      function updateHUD() {
+        const data = MODEL_DATA[blend < 1 ? targetModel : model] || MODEL_DATA.thomson;
+        document.getElementById("hudName").textContent = data.name;
+        document.getElementById("hudYear").textContent = data.year;
+        document.getElementById("hudCharge").innerHTML = data.charge;
+        document.getElementById("hudElectron").innerHTML = data.electron;
+        document.getElementById("hudEvidence").innerHTML = data.evidence;
+        document.getElementById("hudProblem").innerHTML = data.problem;
+        document.getElementById("hintText").innerHTML = data.hint;
+
+        document.getElementById("modeBadge").textContent =
+          data.name + "\n" + data.year;
+
+        document.getElementById("statusBadge").textContent =
+          alphaDemo ? "α線散乱デモ再生中" : "ドラッグで回転 · スクロールで拡大";
+
+        const activeModel = blend < 1 ? targetModel : model;
+        document.getElementById("tl1").classList.toggle("active", activeModel === "thomson" || activeModel === "compare");
+        document.getElementById("tl2").classList.toggle("active", activeModel === "nagaoka" || activeModel === "compare");
+        document.getElementById("tl3").classList.toggle("active", activeModel === "rutherford" || activeModel === "compare");
+        document.getElementById("tl4").classList.toggle("active", activeModel === "bohr");
+        document.getElementById("tl5").classList.toggle("active", activeModel === "quantum");
+
+        document.getElementById("step1").classList.toggle("active", activeModel === "thomson");
+        document.getElementById("step2").classList.toggle("active", activeModel === "nagaoka");
+        document.getElementById("step3").classList.toggle("active", activeModel === "rutherford");
+        document.getElementById("step4").classList.toggle("active", activeModel === "bohr");
+        document.getElementById("step5").classList.toggle("active", activeModel === "quantum");
+
+        document.querySelectorAll(".mode-btn, .tl-btn").forEach((b) => {
+          if (b.dataset.model) b.classList.toggle("active", b.dataset.model === activeModel);
+        });
+        document.getElementById("btnAlpha").classList.toggle("active", alphaDemo);
+      }
+
+      function selectModel(m) {
+        setModel(m);
+        blend = 0;
+        document.querySelectorAll(".mode-btn, .tl-btn").forEach((b) => {
+          if (b.dataset.model) b.classList.toggle("active", b.dataset.model === m);
+        });
+      }
+
+      function setModel(m) {
+        targetModel = m;
+        if (m !== "rutherford" && m !== "compare") alphaDemo = false;
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0xfbbf24, 0.5, 20);
+        rim.position.set(-3, 2, 2);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        renderer.domElement.addEventListener("pointerleave", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.006, 6, 18);
+        }, { passive: false });
+        new ResizeObserver(() => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        }).observe(wrap);
+      }
+
+      function bindControls() {
+        document.querySelectorAll(".mode-btn, .tl-btn").forEach((b) => {
+          b.addEventListener("click", () => selectModel(b.dataset.model));
+        });
+        document.getElementById("btnAlpha").addEventListener("click", () => {
+          selectModel("rutherford");
+          alphaParticles.forEach((p) => worldGroup.remove(p));
+          spawnAlpha();
+        });
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        simTime += dt;
+
+        if (model !== targetModel) {
+          blend += BLEND;
+          if (blend >= 1) { model = targetModel; blend = 1; }
+        }
+
+        setModelVisual();
+        updateElectrons(simTime);
+        updateAlpha(dt);
+        updateHUD();
+
+        if (autoSpin && !dragging) rotY += dt * 0.018;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 1.0,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        setModelVisual();
+        updateHUD();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

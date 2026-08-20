@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>5章 — 仕事率 P = Fv</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1018 45%, #101820 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(52,211,153,0.4), rgba(56,189,248,0.25));
+      border: 1px solid rgba(52,211,153,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #6ee7b7; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #7dd3fc; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(52,211,153,0.14);
+      border: 1px solid rgba(52,211,153,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(52,211,153, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #6ee7b7; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(56,189,248,0.08));
+      border: 1px solid rgba(52,211,153,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #6ee7b7; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(52,211,153,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #6ee7b7; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
+    #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
+    .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #statusPanel, #hintBox {
+      font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px;
+      background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2);
+    }
+    #statusPanel.balanced, #statusPanel.pos-work, #statusPanel.p-low { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
+    #statusPanel.rotating, #statusPanel.neg-work, #statusPanel.p-high { color: #fda4af; border-color: rgba(251,113,133,0.35); }
+    #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
+    #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn, .btn-row button {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(52,211,153,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary, #startBtn, #dropBtn, #releaseBtn, #shotBtn {
+      background: rgba(52,211,153,0.25); color: #fff; border-color: rgba(52,211,153,0.55); font-weight: 800;
+    }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(52,211,153,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #6ee7b7; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(52,211,153,0.45); background: rgba(30,20,10,0.2); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .slider-row label, label.slider-label {
+      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+    }
+    .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #34d399; }
+    .side-group {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2); margin-bottom: 8px;
+    }
+    .side-group.left { border-left: 3px solid #38bdf8; }
+    .side-group.right { border-left: 3px solid #fb7185; }
+    .side-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+    .dir-row { display: flex; gap: 6px; margin-top: 4px; }
+    .dir-row button, .dir-btn {
+      flex: 1; padding: 8px 6px; min-height: 36px; font-family: inherit; font-size: 0.72rem;
+      font-weight: 600; border: 1px solid rgba(148,163,184,0.28); border-radius: 8px;
+      background: rgba(255,255,255,0.06); color: #cbd5e1; cursor: pointer;
+    }
+    .dir-row button.active, .dir-btn.active {
+      background: rgba(52,211,153,0.3); color: #fff; border-color: rgba(52,211,153,0.55);
+    }
+    .mass-row { display: flex; flex-direction: column; gap: 8px; }
+    .mass-item {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .mass-item:nth-child(1) { border-left: 3px solid #38bdf8; }
+    .mass-item:nth-child(2) { border-left: 3px solid #fbbf24; }
+    .mass-item:nth-child(3) { border-left: 3px solid #fb7185; }
+    .mass-label { display: block; font-size: 0.72rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
+    .hint { margin: 0 0 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; }
+    .formula-box { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(52,211,153,0.1);
+      font-size: 0.78rem; font-weight: 600; color: #6ee7b7; text-align: center; line-height: 1.55; }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    #formulaPanel, #calcPanel {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.2);
+    }
+    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #6ee7b7; }
+    .concept { margin: 0 0 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.55; }
+    .formula-block, .calc-block {
+      margin-bottom: 10px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
+    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #34d399; }
+    .formula-line, .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
+    .formula-line.sub, .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
+    .num, .num-before { font-weight: 600; color: #7dd3fc; }
+    .num-after { font-weight: 600; color: #fda4af; }
+    .num-dp, .num-cm { font-weight: 600; color: #c4b5fd; }
+    .num-to-bat { font-weight: 600; color: #fde68a; }
+    #liveReadout {
+      margin: 10px 14px 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.2);
+      display: grid; gap: 8px;
+    }
+    #liveReadout.cols3 { grid-template-columns: 1fr auto 1fr; }
+    #liveReadout.cols4 { grid-template-columns: 1fr 1fr 1fr; }
+    .live-col { font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
+    .live-col.left, .live-col.m1 { color: #7dd3fc; }
+    .live-col.right, .live-col.m3 { color: #fda4af; text-align: right; }
+    .live-col.m2 { color: #fde68a; }
+    .live-col.center { text-align: center; color: #fde68a; border-left: 1px solid rgba(148,163,184,0.15);
+      border-right: 1px solid rgba(148,163,184,0.15); padding: 0 8px; }
+    .live-col .title { display: block; font-weight: 700; font-size: 0.68rem; margin-bottom: 4px; }
+    .live-col .state { display: block; margin-top: 4px; font-weight: 700; font-size: 0.82rem; }
+    .live-col .state.balanced { color: #6ee7b7; }
+    .live-col .state.rotating { color: #fda4af; }
+    .live-col.g-row { grid-column: 1 / -1; text-align: center; color: #fde68a; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+    .graph-block { margin-top: 10px; border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; }
+    .graph-legend { margin: 0 14px 6px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .legend { display: none; }
+    .sim-layout { display: contents; }
+    .canvas-section { display: contents; }
+    @media (max-width: 520px) {
+      #liveReadout.cols3 { grid-template-columns: 1fr 1fr; }
+      .live-col.center { grid-column: 1 / -1; border: none; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+      .live-col.right { text-align: left; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚡</div>
+      <p class="chapter-label">第5章 — 仕事とエネルギー</p>
+      <h2>仕事率（パワー）P = F v</h2>
+      <p class="tagline">同じ F でも v が大きいほど P = Fv は大きい</p>
+      <a id="back" href="../00_folder_classical.html#chapter-5">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">瞬間の仕事率 <strong>P = F × v</strong> · 平均 <strong>P̄ = W / t</strong></div>
+        <div class="formula-sub">静止中 v = 0 → P = 0 · 加速すると v ↑ → P ↑</div>
+      </div>
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+
+            <div class="viz-head"><p class="viz-label">力 F と速度 v · 瞬間パワー P = Fv</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>力 F</span>
+              <span><i class="color-chip" style="background:#34d399;color:#34d399"></i>速度 v</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>P = Fv</span>
+            </div>
+            <div class="canvas-wrap" id="canvasWrap"><canvas id="canvas"></canvas></div>
+          </div>
+        </div>
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">コントロール</p>
+            <div class="slider-row"><label>力 F <span id="fValue">50</span> N</label>
+              <input id="fSlider" type="range" min="0" max="100" step="1" value="50"></div>
+            <div class="slider-row"><label>質量 m <span id="mValue">5.0</span> kg</label>
+              <input id="mSlider" type="range" min="1" max="20" step="0.5" value="5"></div>
+            <p class="hint">スライダーで F と m を変えてスタート。「停止」を押すまで右端で止まらず動き続けます。下の式パネルで計算結果をリアルタイムに確認できます。</p>
+            <div class="btn-row">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" id="pauseBtn">停止</button>
+              <button type="button" id="resetBtn">リセット</button>
+            </div>
+            <div id="statusPanel">スタートで運動を開始</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="formulaPanel" aria-label="仕事と仕事率の式">
+      <h3>仕事・仕事率の式（高校物理）</h3>
+      <p class="concept">水平な床の上で、摩擦のない物体に右向きの力 F を加えます。静止（v₀ = 0）からスタートします。</p>
+
+      <div class="formula-block">
+        <p class="formula-label">① 運動方程式</p>
+        <p class="formula-line">a = F / m</p>
+        <p class="formula-line sub">→ a = <span id="fF" class="num">—</span> / <span id="fM" class="num">—</span> = <span id="fA" class="num">—</span> m/s²</p>
+      </div>
+
+      <div class="formula-block">
+        <p class="formula-label">② 速度・位置（v₀ = 0）</p>
+        <p class="formula-line">v = at = (F/m) t</p>
+        <p class="formula-line sub">→ 今の v = <span id="fV" class="num">—</span> m/s</p>
+        <p class="formula-line">d = ½at² = ½(F/m) t²</p>
+        <p class="formula-line sub">→ 今の d = <span id="fD" class="num">—</span> m</p>
+      </div>
+
+      <div class="formula-block">
+        <p class="formula-label">③ 仕事</p>
+        <p class="formula-line">W = F × d</p>
+        <p class="formula-line sub">→ W = <span id="fF2" class="num">—</span> × <span id="fD2" class="num">—</span> = <span id="fW" class="num">—</span> J</p>
+      </div>
+
+      <div class="formula-block">
+        <p class="formula-label">④ 仕事率</p>
+        <p class="formula-line">P = F × v （瞬間・力と速度が同方向）</p>
+        <p class="formula-line sub">→ P = <span id="fFP" class="num">—</span> × <span id="fVP" class="num">—</span> = <span id="fPinst" class="num">—</span> W</p>
+        <p class="formula-line">P̄ = W / t （開始からの平均）</p>
+        <p class="formula-line sub">→ P̄ = <span id="fWavg" class="num">—</span> / <span id="fT" class="num">—</span> = <span id="fPavg" class="num">—</span> W</p>
+        <span class="note formula-line sub">F が一定のとき v が増えるので P = Fv も大きくなります。静止中は P = 0 です。</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li><strong>仕事率（パワー）</strong> P は単位時間あたりの仕事</li>
+        <li>瞬間 <strong>P = Fv</strong>（力と速度が同方向）</li>
+        <li>平均 <strong>P̄ = W/t</strong> — 開始からの累積仕事 ÷ 時間</li>
+        <li>F 一定でも v が増えると P = Fv は大きくなる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>    let layout = { w: 0, h: 0, dpr: 1 };
+    let fdLayout = { w: 0, h: 0, dpr: 1 };
+
+    function drawDarkBg(c, w, h, glowRgb) {
+      const g = glowRgb || "52,211,153";
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
+      c.fillStyle = bg; c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(" + g + ",0.12)");
+      glow.addColorStop(0.45, "rgba(" + g + ",0.05)");
+      glow.addColorStop(1, "rgba(20,24,36,0)");
+      c.fillStyle = glow; c.fillRect(0, 0, w, h);
+    }
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const fSlider = document.getElementById("fSlider");
+    const mSlider = document.getElementById("mSlider");
+
+    const MAX_DT = 1 / 30;
+    const X_MIN = 0;
+    const X_MAX = 40;
+    const X0 = 0;
+    const VIEW_SPAN = X_MAX - X_MIN;
+    const P_LOW = 200;
+    const P_HIGH = 800;
+
+    let x = X0;
+    let v = 0;
+    let t = 0;
+    let cumulativeW = 0;
+    let running = false;
+    let paused = false;
+    let simF = 50;
+    let simM = 5;
+
+    const DEFAULTS = { F: 50, m: 5 };
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getF() {
+      return running ? simF : parseFloat(fSlider.value);
+    }
+
+    function getM() {
+      return running ? simM : parseFloat(mSlider.value);
+    }
+
+    function getD() {
+      return x - X0;
+    }
+
+    function getMotionView() {
+      const edgePad = 3;
+      let viewMin = X_MIN;
+      let viewMax = X_MAX;
+      if (x > X_MAX - edgePad) {
+        viewMax = x + edgePad;
+        viewMin = viewMax - VIEW_SPAN;
+      } else if (x < X_MIN + edgePad) {
+        viewMin = Math.max(0, x - edgePad);
+        viewMax = viewMin + VIEW_SPAN;
+      }
+      return { viewMin, viewMax };
+    }
+
+    function getWork() {
+      return running ? cumulativeW : getF() * getD();
+    }
+
+    function getInstantPower() {
+      return getF() * v;
+    }
+
+    function getAvgPower() {
+      if (t < 0.05) return 0;
+      return cumulativeW / t;
+    }
+
+    function powerTier(p) {
+      if (p < P_LOW) return "low";
+      if (p < P_HIGH) return "mid";
+      return "high";
+    }
+
+    function powerColor(tier) {
+      if (tier === "low") return "#0088dd";
+      if (tier === "mid") return "#22aa55";
+      return "#ee4455";
+    }
+
+    function powerRgb(tier) {
+      if (tier === "low") return "0, 136, 221";
+      if (tier === "mid") return "34, 170, 85";
+      return "238, 68, 85";
+    }
+
+    function syncSliders() {
+      if (!running) {
+        document.getElementById("fValue").textContent = fSlider.value;
+        document.getElementById("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
+      } else {
+        document.getElementById("fValue").textContent = fmt(simF, 0);
+        document.getElementById("mValue").textContent = fmt(simM, 1);
+      }
+      updateFormulaPanel();
+    }
+
+    function updateFormulaPanel() {
+      const F = getF();
+      const m = getM();
+      const a = m > 0 ? F / m : 0;
+      const d = getD();
+      const W = getWork();
+      const pInst = getInstantPower();
+      const pAvg = getAvgPower();
+
+      document.getElementById("fF").textContent = fmt(F, 0);
+      document.getElementById("fM").textContent = fmt(m, 1);
+      document.getElementById("fA").textContent = fmt(a, 2);
+      document.getElementById("fV").textContent = fmt(v, 2);
+      document.getElementById("fD").textContent = fmt(d, 2);
+      document.getElementById("fF2").textContent = fmt(F, 0);
+      document.getElementById("fD2").textContent = fmt(d, 2);
+      document.getElementById("fW").textContent = fmt(W, 1);
+      document.getElementById("fFP").textContent = fmt(F, 0);
+      document.getElementById("fVP").textContent = fmt(v, 2);
+      document.getElementById("fPinst").textContent = fmt(pInst, 0);
+      document.getElementById("fWavg").textContent = fmt(W, 1);
+      document.getElementById("fT").textContent = fmt(t, 2);
+      document.getElementById("fPavg").textContent = fmt(pAvg, 0);
+    }
+
+    function resetSimulation() {
+      fSlider.value = DEFAULTS.F;
+      mSlider.value = DEFAULTS.m;
+      x = X0;
+      v = 0;
+      t = 0;
+      cumulativeW = 0;
+      running = false;
+      paused = false;
+      simF = DEFAULTS.F;
+      simM = DEFAULTS.m;
+      syncSliders();
+      statusPanel.textContent = "スタートで運動を開始";
+      statusPanel.className = "";
+    }
+
+    function startSimulation() {
+      if (!running) {
+        simF = parseFloat(fSlider.value);
+        simM = parseFloat(mSlider.value);
+        x = X0;
+        v = 0;
+        t = 0;
+        cumulativeW = 0;
+      }
+      running = true;
+      paused = false;
+      syncSliders();
+    }
+
+    function pauseSimulation() {
+      if (!running) return;
+      paused = !paused;
+      statusPanel.textContent = paused ? "一時停止中" : "運動中";
+    }
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      function fit(cv, wrap, minH) {
+        const rect = wrap.getBoundingClientRect();
+        const w = Math.max(280, Math.round(rect.width));
+        const h = Math.max(minH || 220, Math.round(rect.height));
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+        cv.style.width = w + "px";
+        cv.style.height = h + "px";
+        const c = cv.getContext("2d");
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h, dpr };
+      }
+      layout = fit(canvas, canvasWrap, 260);
+      if (typeof fdCanvas !== "undefined" && fdCanvas) fdLayout = fit(fdCanvas, fdWrap, 180);
+    }
+
+    [fSlider, mSlider].forEach((s) => {
+      s.addEventListener("input", syncSliders);
+      s.addEventListener("change", syncSliders);
+    });
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+
+    document.getElementById("pauseBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      pauseSimulation();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      resetSimulation();
+    });
+
+    function update(dt) {
+      if (!running || paused) return;
+      t += dt;
+      const F = simF;
+      const prevX = x;
+      const a = F / simM;
+      v += a * dt;
+      x += v * dt;
+      if (x < X_MIN) {
+        x = X_MIN;
+        v = 0;
+      }
+      const dx = x - prevX;
+      if (dx > 1e-7) cumulativeW += F * dx;
+    }
+
+    function worldToScreen(posX, w, viewMin, viewMax) {
+      const pad = 44;
+      const trackW = w - pad * 2;
+      const tNorm = (posX - viewMin) / (viewMax - viewMin);
+      return pad + tNorm * trackW;
+    }
+
+    function drawBox(cx, cy, glowRgb, glowAlpha) {
+      const bw = 68;
+      const bh = 44;
+
+      if (glowAlpha > 0.05) {
+        ctx.fillStyle = `rgba(${glowRgb}, ${glowAlpha})`;
+        ctx.fillRect(cx - bw / 2 - 8, cy - bh - 8, bw + 16, bh + 16);
+      }
+
+      ctx.fillStyle = "#ffe8c8";
+      ctx.strokeStyle = "#cc8844";
+      ctx.lineWidth = 2.5;
+      ctx.fillRect(cx - bw / 2, cy - bh, bw, bh);
+      ctx.strokeRect(cx - bw / 2, cy - bh, bw, bh);
+
+      ctx.strokeStyle = "#bb7733";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - bw / 2 + 10, cy - bh + 8);
+      ctx.lineTo(cx + bw / 2 - 10, cy - bh + 8);
+      ctx.moveTo(cx - bw / 2 + 10, cy - bh / 2);
+      ctx.lineTo(cx + bw / 2 - 10, cy - bh / 2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#556677";
+      const wheelY = cy - 2;
+      [-20, 20].forEach((dx) => {
+        ctx.beginPath();
+        ctx.arc(cx + dx, wheelY, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#334455";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
+
+    function drawArrowFrom(x0, y0, dx, dy, color, lw) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 3) return;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0 + dx, y0 + dy);
+      ctx.stroke();
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(12, len * 0.28);
+      const tx = x0 + dx;
+      const ty = y0 + dy;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawTrack(w, groundY, startSx) {
+      ctx.fillStyle = "#eef6ff";
+      ctx.fillRect(0, groundY - 8, w, canvas.height - groundY + 8);
+      ctx.strokeStyle = "#aacce8";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(24, groundY);
+      ctx.lineTo(w - 24, groundY);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0, 76, 153, 0.08)";
+      for (let i = 0; i <= 8; i += 1) {
+        const wx = X_MIN + (X_MAX - X_MIN) * (i / 8);
+        const sx = worldToScreen(wx, w);
+        ctx.fillRect(sx - 1, groundY - 20, 2, 20);
+      }
+
+      ctx.strokeStyle = "rgba(0, 140, 220, 0.35)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(startSx, groundY - 24);
+      ctx.lineTo(startSx, groundY + 4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#5a8ab0";
+      ctx.font = "10px Inter, Poppins, sans-serif";
+      ctx.fillText("起点", startSx - 12, groundY + 16);
+
+      ctx.fillStyle = "#7a9fbf";
+      ctx.fillText(`${X_MIN} m`, 28, groundY + 18);
+      ctx.textAlign = "right";
+      ctx.fillText(`${X_MAX} m`, w - 28, groundY + 18);
+      ctx.textAlign = "start";
+    }
+
+    function drawPowerMeter(w, groundY, pInst, pAvg, tier) {
+      const barW = Math.min(240, w * 0.6);
+      const barH = 10;
+      const bx = (w - barW) / 2;
+      const by = groundY + 38;
+      const fillRatio = Math.min(1, pInst / (P_HIGH * 1.1));
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.fillRect(bx - 12, by - 28, barW + 24, 52);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.12)";
+      ctx.strokeRect(bx - 12, by - 28, barW + 24, 52);
+
+      ctx.fillStyle = "rgba(0, 76, 153, 0.1)";
+      ctx.fillRect(bx, by, barW, barH);
+      ctx.fillStyle = powerColor(tier);
+      ctx.fillRect(bx, by, barW * fillRatio, barH);
+
+      ctx.fillStyle = powerColor(tier);
+      ctx.font = "600 14px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`P = Fv = ${fmt(pInst, 0)} W`, w / 2, by - 10);
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(`（参考）平均 P̄ = W/t = ${fmt(pAvg, 0)} W`, w / 2, by + 22);
+      ctx.textAlign = "start";
+    }
+
+    function drawHud(F, m, d, time, W, pInst, pAvg, tier) {
+      const pCol = powerColor(tier);
+      const hudW = 196;
+      const hudH = 148;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+      ctx.fillRect(12, 12, hudW, hudH);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.15)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(12, 12, hudW, hudH);
+
+      ctx.font = "600 13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#004c99";
+      const lines = [
+        `F = ${fmt(F, 0)} N`,
+        `m = ${fmt(m, 1)} kg`,
+        `v = ${fmt(v, 2)} m/s`,
+        `d = ${fmt(d, 2)} m`,
+        `t = ${fmt(time, 2)} s`,
+        `W = ${fmt(W, 1)} J`
+      ];
+      lines.forEach((line, i) => ctx.fillText(line, 22, 30 + i * 16));
+      ctx.fillStyle = pCol;
+      ctx.fillText(`P = Fv = ${fmt(pInst, 0)} W`, 22, 126);
+      ctx.fillStyle = "#5a7a99";
+      ctx.font = "500 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(`P̄ = W/t = ${fmt(pAvg, 0)} W`, 22, 144);
+    }
+
+    function updateStatus(F, pInst, tier) {
+      if (!running) return;
+      if (paused) {
+        statusPanel.className = "";
+        return;
+      }
+      if (F < 0.5) {
+        statusPanel.textContent = "F = 0 → v は増えず P = Fv = 0";
+        statusPanel.className = "";
+        return;
+      }
+      const labels = {
+        low: "まだ v が小さい → P = Fv も小さい（加速し始めの状態）",
+        mid: "v が増えている → 同じ F でも P = Fv は大きくなる",
+        high: "v が大きい → P = Fv が大きい（力が速いうちに仕事している）"
+      };
+      statusPanel.textContent = labels[tier];
+      statusPanel.className = `p-${tier}`;
+    }
+
+    function draw() {
+      syncSliders();
+      const w = layout.w;
+      const h = layout.h;
+      const F = getF();
+      const m = getM();
+      const d = getD();
+      const W = getWork();
+      const pInst = getInstantPower();
+      const pAvg = getAvgPower();
+      const tier = powerTier(pInst);
+      const glowAlpha = running && !paused && pInst > 1 ? Math.min(0.35, pInst / (P_HIGH * 1.5)) : 0;
+
+      const groundY = h * 0.62;
+      const motionView = getMotionView();
+      const startSx = worldToScreen(X0, w, motionView.viewMin, motionView.viewMax);
+      const cx = worldToScreen(x, w, motionView.viewMin, motionView.viewMax);
+      const cy = groundY - 6;
+      const boxCy = cy - 22;
+
+      ctx.clearRect(0, 0, w, h);
+      drawDarkBg(ctx, w, h);
+
+      drawTrack(w, groundY, startSx);
+      drawBox(cx, boxCy, powerRgb(tier), glowAlpha);
+
+      const fScale = 1.1;
+      if (F > 0.5) {
+        const fLen = F * fScale;
+        drawArrowFrom(cx - 8, boxCy - 28, fLen, 0, "#0088dd", 3.5);
+        ctx.fillStyle = "#0088dd";
+        ctx.font = "bold 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(`F=${fmt(F, 0)}N`, cx + fLen + 4, boxCy - 24);
+      }
+
+      if (v > 0.05) {
+        const vLen = Math.min(90, v * 2.2);
+        drawArrowFrom(cx, boxCy - 50, vLen, 0, "#22aa55", 2.8);
+        ctx.fillStyle = "#22aa55";
+        ctx.font = "bold 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(`v=${fmt(v, 2)}`, cx + vLen + 4, boxCy - 46);
+      }
+
+      if (F > 0.5 && v > 0.05 && pInst > 1) {
+        ctx.fillStyle = powerColor(tier);
+        ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(`P=Fv=${fmt(pInst, 0)}W`, cx - 36, boxCy - 58);
+      }
+
+      if (Math.abs(d) > 0.02) {
+        const x1 = Math.min(startSx, cx);
+        const x2 = Math.max(startSx, cx);
+        ctx.strokeStyle = "#0088dd";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x1, groundY + 14);
+        ctx.lineTo(x2, groundY + 14);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#4a7099";
+        ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`d = ${fmt(d, 2)} m`, (x1 + x2) / 2, groundY + 28);
+        ctx.textAlign = "start";
+      }
+
+      drawHud(F, m, d, t, W, pInst, pAvg, tier);
+      drawPowerMeter(w, groundY, pInst, pAvg, tier);
+      updateStatus(F, pInst, tier);
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  
+  </script>
+</body>
+</html>

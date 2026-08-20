@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>8章 — カーブと向心力</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #120a1f 45%, #1a1030 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.45), rgba(167,139,250,0.35));
+      border: 1px solid rgba(139,92,246,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c4b5fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #ddd6fe; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ede9fe; background: rgba(139,92,246,0.16);
+      border: 1px solid rgba(167,139,250,0.42); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 6, 22, 0.92); border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.14), rgba(167,139,250,0.08));
+      border: 1px solid rgba(139,92,246,0.35);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #ddd6fe; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(139,92,246,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #c4b5fd; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    .canvas-wrap { position: relative; background: #0a0e14; min-height: 340px; }
+    #canvas { display: block; width: 100%; height: min(520px, 58dvh); min-height: 340px; touch-action: none; }
+    .canvas-caption {
+      padding: 8px 14px 10px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55;
+      border-top: 1px solid rgba(148,163,184,0.08);
+    }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(139,92,246,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(139,92,246,0.28); color: #ede9fe; border-color: rgba(167,139,250,0.55); font-weight: 800; }
+    .act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(139,92,246,0.22);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #c4b5fd; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(139,92,246,0.45); background: rgba(76,29,149,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #ddd6fe; }
+    .calc-block {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.22);
+      border-left: 3px solid rgba(139,92,246,0.55);
+    }
+    .calc-label { margin: 0 0 4px; font-size: 0.68rem; font-weight: 700; color: #a78bfa; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .calc-line.sub { color: #94a3b8; font-size: 0.68rem; }
+    .num-v { font-weight: 700; color: #38bdf8; }
+    .num-r { font-weight: 700; color: #a78bfa; }
+    .num-mu { font-weight: 700; color: #c4b5fd; }
+    .num-fr { font-weight: 700; color: #fb7185; }
+    .num-ff { font-weight: 700; color: #38bdf8; }
+    .num-vmax { font-weight: 700; color: #6ee7b7; }
+    .verdict {
+      margin-top: 6px; padding: 8px 10px; border-radius: 10px;
+      font-weight: 700; font-size: 0.82rem; text-align: center;
+    }
+    .verdict.ok {
+      background: rgba(110, 231, 183, 0.1);
+      color: #6ee7b7;
+      border: 1px solid rgba(110, 231, 183, 0.35);
+    }
+    .verdict.ng {
+      background: rgba(251, 113, 133, 0.1);
+      color: #fb7185;
+      border: 1px solid rgba(251, 113, 133, 0.35);
+    }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #8b5cf6; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    #runStatus.running { color: #6ee7b7; }
+    #runStatus.danger { color: #fb7185; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">↻</div>
+      <p class="chapter-label">第8章 — 等速円運動</p>
+      <h2>カーブと向心力</h2>
+      <p class="tagline">摩擦力と曲がれる条件 — v, r, μ の連動</p>
+      <a id="back" href="../00_folder_classical.html#chapter-8">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">mv²/r ≤ μmg　→　v ≤ √(μgr)</div>
+        <div class="formula-sub">v が v<sub>max</sub> を超えると、摩擦力では曲がれず外側へ直進します</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">カーブ走行 — 必要向心力 F と摩擦上限 f</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#818cf8;color:#818cf8"></i>カーブ道路 · 半径 r</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>必要向心力 F<sub>req</sub></span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>摩擦最大 f<sub>max</sub></span>
+              <span><i class="color-chip" style="background:#ef4444;color:#ef4444"></i>車（反時計回り）</span>
+            </div>
+            <div class="canvas-wrap" id="canvasWrap">
+              <canvas id="canvas"></canvas>
+            </div>
+            <p class="canvas-caption">車は反時計回りに走行します。F<sub>req</sub> = mv²/r が f<sub>max</sub> = μmg を超えると外側へ直進します。</p>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">カーブ走行 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">走行状態</div>
+              <div class="val big" id="runStatus">v, r, μ を設定して「スタート」</div>
+            </div>
+
+            <p class="hud-title" style="margin-top:4px">値の連動</p>
+            <div class="calc-block">
+              <p class="calc-label">入力</p>
+              <p class="calc-line">v = <span id="cV" class="num-v">—</span> m/s</p>
+              <p class="calc-line">r = <span id="cR" class="num-r">—</span> m</p>
+              <p class="calc-line">μ = <span id="cMu" class="num-mu">—</span>　（m = 1000 kg）</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">必要な向心力</p>
+              <p class="calc-line">F<sub>required</sub> = mv² / r</p>
+              <p class="calc-line sub">→ <span id="cFReq" class="num-fr">—</span> N</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">摩擦の最大値</p>
+              <p class="calc-line">F<sub>friction max</sub> = μmg</p>
+              <p class="calc-line sub">→ <span id="cFFric" class="num-ff">—</span> N</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">最大安全速度</p>
+              <p class="calc-line">v<sub>max</sub> = √(μgr)</p>
+              <p class="calc-line sub">→ <span id="cVmax" class="num-vmax">—</span> m/s</p>
+              <div id="verdict" class="verdict ok">判定 —</div>
+            </div>
+
+            <p class="hud-title" style="margin-top:4px">コントロール</p>
+            <div class="slider-row">
+              <label>速度 v <span id="vValue">15.0</span> m/s</label>
+              <input id="vSlider" type="range" min="0" max="40" step="0.5" value="15">
+            </div>
+            <div class="slider-row">
+              <label>カーブ半径 r <span id="rValue">80</span> m</label>
+              <input id="rSlider" type="range" min="10" max="200" step="1" value="80">
+            </div>
+            <div class="slider-row">
+              <label>摩擦係数 μ <span id="muValue">0.60</span></label>
+              <input id="muSlider" type="range" min="0.1" max="1.0" step="0.05" value="0.6">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li>カーブを曲がるには<strong>向心力 F = mv²/r</strong> が必要（中心向き）</li>
+        <li>路面摩擦が供給できる最大値は <strong>f<sub>max</sub> = μmg</strong></li>
+        <li><strong>F ≤ f<sub>max</sub></strong> のとき曲がれる。等号付きで v = v<sub>max</sub> = √(μgr)</li>
+        <li>v が v<sub>max</sub> を超えると摩擦不足で<strong>外側へ直進</strong>（円運動から外れる）</li>
+        <li>半径 r が小さいほど、同じ v でも必要向心力は大きくなる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const runStatus = document.getElementById("runStatus");
+    const verdictEl = document.getElementById("verdict");
+    const startBtn = document.getElementById("startBtn");
+
+    const G = 9.8;
+    const M = 1000;
+    const MAX_DT = 1 / 30;
+    const START_THETA = 0;
+    const COLOR_F_REQ = "#fb7185";
+    const COLOR_F_FRIC = "#38bdf8";
+    const COLOR_ROAD = "#6366f1";
+    const COLOR_ROAD_EDGE = "#818cf8";
+
+    const DEFAULTS = { v: 15, r: 80, mu: 0.6 };
+
+    let phase = "idle";
+    let mode = "curve";
+    let theta = START_THETA;
+    let flyX = 0;
+    let flyY = 0;
+    let flyVx = 0;
+    let flyVy = 0;
+    let layout = { cx: 0, cy: 0, drawR: 0, ppm: 1, w: 0, h: 0, dpr: 1 };
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getV() { return parseFloat(document.getElementById("vSlider").value); }
+    function getR() { return parseFloat(document.getElementById("rSlider").value); }
+    function getMu() { return parseFloat(document.getElementById("muSlider").value); }
+
+    function computePhysics(v, r, mu) {
+      const fReq = (M * v * v) / r;
+      const fFric = mu * M * G;
+      const vMax = Math.sqrt(mu * G * r);
+      const canTurn = v <= vMax + 1e-6;
+      return { v, r, mu, fReq, fFric, vMax, canTurn };
+    }
+
+    function syncSliders() {
+      document.getElementById("vValue").textContent = fmt(getV(), 1);
+      document.getElementById("rValue").textContent = fmt(getR(), 0);
+      document.getElementById("muValue").textContent = fmt(getMu(), 2);
+    }
+
+    function setStatus(text, cls) {
+      runStatus.textContent = text;
+      runStatus.className = "val big" + (cls ? " " + cls : "");
+    }
+
+    function updateCalcPanel(p) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      set("cV", fmt(p.v, 1));
+      set("cR", fmt(p.r, 0));
+      set("cMu", fmt(p.mu, 2));
+      set("cFReq", fmt(p.fReq, 0));
+      set("cFFric", fmt(p.fFric, 0));
+      set("cVmax", fmt(p.vMax, 2));
+      verdictEl.textContent = p.canTurn ? "✓ 曲がれる" : "✗ 曲がれない";
+      verdictEl.className = "verdict " + (p.canTurn ? "ok" : "ng");
+    }
+
+    function carWorldPos(r, th) {
+      return { x: r * Math.cos(th), y: r * Math.sin(th) };
+    }
+
+    function tangentWorld(th) {
+      return { x: -Math.sin(th), y: Math.cos(th) };
+    }
+
+    function toScreen(wx, wy) {
+      return {
+        x: layout.cx + wx * layout.ppm,
+        y: layout.cy - wy * layout.ppm,
+      };
+    }
+
+    function enterFlyoff(v, r, th) {
+      mode = "flyoff";
+      const pos = carWorldPos(r, th);
+      const tan = tangentWorld(th);
+      flyX = pos.x;
+      flyY = pos.y;
+      flyVx = tan.x * v;
+      flyVy = tan.y * v;
+      setStatus("摩擦不足 — 外側へ直進中", "danger");
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      mode = "curve";
+      theta = START_THETA;
+      syncSliders();
+      const p = computePhysics(getV(), getR(), getMu());
+      updateCalcPanel(p);
+      setStatus("v, r, μ を設定して「スタート」");
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "走行中";
+      const p = computePhysics(getV(), getR(), getMu());
+      if (p.canTurn) {
+        mode = "curve";
+        setStatus("カーブを走行中 — 曲がれる", "running");
+      } else {
+        enterFlyoff(p.v, p.r, theta);
+      }
+    }
+
+    function checkTurnCondition() {
+      const p = computePhysics(getV(), getR(), getMu());
+      if (phase === "running" && mode === "curve" && !p.canTurn) {
+        enterFlyoff(p.v, p.r, theta);
+      }
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      const v = getV();
+      const r = getR();
+      checkTurnCondition();
+
+      if (mode === "curve") {
+        theta += (v / r) * dt;
+      } else {
+        flyX += flyVx * dt;
+        flyY += flyVy * dt;
+        const vNow = getV();
+        const tanLen = Math.hypot(flyVx, flyVy);
+        if (tanLen > 1e-6) {
+          const scale = vNow / tanLen;
+          flyVx *= scale;
+          flyVy *= scale;
+        }
+      }
+    }
+
+    function setupCtx(c, lay) {
+      c.setTransform(lay.dpr, 0, 0, lay.dpr, 0, 0);
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1018");
+      bg.addColorStop(1, "#1a1030");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.48, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(139, 92, 246, 0.14)");
+      glow.addColorStop(0.45, "rgba(167, 139, 250, 0.06)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+      c.strokeStyle = "rgba(148, 163, 184, 0.05)";
+      c.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        c.beginPath();
+        c.moveTo(i, 0);
+        c.lineTo(i, h);
+        c.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        c.beginPath();
+        c.moveTo(0, j);
+        c.lineTo(w, j);
+        c.stroke();
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(260, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
+      const rM = getR();
+      const maxR = Math.min(w, h) * 0.34;
+      layout = {
+        cx: w * 0.5,
+        cy: h * 0.52,
+        drawR: maxR,
+        ppm: maxR / rM,
+        w, h, dpr,
+      };
+    }
+
+    function drawRoad() {
+      const { cx, cy, drawR } = layout;
+      const roadW = 6;
+
+      ctx.save();
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = "rgba(99, 102, 241, 0.55)";
+      ctx.strokeStyle = "rgba(129, 140, 248, 0.35)";
+      ctx.lineWidth = roadW + 10;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "rgba(129, 140, 248, 0.45)";
+      ctx.strokeStyle = COLOR_ROAD;
+      ctx.lineWidth = roadW;
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = COLOR_ROAD_EDGE;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([10, 12]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("中心", cx - 28, cy + 4);
+    }
+
+    function drawForceArrow(sx, sy, dx, dy, color, alpha, lineW, label) {
+      const len = Math.hypot(dx, dy);
+      if (len < 4) return;
+      const ex = sx + dx;
+      const ey = sy + dy;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = lineW + 3;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineW;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = color;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(13, len * 0.28);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+      if (label) {
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 6, ey - 6);
+      }
+      ctx.restore();
+    }
+
+    function drawCar(sx, sy, screenHeading) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(screenHeading);
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "rgba(239, 68, 68, 0.65)";
+      ctx.fillStyle = "#ef4444";
+      const cw = 18;
+      const ch = 34;
+      ctx.beginPath();
+      ctx.roundRect(-cw * 0.5, -ch * 0.5, cw, ch, 5);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.fillRect(-cw * 0.5 + 3, -ch * 0.5 + 4, cw - 6, 8);
+      ctx.strokeStyle = "rgba(251, 113, 133, 0.85)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx(ctx, layout);
+      const p = computePhysics(getV(), getR(), getMu());
+      updateCalcPanel(p);
+
+      const { w, h, cx, cy, ppm } = layout;
+
+      drawDarkBg(ctx, w, h);
+      drawRoad();
+
+      let wx, wy, screenHeading;
+      if (mode === "curve") {
+        const pos = carWorldPos(p.r, theta);
+        wx = pos.x;
+        wy = pos.y;
+        screenHeading = Math.atan2(-Math.cos(theta), -Math.sin(theta)) + Math.PI / 2;
+      } else {
+        wx = flyX;
+        wy = flyY;
+        screenHeading = Math.atan2(-flyVy, flyVx) + Math.PI / 2;
+      }
+
+      const car = toScreen(wx, wy);
+      const center = toScreen(0, 0);
+
+      const forceMax = Math.max(p.fReq, p.fFric, 1);
+      const arrowScale = Math.min(ppm * 0.55, 90) / forceMax;
+
+      const toCenterX = center.x - car.x;
+      const toCenterY = center.y - car.y;
+      const tcLen = Math.hypot(toCenterX, toCenterY) || 1;
+      const ux = toCenterX / tcLen;
+      const uy = toCenterY / tcLen;
+
+      drawForceArrow(
+        car.x, car.y,
+        ux * p.fReq * arrowScale, uy * p.fReq * arrowScale,
+        COLOR_F_REQ, 0.92, 4, "F"
+      );
+      drawForceArrow(
+        car.x, car.y,
+        ux * p.fFric * arrowScale, uy * p.fFric * arrowScale,
+        COLOR_F_FRIC, 0.8, 4, "f"
+      );
+
+      if (mode === "flyoff" && phase === "running") {
+        ctx.strokeStyle = "rgba(251, 113, 133, 0.45)";
+        ctx.setLineDash([6, 5]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(car.x, car.y);
+        ctx.lineTo(car.x + flyVx * 0.08 * ppm, car.y - flyVy * 0.08 * ppm);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      drawCar(car.x, car.y, screenHeading);
+    }
+
+    ["vSlider", "rSlider", "muSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") {
+          updateCalcPanel(computePhysics(getV(), getR(), getMu()));
+        }
+        if (phase === "running" && mode === "curve") {
+          layout.drawR = Math.min(layout.w, layout.h) * 0.34;
+          layout.ppm = layout.drawR / getR();
+        }
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("vSlider").value = DEFAULTS.v;
+      document.getElementById("rSlider").value = DEFAULTS.r;
+      document.getElementById("muSlider").value = DEFAULTS.mu;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => draw()).observe(canvasWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>6章 — 重心 Center of Mass</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1018 45%, #101820 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(56,189,248,0.25));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fde68a; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fcd34d; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.14);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251,191,36, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fde68a; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(56,189,248,0.08));
+      border: 1px solid rgba(251,191,36,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(251,191,36,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fde68a; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
+    #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
+    .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #statusPanel, #hintBox {
+      font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2);
+    }
+    #statusPanel.balanced, #statusPanel.pos-work, #statusPanel.p-low { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
+    #statusPanel.rotating, #statusPanel.neg-work, #statusPanel.p-high { color: #fda4af; border-color: rgba(251,113,133,0.35); }
+    #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
+    #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn, .btn-row button {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary, #startBtn, #dropBtn, #releaseBtn, #shotBtn {
+      background: rgba(251,191,36,0.25); color: #fff; border-color: rgba(251,191,36,0.55); font-weight: 800;
+    }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fde68a; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(251,191,36,0.45); background: rgba(30,20,10,0.2); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .slider-row label, label.slider-label {
+      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+    }
+    .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #fbbf24; }
+    .side-group {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2); margin-bottom: 8px;
+    }
+    .side-group.left { border-left: 3px solid #38bdf8; }
+    .side-group.right { border-left: 3px solid #fb7185; }
+    .side-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+    .dir-row { display: flex; gap: 6px; margin-top: 4px; }
+    .dir-row button, .dir-btn {
+      flex: 1; padding: 8px 6px; min-height: 36px; font-family: inherit; font-size: 0.72rem;
+      font-weight: 600; border: 1px solid rgba(148,163,184,0.28); border-radius: 8px;
+      background: rgba(255,255,255,0.06); color: #cbd5e1; cursor: pointer;
+    }
+    .dir-row button.active, .dir-btn.active {
+      background: rgba(251,191,36,0.3); color: #fff; border-color: rgba(251,191,36,0.55);
+    }
+    .mass-row { display: flex; flex-direction: column; gap: 8px; }
+    .mass-item {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .mass-item:nth-child(1) { border-left: 3px solid #38bdf8; }
+    .mass-item:nth-child(2) { border-left: 3px solid #fbbf24; }
+    .mass-item:nth-child(3) { border-left: 3px solid #fb7185; }
+    .mass-label { display: block; font-size: 0.72rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
+    .hint { margin: 0 0 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; }
+    .formula-box { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(251,191,36,0.1);
+      font-size: 0.78rem; font-weight: 600; color: #fde68a; text-align: center; line-height: 1.55; }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    #formulaPanel, #calcPanel {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.2);
+    }
+    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #fde68a; }
+    .concept { margin: 0 0 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.55; }
+    .formula-block, .calc-block {
+      margin-bottom: 10px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
+    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #fbbf24; }
+    .formula-line, .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
+    .formula-line.sub, .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
+    .num, .num-before { font-weight: 600; color: #7dd3fc; }
+    .num-after { font-weight: 600; color: #fda4af; }
+    .num-dp, .num-cm { font-weight: 600; color: #c4b5fd; }
+    .num-to-bat { font-weight: 600; color: #fde68a; }
+    #liveReadout {
+      margin: 10px 14px 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.2);
+      display: grid; gap: 8px;
+    }
+    #liveReadout.cols3 { grid-template-columns: 1fr auto 1fr; }
+    #liveReadout.cols4 { grid-template-columns: 1fr 1fr 1fr; }
+    .live-col { font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
+    .live-col.left, .live-col.m1 { color: #7dd3fc; }
+    .live-col.right, .live-col.m3 { color: #fda4af; text-align: right; }
+    .live-col.m2 { color: #fde68a; }
+    .live-col.center { text-align: center; color: #fde68a; border-left: 1px solid rgba(148,163,184,0.15);
+      border-right: 1px solid rgba(148,163,184,0.15); padding: 0 8px; }
+    .live-col .title { display: block; font-weight: 700; font-size: 0.68rem; margin-bottom: 4px; }
+    .live-col .state { display: block; margin-top: 4px; font-weight: 700; font-size: 0.82rem; }
+    .live-col .state.balanced { color: #6ee7b7; }
+    .live-col .state.rotating { color: #fda4af; }
+    .live-col.g-row { grid-column: 1 / -1; text-align: center; color: #fde68a; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+    .graph-block { margin-top: 10px; border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; }
+    .graph-legend { margin: 0 14px 6px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .legend { display: none; }
+    .sim-layout { display: contents; }
+    .canvas-section { display: contents; }
+    @media (max-width: 520px) {
+      #liveReadout.cols3 { grid-template-columns: 1fr 1fr; }
+      .live-col.center { grid-column: 1 / -1; border: none; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+      .live-col.right { text-align: left; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">◎</div>
+      <p class="chapter-label">第6章 — 力のモーメントと重心</p>
+      <h2>重心（Center of Mass）</h2>
+      <p class="tagline">x_G = Σmx / Σm · 質量のつり合い点</p>
+      <a id="back" href="../00_folder_classical.html#chapter-6">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main"><strong>x_G = Σ(m_i x_i) / Σm_i</strong></div>
+        <div class="formula-sub">質量が大きい質点ほど G はその方向へ</div>
+      </div>
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+<div class="viz-head"><p class="viz-label">重心シミュレーション</p></div>
+<div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+
+            <p class="canvas-caption">図は質点・重心・補助線のみ。座標と質量は下のパネルで確認できます。</p>
+
+            <div id="liveReadout" class="cols4" aria-live="polite">
+              <div class="live-col m1">
+                <span class="title">質点 1</span>
+                <span id="liveM1">m₁ = — kg<br>(x₁, y₁) = (—, —) m</span>
+              </div>
+              <div class="live-col m2">
+                <span class="title">質点 2</span>
+                <span id="liveM2">m₂ = — kg<br>(x₂, y₂) = (—, —) m</span>
+              </div>
+              <div class="live-col m3">
+                <span class="title">質点 3</span>
+                <span id="liveM3">m₃ = — kg<br>(x₃, y₃) = (—, —) m</span>
+              </div>
+              <div class="live-col g-row" id="liveG">重心 G = (—, —) m　　Σm = — kg
+</div>
+            </div>
+            <section id="formulaPanel" aria-label="重心の計算">
+    <h3>重心の計算</h3>
+    <p class="concept">原点 O を Canvas 左下付近とします。各質点の位置 (x, y) と質量 m から、質量のつり合い点が重心 G です。</p>
+
+    <div class="formula-block">
+      <p class="formula-label">① x 方向</p>
+      <p class="formula-line">x<sub>G</sub> = (m₁x₁ + m₂x₂ + m₃x₃) / (m₁ + m₂ + m₃)</p>
+      <p class="formula-line sub">→ x<sub>G</sub> = <span id="fXG" class="num-cm">—</span> m</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">② y 方向</p>
+      <p class="formula-line">y<sub>G</sub> = (m₁y₁ + m₂y₂ + m₃y₃) / (m₁ + m₂ + m₃)</p>
+      <p class="formula-line sub">→ y<sub>G</sub> = <span id="fYG" class="num-cm">—</span> m</p>
+    </div>
+  </section>
+          </div>
+        </div>
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">コントロール</p>
+<div class="mass-row">
+      <div class="mass-item">
+        <span class="mass-label">質点 1（青）</span>
+        <label>
+          質量 m₁ (kg):
+          <input id="m1Slider" type="range" min="1" max="20" step="0.5" value="2">
+          <span id="m1Value">2.0</span>
+        </label>
+      </div>
+      <div class="mass-item">
+        <span class="mass-label">質点 2（黄）</span>
+        <label>
+          質量 m₂ (kg):
+          <input id="m2Slider" type="range" min="1" max="20" step="0.5" value="4">
+          <span id="m2Value">4.0</span>
+        </label>
+      </div>
+      <div class="mass-item">
+        <span class="mass-label">質点 3（赤）</span>
+        <label>
+          質量 m₃ (kg):
+          <input id="m3Slider" type="range" min="1" max="20" step="0.5" value="6">
+          <span id="m3Value">6.0</span>
+        </label>
+      </div>
+    </div>
+
+    <p class="formula-box">
+      x<sub>G</sub> = (m₁x₁ + m₂x₂ + m₃x₃) / (m₁ + m₂ + m₃)<br>
+      y<sub>G</sub> = (m₁y₁ + m₂y₂ + m₃y₃) / (m₁ + m₂ + m₃)
+    </p>
+
+    <p class="hint">
+      色付きの質点をドラッグして位置を変えてください。質量を大きくした質点ほど、重心 G はその方向へ引き寄せられます。
+    </p>
+
+    <div class="btn-row">
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+            <div id="statusPanel">質点をドラッグして重心の動きを確かめましょう</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li>重心 G は<strong>質量のつり合い点</strong></li>
+        <li>x_G = (m₁x₁ + m₂x₂ + …) / (m₁ + m₂ + …)</li>
+        <li>質量を大きくすると G がその質点側へ移動</li>
+        <li>対称な剛体では重心が幾何中心に来ることが多い</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+
+    const MARGIN = { left: 48, right: 24, top: 36, bottom: 44 };
+    const PLOT_W_M = 6;
+    const PLOT_H_M = 4;
+    const POINT_R = 16;
+    const HIT_R = 24;
+    const MASS_COLORS = ["#38bdf8", "#fbbf24", "#fb7185"];
+
+    const DEFAULTS = {
+      points: [
+        { x: 1.2, y: 2.8, m: 2 },
+        { x: 3.5, y: 1.0, m: 4 },
+        { x: 4.8, y: 3.2, m: 6 },
+      ],
+    };
+
+    let points = DEFAULTS.points.map((p) => ({ ...p }));
+    let dragging = -1;
+    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0, dpr: 1 };
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getMasses() {
+      return [
+        parseFloat(document.getElementById("m1Slider").value),
+        parseFloat(document.getElementById("m2Slider").value),
+        parseFloat(document.getElementById("m3Slider").value),
+      ];
+    }
+
+    function syncMassesFromSliders() {
+      const ms = getMasses();
+      points.forEach((p, i) => { p.m = ms[i]; });
+      document.getElementById("m1Value").textContent = fmt(ms[0], 1);
+      document.getElementById("m2Value").textContent = fmt(ms[1], 1);
+      document.getElementById("m3Value").textContent = fmt(ms[2], 1);
+    }
+
+    function computeCenterOfMass() {
+      let sumM = 0;
+      let sumX = 0;
+      let sumY = 0;
+      points.forEach((p) => {
+        sumM += p.m;
+        sumX += p.m * p.x;
+        sumY += p.m * p.y;
+      });
+      if (sumM < 1e-9) return { x: 0, y: 0, sumM: 0 };
+      return { x: sumX / sumM, y: sumY / sumM, sumM };
+    }
+
+    function updateLayout(w, h) {
+      const plotW = w - MARGIN.left - MARGIN.right;
+      const plotH = h - MARGIN.top - MARGIN.bottom;
+      const scale = Math.min(plotW / PLOT_W_M, plotH / PLOT_H_M);
+      layout = {
+        ox: MARGIN.left,
+        oy: h - MARGIN.bottom,
+        scale,
+        w,
+        h,
+        plotW,
+        plotH,
+        dpr: layout.dpr,
+      };
+    }
+
+    function toScreen(x, y) {
+      return {
+        x: layout.ox + x * layout.scale,
+        y: layout.oy - y * layout.scale,
+      };
+    }
+
+    function toWorld(sx, sy) {
+      const x = (sx - layout.ox) / layout.scale;
+      const y = (layout.oy - sy) / layout.scale;
+      return {
+        x: Math.max(0, Math.min(PLOT_W_M, x)),
+        y: Math.max(0, Math.min(PLOT_H_M, y)),
+      };
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const ht = Math.max(280, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(ht * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(ht * dpr);
+      }
+      layout.dpr = dpr;
+      updateLayout(w, ht);
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function pointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * (layout.w / rect.width),
+        y: (clientY - rect.top) * (layout.h / rect.height),
+      };
+    }
+
+    function hitTest(sx, sy) {
+      for (let i = points.length - 1; i >= 0; i -= 1) {
+        const s = toScreen(points[i].x, points[i].y);
+        const dx = sx - s.x;
+        const dy = sy - s.y;
+        if (dx * dx + dy * dy <= HIT_R * HIT_R) return i;
+      }
+      return -1;
+    }
+
+    function onPointerDown(e) {
+      e.preventDefault();
+      const pos = pointerPos(e);
+      const idx = hitTest(pos.x, pos.y);
+      if (idx >= 0) {
+        dragging = idx;
+        canvas.classList.add("dragging");
+      }
+    }
+
+    function onPointerMove(e) {
+      if (dragging < 0) return;
+      e.preventDefault();
+      const pos = pointerPos(e);
+      const w = toWorld(pos.x, pos.y);
+      points[dragging].x = w.x;
+      points[dragging].y = w.y;
+    }
+
+    function onPointerUp() {
+      dragging = -1;
+      canvas.classList.remove("dragging");
+    }
+
+    canvas.addEventListener("mousedown", onPointerDown);
+    canvas.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+    canvas.addEventListener("touchstart", onPointerDown, { passive: false });
+    canvas.addEventListener("touchmove", onPointerMove, { passive: false });
+    window.addEventListener("touchend", onPointerUp);
+
+    ["m1Slider", "m2Slider", "m3Slider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncMassesFromSliders();
+      });
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      points = DEFAULTS.points.map((p) => ({ ...p }));
+      document.getElementById("m1Slider").value = DEFAULTS.points[0].m;
+      document.getElementById("m2Slider").value = DEFAULTS.points[1].m;
+      document.getElementById("m3Slider").value = DEFAULTS.points[2].m;
+      syncMassesFromSliders();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    function drawDarkBg(w, ht) {
+      const bg = ctx.createLinearGradient(0, 0, w, ht);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#121824");
+      bg.addColorStop(1, "#181e2c");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, ht);
+      const glow = ctx.createRadialGradient(w * 0.5, ht * 0.5, 0, w * 0.5, ht * 0.5, w * 0.55);
+      glow.addColorStop(0, "rgba(251,191,36,0.06)");
+      glow.addColorStop(1, "rgba(20,24,36,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, ht);
+    }
+
+    function drawGrid() {
+      const w = layout.w;
+      const ht = layout.h;
+      drawDarkBg(w, ht);
+
+      ctx.fillStyle = "rgba(18, 24, 36, 0.55)";
+      ctx.fillRect(layout.ox, MARGIN.top, layout.plotW, layout.plotH);
+
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= PLOT_W_M; x += 1) {
+        const s = toScreen(x, 0);
+        ctx.beginPath();
+        ctx.moveTo(s.x, MARGIN.top);
+        ctx.lineTo(s.x, layout.oy);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= PLOT_H_M; y += 1) {
+        const s = toScreen(0, y);
+        ctx.beginPath();
+        ctx.moveTo(layout.ox, s.y);
+        ctx.lineTo(layout.ox + layout.plotW, s.y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(layout.ox, layout.oy);
+      ctx.lineTo(layout.ox + layout.plotW, layout.oy);
+      ctx.moveTo(layout.ox, layout.oy);
+      ctx.lineTo(layout.ox, MARGIN.top);
+      ctx.stroke();
+
+      ctx.fillStyle = "#9aa8bc";
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("O", layout.ox - 14, layout.oy + 14);
+      ctx.fillText("x", layout.ox + layout.plotW - 8, layout.oy + 14);
+      ctx.fillText("y", layout.ox - 10, MARGIN.top + 4);
+    }
+
+    function drawPointMass(p, index) {
+      const s = toScreen(p.x, p.y);
+      const color = MASS_COLORS[index];
+      const r = POINT_R + Math.min(8, p.m * 0.4);
+
+      ctx.save();
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = color;
+      const grad = ctx.createRadialGradient(s.x - 5, s.y - 5, 2, s.x, s.y, r);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.55, color);
+      grad.addColorStop(1, "#334155");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = "#0c1018";
+      ctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(String(index + 1), s.x, s.y + 4);
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    function drawHelperLines(g) {
+      const s = toScreen(g.x, g.y);
+      points.forEach((p, i) => {
+        const ps = toScreen(p.x, p.y);
+        ctx.strokeStyle = MASS_COLORS[i] + "66";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(ps.x, ps.y);
+        ctx.lineTo(s.x, s.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+    }
+
+    function drawCenterMarker(g) {
+      const s = toScreen(g.x, g.y);
+      const color = "#fbbf24";
+
+      ctx.save();
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "rgba(251,191,36,0.7)";
+      const grad = ctx.createRadialGradient(s.x - 4, s.y - 4, 1, s.x, s.y, 14);
+      grad.addColorStop(0, "#fef3c7");
+      grad.addColorStop(0.6, color);
+      grad.addColorStop(1, "#92400e");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#fef3c7";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.fillStyle = "#0c1018";
+      ctx.font = "800 12px Inter, Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("G", s.x, s.y + 4);
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    function updatePanels(g, ms) {
+      document.getElementById("fXG").textContent = fmt(g.x, 2);
+      document.getElementById("fYG").textContent = fmt(g.y, 2);
+
+      document.getElementById("liveM1").innerHTML =
+        `m₁ = ${fmt(ms[0], 1)} kg<br>(x₁, y₁) = (${fmt(points[0].x, 2)}, ${fmt(points[0].y, 2)}) m`;
+      document.getElementById("liveM2").innerHTML =
+        `m₂ = ${fmt(ms[1], 1)} kg<br>(x₂, y₂) = (${fmt(points[1].x, 2)}, ${fmt(points[1].y, 2)}) m`;
+      document.getElementById("liveM3").innerHTML =
+        `m₃ = ${fmt(ms[2], 1)} kg<br>(x₃, y₃) = (${fmt(points[2].x, 2)}, ${fmt(points[2].y, 2)}) m`;
+
+      const dragHint = dragging >= 0 ? ` — 質点 ${dragging + 1} を移動中` : "";
+      document.getElementById("liveG").textContent =
+        `重心 G = (${fmt(g.x, 2)}, ${fmt(g.y, 2)}) m　　Σm = ${fmt(g.sumM, 1)} kg${dragHint}`;
+    }
+
+    function drawFrame() {
+      resizeCanvas();
+      setupCtx();
+      syncMassesFromSliders();
+      const g = computeCenterOfMass();
+      const ms = getMasses();
+
+      ctx.clearRect(0, 0, layout.w, layout.h);
+      drawGrid();
+      drawHelperLines(g);
+      points.forEach((p, i) => drawPointMass(p, i));
+      drawCenterMarker(g);
+      updatePanels(g, ms);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      syncMassesFromSliders();
+    });
+
+    function loop() {
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  
+  </script>
+</body>
+</html>

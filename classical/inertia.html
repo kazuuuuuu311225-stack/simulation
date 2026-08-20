@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>4章 — 慣性の法則</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1410 45%, #101820 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(245,158,11,0.35));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fde68a; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fcd34d; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.14);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251, 191, 36, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fde68a; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08));
+      border: 1px solid rgba(251,191,36,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #fef3c7; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.55fr 0.45fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(251,191,36,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fde68a; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap { position: relative; background: #0a0e14; min-height: 320px; }
+    #canvas { display: block; width: 100%; height: min(420px, 48dvh); min-height: 320px; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #statusPanel {
+      padding: 8px 12px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 0.8rem;
+      background: rgba(2,6,23,0.8); border: 1px solid rgba(251,191,36,0.45); color: #fef3c7;
+    }
+    #statusPanel.inertia { color: #86efac; border-color: rgba(74,222,128,0.45); }
+    #hintBox { font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); margin: 0; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(251,191,36,0.25); color: #fef3c7; border-color: rgba(251,191,36,0.55); font-weight: 800; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fde68a; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(251,191,36,0.45); background: rgba(120,53,15,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #fbbf24; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #fbbf24; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">🛒</div>
+      <p class="chapter-label">第4章 — 運動の法則</p>
+      <h2>慣性の法則</h2>
+      <p class="tagline">第1法則 — F = 0 のとき等速直線運動</p>
+      <a id="back" href="../00_folder_classical.html#chapter-4">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">第1法則（慣性）：<strong>F = 0 → a = 0</strong> · 物体は等速直線運動を続ける</div>
+        <div class="formula-sub">外力 F を 0 に戻すと、再び速度一定の運動に戻る</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">台車の運動 — 力 F と速度 v</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>右向き F</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>左向き F</span>
+              <span><i class="color-chip" style="background:#34d399;color:#34d399"></i>速度 v</span>
+            </div>
+            <div id="canvasWrap"><canvas id="canvas"></canvas></div>
+            <div class="explain-panel">
+              <div id="statusPanel">スタートで運動を開始</div>
+              <p id="hintBox">F = 0 のとき a = 0 となり、物体は等速直線運動を続けます。F を変えて加速度 a = F/m を確認しましょう。</p>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="pauseBtn">停止</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">操作 · 数値</p>
+            <div class="slider-row">
+              <label>初速度 v₀ (m/s) <span id="v0Value">8</span></label>
+              <input id="v0Slider" type="range" min="-30" max="30" step="1" value="8">
+            </div>
+            <div class="slider-row">
+              <label>外力 F (N) <span id="fValue">0</span></label>
+              <input id="fSlider" type="range" min="-50" max="50" step="1" value="0">
+            </div>
+            <div class="slider-row">
+              <label>質量 m (kg) <span id="mValue">2.0</span></label>
+              <input id="mSlider" type="range" min="1" max="10" step="0.1" value="2">
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card highlight">
+                <div class="lbl">速度 v</div>
+                <div class="val big" id="hudV">0.00 m/s</div>
+              </div>
+              <div class="hud-card highlight">
+                <div class="lbl">加速度 a</div>
+                <div class="val big" id="hudA">0.00 m/s²</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">位置 x</div>
+                <div class="val" id="hudX">0.00 m</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">力 F</div>
+                <div class="val" id="hudF">0 N</div>
+              </div>
+            </div>
+            <p class="calc-line" id="calcLine">a = F / m = 0 / 2.0 = 0 m/s²</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>学習ポイント</h3>
+      <ul class="edu-list">
+        <li>外力が働かない（F = 0）とき、物体は等速直線運動を続ける</li>
+        <li>これがニュートンの第1法則（慣性の法則）</li>
+        <li>質量 m が大きいほど、同じ F でも a = F/m は小さい（慣性が大きい）</li>
+        <li>F を 0 に戻すと、再び速度一定の運動に戻る</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const v0Slider = document.getElementById("v0Slider");
+    const fSlider = document.getElementById("fSlider");
+    const mSlider = document.getElementById("mSlider");
+    let layout = { w: 400, h: 320, dpr: 1 };
+
+    const MAX_DT = 1 / 30;
+    const X_MIN = -20;
+    const X_MAX = 20;
+    const DEFAULTS = { v0: 8, F: 0, m: 2 };
+
+    let x = 0;
+    let v = 0;
+    let running = false;
+    let paused = false;
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function syncSliders() {
+      document.getElementById("v0Value").textContent = v0Slider.value;
+      document.getElementById("fValue").textContent = fSlider.value;
+      document.getElementById("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
+    }
+
+    function getF() { return parseFloat(fSlider.value); }
+    function getM() { return parseFloat(mSlider.value); }
+    function getA() { return getF() / getM(); }
+
+    function updateCalcPanel() {
+      const F = getF();
+      const a = getA();
+      document.getElementById("hudV").textContent = fmt(v, 2) + " m/s";
+      document.getElementById("hudA").textContent = fmt(a, 2) + " m/s²";
+      document.getElementById("hudX").textContent = fmt(x, 2) + " m";
+      document.getElementById("hudF").textContent = fmt(F, 0) + " N";
+      document.getElementById("calcLine").textContent = "a = F / m = " + fmt(F, 0) + " / " + fmt(getM(), 1) + " = " + fmt(a, 2) + " m/s²";
+    }
+
+    function resetSimulation() {
+      v0Slider.value = DEFAULTS.v0;
+      fSlider.value = DEFAULTS.F;
+      mSlider.value = DEFAULTS.m;
+      x = 0; v = DEFAULTS.v0;
+      running = false; paused = false;
+      syncSliders();
+      statusPanel.textContent = "スタートで運動を開始";
+      statusPanel.className = "";
+      updateCalcPanel();
+    }
+
+    function startSimulation() {
+      if (!running) { v = parseFloat(v0Slider.value); x = 0; }
+      running = true; paused = false;
+      syncSliders();
+    }
+
+    function pauseSimulation() {
+      if (!running) return;
+      paused = !paused;
+      statusPanel.textContent = paused ? "一時停止中" : "運動中";
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(220, Math.round(rect.height));
+      const cw = Math.round(w * dpr);
+      const ch = Math.round(h * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      layout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1210");
+      bg.addColorStop(1, "#1a1810");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(251, 191, 36, 0.12)");
+      glow.addColorStop(0.45, "rgba(251, 191, 36, 0.05)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    [v0Slider, fSlider, mSlider].forEach((s) => {
+      s.addEventListener("input", () => { syncSliders(); updateCalcPanel(); });
+      s.addEventListener("change", () => { syncSliders(); updateCalcPanel(); });
+    });
+    document.getElementById("startBtn").addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    document.getElementById("resetBtn").addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    requestAnimationFrame(() => { resizeCanvas(); resetSimulation(); });
+
+    function update(dt) {
+      if (!running || paused) return;
+      const F = getF();
+      const a = F / getM();
+      v += a * dt;
+      x += v * dt;
+      if (x < X_MIN) { x = X_MIN; v = 0; }
+      else if (x > X_MAX) { x = X_MAX; v = 0; }
+    }
+
+    function worldToScreen(posX, w) {
+      const pad = 40;
+      const trackW = w - pad * 2;
+      return pad + ((posX - X_MIN) / (X_MAX - X_MIN)) * trackW;
+    }
+
+    function drawCart(cx, cy) {
+      const bw = 72; const bh = 40;
+      ctx.fillStyle = "rgba(71, 85, 105, 0.85)";
+      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2.5;
+      ctx.fillRect(cx - bw / 2, cy - bh / 2, bw, bh);
+      ctx.strokeRect(cx - bw / 2, cy - bh / 2, bw, bh);
+      ctx.fillStyle = "#64748b";
+      const wheelY = cy + bh / 2 - 2;
+      [-22, 22].forEach((dx) => {
+        ctx.beginPath(); ctx.arc(cx + dx, wheelY, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#475569"; ctx.lineWidth = 2; ctx.stroke();
+      });
+      ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx - bw / 2 + 8, cy - bh / 2); ctx.lineTo(cx - bw / 2 + 8, cy - bh / 2 - 16); ctx.stroke();
+    }
+
+    function drawArrowFrom(x0, y0, dx, dy, color, lw) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 3) return;
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx, y0 + dy); ctx.stroke();
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(12, len * 0.3);
+      const tx = x0 + dx; const ty = y0 + dy;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath(); ctx.fill();
+    }
+
+    function drawTrack(w, groundY) {
+      ctx.fillStyle = "rgba(15, 23, 42, 0.6)";
+      ctx.fillRect(0, groundY - 6, w, layout.h - groundY + 6);
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.35)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(24, groundY); ctx.lineTo(w - 24, groundY); ctx.stroke();
+      ctx.fillStyle = "rgba(148, 163, 184, 0.2)";
+      for (let i = 0; i <= 8; i += 1) {
+        const sx = worldToScreen(X_MIN + (X_MAX - X_MIN) * (i / 8), w);
+        ctx.fillRect(sx - 1, groundY - 18, 2, 18);
+      }
+      ctx.fillStyle = "#94a3b8"; ctx.font = "10px Inter, sans-serif";
+      ctx.fillText(`${X_MIN} m`, 28, groundY + 18);
+      ctx.textAlign = "right";
+      ctx.fillText(`${X_MAX} m`, w - 28, groundY + 18);
+      ctx.textAlign = "start";
+    }
+
+    function draw() {
+      syncSliders();
+      const w = layout.w;
+      const h = layout.h;
+      setupCtx();
+      drawDarkBg(w, h);
+      const F = getF();
+      const a = getA();
+      const groundY = h * 0.68;
+      const cx = worldToScreen(x, w);
+      const cy = groundY - 28;
+
+      drawTrack(w, groundY);
+      drawCart(cx, cy);
+
+      const vScale = 2.2;
+      const vLen = v * vScale;
+      if (Math.abs(v) > 0.05) {
+        drawArrowFrom(cx, cy - 42, vLen, 0, "#34d399", 3.5);
+        ctx.fillStyle = "#34d399"; ctx.font = "bold 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(`v=${fmt(v, 1)}`, cx + vLen + 6, cy - 46);
+      }
+      if (Math.abs(F) > 0.5) {
+        const fScale = 1.1;
+        const fLen = F * fScale;
+        const color = F > 0 ? "#38bdf8" : "#fb7185";
+        drawArrowFrom(cx, cy + 38, fLen, 0, color, 3.5);
+        ctx.fillStyle = color; ctx.font = "bold 11px Inter, Noto Sans JP, sans-serif";
+        const labelX = F > 0 ? cx + fLen + 6 : cx + fLen - 52;
+        ctx.fillText(`F=${fmt(F, 0)}N`, labelX, cy + 42);
+      }
+
+      updateCalcPanel();
+
+      if (running && !paused) {
+        if (Math.abs(F) < 0.5 && Math.abs(a) < 0.01) {
+          statusPanel.textContent = "F = 0 → 等速直線運動（慣性の法則）";
+          statusPanel.className = "inertia";
+        } else if (Math.abs(F) >= 0.5) {
+          statusPanel.textContent = "外力 F により加速度 a = F/m";
+          statusPanel.className = "";
+        } else {
+          statusPanel.textContent = "運動中";
+          statusPanel.className = "";
+        }
+      }
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

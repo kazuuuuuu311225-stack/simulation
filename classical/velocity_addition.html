@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>1章 — 速度の合成</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1524 45%, #0a1220 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.4), rgba(14,165,233,0.35));
+      border: 1px solid rgba(56,189,248,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #7dd3fc; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #bae6fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0f2fe; background: rgba(56,189,248,0.14);
+      border: 1px solid rgba(56,189,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(56, 189, 248, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #7dd3fc; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(14,165,233,0.08));
+      border: 1px solid rgba(56,189,248,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #bae6fd; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.55fr 0.45fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(56,189,248,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #7dd3fc; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap { position: relative; background: #0a0e14; min-height: 340px; }
+    #canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+    }
+    #hintBox { font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); margin: 0; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(56,189,248,0.25); color: #e0f2fe; border-color: rgba(56,189,248,0.55); font-weight: 800; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(56,189,248,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #7dd3fc; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(56,189,248,0.45); background: rgba(12,74,110,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #38bdf8; }
+    .vector-group {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.45); border: 1px solid rgba(148,163,184,0.18);
+    }
+    .vector-title { margin: 0 0 6px; font-size: 0.72rem; font-weight: 800; }
+    .vector-title.v1 { color: #38bdf8; }
+    .vector-title.v2 { color: #fb7185; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #38bdf8; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">➕</div>
+      <p class="chapter-label">第1章 — 物体の運動</p>
+      <h2>速度の合成</h2>
+      <p class="tagline">2 つの速度ベクトルのベクトル和 · 平行四辺形法則</p>
+      <a id="back" href="../00_folder_classical.html#chapter-1">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main"><strong>v_x = v₁x + v₂x</strong> · <strong>v_y = v₁y + v₂y</strong> · <strong>|v| = √(v_x² + v_y²)</strong></div>
+        <div class="formula-sub">2 つの速度ベクトルを足すと合成速度 v になる</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">速度ベクトルの合成と物体の運動</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>v₁（青）</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>v₂（赤）</span>
+              <span><i class="color-chip" style="background:#34d399;color:#34d399"></i>合成 v</span>
+            </div>
+            <div id="canvasWrap"><canvas id="canvas"></canvas></div>
+            <div class="explain-panel">
+              <p id="hintBox">v₁ と v₂ の大きさ・方向を変え、合成速度 v の向きと大きさを確認しましょう。</p>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">操作 · 数値</p>
+            <div class="vector-group">
+              <p class="vector-title v1">速度 v₁（青）</p>
+              <div class="slider-row">
+                <label>大きさ (m/s) <span id="v1MagValue">20</span></label>
+                <input id="v1MagSlider" type="range" min="0" max="50" step="1" value="20">
+              </div>
+              <div class="slider-row">
+                <label>方向 (°) <span id="v1DirValue">30</span></label>
+                <input id="v1DirSlider" type="range" min="0" max="360" step="1" value="30">
+              </div>
+            </div>
+            <div class="vector-group">
+              <p class="vector-title v2">速度 v₂（赤）</p>
+              <div class="slider-row">
+                <label>大きさ (m/s) <span id="v2MagValue">15</span></label>
+                <input id="v2MagSlider" type="range" min="0" max="50" step="1" value="15">
+              </div>
+              <div class="slider-row">
+                <label>方向 (°) <span id="v2DirValue">120</span></label>
+                <input id="v2DirSlider" type="range" min="0" max="360" step="1" value="120">
+              </div>
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">合成速度 |v|</div>
+              <div class="val big" id="fVmag">— m/s</div>
+            </div>
+            <p class="calc-line">v_x = <span id="fVx">—</span> m/s</p>
+            <p class="calc-line">v_y = <span id="fVy">—</span> m/s</p>
+            <p class="calc-line">方向 θ = <span id="fVdir">—</span>°</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>学習ポイント</h3>
+      <ul class="edu-list">
+        <li>速度はベクトル量 — 大きさと方向の両方が必要</li>
+        <li>v₁x = v₁ cosθ₁、v₁y = v₁ sinθ₁ で成分分解</li>
+        <li>合成速度は平行四辺形（または三角形）の対角線</li>
+        <li>スタートで合成速度 v に沿って物体が動く</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const v1MagSlider = document.getElementById("v1MagSlider");
+    const v1DirSlider = document.getElementById("v1DirSlider");
+    const v2MagSlider = document.getElementById("v2MagSlider");
+    const v2DirSlider = document.getElementById("v2DirSlider");
+
+    const MAX_DT = 1 / 30;
+    const MARGIN = 20;
+    const VECTOR_SCALE = 2.2;
+    let layout = { w: 400, h: 340, dpr: 1 };
+
+    let v1Mag = parseFloat(v1MagSlider.value);
+    let v1Dir = parseFloat(v1DirSlider.value);
+    let v2Mag = parseFloat(v2MagSlider.value);
+    let v2Dir = parseFloat(v2DirSlider.value);
+    let simV1 = vectorFromPolar(v1Mag, v1Dir);
+    let simV2 = vectorFromPolar(v2Mag, v2Dir);
+    let posX = 0;
+    let posY = 0;
+    let t = 0;
+    let running = false;
+
+    function degToRad(deg) { return deg * Math.PI / 180; }
+    function vectorFromPolar(mag, deg) {
+      const rad = degToRad(deg);
+      return { x: mag * Math.cos(rad), y: mag * Math.sin(rad) };
+    }
+    function addVectors(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
+    function vectorMag(v) { return Math.sqrt(v.x * v.x + v.y * v.y); }
+    function vectorDirDeg(v) {
+      let deg = Math.atan2(v.y, v.x) * 180 / Math.PI;
+      if (deg < 0) deg += 360;
+      return deg;
+    }
+    function fmt(value, digits) { return Number(value).toFixed(digits); }
+
+    function syncSliders() {
+      v1Mag = parseFloat(v1MagSlider.value);
+      v1Dir = parseFloat(v1DirSlider.value);
+      v2Mag = parseFloat(v2MagSlider.value);
+      v2Dir = parseFloat(v2DirSlider.value);
+      document.getElementById("v1MagValue").textContent = v1Mag;
+      document.getElementById("v1DirValue").textContent = v1Dir;
+      document.getElementById("v2MagValue").textContent = v2Mag;
+      document.getElementById("v2DirValue").textContent = v2Dir;
+      if (!running) {
+        simV1 = vectorFromPolar(v1Mag, v1Dir);
+        simV2 = vectorFromPolar(v2Mag, v2Dir);
+      }
+      updateFormulaPanel();
+    }
+
+    function getVectorScale() {
+      const v = resultantVelocity();
+      const maxMag = Math.max(vectorMag(simV1), vectorMag(simV2), vectorMag(v), 8);
+      const avail = Math.min(layout.w, layout.h) * 0.38 - MARGIN;
+      return Math.max(3.5, avail / maxMag);
+    }
+
+    function getMotionScale() {
+      return Math.min(layout.w, layout.h) * 0.0042;
+    }
+
+    function resultantVelocity() { return addVectors(simV1, simV2); }
+
+    function updateFormulaPanel() {
+      const v = resultantVelocity();
+      document.getElementById("fVx").textContent = fmt(v.x, 1);
+      document.getElementById("fVy").textContent = fmt(v.y, 1);
+      document.getElementById("fVmag").textContent = fmt(vectorMag(v), 1) + " m/s";
+      document.getElementById("fVdir").textContent = fmt(vectorDirDeg(v), 0);
+    }
+
+    function resetSimulation() {
+      syncSliders();
+      simV1 = vectorFromPolar(v1Mag, v1Dir);
+      simV2 = vectorFromPolar(v2Mag, v2Dir);
+      posX = 0; posY = 0; t = 0; running = false;
+      updateFormulaPanel();
+    }
+
+    function startSimulation() {
+      syncSliders();
+      simV1 = vectorFromPolar(v1Mag, v1Dir);
+      simV2 = vectorFromPolar(v2Mag, v2Dir);
+      posX = 0; posY = 0; t = 0; running = true;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      const cw = Math.round(w * dpr);
+      const ch = Math.round(h * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      layout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1218");
+      bg.addColorStop(1, "#0f2847");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(56, 189, 248, 0.12)");
+      glow.addColorStop(0.45, "rgba(56, 189, 248, 0.05)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function bindSlider(slider, onChange) {
+      slider.addEventListener("input", onChange);
+      slider.addEventListener("change", onChange);
+    }
+    bindSlider(v1MagSlider, syncSliders);
+    bindSlider(v1DirSlider, syncSliders);
+    bindSlider(v2MagSlider, syncSliders);
+    bindSlider(v2DirSlider, syncSliders);
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    resetBtn.addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    requestAnimationFrame(() => { resizeCanvas(); resetSimulation(); });
+
+    function update(dt) {
+      if (!running) return;
+      const v = resultantVelocity();
+      posX += v.x * dt;
+      posY += v.y * dt;
+      t += dt;
+    }
+
+    function worldToScreen(x, y, centerX, centerY, scale) {
+      return { x: centerX + x * scale, y: centerY - y * scale };
+    }
+
+    function drawGrid(centerX, centerY, scale) {
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
+      ctx.lineWidth = 1;
+      const spacing = 10;
+      const halfW = layout.w / 2;
+      const halfH = layout.h / 2;
+      for (let gx = centerX - halfW; gx <= centerX + halfW; gx += spacing * scale) {
+        ctx.beginPath(); ctx.moveTo(gx, MARGIN); ctx.lineTo(gx, layout.h - MARGIN); ctx.stroke();
+      }
+      for (let gy = centerY - halfH; gy <= centerY + halfH; gy += spacing * scale) {
+        ctx.beginPath(); ctx.moveTo(MARGIN, gy); ctx.lineTo(layout.w - MARGIN, gy); ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.35)"; ctx.lineWidth = 1.5;
+      const origin = worldToScreen(0, 0, centerX, centerY, scale);
+      ctx.beginPath(); ctx.moveTo(origin.x, MARGIN); ctx.lineTo(origin.x, layout.h - MARGIN); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, origin.y); ctx.lineTo(layout.w - MARGIN, origin.y); ctx.stroke();
+    }
+
+    function drawArrow(fromX, fromY, toX, toY, color, lineWidth) {
+      const dx = toX - fromX; const dy = toY - fromY;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 2) return;
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lineWidth;
+      ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY); ctx.stroke();
+      const head = Math.min(12, len * 0.25);
+      const angle = Math.atan2(dy, dx);
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - head * Math.cos(angle - Math.PI / 7), toY - head * Math.sin(angle - Math.PI / 7));
+      ctx.lineTo(toX - head * Math.cos(angle + Math.PI / 7), toY - head * Math.sin(angle + Math.PI / 7));
+      ctx.closePath(); ctx.fill();
+    }
+
+    function drawVectorFrom(baseScreen, vec, color, label, lineWidth) {
+      const end = { x: baseScreen.x + vec.x * VECTOR_SCALE, y: baseScreen.y - vec.y * VECTOR_SCALE };
+      drawArrow(baseScreen.x, baseScreen.y, end.x, end.y, color, lineWidth);
+      ctx.fillStyle = color; ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(label, end.x + 6, end.y - 4);
+    }
+
+    function draw() {
+      if (!running) syncSliders();
+      const w = layout.w;
+      const h = layout.h;
+      setupCtx();
+      drawDarkBg(w, h);
+
+      const v = resultantVelocity();
+      const scale = 1;
+      const centerX = w / 2 - posX * scale;
+      const centerY = h / 2 + posY * scale;
+      const obj = worldToScreen(posX, posY, centerX, centerY, scale);
+
+      drawGrid(centerX, centerY, scale);
+      drawVectorFrom(obj, simV1, "#38bdf8", "v₁", 3);
+      drawVectorFrom(obj, simV2, "#fb7185", "v₂", 3);
+      drawVectorFrom(obj, v, "#34d399", "v", 3.5);
+
+      ctx.strokeStyle = "rgba(52, 211, 153, 0.35)"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]);
+      const v1End = { x: obj.x + simV1.x * VECTOR_SCALE, y: obj.y - simV1.y * VECTOR_SCALE };
+      const vEnd = { x: obj.x + v.x * VECTOR_SCALE, y: obj.y - v.y * VECTOR_SCALE };
+      ctx.beginPath(); ctx.moveTo(v1End.x, v1End.y); ctx.lineTo(vEnd.x, vEnd.y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(obj.x + simV2.x * VECTOR_SCALE, obj.y - simV2.y * VECTOR_SCALE);
+      ctx.lineTo(vEnd.x, vEnd.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#f1f5f9";
+      ctx.beginPath(); ctx.arc(obj.x, obj.y, 6, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = "#bae6fd"; ctx.font = "13px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(`t = ${fmt(t, 2)} s`, 12, 22);
+      ctx.fillText(`v₁ = ${fmt(vectorMag(simV1), 1)} m/s  ∠${fmt(vectorDirDeg(simV1), 0)}°`, 12, 42);
+      ctx.fillText(`v₂ = ${fmt(vectorMag(simV2), 1)} m/s  ∠${fmt(vectorDirDeg(simV2), 0)}°`, 12, 62);
+      ctx.fillText(`v = ${fmt(vectorMag(v), 1)} m/s  ∠${fmt(vectorDirDeg(v), 0)}°`, 12, 82);
+      updateFormulaPanel();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

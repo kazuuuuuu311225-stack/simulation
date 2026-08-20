@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>7章 — バットとボール</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1018 45%, #101820 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,113,133,0.4), rgba(56,189,248,0.25));
+      border: 1px solid rgba(251,113,133,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fda4af; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fecdd3; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,113,133,0.14);
+      border: 1px solid rgba(251,113,133,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251,113,133, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fda4af; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,113,133,0.12), rgba(56,189,248,0.08));
+      border: 1px solid rgba(251,113,133,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #fda4af; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(251,113,133,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fda4af; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
+    #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
+    .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #statusPanel, #hintBox {
+      font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px;
+      background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.2);
+    }
+    #statusPanel.balanced, #statusPanel.pos-work, #statusPanel.p-low { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
+    #statusPanel.rotating, #statusPanel.neg-work, #statusPanel.p-high { color: #fda4af; border-color: rgba(251,113,133,0.35); }
+    #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
+    #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn, .btn-row button {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(251,113,133,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary, #startBtn, #dropBtn, #releaseBtn, #shotBtn {
+      background: rgba(251,113,133,0.25); color: #fff; border-color: rgba(251,113,133,0.55); font-weight: 800;
+    }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,113,133,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fda4af; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(251,113,133,0.45); background: rgba(30,20,10,0.2); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .slider-row label, label.slider-label {
+      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+    }
+    .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #fb7185; }
+    .side-group {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2); margin-bottom: 8px;
+    }
+    .side-group.left { border-left: 3px solid #38bdf8; }
+    .side-group.right { border-left: 3px solid #fb7185; }
+    .side-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+    .dir-row { display: flex; gap: 6px; margin-top: 4px; }
+    .dir-row button, .dir-btn {
+      flex: 1; padding: 8px 6px; min-height: 36px; font-family: inherit; font-size: 0.72rem;
+      font-weight: 600; border: 1px solid rgba(148,163,184,0.28); border-radius: 8px;
+      background: rgba(255,255,255,0.06); color: #cbd5e1; cursor: pointer;
+    }
+    .dir-row button.active, .dir-btn.active {
+      background: rgba(251,113,133,0.3); color: #fff; border-color: rgba(251,113,133,0.55);
+    }
+    .mass-row { display: flex; flex-direction: column; gap: 8px; }
+    .mass-item {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .mass-item:nth-child(1) { border-left: 3px solid #38bdf8; }
+    .mass-item:nth-child(2) { border-left: 3px solid #fbbf24; }
+    .mass-item:nth-child(3) { border-left: 3px solid #fb7185; }
+    .mass-label { display: block; font-size: 0.72rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
+    .hint { margin: 0 0 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; }
+    .formula-box { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(251,113,133,0.1);
+      font-size: 0.78rem; font-weight: 600; color: #fda4af; text-align: center; line-height: 1.55; }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    #formulaPanel, #calcPanel {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.2);
+    }
+    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #fda4af; }
+    .concept { margin: 0 0 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.55; }
+    .formula-block, .calc-block {
+      margin-bottom: 10px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
+    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #fb7185; }
+    .formula-line, .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
+    .formula-line.sub, .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
+    .num, .num-before { font-weight: 600; color: #7dd3fc; }
+    .num-after { font-weight: 600; color: #fda4af; }
+    .num-dp, .num-cm { font-weight: 600; color: #c4b5fd; }
+    .num-to-bat { font-weight: 600; color: #fde68a; }
+    #liveReadout {
+      margin: 10px 14px 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.2);
+      display: grid; gap: 8px;
+    }
+    #liveReadout.cols3 { grid-template-columns: 1fr auto 1fr; }
+    #liveReadout.cols4 { grid-template-columns: 1fr 1fr 1fr; }
+    .live-col { font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
+    .live-col.left, .live-col.m1 { color: #7dd3fc; }
+    .live-col.right, .live-col.m3 { color: #fda4af; text-align: right; }
+    .live-col.m2 { color: #fde68a; }
+    .live-col.center { text-align: center; color: #fde68a; border-left: 1px solid rgba(148,163,184,0.15);
+      border-right: 1px solid rgba(148,163,184,0.15); padding: 0 8px; }
+    .live-col .title { display: block; font-weight: 700; font-size: 0.68rem; margin-bottom: 4px; }
+    .live-col .state { display: block; margin-top: 4px; font-weight: 700; font-size: 0.82rem; }
+    .live-col .state.balanced { color: #6ee7b7; }
+    .live-col .state.rotating { color: #fda4af; }
+    .live-col.g-row { grid-column: 1 / -1; text-align: center; color: #fde68a; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+    .graph-block { margin-top: 10px; border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; }
+    .graph-legend { margin: 0 14px 6px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .legend { display: none; }
+    .sim-layout { display: contents; }
+    .canvas-section { display: contents; }
+    @media (max-width: 520px) {
+      #liveReadout.cols3 { grid-template-columns: 1fr 1fr; }
+      .live-col.center { grid-column: 1 / -1; border: none; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+      .live-col.right { text-align: left; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚾</div>
+      <p class="chapter-label">第7章 — 運動量保存と反発係数</p>
+      <h2>運動量 — バットとボール</h2>
+      <p class="tagline">p = mv · 力積 I = Δp · 反射</p>
+      <a id="back" href="../00_folder_classical.html#chapter-7">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main"><strong>p = m v</strong> · <strong>I = Δp = p′ − p</strong></div>
+        <div class="formula-sub">法線 n に対する入射角 = 反射角</div>
+      </div>
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+
+            <div class="viz-head"><p class="viz-label">バットとボール · 運動量ベクトル</p></div>
+            <div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+          </div>
+        </div>
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">コントロール</p>
+<div class="slider-row"><label class="slider-label">質量 m (kg):
+      <input id="mSlider" type="range" min="0.1" max="1" step="0.1" value="0.15">
+      <span id="mValue">0.15</span></label></div>
+            <div class="slider-row"><label class="slider-label">初速度 v (m/s):
+      <input id="vSlider" type="range" min="0" max="50" step="1" value="25">
+      <span id="vValue">25</span>
+    </label>
+
+    <div class="slider-row"><label class="slider-label">バット角度 θ<sub>bat</sub> (°):
+      <input id="batSlider" type="range" min="0" max="180" step="1" value="45">
+      <span id="batValue">45</span>
+    </label>
+
+    <p class="formula-box">
+      p = m v　　I = Δp = p′ − p　　ボール→バット = −I<br>
+      法線 n に対する入射角 = 反射角（鏡面反射モデル）
+    </p>
+
+    <p class="hint">
+      スライダーを動かすと、<strong>投げる前</strong>から力積 I と反作用（−I）の矢印が大きく表示されます。「スタート」で衝突後は <strong>運動量 p′</strong> の向きと大きさが表示されます。
+    </p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+            <div id="statusPanel">スライダーを設定して「スタート」</div>
+            <section id="calcPanel" aria-label="計算過程">
+      <h3>計算過程</h3>
+      <p class="concept">バットの法線 n に対する入射角 θ<sub>in</sub> と反射角 θ<sub>out</sub>（|θ<sub>out</sub>| = |θ<sub>in</sub>|）から v′ を求め、運動量を計算します。</p>
+
+      <div class="calc-block">
+        <p class="calc-label">① 入射角 θ<sub>in</sub>（法線 n に対する角）</p>
+        <p class="calc-line">θ<sub>in</sub> = ∠(v, n)</p>
+        <p class="calc-line sub">→ θ<sub>in</sub> = <span id="cThetaIn" class="num">—</span>°</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">② 衝突前の速度成分</p>
+        <p class="calc-line">v<sub>x</sub> = v cos φ　　v<sub>y</sub> = v sin φ</p>
+        <p class="calc-line sub">→ v<sub>x</sub> = <span id="cVx" class="num-before">—</span> m/s、v<sub>y</sub> = <span id="cVy" class="num-before">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">③ 反射角 θ<sub>out</sub></p>
+        <p class="calc-line">|θ<sub>out</sub>| = |θ<sub>in</sub>|（法線の反対側）</p>
+        <p class="calc-line sub">→ θ<sub>out</sub> = <span id="cThetaOut" class="num-after">—</span>°</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">④ 衝突後の速度成分</p>
+        <p class="calc-line">v′ = v′<sub>t</sub> t + v′<sub>n</sub> n　（v′<sub>n</sub> = −v<sub>n</sub>）</p>
+        <p class="calc-line sub">→ v′<sub>x</sub> = <span id="cVpx" class="num-after">—</span> m/s、v′<sub>y</sub> = <span id="cVpy" class="num-after">—</span> m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">⑤ 力積（やさしい言い方）</p>
+        <p class="calc-line">I = Δp = p′ − p（ボールの運動量の変化）</p>
+        <p class="calc-line sub">→ I<sub>x</sub> = <span id="cIx" class="num-dp">—</span>、I<sub>y</sub> = <span id="cIy" class="num-dp">—</span> kg·m/s</p>
+        <p class="calc-line">大きさ |I| = <span id="cImag" class="num-dp">—</span> kg·m/s</p>
+        <p class="calc-line">ボール→バット = −I（向きが反対・大きさ同じ）</p>
+        <p class="calc-line sub">→ (−I)<sub>x</sub> = <span id="cNegIx" class="num-to-bat">—</span>、(−I)<sub>y</sub> = <span id="cNegIy" class="num-to-bat">—</span> kg·m/s</p>
+      </div>
+
+      <div class="calc-block">
+        <p class="calc-label">⑥ 運動量</p>
+        <p class="calc-line">衝突前 p = m v</p>
+        <p class="calc-line sub">→ p<sub>x</sub> = <span id="cPbx" class="num-before">—</span>、p<sub>y</sub> = <span id="cPby" class="num-before">—</span> kg·m/s　大きさ = <span id="cPmag" class="num-before">—</span></p>
+        <p class="calc-line">衝突後 p′ = m v′</p>
+        <p class="calc-line sub">→ p′<sub>x</sub> = <span id="cPax" class="num-after">—</span>、p′<sub>y</sub> = <span id="cPay" class="num-after">—</span> kg·m/s</p>
+        <p class="calc-line">大きさ |p′| = <span id="cPmagAfter" class="num-after">—</span> kg·m/s　向き = <span id="cPangleAfter" class="num-after">—</span>°</p>
+      </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li><strong>運動量</strong> p = mv（kg·m/s）</li>
+        <li><strong>力積</strong> I = Δp = p′ − p</li>
+        <li>ボール→バットの力積 = −I（反作用）</li>
+        <li>鏡面反射モデル：法線に対し入射角 = 反射角</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>    let layout = { w: 0, h: 0, dpr: 1 };
+    let fdLayout = { w: 0, h: 0, dpr: 1 };
+
+    function drawDarkBg(c, w, h, glowRgb) {
+      const g = glowRgb || "52,211,153";
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
+      c.fillStyle = bg; c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(" + g + ",0.12)");
+      glow.addColorStop(0.45, "rgba(" + g + ",0.05)");
+      glow.addColorStop(1, "rgba(20,24,36,0)");
+      c.fillStyle = glow; c.fillRect(0, 0, w, h);
+    }
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const mSlider = document.getElementById("mSlider");
+    const vSlider = document.getElementById("vSlider");
+    const batSlider = document.getElementById("batSlider");
+
+    const DEG = Math.PI / 180;
+    const MAX_DT = 1 / 30;
+    const BALL_R_M = 0.062;
+    const BAT_HALF_M = 1.24;
+    const BAT_WIDTH_SCALE = 1.38;
+    const BAT_ORIGIN_X = 0.62;
+    const BAT_ORIGIN_Y = 0;
+    const PX_PER_M = 88;
+    const MOMENTUM_SCALE = 22;
+    const VEL_SCALE = 3.2;
+    const APPROACH_TIME_SCALE = 0.34;
+    const REBOUND_TIME_SCALE = 0.38;
+    const FIELD_X_MIN = -5.2;
+    const FIELD_X_MAX = 5.4;
+    const FIELD_Y_MIN = -3.2;
+    const FIELD_Y_MAX = 3.2;
+
+    const DEFAULTS = { m: 0.15, v: 25, bat: 45, ballX: -3.85, ballY: 0 };
+
+    let phase = "idle";
+    let ballX = DEFAULTS.ballX;
+    let ballY = DEFAULTS.ballY;
+    let ballVx = 0;
+    let ballVy = 0;
+    let collision = null;
+    let frozenCollision = null;
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getM() { return parseFloat(mSlider.value); }
+    function getV() { return parseFloat(vSlider.value); }
+    function getBatDeg() { return parseFloat(batSlider.value); }
+
+    function syncSliders() {
+      document.getElementById("mValue").textContent = fmt(getM(), 2);
+      document.getElementById("vValue").textContent = fmt(getV(), 0);
+      document.getElementById("batValue").textContent = fmt(getBatDeg(), 0);
+    }
+
+    function vecLen(v) {
+      return Math.hypot(v.x, v.y);
+    }
+
+    function vecNorm(v) {
+      const l = vecLen(v) || 1;
+      return { x: v.x / l, y: v.y / l };
+    }
+
+    function dot(a, b) {
+      return a.x * b.x + a.y * b.y;
+    }
+
+    function getBatVectors(batDeg) {
+      const th = batDeg * DEG;
+      const t = { x: Math.cos(th), y: Math.sin(th) };
+      let n = { x: -Math.sin(th), y: Math.cos(th) };
+      const vIn = { x: getV(), y: 0 };
+      if (dot(vIn, n) > 0) {
+        n = { x: -n.x, y: -n.y };
+      }
+      return { t, n, th };
+    }
+
+    function computeCollisionPhysics(m, v, batDeg) {
+      const { t, n } = getBatVectors(batDeg);
+      const vIn = { x: v, y: 0 };
+      if (v < 0.01) {
+        const zero = { x: 0, y: 0 };
+        return {
+          m,
+          v,
+          batDeg,
+          phi: 0,
+          thetaInRad: 0,
+          thetaInDeg: 0,
+          thetaOutDeg: 0,
+          vIn: { ...zero },
+          vOut: { ...zero },
+          vn: 0,
+          vt: 0,
+          t,
+          n,
+          pBefore: { ...zero },
+          pAfter: { ...zero },
+          dP: { ...zero },
+          impulse: { ...zero },
+          pToBat: { ...zero },
+          pBeforeMag: 0,
+          pAfterMag: 0,
+          impulseMag: 0,
+          pAfterAngleDeg: 0,
+        };
+      }
+      const phi = Math.atan2(vIn.y, vIn.x);
+      const vn = dot(vIn, n);
+      const vt = dot(vIn, t);
+      const thetaInRad = Math.acos(Math.min(1, Math.abs(vn) / (v || 1)));
+      const vOut = {
+        x: vt * t.x - vn * n.x,
+        y: vt * t.y - vn * n.y,
+      };
+      const thetaOutRad = Math.acos(Math.min(1, Math.abs(dot(vOut, n)) / (vecLen(vOut) || 1)));
+      const signOut = dot(vOut, n) >= 0 ? 1 : -1;
+
+      const pBefore = { x: m * vIn.x, y: m * vIn.y };
+      const pAfter = { x: m * vOut.x, y: m * vOut.y };
+      const dP = { x: pAfter.x - pBefore.x, y: pAfter.y - pBefore.y };
+      const impulse = { ...dP };
+      const pToBat = { x: -dP.x, y: -dP.y };
+
+      return {
+        m,
+        v,
+        batDeg,
+        phi,
+        thetaInRad,
+        thetaInDeg: thetaInRad / DEG,
+        thetaOutDeg: (signOut * thetaOutRad) / DEG,
+        vIn,
+        vOut,
+        vn,
+        vt,
+        t,
+        n,
+        pBefore,
+        pAfter,
+        dP,
+        impulse,
+        pToBat,
+        pBeforeMag: vecLen(pBefore),
+        pAfterMag: vecLen(pAfter),
+        impulseMag: vecLen(dP),
+        pAfterAngleDeg: Math.atan2(pAfter.y, pAfter.x) / DEG,
+      };
+    }
+
+    function updateCalcPanel(data) {
+      const set = (id, text) => {
+        document.getElementById(id).textContent = text;
+      };
+      if (!data) {
+        ["cPmag", "cVx", "cThetaIn", "cThetaOut", "cVpmag", "cPangleAfter", "cImag"].forEach((id) => {
+          set(id, "—");
+        });
+        return;
+      }
+      set("cPmag", fmt(data.pBeforeMag, 2));
+      set("cVx", fmt(data.v, 1));
+      set("cThetaIn", fmt(data.thetaInDeg, 1));
+      set("cThetaOut", fmt(data.thetaOutDeg, 1));
+      set("cVpmag", fmt(vecLen(data.vOut), 1));
+      set("cPangleAfter", fmt(data.pAfterAngleDeg, 0));
+      set("cImag", fmt(data.impulseMag, 2));
+    }
+
+    function updateLiveReadout(data) {
+      if (phase === "idle") {
+        document.getElementById("livePhase").textContent = "設定中 — 衝突後に運動量を表示";
+      } else if (phase === "running") {
+        document.getElementById("livePhase").textContent = "接近中 — まだ衝突前";
+      } else if (phase === "collided") {
+        document.getElementById("livePhase").textContent = "衝突後 — Δp = p′ − p（停止中）";
+      } else if (phase === "rebound") {
+        document.getElementById("livePhase").textContent = "跳ね返り中 — v′ の向きで飛んでいます";
+      } else if (phase === "reboundDone") {
+        document.getElementById("livePhase").textContent = "跳ね返り完了 — リセットで最初から";
+      }
+      if (!data || data.v < 0.01) {
+        document.getElementById("liveP").textContent = "—";
+        document.getElementById("livePp").textContent = "—";
+        document.getElementById("liveDp").textContent = "—";
+        return;
+      }
+      document.getElementById("liveP").textContent = fmt(data.pBeforeMag, 2);
+      document.getElementById("livePp").textContent =
+        (phase === "collided" || phase === "rebound" || phase === "reboundDone")
+          ? fmt(data.pAfterMag, 2) : "—";
+      document.getElementById("liveDp").textContent =
+        (phase === "collided" || phase === "rebound" || phase === "reboundDone")
+          ? fmt(data.impulseMag, 2) : "—";
+    }
+
+    function updateActionUI() {
+      statusPanel.className = "";
+      reboundBtn.disabled = phase !== "collided";
+      if (phase === "idle") {
+        startBtn.disabled = getV() < 0.01;
+        resetBtn.disabled = false;
+        if (getV() < 0.01) {
+          statusPanel.textContent = "v = 0 のためボールは動きません。速度を上げてください。";
+          statusPanel.classList.add("zero-work");
+        } else {
+          statusPanel.textContent = "準備完了 — 「投球する」でボールを飛ばせます";
+          statusPanel.classList.add("ready");
+        }
+      } else if (phase === "running") {
+        startBtn.disabled = true;
+        resetBtn.disabled = false;
+        statusPanel.textContent = "ボール接近中… バットに向かって v = " + fmt(getV(), 0) + " m/s";
+        statusPanel.classList.add("motion");
+      } else if (phase === "collided") {
+        startBtn.disabled = true;
+        resetBtn.disabled = false;
+        statusPanel.textContent = "衝突 — ベクトルを確認したら「跳ね返りを見る」";
+        statusPanel.classList.add("p-mid");
+      } else if (phase === "rebound") {
+        startBtn.disabled = true;
+        resetBtn.disabled = false;
+        const spd = frozenCollision ? vecLen(frozenCollision.vOut) : 0;
+        statusPanel.textContent = "跳ね返り中… v′ = " + fmt(spd, 1) + " m/s の向きで飛んでいます";
+        statusPanel.classList.add("motion");
+      } else if (phase === "reboundDone") {
+        startBtn.disabled = true;
+        resetBtn.disabled = false;
+        statusPanel.textContent = "跳ね返り完了 — 「リセット」で最初からやり直せます";
+        statusPanel.classList.add("ready");
+      }
+    }
+
+    function setCanvasCaption(text) {
+      document.getElementById("canvasCaption").innerHTML = text;
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      ballX = DEFAULTS.ballX;
+      ballY = DEFAULTS.ballY;
+      ballVx = 0;
+      ballVy = 0;
+      collision = null;
+      frozenCollision = null;
+      mSlider.disabled = false;
+      vSlider.disabled = false;
+      batSlider.disabled = false;
+      syncSliders();
+      updateCalcPanel(null);
+      updateLiveReadout(null);
+      updateActionUI();
+    }
+
+    function startSimulation() {
+      if (phase === "running" || getV() < 0.01) return;
+      phase = "running";
+      ballX = DEFAULTS.ballX;
+      ballY = DEFAULTS.ballY;
+      ballVx = getV();
+      ballVy = 0;
+      collision = null;
+      frozenCollision = null;
+      mSlider.disabled = true;
+      vSlider.disabled = true;
+      batSlider.disabled = true;
+      updateActionUI();
+    }
+
+    function startRebound() {
+      if (phase !== "collided" || !frozenCollision) return;
+      phase = "rebound";
+      ballVx = frozenCollision.vOut.x;
+      ballVy = frozenCollision.vOut.y;
+      updateActionUI();
+    }
+
+    function isBallOutOfView() {
+      return ballX < FIELD_X_MIN || ballX > FIELD_X_MAX
+        || ballY < FIELD_Y_MIN || ballY > FIELD_Y_MAX;
+    }
+
+    function distPointToBatSegment(px, py, batDeg) {
+      const th = batDeg * DEG;
+      const tx = Math.cos(th);
+      const ty = Math.sin(th);
+      const lx = px - BAT_ORIGIN_X;
+      const ly = py - BAT_ORIGIN_Y;
+      const proj = lx * tx + ly * ty;
+      const clamped = Math.max(-BAT_HALF_M, Math.min(BAT_HALF_M, proj));
+      const cx = BAT_ORIGIN_X + clamped * tx;
+      const cy = BAT_ORIGIN_Y + clamped * ty;
+      const dx = px - cx;
+      const dy = py - cy;
+      return Math.hypot(dx, dy);
+    }
+
+    function snapBallToBatContact(batDeg) {
+      const { t } = getBatVectors(batDeg);
+      const lx = ballX - BAT_ORIGIN_X;
+      const ly = ballY - BAT_ORIGIN_Y;
+      const proj = lx * t.x + ly * t.y;
+      const clamped = Math.max(-BAT_HALF_M, Math.min(BAT_HALF_M, proj));
+      const cx = BAT_ORIGIN_X + clamped * t.x;
+      const cy = BAT_ORIGIN_Y + clamped * t.y;
+      const dx = ballX - cx;
+      const dy = ballY - cy;
+      const d = Math.hypot(dx, dy) || 1;
+      ballX = cx + (dx / d) * (BALL_R_M * 1.02);
+      ballY = cy + (dy / d) * (BALL_R_M * 1.02);
+    }
+
+    function tryCollision() {
+      const batDeg = getBatDeg();
+      const { n, t } = getBatVectors(batDeg);
+      const dist = distPointToBatSegment(ballX, ballY, batDeg);
+      const vIn = { x: ballVx || getV(), y: ballVy };
+      const approaching = dot(vIn, n) < -0.05;
+      const lx = ballX - BAT_ORIGIN_X;
+      const ly = ballY - BAT_ORIGIN_Y;
+      const proj = lx * t.x + ly * t.y;
+      const onSegment = proj >= -BAT_HALF_M - BALL_R_M && proj <= BAT_HALF_M + BALL_R_M;
+      if (dist <= BALL_R_M * 1.05 && approaching && onSegment) {
+        frozenCollision = computeCollisionPhysics(getM(), getV(), batDeg);
+        collision = frozenCollision;
+        snapBallToBatContact(batDeg);
+        ballVx = 0;
+        ballVy = 0;
+        phase = "collided";
+        updateCalcPanel(frozenCollision);
+        updateActionUI();
+      }
+    }
+
+    function update(dt) {
+      if (phase === "running") {
+        const moveDt = dt * APPROACH_TIME_SCALE;
+        const steps = 5;
+        const sub = moveDt / steps;
+        for (let i = 0; i < steps; i += 1) {
+          ballX += ballVx * sub;
+          ballY += ballVy * sub;
+          tryCollision();
+          if (phase === "collided") break;
+        }
+        return;
+      }
+      if (phase !== "rebound") return;
+      const moveDt = dt * REBOUND_TIME_SCALE;
+      const steps = 5;
+      const sub = moveDt / steps;
+      for (let i = 0; i < steps; i += 1) {
+        ballX += ballVx * sub;
+        ballY += ballVy * sub;
+        if (isBallOutOfView()) {
+          ballVx = 0;
+          ballVy = 0;
+          phase = "reboundDone";
+          updateActionUI();
+          break;
+        }
+      }
+    }
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      function fit(cv, wrap, minH) {
+        const rect = wrap.getBoundingClientRect();
+        const w = Math.max(280, Math.round(rect.width));
+        const h = Math.max(minH || 220, Math.round(rect.height));
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+        cv.style.width = w + "px";
+        cv.style.height = h + "px";
+        const c = cv.getContext("2d");
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h, dpr };
+      }
+      layout = fit(canvas, canvasWrap, 260);
+      if (typeof fdCanvas !== "undefined" && fdCanvas) fdLayout = fit(fdCanvas, fdWrap, 180);
+    }
+
+    function getLayout(w, h) {
+      const cx = w * 0.5;
+      const cy = h * 0.54;
+      return { cx, cy, w, h };
+    }
+
+    function toScreen(lay, x, y) {
+      return {
+        x: lay.cx + x * PX_PER_M,
+        y: lay.cy - y * PX_PER_M,
+      };
+    }
+
+    function drawArrow(sx, sy, vx, vy, color, label, scale, opts) {
+      const dashed = opts && opts.dashed;
+      const ex = sx + vx * scale;
+      const ey = sy - vy * scale;
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const len = Math.hypot(dx, dy);
+      if (len < 6) return { ex: sx, ey: sy, len: len || 0 };
+      ctx.lineCap = "round";
+      if (dashed) ctx.setLineDash([7, 5]);
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = dashed ? 4 : 6;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = dashed ? 2.5 : 3.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const head = Math.min(14, len * 0.2);
+      const ang = Math.atan2(dy, dx);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 7), ey - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), ey - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+      if (label) {
+        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 8, ey - 6);
+      }
+      return { ex, ey };
+    }
+
+    function drawVelocityArrow(ballScreen, vx, vy, label, dashed) {
+      if (Math.hypot(vx, vy) < 0.01) return;
+      drawArrow(ballScreen.x, ballScreen.y, vx, vy, "#fbbf24", label, VEL_SCALE, { dashed });
+    }
+
+    function drawCollisionMomentum(ballScreen, data) {
+      if (!data) return;
+      drawArrow(ballScreen.x, ballScreen.y, data.pBefore.x, data.pBefore.y, "#38bdf8", "p", MOMENTUM_SCALE);
+      drawArrow(ballScreen.x, ballScreen.y, data.pAfter.x, data.pAfter.y, "#f87171", "p′", MOMENTUM_SCALE);
+      drawArrow(ballScreen.x, ballScreen.y, data.dP.x, data.dP.y, "#a78bfa", "Δp", MOMENTUM_SCALE);
+    }
+
+    function drawIdlePreview(ballScreen, data) {
+      if (!data || data.v < 0.01) return;
+      drawVelocityArrow(ballScreen, data.vIn.x, data.vIn.y, "v", true);
+      if (data.pAfterMag > 0.01) {
+        drawArrow(
+          ballScreen.x, ballScreen.y,
+          data.pAfter.x, data.pAfter.y,
+          "rgba(248,113,113,0.55)", "p′?", MOMENTUM_SCALE * 0.85,
+          { dashed: true }
+        );
+      }
+    }
+
+    function drawBat(lay, batDeg) {
+      const th = batDeg * DEG;
+      const tx = Math.cos(th);
+      const ty = Math.sin(th);
+      const nx = -Math.sin(th);
+      const ny = Math.cos(th);
+      const ox = BAT_ORIGIN_X;
+      const oy = BAT_ORIGIN_Y;
+      const pc = toScreen(lay, ox, oy);
+
+      function edge(s, halfW) {
+        const bx = ox + s * tx;
+        const by = oy + s * ty;
+        return {
+          top: toScreen(lay, bx + nx * halfW, by + ny * halfW),
+          bot: toScreen(lay, bx - nx * halfW, by - ny * halfW),
+        };
+      }
+
+      const handleTip = -BAT_HALF_M * 0.72;
+      const barrelStart = -BAT_HALF_M * 0.08;
+      const barrelEnd = BAT_HALF_M * 0.92;
+      const tipEnd = BAT_HALF_M;
+
+      const h0 = edge(handleTip, 0.038 * BAT_WIDTH_SCALE);
+      const h1 = edge(barrelStart, 0.044 * BAT_WIDTH_SCALE);
+      const b0 = edge(barrelStart, 0.058 * BAT_WIDTH_SCALE);
+      const b1 = edge(barrelEnd, 0.082 * BAT_WIDTH_SCALE);
+      const t0 = edge(barrelEnd, 0.068 * BAT_WIDTH_SCALE);
+      const t1 = edge(tipEnd, 0.022 * BAT_WIDTH_SCALE);
+
+      ctx.save();
+
+      ctx.shadowColor = "rgba(0,40,80,0.22)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+
+      ctx.beginPath();
+      ctx.moveTo(h0.top.x, h0.top.y);
+      ctx.lineTo(h1.top.x, h1.top.y);
+      ctx.lineTo(b1.top.x, b1.top.y);
+      ctx.lineTo(t1.top.x, t1.top.y);
+      ctx.lineTo(t1.bot.x, t1.bot.y);
+      ctx.lineTo(b1.bot.x, b1.bot.y);
+      ctx.lineTo(h1.bot.x, h1.bot.y);
+      ctx.lineTo(h0.bot.x, h0.bot.y);
+      ctx.closePath();
+
+      const gradStart = toScreen(lay, ox + handleTip * tx, oy + handleTip * ty);
+      const gradEnd = toScreen(lay, ox + tipEnd * tx, oy + tipEnd * ty);
+      const wood = ctx.createLinearGradient(gradStart.x, gradStart.y, gradEnd.x, gradEnd.y);
+      wood.addColorStop(0, "#5c3d1e");
+      wood.addColorStop(0.22, "#8b5a2b");
+      wood.addColorStop(0.55, "#c9924a");
+      wood.addColorStop(0.82, "#ddb566");
+      wood.addColorStop(1, "#a87332");
+      ctx.fillStyle = wood;
+      ctx.fill();
+
+      ctx.shadowColor = "transparent";
+      ctx.strokeStyle = "rgba(60,35,15,0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const shine0 = edge(barrelStart + 0.04, 0.04 * BAT_WIDTH_SCALE);
+      const shine1 = edge(barrelEnd - 0.06, 0.04 * BAT_WIDTH_SCALE);
+      ctx.moveTo(shine0.top.x, shine0.top.y);
+      ctx.lineTo(shine1.top.x, shine1.top.y);
+      ctx.stroke();
+
+      for (let i = 0; i < 5; i += 1) {
+        const gs = handleTip + (barrelStart - handleTip) * (i + 0.5) / 5;
+        const g = edge(gs, 0.038 * BAT_WIDTH_SCALE);
+        ctx.strokeStyle = i % 2 === 0 ? "rgba(30,30,35,0.55)" : "rgba(220,180,80,0.35)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(g.top.x, g.top.y);
+        ctx.lineTo(g.bot.x, g.bot.y);
+        ctx.stroke();
+      }
+
+      const knob = toScreen(lay, ox + (handleTip - 0.06) * tx, oy + (handleTip - 0.06) * ty);
+      ctx.fillStyle = "#2a2018";
+      ctx.beginPath();
+      ctx.arc(knob.x, knob.y, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#554433";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.strokeStyle = "#334455";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(pc.x, pc.y, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#556677";
+      ctx.beginPath();
+      ctx.arc(pc.x, pc.y, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      const { n } = getBatVectors(batDeg);
+      drawArrow(pc.x, pc.y, n.x, n.y, "#64748b", "n", PX_PER_M * 0.62);
+
+      const arcR = 62;
+      ctx.strokeStyle = "rgba(0,120,200,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(pc.x, pc.y, arcR, 0, -th, th > Math.PI);
+      ctx.stroke();
+      ctx.fillStyle = "#4a7099";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "left";
+      const labelPos = toScreen(lay, ox + 0.55 * Math.cos(th * 0.5), oy + 0.55 * Math.sin(th * 0.5));
+      ctx.fillText(`θ=${fmt(batDeg, 0)}°`, labelPos.x + 10, labelPos.y - 6);
+
+      const tipScreen = toScreen(lay, ox + tipEnd * tx, oy + tipEnd * ty);
+      ctx.fillStyle = "#5c3d1e";
+      ctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("バット", tipScreen.x + 8, tipScreen.y - 4);
+    }
+
+    function drawBall(lay) {
+      const p = toScreen(lay, ballX, ballY);
+      const r = BALL_R_M * PX_PER_M;
+      if (phase === "collided") {
+        ctx.strokeStyle = "rgba(244, 63, 94, 0.75)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#ff8800";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, BALL_R_M * PX_PER_M, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#aa5500";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("球", p.x, p.y + 4);
+      ctx.textAlign = "left";
+      return p;
+    }
+
+    function drawPhaseBadge(lay, text) {
+      ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+      ctx.strokeStyle = "rgba(244, 63, 94, 0.35)";
+      ctx.lineWidth = 1;
+      const bw = Math.min(220, lay.w * 0.42);
+      ctx.fillRect(12, 12, bw, 34);
+      ctx.strokeRect(12, 12, bw, 34);
+      ctx.fillStyle = "#fecdd3";
+      ctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(text, 22, 33);
+    }
+
+    function drawFrame() {
+      resizeCanvas();
+      const lay = getLayout(canvas.width, canvas.height);
+      ctx.clearRect(0, 0, lay.w, lay.h);
+      ctx.fillStyle = "#f8fcff";
+      ctx.fillRect(0, 0, lay.w, lay.h);
+
+      const pc = toScreen(lay, BAT_ORIGIN_X, BAT_ORIGIN_Y);
+      ctx.strokeStyle = "rgba(0,100,180,0.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(20, pc.y);
+      ctx.lineTo(lay.w - 20, pc.y);
+      ctx.stroke();
+      ctx.fillStyle = "#4a7099";
+      ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("+x", lay.w - 36, pc.y - 6);
+
+      drawBat(lay, getBatDeg());
+      const batScreen = toScreen(lay, 0, 0);
+      const ballScreen = drawBall(lay);
+
+      const previewData = computeCollisionPhysics(getM(), getV(), getBatDeg());
+
+      if (phase === "collided" && frozenCollision) {
+        drawAfterMomentum(ballScreen, frozenCollision);
+        setCanvasCaption(
+          '衝突後：<span style="color:#34d399;font-weight:600">運動量 p′</span> · 大きさ '
+          + fmt(frozenCollision.pAfterMag, 1) + ' kg·m/s · 向き '
+          + fmt(frozenCollision.pAfterAngleDeg, 0) + '°'
+        );
+      } else if (getV() >= 0.01) {
+        drawPreCollisionVectors(ballScreen, batScreen, previewData);
+        const phaseLabel = phase === "running" ? "接近中" : "投げる前";
+        setCanvasCaption(
+          phaseLabel + '：<span style="color:#fb7185;font-weight:600">力積 I</span> と '
+          + '<span style="color:#fbbf24;font-weight:600">−I</span>（向き反対・大きさ同じ）'
+        );
+      } else {
+        setCanvasCaption("v = 0 — ベクトルは表示されません");
+      }
+
+      if (phase === "idle") {
+        updateCalcPanel(previewData);
+      }
+
+      if (phase === "idle") {
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillRect(lay.w - 168, 12, 152, 44);
+        ctx.strokeStyle = "rgba(0,76,153,0.12)";
+        ctx.strokeRect(lay.w - 168, 12, 152, 44);
+        ctx.fillStyle = "#004c99";
+        ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText(`m=${fmt(getM(), 2)} kg  v=${fmt(getV(), 0)} m/s`, lay.w - 158, 32);
+        ctx.fillText(`θ_bat=${fmt(getBatDeg(), 0)}°`, lay.w - 158, 48);
+      }
+    }
+
+    [mSlider, vSlider, batSlider].forEach((el) => {
+      el.addEventListener("input", () => {
+        if (phase === "idle") {
+          syncSliders();
+          const data = computeCollisionPhysics(getM(), getV(), getBatDeg());
+          updateCalcPanel(data);
+          updateLiveReadout(data);
+          updateActionUI();
+        }
+      });
+    });
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+    reboundBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startRebound();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      resetSimulation();
+    });
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      if (phase === "idle") syncSliders();
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  
+  </script>
+</body>
+</html>

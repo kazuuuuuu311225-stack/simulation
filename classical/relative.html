@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>1章 — 相対速度</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1524 45%, #0a1220 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.4), rgba(14,165,233,0.35));
+      border: 1px solid rgba(56,189,248,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #7dd3fc; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #bae6fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0f2fe; background: rgba(56,189,248,0.14);
+      border: 1px solid rgba(56,189,248,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(56, 189, 248, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #7dd3fc; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(14,165,233,0.08));
+      border: 1px solid rgba(56,189,248,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #bae6fd; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.55fr 0.45fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(56,189,248,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #7dd3fc; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap { position: relative; background: #0a0e14; min-height: 320px; }
+    #canvas { display: block; width: 100%; height: min(420px, 48dvh); min-height: 320px; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+    }
+    #hintBox { font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); margin: 0; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(56,189,248,0.25); color: #e0f2fe; border-color: rgba(56,189,248,0.55); font-weight: 800; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(56,189,248,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #7dd3fc; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(56,189,248,0.45); background: rgba(12,74,110,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #38bdf8; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #38bdf8; }
+    .observer-row { display: flex; gap: 6px; }
+    .observer-btn {
+      flex: 1; padding: 8px 6px; min-height: 38px; font-family: inherit; font-size: 0.62rem; font-weight: 700;
+      border-radius: 9px; cursor: pointer; border: 1px solid rgba(148,163,184,0.28);
+      background: rgba(15,23,42,0.6); color: #94a3b8;
+    }
+    .observer-btn.active { color: #e0f2fe; border-color: rgba(56,189,248,0.7); background: rgba(12,74,110,0.35); }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .calc-line.sub { color: #94a3b8; font-size: 0.68rem; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">🚃</div>
+      <p class="chapter-label">第1章 — 物体の運動</p>
+      <h2>相対速度</h2>
+      <p class="tagline">2 つの物体 · 観測者の切り替え · v_rel = v_B − v_A</p>
+      <a id="back" href="../00_folder_classical.html#chapter-1">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">A から見た B：<strong>v_rel = v_B − v_A</strong> · B から見た A：<strong>v_rel = v_A − v_B</strong></div>
+        <div class="formula-sub">電車の窓から見た景色のように、観測者と一緒に動く座標系で見え方が変わる</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">車内から見た景色（相対速度の視覚化）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>物体 A</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>物体 B</span>
+              <span><i class="color-chip" style="background:#64748b;color:#64748b"></i>外の景色</span>
+            </div>
+            <div id="canvasWrap"><canvas id="canvas"></canvas></div>
+            <div class="explain-panel">
+              <p id="hintBox">観測者を切り替えると、電車の窓から見た景色のように見え方が変わります。</p>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">操作 · 数値</p>
+            <div class="slider-row">
+              <label>v<sub>A</sub> (m/s) <span id="vAValue">15</span></label>
+              <input id="vASlider" type="range" min="-50" max="50" step="1" value="15">
+            </div>
+            <div class="slider-row">
+              <label>v<sub>B</sub> (m/s) <span id="vBValue">-10</span></label>
+              <input id="vBSlider" type="range" min="-50" max="50" step="1" value="-10">
+            </div>
+            <p class="hud-title" style="margin-top:4px">観測者</p>
+            <div class="observer-row">
+              <button type="button" class="observer-btn active" id="obsBtnA" data-observer="A">A の車内から見る</button>
+              <button type="button" class="observer-btn" id="obsBtnB" data-observer="B">B の車内から見る</button>
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">相対速度 v_rel</div>
+              <div class="val big" id="fVrel">— m/s</div>
+            </div>
+            <p class="calc-line">x<sub>A</sub> = <span id="fXA0">—</span> + <span id="fVA">—</span> · t</p>
+            <p class="calc-line">x<sub>B</sub> = <span id="fXB0">—</span> + <span id="fVB">—</span> · t</p>
+            <p class="calc-line sub">観測者：<span id="fObsLabel">—</span> · <span id="fViewDesc">—</span></p>
+            <p class="calc-line sub">相手までの距離 = <span id="fRelDist">—</span> m</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>学習ポイント</h3>
+      <ul class="edu-list">
+        <li>観測者は自分と一緒に動くので、自分は止まって見える</li>
+        <li>外の物体は v_rel の速さで動いて見える</li>
+        <li>A から見た B：v_rel = v_B − v_A</li>
+        <li>相対速度の符号で「近づく／遠ざかる」がわかる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const vASlider = document.getElementById("vASlider");
+    const vBSlider = document.getElementById("vBSlider");
+    const vAValue = document.getElementById("vAValue");
+    const vBValue = document.getElementById("vBValue");
+    const obsBtnA = document.getElementById("obsBtnA");
+    const obsBtnB = document.getElementById("obsBtnB");
+
+    const MAX_DT = 1 / 30;
+    const MARGIN = { left: 16, right: 16, top: 16, bottom: 16 };
+    const XA0 = -25;
+    const XB0 = 25;
+    const SCENERY_SPACING = 70;
+    let layout = { w: 400, h: 320, dpr: 1 };
+
+    let vA = parseFloat(vASlider.value);
+    let vB = parseFloat(vBSlider.value);
+    let simVA = vA;
+    let simVB = vB;
+    let observer = "A";
+    let t = 0;
+    let running = false;
+
+    function syncSliders() {
+      vA = parseFloat(vASlider.value);
+      vB = parseFloat(vBSlider.value);
+      vAValue.textContent = vA;
+      vBValue.textContent = vB;
+      if (!running) { simVA = vA; simVB = vB; }
+      updateFormulaPanel();
+    }
+
+    function relativeVelocity() { return observer === "A" ? simVB - simVA : simVA - simVB; }
+    function relativeDistance() { return observer === "A" ? positionB(t) - positionA(t) : positionA(t) - positionB(t); }
+    function observerSpeed() { return observer === "A" ? simVA : simVB; }
+    function positionA(time) { return XA0 + simVA * time; }
+    function positionB(time) { return XB0 + simVB * time; }
+    function fmt(value, digits) { return Number(value).toFixed(digits); }
+
+    function updateFormulaPanel() {
+      const vRel = relativeVelocity();
+      const relDist = relativeDistance();
+      const viewDesc = observer === "A"
+        ? "A は止まって見え、B が v_rel の速さで動く"
+        : "B は止まって見え、A が v_rel の速さで動く";
+      document.getElementById("fXA0").textContent = XA0;
+      document.getElementById("fVA").textContent = simVA;
+      document.getElementById("fXB0").textContent = XB0;
+      document.getElementById("fVB").textContent = simVB;
+      document.getElementById("fObsLabel").textContent = observer;
+      document.getElementById("fVrel").textContent = fmt(vRel, 1) + " m/s";
+      document.getElementById("fViewDesc").textContent = viewDesc;
+      document.getElementById("fRelDist").textContent = fmt(relDist, 1);
+    }
+
+    function setObserver(next) {
+      observer = next;
+      obsBtnA.classList.toggle("active", observer === "A");
+      obsBtnB.classList.toggle("active", observer === "B");
+      updateFormulaPanel();
+    }
+
+    function resetSimulation() {
+      syncSliders();
+      simVA = vA; simVB = vB;
+      t = 0; running = false;
+      updateFormulaPanel();
+    }
+
+    function startSimulation() {
+      syncSliders();
+      simVA = vA; simVB = vB;
+      t = 0; running = true;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      const cw = Math.round(w * dpr);
+      const ch = Math.round(h * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      layout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1218");
+      bg.addColorStop(1, "#0f2847");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(56, 189, 248, 0.12)");
+      glow.addColorStop(0.45, "rgba(56, 189, 248, 0.05)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function bindSlider(slider, onChange) {
+      slider.addEventListener("input", onChange);
+      slider.addEventListener("change", onChange);
+    }
+    bindSlider(vASlider, syncSliders);
+    bindSlider(vBSlider, syncSliders);
+    obsBtnA.addEventListener("click", () => setObserver("A"));
+    obsBtnB.addEventListener("click", () => setObserver("B"));
+    startBtn.addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    resetBtn.addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    requestAnimationFrame(() => { resizeCanvas(); resetSimulation(); });
+
+    function update(dt) { if (!running) return; t += dt; }
+
+    function getViewMetrics() {
+      const w = layout.w;
+      const h = layout.h;
+      const innerW = w - MARGIN.left - MARGIN.right;
+      const innerH = h - MARGIN.top - MARGIN.bottom;
+      const groundY = MARGIN.top + innerH - 36;
+      const windowTop = MARGIN.top + 28;
+      const observerPx = MARGIN.left + innerW * 0.24;
+      const metersPerPx = 120 / innerW;
+      return { innerW, innerH, groundY, windowTop, observerPx, metersPerPx };
+    }
+
+    function drawScenery(metrics, bgOffsetPx) {
+      const { innerW, groundY, windowTop } = metrics;
+      const left = MARGIN.left;
+      const right = layout.w - MARGIN.right;
+      ctx.fillStyle = "rgba(15, 30, 50, 0.85)";
+      ctx.fillRect(left, windowTop, innerW, groundY - windowTop - 8);
+      const start = left + (bgOffsetPx % SCENERY_SPACING) - SCENERY_SPACING;
+      for (let x = start; x < right + SCENERY_SPACING; x += SCENERY_SPACING) {
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.25)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, groundY - 55); ctx.lineTo(x, groundY - 8); ctx.stroke();
+        ctx.fillStyle = "rgba(52, 211, 153, 0.55)";
+        ctx.beginPath(); ctx.arc(x, groundY - 58, 14, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "rgba(34, 197, 94, 0.35)";
+      ctx.fillRect(left, groundY - 6, innerW, 10);
+    }
+
+    function drawTrainCar(x, groundY, color, label, isSelf) {
+      const w = 56; const h = 28;
+      const baseX = x - w / 2; const baseY = groundY - h - 6;
+      ctx.fillStyle = color;
+      ctx.shadowColor = color; ctx.shadowBlur = isSelf ? 16 : 8;
+      ctx.fillRect(baseX, baseY, w, h); ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.fillRect(baseX + 8, baseY + 6, 16, 12);
+      ctx.fillRect(baseX + 32, baseY + 6, 16, 12);
+      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(baseX + 14, groundY - 2, 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(baseX + 42, groundY - 2, 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#e2e8f0"; ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(label + (isSelf ? "（あなた）" : ""), baseX + 14, baseY - 6);
+    }
+
+    function drawWindowFrame(metrics) {
+      const { innerW, innerH } = metrics;
+      const left = MARGIN.left; const top = MARGIN.top;
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.55)"; ctx.lineWidth = 5;
+      ctx.strokeRect(left, top, innerW, innerH);
+      ctx.fillStyle = "rgba(8, 12, 28, 0.92)";
+      ctx.fillRect(left + 8, top + 8, innerW - 16, 22);
+      ctx.fillStyle = "#bae6fd"; ctx.font = "13px Inter, Noto Sans JP, sans-serif";
+      const viewTitle = observer === "A" ? "A の車内から見た景色（外が流れる）" : "B の車内から見た景色（外が流れる）";
+      ctx.fillText(viewTitle, left + 16, top + 24);
+    }
+
+    function drawScene() {
+      const w = layout.w;
+      const h = layout.h;
+      setupCtx();
+      drawDarkBg(w, h);
+      const metrics = getViewMetrics();
+      const { observerPx, metersPerPx, groundY } = metrics;
+      const vRel = relativeVelocity();
+      const relDist = relativeDistance();
+      const otherPx = observerPx + relDist / metersPerPx;
+      const bgOffsetPx = -observerSpeed() * t / metersPerPx;
+
+      drawWindowFrame(metrics);
+      drawScenery(metrics, bgOffsetPx);
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.45)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(MARGIN.left, groundY); ctx.lineTo(w - MARGIN.right, groundY); ctx.stroke();
+
+      const obsColor = observer === "A" ? "#38bdf8" : "#fb7185";
+      const otherColor = observer === "A" ? "#fb7185" : "#38bdf8";
+      const otherLabel = observer === "A" ? "B" : "A";
+
+      drawTrainCar(observerPx, groundY, obsColor, observer, true);
+      if (otherPx > MARGIN.left - 20 && otherPx < w - MARGIN.right + 20) {
+        drawTrainCar(otherPx, groundY, otherColor, otherLabel, false);
+      } else {
+        ctx.fillStyle = "#94a3b8"; ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+        const dir = relDist > 0 ? "右" : "左";
+        ctx.fillText(`相手（${otherLabel}）は画面の${dir}の外へ`, observerPx - 40, groundY - 50);
+      }
+
+      ctx.fillStyle = "#bae6fd"; ctx.font = "14px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(`t = ${fmt(t, 2)} s`, MARGIN.left + 12, h - 52);
+      ctx.fillText(`vA = ${fmt(simVA, 1)} m/s`, MARGIN.left + 12, h - 34);
+      ctx.fillText(`vB = ${fmt(simVB, 1)} m/s`, MARGIN.left + 130, h - 34);
+      ctx.fillText(`v_rel = ${fmt(vRel, 1)} m/s`, MARGIN.left + 12, h - 16);
+    }
+
+    function draw() {
+      if (!running) syncSliders();
+      drawScene();
+      updateFormulaPanel();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

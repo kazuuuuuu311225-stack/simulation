@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>6章 — 力のモーメント M = Fr</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1018 45%, #101820 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(56,189,248,0.25));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fde68a; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fcd34d; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.14);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251,191,36, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fde68a; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(56,189,248,0.08));
+      border: 1px solid rgba(251,191,36,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #fde68a; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(251,191,36,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fde68a; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
+    #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
+    .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #statusPanel, #hintBox {
+      font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2);
+    }
+    #statusPanel.balanced, #statusPanel.pos-work, #statusPanel.p-low { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
+    #statusPanel.rotating, #statusPanel.neg-work, #statusPanel.p-high { color: #fda4af; border-color: rgba(251,113,133,0.35); }
+    #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
+    #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn, .btn-row button {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary, #startBtn, #dropBtn, #releaseBtn, #shotBtn {
+      background: rgba(251,191,36,0.25); color: #fff; border-color: rgba(251,191,36,0.55); font-weight: 800;
+    }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fde68a; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(251,191,36,0.45); background: rgba(30,20,10,0.2); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .slider-row label, label.slider-label {
+      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+    }
+    .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #fbbf24; }
+    .side-group {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2); margin-bottom: 8px;
+    }
+    .side-group.left { border-left: 3px solid #38bdf8; }
+    .side-group.right { border-left: 3px solid #fb7185; }
+    .side-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+    .dir-row { display: flex; gap: 6px; margin-top: 4px; }
+    .dir-row button, .dir-btn {
+      flex: 1; padding: 8px 6px; min-height: 36px; font-family: inherit; font-size: 0.72rem;
+      font-weight: 600; border: 1px solid rgba(148,163,184,0.28); border-radius: 8px;
+      background: rgba(255,255,255,0.06); color: #cbd5e1; cursor: pointer;
+    }
+    .dir-row button.active, .dir-btn.active {
+      background: rgba(251,191,36,0.3); color: #fff; border-color: rgba(251,191,36,0.55);
+    }
+    .mass-row { display: flex; flex-direction: column; gap: 8px; }
+    .mass-item {
+      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .mass-item:nth-child(1) { border-left: 3px solid #38bdf8; }
+    .mass-item:nth-child(2) { border-left: 3px solid #fbbf24; }
+    .mass-item:nth-child(3) { border-left: 3px solid #fb7185; }
+    .mass-label { display: block; font-size: 0.72rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
+    .hint { margin: 0 0 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; }
+    .formula-box { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(251,191,36,0.1);
+      font-size: 0.78rem; font-weight: 600; color: #fde68a; text-align: center; line-height: 1.55; }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    #formulaPanel, #calcPanel {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.2);
+    }
+    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #fde68a; }
+    .concept { margin: 0 0 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.55; }
+    .formula-block, .calc-block {
+      margin-bottom: 10px; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
+    }
+    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
+    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #fbbf24; }
+    .formula-line, .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
+    .formula-line.sub, .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
+    .num, .num-before { font-weight: 600; color: #7dd3fc; }
+    .num-after { font-weight: 600; color: #fda4af; }
+    .num-dp, .num-cm { font-weight: 600; color: #c4b5fd; }
+    .num-to-bat { font-weight: 600; color: #fde68a; }
+    #liveReadout {
+      margin: 10px 14px 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.2);
+      display: grid; gap: 8px;
+    }
+    #liveReadout.cols3 { grid-template-columns: 1fr auto 1fr; }
+    #liveReadout.cols4 { grid-template-columns: 1fr 1fr 1fr; }
+    .live-col { font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
+    .live-col.left, .live-col.m1 { color: #7dd3fc; }
+    .live-col.right, .live-col.m3 { color: #fda4af; text-align: right; }
+    .live-col.m2 { color: #fde68a; }
+    .live-col.center { text-align: center; color: #fde68a; border-left: 1px solid rgba(148,163,184,0.15);
+      border-right: 1px solid rgba(148,163,184,0.15); padding: 0 8px; }
+    .live-col .title { display: block; font-weight: 700; font-size: 0.68rem; margin-bottom: 4px; }
+    .live-col .state { display: block; margin-top: 4px; font-weight: 700; font-size: 0.82rem; }
+    .live-col .state.balanced { color: #6ee7b7; }
+    .live-col .state.rotating { color: #fda4af; }
+    .live-col.g-row { grid-column: 1 / -1; text-align: center; color: #fde68a; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+    .graph-block { margin-top: 10px; border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; }
+    .graph-legend { margin: 0 14px 6px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .legend { display: none; }
+    .sim-layout { display: contents; }
+    .canvas-section { display: contents; }
+    @media (max-width: 520px) {
+      #liveReadout.cols3 { grid-template-columns: 1fr 1fr; }
+      .live-col.center { grid-column: 1 / -1; border: none; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
+      .live-col.right { text-align: left; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚖</div>
+      <p class="chapter-label">第6章 — 力のモーメントと重心</p>
+      <h2>力のモーメント M = F × r</h2>
+      <p class="tagline">てこ · 反時計回り − · 時計回り ＋</p>
+      <a id="back" href="../00_folder_classical.html#chapter-6">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main"><strong>M = F × r</strong>（支点まわり）</div>
+        <div class="formula-sub">合成 M = M_A + M_B = 0 でつりあい</div>
+      </div>
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+<div class="viz-head"><p class="viz-label">てこのアニメーション</p></div>
+<div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+
+            <p class="canvas-caption">r = 2.0 m の位置＝画面中央。その先に2マス分、てこがさらに伸びます。</p>
+
+            <div id="liveReadout" class="cols3" aria-live="polite">
+              <div class="live-col left">
+                <span class="title">位置 A（青）</span>
+                <span id="liveLeft">F_L = — N　r_L = — m<br>M_L = — N·m</span>
+              </div>
+              <div class="live-col center">
+                <span id="liveCenter">M = — N·m<br>θ = —°</span>
+                <span id="liveState" class="state balanced">つりあい</span>
+              </div>
+              <div class="live-col right">
+                <span class="title">位置 B（赤）</span>
+                <span id="liveRight">F_R = — N　r_R = — m<br>M_R = — N·m</span>
+              </div>
+            </div>
+            <section id="formulaPanel" aria-label="力のモーメントの計算">
+    <h3>モーメントの計算</h3>
+    <p class="concept">壁に固定した支点 O まわりの回転。各点で M = F × r（N·m）。上向きの力は反時計回り（−）、下向きは時計回り（＋）。</p>
+
+    <div class="formula-block">
+      <p class="formula-label">① 左側 M<sub>L</sub></p>
+      <p class="formula-line">M<sub>L</sub> = F<sub>L</sub> × r<sub>L</sub></p>
+      <p class="formula-line sub">→ <span id="fMLcalc" class="num">—</span> N·m（<span id="fMLdir" class="num">—</span>）</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">② 右側 M<sub>R</sub></p>
+      <p class="formula-line">M<sub>R</sub> = F<sub>R</sub> × r<sub>R</sub></p>
+      <p class="formula-line sub">→ <span id="fMRcalc" class="num">—</span> N·m（<span id="fMRdir" class="num">—</span>）</p>
+    </div>
+
+    <div class="formula-block">
+      <p class="formula-label">③ 合成モーメント</p>
+      <p class="formula-line">M = M<sub>L</sub> + M<sub>R</sub></p>
+      <p class="formula-line sub">→ M = <span id="fMnet" class="num">—</span> N·m（<span id="fMnetDir" class="num">—</span>）</p>
+      <p class="formula-line sub" id="fBalanceLine">判定：<span id="fBalance" class="num">—</span></p>
+    </div>
+  </section>
+          </div>
+        </div>
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">コントロール</p>
+<div class="side-group left">
+      <p class="side-title">位置 A（支点に近い）</p>
+      <label>
+        力 F<sub>L</sub> (N):
+        <input id="fLeftSlider" type="range" min="0" max="50" step="1" value="20">
+        <span id="fLeftValue">20</span>
+      </label>
+      <label>
+        支点からの距離 r<sub>L</sub> (m):
+        <input id="rLeftSlider" type="range" min="0" max="2" step="0.1" value="1.5">
+        <span id="rLeftValue">1.5</span>
+      </label>
+      <label>
+        力の向き
+        <div class="dir-row" id="dirLeftRow">
+          <button type="button" class="dir-btn active" data-side="a" data-dir="up">上向き ↑</button>
+          <button type="button" class="dir-btn" data-side="a" data-dir="down">下向き ↓</button>
+        </div>
+      </label>
+    </div>
+
+    <div class="side-group right">
+      <p class="side-title">位置 B（支点から遠い）</p>
+      <label>
+        力 F<sub>R</sub> (N):
+        <input id="fRightSlider" type="range" min="0" max="50" step="1" value="20">
+        <span id="fRightValue">20</span>
+      </label>
+      <label>
+        支点からの距離 r<sub>R</sub> (m):
+        <input id="rRightSlider" type="range" min="0" max="2" step="0.1" value="1.5">
+        <span id="rRightValue">1.5</span>
+      </label>
+      <label>
+        力の向き
+        <div class="dir-row" id="dirRightRow">
+          <button type="button" class="dir-btn" data-side="b" data-dir="up">上向き ↑</button>
+          <button type="button" class="dir-btn active" data-side="b" data-dir="down">下向き ↓</button>
+        </div>
+      </label>
+    </div>
+
+    <p class="formula-box">M = F × r　　反時計回りを −、時計回りを ＋</p>
+
+    <p class="hint">
+      壁に固定したてこの上の2か所に力を加えます。M = F × r を各点で求め、合成 M = M<sub>A</sub> + M<sub>B</sub> が 0 なら水平のまま、「スタート」で回転します。
+    </p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="pauseBtn" type="button">停止</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+            <div id="statusPanel">条件を設定して「スタート」</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li><strong>力のモーメント</strong> M = Fr（N·m）</li>
+        <li>上向きの力 → 反時計回り（−）、下向き → 時計回り（＋）</li>
+        <li>合成 M = 0 でてこは水平のまま</li>
+        <li>M ≠ 0 ならてこは回転する</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const statusPanel = document.getElementById("statusPanel");
+
+    const fLeftSlider = document.getElementById("fLeftSlider");
+    const rLeftSlider = document.getElementById("rLeftSlider");
+    const fRightSlider = document.getElementById("fRightSlider");
+    const rRightSlider = document.getElementById("rRightSlider");
+
+    const MAX_DT = 1 / 30;
+    const WALL_W = 38;
+    const ARM_MAX_M = 2.0; // r スライダー最大（先端＝画面中央）
+    const GRID_CELL = 36; // 背景グリッド1マス
+    const BEAM_EXT_CELLS = 2; // 中央から先に伸ばすマス数
+    const SCENE_RIGHT_PAD = 12;
+    const SCENE_MARGIN_TOP = 36;
+    const SCENE_MARGIN_BOTTOM = 44;
+    const BALANCE_EPS = 0.5;
+    const MAX_ANGLE = 78 * Math.PI / 180;
+    const MIN_ANGLE = -78 * Math.PI / 180;
+    const SIN_MAX_ANGLE = Math.sin(MAX_ANGLE);
+    const ROT_SCALE = 0.022;
+    const FORCE_PX_SCALE = 2.35;
+    const MIN_ARROW_PX = 32;
+    const MAX_ARROW_PX = 118;
+    const BEAM_HALF_H = 11;
+    const WEIGHT_W = 34;
+    const WEIGHT_H = 26;
+
+    const COL = {
+      left: "#38bdf8",
+      leftSoft: "rgba(56,189,248,0.22)",
+      leftGlow: "rgba(56,189,248,0.65)",
+      right: "#fb7185",
+      rightSoft: "rgba(251,113,133,0.22)",
+      rightGlow: "rgba(251,113,133,0.65)",
+      gold: "#fbbf24",
+      goldSoft: "rgba(251,191,36,0.35)",
+      beamTop: "#f8fafc",
+      beamMid: "#94a3b8",
+      beamBot: "#334155",
+      pivot: "#e2e8f0",
+    };
+
+    let layout = { w: 0, h: 0, dpr: 1 };
+
+    let dirA = "up";
+    let dirB = "down";
+    let theta = 0;
+    let running = false;
+    let paused = false;
+
+    function fmt(n, d) {
+      return Number(n).toFixed(d);
+    }
+
+    function getLeftF() { return parseFloat(fLeftSlider.value); }
+    function getRightF() { return parseFloat(fRightSlider.value); }
+    function getLeftR() { return parseFloat(rLeftSlider.value); }
+    function getRightR() { return parseFloat(rRightSlider.value); }
+
+    function signedMoment(F, r, dir) {
+      if (F < 0.01 || r < 0.01) return 0;
+      // Canvas y 軸向下：上向きの力 → 反時計回り → 負の M
+      return dir === "up" ? -F * r : F * r;
+    }
+
+    function momentDirectionLabel(signed) {
+      if (Math.abs(signed) < BALANCE_EPS) return "—";
+      return signed < 0 ? "反時計回り" : "時計回り";
+    }
+
+    function computeMoments() {
+      const FL = getLeftF();
+      const FR = getRightF();
+      const rL = getLeftR();
+      const rR = getRightR();
+      const MLsigned = signedMoment(FL, rL, dirA);
+      const MRsigned = signedMoment(FR, rR, dirB);
+      const Mnet = MLsigned + MRsigned;
+      const MLmag = Math.abs(MLsigned);
+      const MRmag = Math.abs(MRsigned);
+      const balanced = Math.abs(Mnet) < BALANCE_EPS;
+      return { FL, FR, rL, rR, MLsigned, MRsigned, Mnet, MLmag, MRmag, balanced };
+    }
+
+    function syncUI() {
+      document.getElementById("fLeftValue").textContent = fmt(getLeftF(), 0);
+      document.getElementById("rLeftValue").textContent = fmt(getLeftR(), 1);
+      document.getElementById("fRightValue").textContent = fmt(getRightF(), 0);
+      document.getElementById("rRightValue").textContent = fmt(getRightR(), 1);
+      updateFormulaPanel();
+    }
+
+    function updateFormulaPanel() {
+      const m = computeMoments();
+      document.getElementById("fMLcalc").textContent = fmt(m.MLmag, 1);
+      document.getElementById("fMLdir").textContent = momentDirectionLabel(m.MLsigned);
+      document.getElementById("fMRcalc").textContent = fmt(m.MRmag, 1);
+      document.getElementById("fMRdir").textContent = momentDirectionLabel(m.MRsigned);
+      document.getElementById("fMnet").textContent = fmt(Math.abs(m.Mnet), 1);
+      document.getElementById("fMnetDir").textContent = momentDirectionLabel(m.Mnet);
+      document.getElementById("fBalance").textContent = m.balanced ? "つりあい（M = 0）" : "回転する";
+
+      document.getElementById("liveLeft").innerHTML =
+        `F<sub>L</sub> = ${fmt(m.FL, 0)} N　r<sub>L</sub> = ${fmt(m.rL, 1)} m<br>M<sub>L</sub> = ${fmt(m.MLmag, 1)} N·m`;
+      document.getElementById("liveRight").innerHTML =
+        `F<sub>R</sub> = ${fmt(m.FR, 0)} N　r<sub>R</sub> = ${fmt(m.rR, 1)} m<br>M<sub>R</sub> = ${fmt(m.MRmag, 1)} N·m`;
+      document.getElementById("liveCenter").innerHTML =
+        `M = ${fmt(m.Mnet, 1)} N·m<br>θ = ${fmt(theta * 180 / Math.PI, 1)}°`;
+      const stateEl = document.getElementById("liveState");
+      if (running && paused) {
+        stateEl.textContent = "一時停止中";
+        stateEl.className = "state";
+      } else if (m.balanced) {
+        stateEl.textContent = running ? "つりあい（水平のまま）" : "つりあい";
+        stateEl.className = "state balanced";
+      } else {
+        const dir = momentDirectionLabel(m.Mnet);
+        stateEl.textContent = running ? `回転中（${dir}）` : `回転（${dir}）`;
+        stateEl.className = "state rotating";
+      }
+    }
+
+    function updateStatus() {
+      const m = computeMoments();
+      if (!running) {
+        statusPanel.textContent = m.balanced
+          ? `つりあい — M_L = ${fmt(m.MLmag, 1)} N·m と M_R = ${fmt(m.MRmag, 1)} N·m が打ち消し合います`
+          : `回転する — 合成 M = ${fmt(m.Mnet, 1)} N·m（${momentDirectionLabel(m.Mnet)}）`;
+        statusPanel.className = m.balanced ? "balanced" : "rotating";
+        return;
+      }
+      if (paused) {
+        statusPanel.textContent = "一時停止中";
+        statusPanel.className = "";
+        return;
+      }
+      if (m.balanced) {
+        statusPanel.textContent = "つりあい — 棒は水平のまま";
+        statusPanel.className = "balanced";
+      } else {
+        statusPanel.textContent = `回転中 — M = ${fmt(m.Mnet, 1)} N·m（${momentDirectionLabel(m.Mnet)}）`;
+        statusPanel.className = "rotating";
+      }
+    }
+
+    function resetSimulation() {
+      theta = 0;
+      running = false;
+      paused = false;
+      syncUI();
+      updateStatus();
+    }
+
+    function startSimulation() {
+      running = true;
+      paused = false;
+      updateStatus();
+    }
+
+    function pauseSimulation() {
+      if (!running) return;
+      paused = !paused;
+      updateStatus();
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const ht = Math.max(520, Math.round(rect.height));
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(ht * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(ht * dpr);
+      }
+      layout = { w, h: ht, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(w, ht) {
+      const bg = ctx.createLinearGradient(0, 0, w, ht);
+      bg.addColorStop(0, "#070a10");
+      bg.addColorStop(0.5, "#101722");
+      bg.addColorStop(1, "#151c2a");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, ht);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.055)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < w; i += GRID_CELL) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, ht);
+        ctx.stroke();
+      }
+      for (let j = 0; j < ht; j += GRID_CELL) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(w, j);
+        ctx.stroke();
+      }
+
+      const glow = ctx.createRadialGradient(w * 0.5, ht * 0.42, 0, w * 0.5, ht * 0.48, w * 0.62);
+      glow.addColorStop(0, "rgba(251,191,36,0.11)");
+      glow.addColorStop(0.55, "rgba(56,189,248,0.04)");
+      glow.addColorStop(1, "rgba(8,12,20,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, ht);
+
+      const vig = ctx.createRadialGradient(w * 0.5, ht * 0.5, ht * 0.2, w * 0.5, ht * 0.5, Math.max(w, ht) * 0.72);
+      vig.addColorStop(0, "rgba(0,0,0,0)");
+      vig.addColorStop(1, "rgba(0,0,0,0.35)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, w, ht);
+    }
+
+    function roundRectPath(x, y, rw, rh, r) {
+      const rr = Math.min(r, rw * 0.5, rh * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + rw, y, x + rw, y + rh, rr);
+      ctx.arcTo(x + rw, y + rh, x, y + rh, rr);
+      ctx.arcTo(x, y + rh, x, y, rr);
+      ctx.arcTo(x, y, x + rw, y, rr);
+      ctx.closePath();
+    }
+
+    function drawTextLabel(x, y, text, color, align) {
+      ctx.save();
+      ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = align || "center";
+      ctx.textBaseline = "middle";
+      const m = ctx.measureText(text);
+      const padX = 7;
+      const padY = 4;
+      const bw = m.width + padX * 2;
+      const bh = 18;
+      const bx = align === "left" ? x : align === "right" ? x - bw : x - bw * 0.5;
+      const by = y - bh * 0.5;
+      ctx.fillStyle = "rgba(8,12,20,0.78)";
+      roundRectPath(bx, by, bw, bh, 6);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.12)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.fillText(text, align === "left" ? x + padX : align === "right" ? x - padX : x, y);
+      ctx.restore();
+    }
+
+    function drawForceArrow(sx, sy, ex, ey, color, glow, lineW, label, labelOffX, labelOffY) {
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const len = Math.hypot(dx, dy);
+      if (len < 6) return;
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(16, Math.max(11, len * 0.22));
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = glow;
+      ctx.strokeStyle = "rgba(255,255,255,0.88)";
+      ctx.lineWidth = lineW + 4;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      const shaft = ctx.createLinearGradient(sx, sy, ex, ey);
+      shaft.addColorStop(0, "rgba(255,255,255,0.95)");
+      shaft.addColorStop(0.35, color);
+      shaft.addColorStop(1, color);
+      ctx.shadowBlur = 12;
+      ctx.strokeStyle = shaft;
+      ctx.lineWidth = lineW;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 6.5), ey - head * Math.sin(ang - Math.PI / 6.5));
+      ctx.lineTo(ex - head * 0.55 * Math.cos(ang), ey - head * 0.55 * Math.sin(ang));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 6.5), ey - head * Math.sin(ang + Math.PI / 6.5));
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (label) {
+        drawTextLabel(ex + (labelOffX || 0), ey + (labelOffY || 0), label, color, "center");
+      }
+      ctx.restore();
+    }
+
+    let scene = { pxPerM: 1, armPx: 100, ox: WALL_W, oy: 240, decorScale: 1 };
+
+    function computeExtras(scale) {
+      const weightStack = (WEIGHT_H + 14) * scale;
+      return {
+        top: BEAM_HALF_H + MAX_ARROW_PX * scale + 18,
+        bottom: BEAM_HALF_H + weightStack + MAX_ARROW_PX * scale * 0.4 + 22,
+      };
+    }
+
+    function sceneLayout(w, ht) {
+      const ox = WALL_W;
+      const oy = ht * 0.5;
+      const armPxCore = w * 0.5 - ox;
+      const armPxTarget = armPxCore + BEAM_EXT_CELLS * GRID_CELL;
+      let pxPerM = armPxCore / ARM_MAX_M;
+      let decorScale = Math.min(1.1, Math.max(0.38, 110 / pxPerM));
+
+      for (let i = 0; i < 6; i += 1) {
+        const extras = computeExtras(decorScale);
+        const vTop = oy - SCENE_MARGIN_TOP - extras.top;
+        const vBot = ht - oy - SCENE_MARGIN_BOTTOM - extras.bottom;
+        const vSwing = Math.min(vTop, vBot);
+        const needSwing = armPxTarget * SIN_MAX_ANGLE;
+        if (vSwing >= needSwing + Math.max(extras.top, extras.bottom) * 0.35) break;
+        decorScale = Math.max(0.32, decorScale * 0.88);
+      }
+
+      decorScale = Math.min(1.1, Math.max(0.32, decorScale));
+      pxPerM = armPxCore / ARM_MAX_M;
+      return { pxPerM, armPx: armPxTarget, ox, oy, decorScale, armPxCore };
+    }
+
+    function worldFromLocal(ox, oy, lx, ly) {
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      return { x: ox + lx * cos - ly * sin, y: oy + lx * sin + ly * cos };
+    }
+
+    function drawEquilibriumGuide(ox, oy, armPx, armPxCore, w) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(148,163,184,0.22)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox + armPx, oy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const cx = w * 0.5;
+      ctx.strokeStyle = "rgba(251,191,36,0.35)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(ox + armPxCore, oy - 14);
+      ctx.lineTo(ox + armPxCore, oy + 14);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = "rgba(148,163,184,0.15)";
+      ctx.beginPath();
+      ctx.moveTo(cx, oy - 12);
+      ctx.lineTo(cx, oy + 12);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(148,163,184,0.55)";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("水平（θ = 0°）", w - 10, oy - 8);
+      ctx.restore();
+    }
+
+    function drawBeam(ox, oy, armPx) {
+      ctx.save();
+      ctx.translate(ox, oy);
+      ctx.rotate(theta);
+
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+      ctx.shadowBlur = 22;
+      ctx.shadowOffsetY = 8;
+      const bodyGrad = ctx.createLinearGradient(0, -BEAM_HALF_H, 0, BEAM_HALF_H);
+      bodyGrad.addColorStop(0, COL.beamTop);
+      bodyGrad.addColorStop(0.42, COL.beamMid);
+      bodyGrad.addColorStop(1, COL.beamBot);
+      roundRectPath(0, -BEAM_HALF_H, armPx, BEAM_HALF_H * 2, 5);
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(8, -BEAM_HALF_H + 3);
+      ctx.lineTo(armPx - 8, -BEAM_HALF_H + 3);
+      ctx.stroke();
+
+      ctx.setLineDash([7, 6]);
+      ctx.strokeStyle = "rgba(251,191,36,0.42)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(4, 0);
+      ctx.lineTo(armPx - 4, 0);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const capGrad = ctx.createLinearGradient(armPx - 6, -BEAM_HALF_H, armPx + 6, BEAM_HALF_H);
+      capGrad.addColorStop(0, "#64748b");
+      capGrad.addColorStop(0.5, "#cbd5e1");
+      capGrad.addColorStop(1, "#475569");
+      ctx.fillStyle = capGrad;
+      roundRectPath(armPx - 5, -BEAM_HALF_H - 1, 10, BEAM_HALF_H * 2 + 2, 3);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawWallMount(ox, oy, ht, balanced) {
+      ctx.save();
+      const wallGrad = ctx.createLinearGradient(0, 0, ox, 0);
+      wallGrad.addColorStop(0, "#0f172a");
+      wallGrad.addColorStop(0.55, "#334155");
+      wallGrad.addColorStop(1, "#64748b");
+      ctx.fillStyle = wallGrad;
+      ctx.fillRect(0, 0, ox, ht);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.12)";
+      ctx.lineWidth = 1;
+      for (let y = 18; y < ht; y += 22) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(ox, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = balanced ? "rgba(110,231,183,0.5)" : "rgba(251,191,36,0.38)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(ox, 0);
+      ctx.lineTo(ox, ht);
+      ctx.stroke();
+
+      ctx.shadowBlur = balanced ? 16 : 10;
+      ctx.shadowColor = balanced ? "rgba(110,231,183,0.35)" : "rgba(251,191,36,0.25)";
+
+      const bracketGrad = ctx.createLinearGradient(ox - 14, oy - 16, ox + 2, oy + 16);
+      bracketGrad.addColorStop(0, "#64748b");
+      bracketGrad.addColorStop(0.5, "#e2e8f0");
+      bracketGrad.addColorStop(1, "#475569");
+      roundRectPath(ox - 13, oy - 14, 14, 28, 4);
+      ctx.fillStyle = bracketGrad;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "rgba(148,163,184,0.75)";
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("固定壁", ox * 0.5, ht - 16);
+      ctx.restore();
+    }
+
+    function drawPivotPin(ox, oy) {
+      ctx.save();
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(ox, oy, 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      const ringGrad = ctx.createRadialGradient(ox - 3, oy - 4, 1, ox, oy, 12);
+      ringGrad.addColorStop(0, "#fff7ed");
+      ringGrad.addColorStop(0.45, COL.gold);
+      ringGrad.addColorStop(1, "#b45309");
+      ctx.fillStyle = ringGrad;
+      ctx.beginPath();
+      ctx.arc(ox, oy, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#78350f";
+      ctx.beginPath();
+      ctx.arc(ox, oy, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawTextLabel(ox + 14, oy - 24, "支点 O", COL.gold, "left");
+      ctx.restore();
+    }
+
+    function drawWeightAndHook(point, color, glow, side, scale) {
+      const hookH = 14 * scale;
+      const wW = WEIGHT_W * scale;
+      const wH = WEIGHT_H * scale;
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y);
+      ctx.lineTo(point.x, point.y + hookH);
+      ctx.stroke();
+
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = glow;
+      const bx = point.x - wW * 0.5;
+      const by = point.y + hookH + 2;
+      const wg = ctx.createLinearGradient(bx, by, bx, by + wH);
+      wg.addColorStop(0, "rgba(255,255,255,0.92)");
+      wg.addColorStop(0.35, color);
+      wg.addColorStop(1, "#1e293b");
+      roundRectPath(bx, by, wW, wH, 6 * scale);
+      ctx.fillStyle = wg;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      roundRectPath(bx + 5 * scale, by + 4 * scale, wW - 10 * scale, 6 * scale, 2);
+      ctx.fill();
+
+      ctx.fillStyle = side === "a" ? COL.left : COL.right;
+      ctx.font = "800 11px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(side === "a" ? "A" : "B", point.x, by + wH * 0.62);
+      ctx.restore();
+
+      return { attachX: point.x, attachY: by + wH };
+    }
+
+    function drawDistanceR(pivot, point, rM, side) {
+      const dx = point.x - pivot.x;
+      const dy = point.y - pivot.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ax = dx / dist;
+      const ay = dy / dist;
+      let nx = ay;
+      let ny = -ax;
+      if (ny < 0) { nx = -nx; ny = -ny; }
+      const dimOff = side === "a" ? 42 : 58;
+
+      const x1 = pivot.x + nx * dimOff;
+      const y1 = pivot.y + ny * dimOff;
+      const x2 = point.x + nx * dimOff;
+      const y2 = point.y + ny * dimOff;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(251,191,36,0.25)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pivot.x, pivot.y);
+      ctx.lineTo(x1, y1);
+      ctx.moveTo(point.x, point.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = COL.gold;
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(251,191,36,0.45)";
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      function tick(x, y) {
+        const t = 7;
+        ctx.strokeStyle = COL.gold;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - ax * t - nx * t, y - ay * t - ny * t);
+        ctx.lineTo(x - ax * t + nx * t, y - ay * t + ny * t);
+        ctx.stroke();
+      }
+      tick(x1, y1);
+      tick(x2, y2);
+
+      const mx = (x1 + x2) * 0.5;
+      const my = (y1 + y2) * 0.5;
+      const label = side === "a" ? `r_L = ${fmt(rM, 1)} m` : `r_R = ${fmt(rM, 1)} m`;
+      drawTextLabel(mx, my - 12, label, COL.gold, "center");
+      ctx.restore();
+    }
+
+    function drawForceFromWeight(beamPt, attach, F, dir, color, glow, side, scale) {
+      if (F < 0.5) return;
+      const up = dir === "up";
+      const minA = MIN_ARROW_PX * scale;
+      const maxA = MAX_ARROW_PX * scale;
+      const len = Math.min(maxA, Math.max(minA, F * FORCE_PX_SCALE * scale));
+      const sx = beamPt.x;
+      const sy = beamPt.y;
+      const ey = sy + (up ? -len : len);
+      const label = `${side === "a" ? "F_L" : "F_R"} = ${fmt(F, 0)} N`;
+      drawForceArrow(sx, sy, sx, ey, color, glow, 4 + scale, label, 0, up ? -14 * scale : 14 * scale);
+    }
+
+    function drawAngleArc(ox, oy) {
+      if (Math.abs(theta) < 0.004) return;
+      ctx.save();
+      ctx.strokeStyle = "rgba(167,139,250,0.75)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const r = 40;
+      ctx.arc(ox, oy, r, 0, theta, theta < 0);
+      ctx.stroke();
+      drawTextLabel(ox + r + 8, oy - 8, `θ = ${fmt(theta * 180 / Math.PI, 1)}°`, "#c4b5fd", "left");
+      ctx.restore();
+    }
+
+    function drawMomentArc(ox, oy, Mnet, balanced, scale) {
+      if (balanced || Math.abs(Mnet) < BALANCE_EPS) return;
+      const ccw = Mnet < 0;
+      const r = 58 * scale;
+      ctx.save();
+      ctx.strokeStyle = ccw ? "rgba(110,231,183,0.85)" : "rgba(251,113,133,0.85)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      if (ccw) ctx.arc(ox, oy, r, -0.95, -0.2);
+      else ctx.arc(ox, oy, r, -0.2, -0.95);
+      ctx.stroke();
+
+      const endAng = ccw ? -0.2 : -0.95;
+      const hx = ox + r * Math.cos(endAng);
+      const hy = oy + r * Math.sin(endAng);
+      const tang = ccw ? endAng + Math.PI / 2 : endAng - Math.PI / 2;
+      const head = 11;
+      ctx.fillStyle = ccw ? "#6ee7b7" : "#fb7185";
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx - head * Math.cos(tang - 0.45), hy - head * Math.sin(tang - 0.45));
+      ctx.lineTo(hx - head * Math.cos(tang + 0.45), hy - head * Math.sin(tang + 0.45));
+      ctx.closePath();
+      ctx.fill();
+
+      drawTextLabel(ox + r * 0.55, oy + r + 18, ccw ? "M < 0 反時計回り" : "M > 0 時計回り", ccw ? "#6ee7b7" : "#fb7185", "center");
+      ctx.restore();
+    }
+
+    function drawBalanceBadge(cx, cy, balanced) {
+      if (!balanced) return;
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "rgba(110,231,183,0.45)";
+      drawTextLabel(cx, cy, "⚖ つりあい", "#6ee7b7", "center");
+      ctx.restore();
+    }
+
+    document.querySelectorAll(".dir-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const side = btn.dataset.side;
+        const dir = btn.dataset.dir;
+        document.querySelectorAll(`.dir-btn[data-side="${side}"]`).forEach((b) => {
+          b.classList.toggle("active", b === btn);
+        });
+        if (side === "a") dirA = dir;
+        else dirB = dir;
+        syncUI();
+        updateStatus();
+      });
+    });
+
+    [fLeftSlider, rLeftSlider, fRightSlider, rRightSlider].forEach((el) => {
+      el.addEventListener("input", () => {
+        syncUI();
+        updateStatus();
+      });
+    });
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      pauseSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      syncUI();
+      updateStatus();
+    });
+
+    function update(dt) {
+      if (!running || paused) return;
+      const { Mnet, balanced } = computeMoments();
+      if (!balanced) {
+        theta += Mnet * ROT_SCALE * dt;
+        if (theta > MAX_ANGLE) theta = MAX_ANGLE;
+        if (theta < MIN_ANGLE) theta = MIN_ANGLE;
+      }
+    }
+
+    function drawFrame() {
+      resizeCanvas();
+      setupCtx();
+      const w = layout.w;
+      const ht = layout.h;
+      const m = computeMoments();
+      const sc = sceneLayout(w, ht);
+      scene = sc;
+      const { pxPerM, armPx, ox, oy, decorScale, armPxCore } = sc;
+      const pivot = { x: ox, y: oy };
+
+      ctx.clearRect(0, 0, w, ht);
+      drawDarkBg(w, ht);
+      drawEquilibriumGuide(ox, oy, armPx, armPxCore, w);
+      drawWallMount(ox, oy, ht, m.balanced);
+      drawBeam(ox, oy, armPx);
+
+      function pointOnBeam(rM) {
+        return worldFromLocal(ox, oy, rM * pxPerM, 0);
+      }
+
+      let attachL = null;
+      let attachR = null;
+      let ptL = null;
+      let ptR = null;
+
+      if (m.rL >= 0.05) {
+        ptL = pointOnBeam(Math.min(m.rL, ARM_MAX_M));
+        drawDistanceR(pivot, ptL, m.rL, "a");
+        attachL = drawWeightAndHook(ptL, COL.left, COL.leftGlow, "a", decorScale);
+      }
+
+      if (m.rR >= 0.05) {
+        ptR = pointOnBeam(Math.min(m.rR, ARM_MAX_M));
+        drawDistanceR(pivot, ptR, m.rR, "b");
+        attachR = drawWeightAndHook(ptR, COL.right, COL.rightGlow, "b", decorScale);
+      }
+
+      if (attachL && ptL) drawForceFromWeight(ptL, attachL, m.FL, dirA, COL.left, COL.leftGlow, "a", decorScale);
+      if (attachR && ptR) drawForceFromWeight(ptR, attachR, m.FR, dirB, COL.right, COL.rightGlow, "b", decorScale);
+
+      drawPivotPin(ox, oy);
+      drawAngleArc(ox, oy);
+      drawMomentArc(ox, oy, m.Mnet, m.balanced, decorScale);
+      drawBalanceBadge(ox + armPx * 0.42, oy + 52 * decorScale, m.balanced);
+
+      if (!m.balanced) {
+        drawTextLabel(w - 12, 16, `M = ${fmt(m.Mnet, 1)} N·m`, m.Mnet < 0 ? "#6ee7b7" : "#fb7185", "right");
+      }
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      syncUI();
+      updateStatus();
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  
+  </script>
+</body>
+</html>

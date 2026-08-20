@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>8章 — 等速円運動</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #120a1f 45%, #1a1030 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.45), rgba(167,139,250,0.35));
+      border: 1px solid rgba(139,92,246,0.5); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #c4b5fd; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #ddd6fe; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #ede9fe; background: rgba(139,92,246,0.16);
+      border: 1px solid rgba(167,139,250,0.42); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 6, 22, 0.92); border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #c4b5fd; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.14), rgba(167,139,250,0.08));
+      border: 1px solid rgba(139,92,246,0.35);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #ddd6fe; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(139,92,246,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #c4b5fd; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    .canvas-wrap { position: relative; background: #0a0e14; min-height: 340px; }
+    #canvas { display: block; width: 100%; height: min(520px, 58dvh); min-height: 340px; touch-action: none; }
+    .canvas-caption {
+      padding: 8px 14px 10px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55;
+      border-top: 1px solid rgba(148,163,184,0.08);
+    }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(139,92,246,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(139,92,246,0.28); color: #ede9fe; border-color: rgba(167,139,250,0.55); font-weight: 800; }
+    .act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(139,92,246,0.22);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #c4b5fd; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(139,92,246,0.45); background: rgba(76,29,149,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #ddd6fe; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .calc-block {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.22);
+      border-left: 3px solid rgba(139,92,246,0.55);
+    }
+    .calc-label { margin: 0 0 4px; font-size: 0.68rem; font-weight: 700; color: #a78bfa; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .calc-line.sub { color: #94a3b8; font-size: 0.68rem; }
+    .num-r { font-weight: 700; color: #a78bfa; }
+    .num-t { font-weight: 700; color: #c4b5fd; }
+    .num-f { font-weight: 700; color: #6ee7b7; }
+    .num-w { font-weight: 700; color: #38bdf8; }
+    .num-v { font-weight: 700; color: #38bdf8; }
+    .num-a { font-weight: 700; color: #fb7185; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #8b5cf6; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    #runStatus.running { color: #6ee7b7; }
+    #runStatus.paused { color: #fde047; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">↻</div>
+      <p class="chapter-label">第8章 — 等速円運動</p>
+      <h2>等速円運動</h2>
+      <p class="tagline">周期 T · 振動数 f · 角速度 ω · 周速度 v · 向心加速度 a</p>
+      <a id="back" href="../00_folder_classical.html#chapter-8">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">T → f = 1/T → ω = 2πf → v = rω → a = v²/r</div>
+        <div class="formula-sub">T を変えると f, ω, v, a がすべて連動して更新されます</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">円周上の点 P — 速度 v（接線）と向心加速度 a</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>円軌道 · 半径 r</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>速度 v（接線）</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>向心加速度 a</span>
+              <span><i class="color-chip" style="background:#64748b;color:#64748b"></i>点 P（反時計回り）</span>
+            </div>
+            <div class="canvas-wrap" id="canvasWrap">
+              <canvas id="canvas"></canvas>
+            </div>
+            <p class="canvas-caption">θ = ωt で点 P が円周を等速で回ります。v は接線方向、a は中心 O 向きです。</p>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="pauseBtn">停止</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">等速円運動 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">走行状態</div>
+              <div class="val big" id="runStatus">r と T を設定して「スタート」</div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">半径 r</div><div class="val"><span id="hudR">1.2</span> m</div></div>
+              <div class="hud-card"><div class="lbl">周期 T</div><div class="val"><span id="hudT">2.0</span> s</div></div>
+              <div class="hud-card"><div class="lbl">周速度 v</div><div class="val num-v"><span id="hudV">—</span> m/s</div></div>
+              <div class="hud-card"><div class="lbl">向心加速度 a</div><div class="val num-a"><span id="hudA">—</span> m/s²</div></div>
+            </div>
+
+            <p class="hud-title" style="margin-top:4px">値の連動</p>
+            <div class="calc-block">
+              <p class="calc-label">① 半径</p>
+              <p class="calc-line">r = <span id="cR" class="num-r">—</span> m</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">② 周期 T → 振動数 f</p>
+              <p class="calc-line">f = 1 / T</p>
+              <p class="calc-line sub">T = <span id="cT" class="num-t">—</span> s → f = <span id="cF" class="num-f">—</span> Hz</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">③ 角速度 ω</p>
+              <p class="calc-line">ω = 2πf = 2π / T</p>
+              <p class="calc-line sub">→ ω = <span id="cW" class="num-w">—</span> rad/s</p>
+              <p class="calc-line sub">θ = ωt = <span id="cTheta" class="num-w">—</span> rad（<span id="cThetaDeg" class="num-w">—</span>°）</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">④ 周速度 v</p>
+              <p class="calc-line">v = rω = 2πr / T</p>
+              <p class="calc-line sub">→ v = <span id="cV" class="num-v">—</span> m/s</p>
+            </div>
+            <div class="calc-block">
+              <p class="calc-label">⑤ 向心加速度 a</p>
+              <p class="calc-line">a = v² / r = rω²</p>
+              <p class="calc-line sub">→ a = <span id="cA" class="num-a">—</span> m/s²</p>
+            </div>
+
+            <p class="hud-title" style="margin-top:4px">コントロール</p>
+            <div class="slider-row">
+              <label>半径 r <span id="rValue">1.2</span> m</label>
+              <input id="rSlider" type="range" min="0.3" max="3" step="0.1" value="1.2">
+            </div>
+            <div class="slider-row">
+              <label>周期 T <span id="tValue">2.0</span> s</label>
+              <input id="tSlider" type="range" min="0.5" max="10" step="0.1" value="2">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li>等速円運動では<strong>速度の大きさ v は一定</strong>だが、方向が常に変わる</li>
+        <li><strong>向心加速度 a = v²/r</strong> は常に円の中心向き（接線方向の加速度は 0）</li>
+        <li>周期 T が短いほど ω, v, a は大きくなる</li>
+        <li>半径 r が大きいほど v は大きいが、a = v²/r の関係に注意</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const runStatus = document.getElementById("runStatus");
+    const startBtn = document.getElementById("startBtn");
+
+    const TWO_PI = Math.PI * 2;
+    const MAX_DT = 1 / 30;
+    const V_LEN = 0.55;
+    const A_LEN = 0.38;
+    const COLOR_V = "#38bdf8";
+    const COLOR_A = "#fb7185";
+    const COLOR_ORBIT = "#a78bfa";
+
+    const DEFAULTS = { r: 1.2, T: 2 };
+
+    let phase = "idle";
+    let simTime = 0;
+    let layout = { cx: 0, cy: 0, drawR: 0, w: 0, h: 0, dpr: 1 };
+
+    function fmt(n, d) { return Number(n).toFixed(d); }
+
+    function getR() { return parseFloat(document.getElementById("rSlider").value); }
+    function getT() { return parseFloat(document.getElementById("tSlider").value); }
+
+    function computePhysics(r, T, t) {
+      const f = 1 / T;
+      const omega = TWO_PI * f;
+      const v = r * omega;
+      const a = (v * v) / r;
+      const theta = omega * t;
+      return { r, T, f, omega, v, a, theta, t };
+    }
+
+    function syncSliders() {
+      document.getElementById("rValue").textContent = fmt(getR(), 1);
+      document.getElementById("tValue").textContent = fmt(getT(), 1);
+      document.getElementById("hudR").textContent = fmt(getR(), 1);
+      document.getElementById("hudT").textContent = fmt(getT(), 1);
+    }
+
+    function setStatus(text, cls) {
+      runStatus.textContent = text;
+      runStatus.className = "val big" + (cls ? " " + cls : "");
+    }
+
+    function updateCalcPanel(p) {
+      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      set("cR", fmt(p.r, 2));
+      set("cT", fmt(p.T, 2));
+      set("cF", fmt(p.f, 3));
+      set("cW", fmt(p.omega, 3));
+      set("cTheta", fmt(p.theta, 3));
+      set("cThetaDeg", fmt(p.theta * 180 / Math.PI, 1));
+      set("cV", fmt(p.v, 3));
+      set("cA", fmt(p.a, 3));
+      document.getElementById("hudV").textContent = fmt(p.v, 3);
+      document.getElementById("hudA").textContent = fmt(p.a, 3);
+    }
+
+    function resetSimulation() {
+      phase = "idle";
+      simTime = 0;
+      syncSliders();
+      updateCalcPanel(computePhysics(getR(), getT(), 0));
+      setStatus("r と T を設定して「スタート」");
+      startBtn.textContent = "スタート";
+    }
+
+    function startSimulation() {
+      if (phase === "running") return;
+      phase = "running";
+      startBtn.textContent = "再開";
+      setStatus("等速円運動中", "running");
+    }
+
+    function pauseSimulation() {
+      if (phase !== "running") return;
+      phase = "paused";
+      setStatus("一時停止 — 「再開」または「リセット」", "paused");
+    }
+
+    function update(dt) {
+      if (phase !== "running") return;
+      simTime += dt;
+    }
+
+    function setupCtx(c, lay) {
+      c.setTransform(lay.dpr, 0, 0, lay.dpr, 0, 0);
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1018");
+      bg.addColorStop(1, "#1a1030");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.48, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(139, 92, 246, 0.14)");
+      glow.addColorStop(0.45, "rgba(167, 139, 250, 0.06)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+      c.strokeStyle = "rgba(148, 163, 184, 0.05)";
+      c.lineWidth = 1;
+      for (let i = 0; i < w; i += 40) {
+        c.beginPath();
+        c.moveTo(i, 0);
+        c.lineTo(i, h);
+        c.stroke();
+      }
+      for (let j = 0; j < h; j += 40) {
+        c.beginPath();
+        c.moveTo(0, j);
+        c.lineTo(w, j);
+        c.stroke();
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(240, Math.round(rect.height));
+      const cw = Math.round(w * dpr);
+      const ch = Math.round(h * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
+      const maxR = Math.min(w, h) * 0.38;
+      layout = {
+        cx: w * 0.5,
+        cy: h * 0.52,
+        drawR: maxR,
+        w, h,
+        dpr,
+      };
+    }
+
+    function drawArrow(sx, sy, ex, ey, color, label) {
+      const len = Math.hypot(ex - sx, ey - sy);
+      if (len < 6) return;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = color;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      const ang = Math.atan2(ey - sy, ex - sx);
+      const head = Math.min(11, len * 0.22);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 7), ey - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 7), ey - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+      if (label) {
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(label, ex + 5, ey - 4);
+      }
+    }
+
+    function draw() {
+      resizeCanvas();
+      setupCtx(ctx, layout);
+      const p = computePhysics(getR(), getT(), simTime);
+      updateCalcPanel(p);
+
+      const { cx, cy, drawR, w, h } = layout;
+      const theta = p.theta;
+
+      drawDarkBg(ctx, w, h);
+
+      ctx.strokeStyle = "rgba(167, 139, 250, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, cy);
+      ctx.lineTo(w, cy);
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, h);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(167, 139, 250, 0.55)";
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "rgba(139, 92, 246, 0.45)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, drawR, 0, TWO_PI);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, TWO_PI);
+      ctx.fill();
+      ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("O", cx - 18, cy + 5);
+      ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("+x", cx + drawR + 8, cy + 4);
+
+      const Px = cx + drawR * Math.cos(theta);
+      const Py = cy - drawR * Math.sin(theta);
+
+      ctx.strokeStyle = "rgba(167, 139, 250, 0.28)";
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + drawR, cy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = COLOR_ORBIT;
+      ctx.textAlign = "center";
+      ctx.fillText("r = " + fmt(p.r, 1) + " m", cx + drawR * 0.5, cy - 12);
+      ctx.textAlign = "left";
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(Px, Py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const arcR = Math.min(drawR * 0.22, 36);
+      const turns = Math.floor(Math.abs(theta) / TWO_PI);
+      const thetaVis = theta - turns * TWO_PI * Math.sign(theta || 1);
+      if (Math.abs(thetaVis) > 0.04) {
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.55)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, arcR, 0, -thetaVis, thetaVis > 0);
+        ctx.stroke();
+        const mid = -thetaVis * 0.5;
+        ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = COLOR_V;
+        ctx.fillText("θ", cx + (arcR + 10) * Math.cos(mid), cy - (arcR + 10) * Math.sin(mid));
+      }
+
+      const vLen = drawR * V_LEN;
+      const aLen = drawR * A_LEN;
+      const vEndX = Px - Math.sin(theta) * vLen;
+      const vEndY = Py - Math.cos(theta) * vLen;
+      const aEndX = Px - Math.cos(theta) * aLen;
+      const aEndY = Py + Math.sin(theta) * aLen;
+
+      drawArrow(Px, Py, vEndX, vEndY, COLOR_V, "v");
+      drawArrow(Px, Py, aEndX, aEndY, COLOR_A, "a");
+
+      const grad = ctx.createRadialGradient(Px - 5, Py - 5, 1, Px, Py, 9);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.55, "#c4b5fd");
+      grad.addColorStop(1, "#8b5cf6");
+      ctx.fillStyle = grad;
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = "rgba(139, 92, 246, 0.65)";
+      ctx.beginPath();
+      ctx.arc(Px, Py, 9, 0, TWO_PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,0.45)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("P", Px, Py + 4);
+      ctx.textAlign = "left";
+    }
+
+    ["rSlider", "tSlider"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase !== "running") {
+          updateCalcPanel(computePhysics(getR(), getT(), simTime));
+        }
+      });
+    });
+
+    startBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+    document.getElementById("pauseBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      pauseSimulation();
+    });
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("rSlider").value = DEFAULTS.r;
+      document.getElementById("tSlider").value = DEFAULTS.T;
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", () => draw());
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => draw());
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => draw()).observe(canvasWrap);
+    }
+
+    resetSimulation();
+
+    let lastTime = 0;
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, MAX_DT);
+      lastTime = t;
+      if (dt > 0) update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

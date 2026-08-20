@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>4章 — 大気圧・水圧・浮力</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1410 45%, #101820 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(245,158,11,0.35));
+      border: 1px solid rgba(251,191,36,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fde68a; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #fcd34d; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fef3c7; background: rgba(251,191,36,0.14);
+      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(251, 191, 36, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fde68a; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08));
+      border: 1px solid rgba(251,191,36,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #fef3c7; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.55fr 0.45fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(251,191,36,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fde68a; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    #canvasWrap { position: relative; background: #0a0e14; min-height: 340px; }
+    #canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #motionStatus {
+      padding: 8px 12px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 0.8rem;
+      background: rgba(2,6,23,0.8); border: 1px solid rgba(251,191,36,0.45); color: #fef3c7;
+    }
+    #motionStatus.rise { color: #86efac; border-color: rgba(74,222,128,0.45); }
+    #motionStatus.sink { color: #fca5a5; border-color: rgba(248,113,113,0.45); }
+    #motionStatus.rest { color: #fef3c7; }
+    #hintBox { font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); margin: 0; }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(251,191,36,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.primary { background: rgba(251,191,36,0.25); color: #fef3c7; border-color: rgba(251,191,36,0.55); font-weight: 800; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fde68a; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(251,191,36,0.45); background: rgba(120,53,15,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; color: #fbbf24; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #fbbf24; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">💧</div>
+      <p class="chapter-label">第4章 — 運動の法則</p>
+      <h2>大気圧・水圧・浮力</h2>
+      <p class="tagline">P = ρgh · 浮力 F<sub>B</sub> = ρgV · 阿基米デスの原理</p>
+      <a id="back" href="../00_folder_classical.html#chapter-4">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main"><strong>P = ρgh</strong> · <strong>F<sub>B</sub> = ρ<sub>液</sub>gV</strong> · <strong>F<sub>g</sub> = ρ<sub>物</sub>gV</strong></div>
+        <div class="formula-sub">液体の密度 ρ と物体の密度を変えて浮力を比べる — 立方体 V = 0.008 m³（一辺 20 cm）</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">左：水槽の様子　／　右：力のベクトル（拡大）</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#7dd3fc;color:#7dd3fc"></i>大気圧 Pa</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>水圧 P</span>
+              <span><i class="color-chip" style="background:#34d399;color:#34d399"></i>浮力 FB</span>
+              <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>重力 Fg</span>
+            </div>
+            <div id="canvasWrap"><canvas id="canvas"></canvas></div>
+            <div class="explain-panel">
+              <div id="motionStatus" class="rest">静止</div>
+              <p id="hintBox">液体の密度 ρ と物体の密度を変えて浮力を比べられます。深さ h は物体中心の水面下の深さです。</p>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn primary" id="startBtn">スタート</button>
+              <button type="button" class="act-btn" id="resetBtn">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">操作 · 数値</p>
+            <div class="slider-row">
+              <label>深さ h (m) <span id="hValue">2.0</span></label>
+              <input id="hSlider" type="range" min="0" max="5" step="0.1" value="2">
+            </div>
+            <div class="slider-row">
+              <label>液体の密度 ρ (kg/m³) <span id="rhoLiquidValue">1000</span></label>
+              <input id="rhoLiquidSlider" type="range" min="500" max="1500" step="10" value="1000">
+            </div>
+            <div class="slider-row">
+              <label>物体の密度 (kg/m³) <span id="rhoValue">800</span></label>
+              <input id="rhoSlider" type="range" min="100" max="2000" step="10" value="800">
+            </div>
+            <div class="slider-row">
+              <label>重力 g (m/s²) <span id="gValue">9.8</span></label>
+              <input id="gSlider" type="range" min="0" max="20" step="0.1" value="9.8">
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">浮力 FB</div>
+              <div class="val big" id="hudFB">— N</div>
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">重力 Fg</div>
+              <div class="val big" id="hudFG">— N</div>
+            </div>
+            <p class="calc-line" id="calcLine1">P = ρgh</p>
+            <p class="calc-line" id="calcLine2">Fnet = FB − Fg</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>学習ポイント</h3>
+      <ul class="edu-list">
+        <li>水圧 P = ρgh — 深さ h に比例して増える</li>
+        <li>浮力 F<sub>B</sub> = ρ<sub>液</sub>gV（排いた液体の重さに等しい）</li>
+        <li>物体の密度 &lt; 液体の密度 → 浮く（F<sub>B</sub> &gt; F<sub>g</sub>）</li>
+        <li>物体の密度 &gt; 液体の密度 → 沈む（F<sub>B</sub> &lt; F<sub>g</sub>）</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const motionStatus = document.getElementById("motionStatus");
+    const hSlider = document.getElementById("hSlider");
+    const rhoLiquidSlider = document.getElementById("rhoLiquidSlider");
+    const rhoSlider = document.getElementById("rhoSlider");
+    const gSlider = document.getElementById("gSlider");
+    let layout = { w: 400, h: 340, dpr: 1 };
+
+    const P_ATM = 101325;
+    const CUBE_SIDE = 0.2;
+    const VOLUME = CUBE_SIDE ** 3;
+    const TANK_DEPTH = 6;
+    const MAX_DT = 1 / 30;
+    const CUBE_VISUAL_HALF = 44;
+    const FORCE_DIAG_SCALE = 0.42;
+    const PRESS_MIN_PX = 22;
+    const PRESS_MAX_PX = 52;
+
+    let objDepth = parseFloat(hSlider.value);
+    let objVel = 0;
+    let running = false;
+    const DEFAULTS = { h: 2, rhoLiquid: 1000, rho: 800, g: 9.8 };
+
+    function fmt(v, d) { return Number(v).toFixed(d); }
+
+    function syncSliders() {
+      document.getElementById("hValue").textContent = fmt(parseFloat(hSlider.value), 1);
+      document.getElementById("rhoLiquidValue").textContent = rhoLiquidSlider.value;
+      document.getElementById("rhoValue").textContent = rhoSlider.value;
+      document.getElementById("gValue").textContent = fmt(parseFloat(gSlider.value), 1);
+    }
+
+    function physicsState(depth) {
+      const g = parseFloat(gSlider.value);
+      const rhoLiquid = parseFloat(rhoLiquidSlider.value);
+      const rhoObj = parseFloat(rhoSlider.value);
+      const h = Math.max(0, depth);
+      const m = rhoObj * VOLUME;
+      const P = rhoLiquid * g * h;
+      const FB = rhoLiquid * g * VOLUME;
+      const Fg = m * g;
+      const Fnet = FB - Fg;
+      return { g, rhoLiquid, rhoObj, h, m, P, FB, Fg, Fnet, Pa: P_ATM };
+    }
+
+    function updateCalcPanel() {
+      const state = physicsState(objDepth);
+      document.getElementById("hudFB").textContent = fmt(state.FB, 1) + " N";
+      document.getElementById("hudFG").textContent = fmt(state.Fg, 1) + " N";
+      document.getElementById("calcLine1").textContent = "P = " + fmt(state.rhoLiquid, 0) + " × " + fmt(state.g, 1) + " × " + fmt(state.h, 1) + " = " + fmt(state.P / 1000, 1) + " kPa";
+      document.getElementById("calcLine2").textContent = "Fnet = " + fmt(state.FB, 1) + " − " + fmt(state.Fg, 1) + " = " + fmt(state.Fnet, 1) + " N";
+    }
+
+    function resetSimulation() {
+      hSlider.value = DEFAULTS.h;
+      rhoLiquidSlider.value = DEFAULTS.rhoLiquid;
+      rhoSlider.value = DEFAULTS.rho;
+      gSlider.value = DEFAULTS.g;
+      objDepth = DEFAULTS.h;
+      objVel = 0;
+      running = false;
+      syncSliders();
+      updateCalcPanel();
+    }
+
+    function startSimulation() {
+      objDepth = parseFloat(hSlider.value);
+      objVel = 0;
+      running = true;
+      syncSliders();
+    }
+
+    function applyDepthFromSlider() {
+      if (running) return;
+      objDepth = parseFloat(hSlider.value);
+      objVel = 0;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      const cw = Math.round(w * dpr);
+      const ch = Math.round(h * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      layout = { w, h, dpr };
+    }
+
+    function setupCtx() {
+      ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    function drawDarkBg(w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1210");
+      bg.addColorStop(1, "#1a1810");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(251, 191, 36, 0.12)");
+      glow.addColorStop(0.45, "rgba(251, 191, 36, 0.05)");
+      glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    [hSlider, rhoLiquidSlider, rhoSlider, gSlider].forEach((s) => {
+      s.addEventListener("input", () => { syncSliders(); if (s === hSlider) applyDepthFromSlider(); updateCalcPanel(); });
+      s.addEventListener("change", () => { syncSliders(); updateCalcPanel(); });
+    });
+    document.getElementById("startBtn").addEventListener("click", (e) => { e.preventDefault(); startSimulation(); });
+    document.getElementById("resetBtn").addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    requestAnimationFrame(() => { resizeCanvas(); resetSimulation(); });
+
+    function update(dt) {
+      if (!running) return;
+      const state = physicsState(objDepth);
+      if (Math.abs(state.Fnet) < 0.01 || state.m <= 0) { objVel = 0; running = false; return; }
+      const a = state.Fnet / state.m;
+      objVel += a * dt;
+      objDepth -= objVel * dt;
+      const minD = CUBE_SIDE / 2;
+      const maxD = TANK_DEPTH - CUBE_SIDE / 2;
+      if (objDepth < minD) { objDepth = minD; objVel = 0; running = false; }
+      else if (objDepth > maxD) { objDepth = maxD; objVel = 0; running = false; }
+      if (running) hSlider.value = Math.min(5, Math.max(0, objDepth)).toFixed(1);
+    }
+
+    function worldLayout(w, h) {
+      const pad = 12;
+      const splitX = Math.floor(w * 0.42);
+      const tank = { left: pad + 8, right: splitX - pad, top: pad + 8, bottom: h - pad - 8 };
+      const force = { left: splitX + pad, right: w - pad - 8, top: pad + 8, bottom: h - pad - 8 };
+      function depthToY(depth, region) {
+        return region.top + (depth / TANK_DEPTH) * (region.bottom - region.top);
+      }
+      return { tank, force, depthToY };
+    }
+
+    function pressToPx(pressure, g, rhoLiquid) {
+      const ref = rhoLiquid * Math.max(g, 1) * TANK_DEPTH;
+      const t = Math.min(1, pressure / ref);
+      return PRESS_MIN_PX + t * (PRESS_MAX_PX - PRESS_MIN_PX);
+    }
+
+    function drawLabelTag(x, y, text, color, align, baseline) {
+      ctx.font = "bold 11px Inter, Noto Sans JP, sans-serif";
+      ctx.textAlign = align || "left";
+      ctx.textBaseline = baseline || "middle";
+      const tw = ctx.measureText(text).width + 10;
+      let hx = x - 5;
+      if (align === "center") hx = x - tw / 2;
+      else if (align === "right") hx = x - tw + 5;
+      ctx.fillStyle = "rgba(8, 12, 28, 0.92)";
+      ctx.fillRect(hx, y - 9, tw, 18);
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.25)"; ctx.lineWidth = 1;
+      ctx.strokeRect(hx, y - 9, tw, 18);
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawArrow(x, y, dx, dy, color, lw, label, opts) {
+      const o = opts || {};
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 2) return;
+      const tx = x + dx; const ty = y + dy;
+      if (o.dashed) ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.setLineDash([]);
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(12, len * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath(); ctx.fill();
+      if (label) drawLabelTag(tx + (o.lx ?? 5), ty + (o.ly ?? -5), label, color, o.align || "left", o.baseline || "middle");
+    }
+
+    function drawCube(cx, cy, half, fill, stroke) {
+      ctx.fillStyle = fill || "rgba(71, 85, 105, 0.85)";
+      ctx.strokeStyle = stroke || "#94a3b8"; ctx.lineWidth = 2.5;
+      ctx.fillRect(cx - half, cy - half, half * 2, half * 2);
+      ctx.strokeRect(cx - half, cy - half, half * 2, half * 2);
+    }
+
+    function drawTankPanel(state, layout) {
+      const region = layout.tank;
+      const cx = (region.left + region.right) / 2;
+      const cy = layout.depthToY(objDepth, region);
+      const waterAlpha = 0.35 + 0.35 * Math.min(1, state.rhoLiquid / 1500);
+      ctx.fillStyle = `rgba(56, 189, 248, ${waterAlpha})`;
+      ctx.fillRect(region.left, region.top, region.right - region.left, region.bottom - region.top);
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.55)"; ctx.lineWidth = 2.5;
+      ctx.strokeRect(region.left, region.top, region.right - region.left, region.bottom - region.top);
+      ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(region.left, region.top); ctx.lineTo(region.right, region.top); ctx.stroke();
+      ctx.fillStyle = "#bae6fd"; ctx.font = "12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("水面", region.left + 6, region.top - 6);
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.35)"; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(region.left, cy); ctx.lineTo(region.right, cy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#94a3b8"; ctx.font = "11px Inter, sans-serif";
+      ctx.fillText(`h=${fmt(state.h, 1)}m`, region.right - 58, cy - 6);
+      drawCube(cx, cy, CUBE_VISUAL_HALF);
+      ctx.fillStyle = "#bae6fd"; ctx.font = "12px Inter, Noto Sans JP, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(`ρ=${fmt(state.rhoLiquid, 0)} kg/m³`, (region.left + region.right) / 2, region.top + 18);
+      ctx.fillText("水槽（横断面）", (region.left + region.right) / 2, region.bottom + 18);
+      ctx.textAlign = "start";
+    }
+
+    function drawForcePanel(state, layout) {
+      const f = layout.force;
+      const panelW = f.right - f.left;
+      const panelH = f.bottom - f.top;
+      const cx = (f.left + f.right) / 2;
+      const infoH = 72;
+      const infoY = f.bottom - 10 - infoH;
+      const diagramTop = f.top + 34;
+      const diagramBottom = infoY - 10;
+      const cy = (diagramTop + diagramBottom) / 2;
+      const half = Math.min(34, Math.max(26, (diagramBottom - diagramTop) * 0.18));
+      const fbX = cx - 22; const fgX = cx + 22;
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.fillRect(f.left, f.top, panelW, panelH);
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.32)"; ctx.lineWidth = 2;
+      ctx.strokeRect(f.left, f.top, panelW, panelH);
+      ctx.fillStyle = "#fde68a"; ctx.font = "13px Inter, Noto Sans JP, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("力のベクトル（拡大）", cx, f.top + 20);
+      ctx.textAlign = "start";
+
+      const pTop = state.rhoLiquid * state.g * Math.max(0, state.h - CUBE_SIDE / 2);
+      const pBottom = state.rhoLiquid * state.g * (state.h + CUBE_SIDE / 2);
+      const pSide = state.rhoLiquid * state.g * state.h;
+      const maxPressPx = Math.min(PRESS_MAX_PX, half + 18);
+      const pTopPx = Math.min(pressToPx(pTop, state.g, state.rhoLiquid), maxPressPx);
+      const pBottomPx = Math.min(pressToPx(pBottom, state.g, state.rhoLiquid), maxPressPx);
+      const pSidePx = Math.min(pressToPx(pSide, state.g, state.rhoLiquid), maxPressPx - 4);
+
+      drawCube(cx, cy, half, "rgba(71, 85, 105, 0.85)", "#64748b");
+      drawArrow(cx, cy - half - pTopPx, 0, pTopPx, "#38bdf8", 3, null);
+      drawLabelTag(cx, cy - half - pTopPx - 14, "P（上）", "#38bdf8", "center");
+      drawArrow(cx, cy + half + pBottomPx, 0, -pBottomPx, "#38bdf8", 3, null);
+      drawLabelTag(cx, cy + half + pBottomPx + 14, "P（下）", "#38bdf8", "center");
+      drawArrow(cx - half - pSidePx, cy, pSidePx, 0, "#38bdf8", 3, null);
+      drawLabelTag(f.left + 8, cy, "P（左）", "#38bdf8", "left");
+      drawArrow(cx + half + pSidePx, cy, -pSidePx, 0, "#38bdf8", 3, null);
+      drawLabelTag(f.right - 8, cy, "P（右）", "#38bdf8", "right");
+
+      const fbLen = Math.max(14, Math.min(state.FB * FORCE_DIAG_SCALE, cy - half - diagramTop - 28));
+      const fgLen = Math.max(14, Math.min(state.Fg * FORCE_DIAG_SCALE, diagramBottom - cy - half - 28));
+      drawArrow(fbX, cy, 0, fbLen, "#34d399", 4, null);
+      drawLabelTag(fbX - 6, cy - fbLen - 12, `FB=${fmt(state.FB, 1)}N`, "#34d399", "right");
+      drawArrow(fgX, cy, 0, -fgLen, "#fb7185", 4, null);
+      drawLabelTag(fgX + 6, cy + fgLen + 12, `Fg=${fmt(state.Fg, 1)}N`, "#fb7185", "left");
+
+      const infoX = f.left + 10;
+      const infoW = panelW - 20;
+      ctx.fillStyle = "rgba(8, 12, 28, 0.92)";
+      ctx.fillRect(infoX, infoY, infoW, infoH);
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.25)"; ctx.strokeRect(infoX, infoY, infoW, infoH);
+      ctx.fillStyle = "#cbd5e1"; ctx.font = "11px Inter, Noto Sans JP, sans-serif";
+      const lines = [
+        `ρ = ${fmt(state.rhoLiquid, 0)} kg/m³　P = ${fmt(state.P / 1000, 1)} kPa　Pa = ${fmt(state.Pa / 1000, 0)} kPa`,
+        `浮力 FB = ρgV = ${fmt(state.FB, 1)} N　重力 Fg = ${fmt(state.Fg, 1)} N`,
+        `合力 Fnet = ${fmt(state.Fnet, 1)} N`
+      ];
+      lines.forEach((line, i) => ctx.fillText(line, infoX + 8, infoY + 22 + i * 18));
+    }
+
+    function draw() {
+      syncSliders();
+      const state = physicsState(objDepth);
+      const w = layout.w;
+      const h = layout.h;
+      setupCtx();
+      drawDarkBg(w, h);
+      const wl = worldLayout(w, h);
+      drawTankPanel(state, wl);
+      drawForcePanel(state, wl);
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.2)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(Math.floor(w * 0.42), 8); ctx.lineTo(Math.floor(w * 0.42), h - 8); ctx.stroke();
+      updateCalcPanel();
+
+      if (objDepth <= CUBE_SIDE / 2 + 0.02 && state.Fnet > 0.05 && !running) {
+        motionStatus.textContent = "水面で浮いている";
+        motionStatus.className = "rise";
+      } else if (!running) {
+        if (state.Fnet > 0.05) { motionStatus.textContent = "スタートで上昇（浮く）"; motionStatus.className = "rise"; }
+        else if (state.Fnet < -0.05) { motionStatus.textContent = "スタートで下降（沈む）"; motionStatus.className = "sink"; }
+        else { motionStatus.textContent = "つり合い — スタート待ち"; motionStatus.className = "rest"; }
+      } else if (state.Fnet > 0.05) {
+        motionStatus.textContent = objVel > 0.02 ? "浮力 ＞ 重力 → 上昇（浮く）" : "浮力 ＞ 重力 → 浮上中";
+        motionStatus.className = "rise";
+      } else if (state.Fnet < -0.05) {
+        motionStatus.textContent = objVel < -0.02 ? "浮力 ＜ 重力 → 下降（沈む）" : "浮力 ＜ 重力 → 沈下中";
+        motionStatus.className = "sink";
+      } else {
+        motionStatus.textContent = "浮力 ＝ 重力 → 静止";
+        motionStatus.className = "rest";
+      }
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

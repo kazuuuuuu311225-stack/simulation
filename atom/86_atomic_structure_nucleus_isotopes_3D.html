@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>28章 — 原子の構造・原子核・同位体 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0a1a12 45%, #0f2a1a 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1320px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(74,222,128,0.35), rgba(248,113,113,0.35));
+      border: 1px solid rgba(74,222,128,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #86efac; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #6ee7b7; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #d1fae5; background: rgba(74,222,128,0.14);
+      border: 1px solid rgba(74,222,128,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(74, 222, 128, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #86efac; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(74,222,128,0.1));
+      border: 1px solid rgba(74,222,128,0.32);
+    }
+    .formula-main { font-size: 0.84rem; font-weight: 800; color: #d1fae5; line-height: 1.65; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "hud";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(74,222,128,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #d1fae5; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(520px, 58dvh); min-height: 360px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.68rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(74,222,128,0.7); color: #d1fae5; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(248,113,113,0.65); color: #fecaca; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .mode-btn, .iso-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(74,222,128,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .mode-btn.active, .iso-btn.active { background: rgba(74,222,128,0.25); color: #d1fae5; border-color: rgba(74,222,128,0.6); }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(74,222,128,0.2);
+      display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: min(720px, 80dvh);
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #86efac; }
+    .hud-section { font-size: 0.66rem; font-weight: 800; color: #6ee7b7; margin: 4px 0 2px; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(74,222,128,0.45); background: rgba(20,83,45,0.15); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hud-card .val.big { font-size: 1rem; color: #fde68a; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #4ade80; }
+    .iso-table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(74,222,128,0.25); }
+    .iso-table {
+      width: 100%; border-collapse: collapse; font-size: 0.76rem;
+    }
+    .iso-table th, .iso-table td {
+      padding: 10px 12px; text-align: center; border-bottom: 1px solid rgba(148,163,184,0.15);
+    }
+    .iso-table th { background: rgba(74,222,128,0.1); color: #86efac; font-weight: 700; }
+    .iso-table tr.active { background: rgba(74,222,128,0.15); }
+    .iso-table tr:hover { background: rgba(255,255,255,0.04); cursor: pointer; }
+    .iso-table .sym { font-weight: 800; color: #fde68a; }
+    .hint-box {
+      padding: 12px 14px; border-radius: 12px; font-size: 0.78rem; line-height: 1.65; color: #cbd5e1;
+      background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.22);
+    }
+    .edu-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; line-height: 1.7; color: #cbd5e1; }
+    .edu-list li { margin-bottom: 6px; }
+    .size-bar {
+      display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.68rem; color: #94a3b8;
+    }
+    .size-bar .bar { height: 8px; border-radius: 4px; background: rgba(148,163,184,0.2); flex: 1; position: relative; }
+    .size-bar .dot-atom { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 14px; height: 14px; border-radius: 50%; background: rgba(56,189,248,0.5); border: 1px solid #38bdf8; }
+    .size-bar .dot-nuc { position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; border-radius: 50%; background: #f87171; box-shadow: 0 0 6px #f87171; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">⚛</div>
+      <p class="chapter-label">第28章 ④ — 原子の構造・原子核・同位体</p>
+      <h2>原子の構造 — 電子・陽子・中性子・同位体 3D</h2>
+      <p class="tagline">原子はほとんど空間 · 原子核は陽子＋中性子 · 同位体は N が違うだけ</p>
+      <a id="back" href="../00_folder_atom.html">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">A = Z + N　·　同位体：Z 同じ・N 異なる　·　結合エネルギー E<sub>B</sub> = Δm·c²</div>
+        <div class="formula-sub">青＝電子 · 赤＝陽子 · 灰＝中性子 · 原子核は原子の約1/10万の大きさ</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">原子・原子核 — 3D統合モデル</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>陽子</span>
+              <span><i class="color-chip" style="background:#94a3b8;color:#94a3b8"></i>中性子</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>α粒子</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">¹H 水素\nZ=1 N=0 A=1</div>
+              <div class="status-badge" id="statusBadge">ドラッグで回転 · スクロールで拡大</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="mode-btn active" data-mode="atom">原子モデル</button>
+              <button type="button" class="mode-btn" data-mode="nucleus">原子核拡大</button>
+              <button type="button" class="iso-btn active" data-iso="H">¹H</button>
+              <button type="button" class="iso-btn" data-iso="D">²H(D)</button>
+              <button type="button" class="iso-btn" data-iso="T">³H(T)</button>
+              <button type="button" class="iso-btn" data-iso="C12">¹²C</button>
+              <button type="button" class="iso-btn" data-iso="C13">¹³C</button>
+              <button type="button" id="btnRutherford">α線散乱</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnPause" class="active">一時停止</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">原子・原子核 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">同位体</div>
+              <div class="val big" id="hudName">¹H（水素）</div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card">
+                <div class="lbl">原子番号 Z</div>
+                <div class="val" id="hudZ">1</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">中性子数 N</div>
+                <div class="val" id="hudN">0</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">質量数 A</div>
+                <div class="val" id="hudA">1</div>
+              </div>
+              <div class="hud-card">
+                <div class="lbl">電子数</div>
+                <div class="val" id="hudE">1</div>
+              </div>
+            </div>
+
+            <p class="hud-section">原子核の性質</p>
+            <div class="hud-card">
+              <div class="lbl">原子核の直径（目安）</div>
+              <div class="val" id="hudNucSize">~1.7 fm（¹H）</div>
+            </div>
+            <div class="hud-card">
+              <div class="lbl">結合エネルギー E<sub>B</sub></div>
+              <div class="val" id="hudBindE">0 MeV</div>
+            </div>
+            <div class="hud-card">
+              <div class="lbl">質量欠損 Δm·c²</div>
+              <div class="val" id="hudMassDef">—</div>
+            </div>
+            <div class="size-bar">
+              <span>原子</span>
+              <div class="bar"><div class="dot-atom"></div><div class="dot-nuc"></div></div>
+              <span>核</span>
+            </div>
+            <p style="margin:4px 0 0;font-size:0.64rem;color:#64748b">原子 ~10⁻¹⁰ m · 核 ~10⁻¹⁵ m（1/10万）</p>
+
+            <div class="slider-row">
+              <label>原子核拡大倍率 <span id="lblNucZoom">1.0×</span></label>
+              <input type="range" id="slNucZoom" min="0.5" max="4" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+              <label>電子軌道速度 <span id="lblOrbitSpd">1.0×</span></label>
+              <input type="range" id="slOrbitSpd" min="0.2" max="3" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+              <label>中性子数 N（カスタム） <span id="lblNeutron">0</span></label>
+              <input type="range" id="slNeutron" min="0" max="8" step="1" value="0">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>同位体比較表</h3>
+      <div class="iso-table-wrap">
+        <table class="iso-table" id="isoTable">
+          <thead>
+            <tr>
+              <th>同位体</th><th>名称</th><th>Z</th><th>N</th><th>A</th>
+              <th>電子数</th><th>存在比</th><th>結合エネルギー</th>
+            </tr>
+          </thead>
+          <tbody id="isoTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>比較のポイント（高校生向け）</h3>
+      <div class="hint-box" id="hintText">
+        <strong>原子</strong>は陽子・中性子からなる<strong>ごく小さな原子核</strong>と、その周りを回る<strong>電子</strong>でできている。
+        原子の大きさのほとんどは<strong>空間</strong>！ 原子核はビー玉のイメージで、スタジアム全体が原子。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li><strong>陽子数 Z</strong>＝原子番号 → 元素を決める（化学的性質）</li>
+        <li><strong>同位体</strong>＝Z 同じ・N 違う → 質量だけ違う（¹H, ²H, ³H など）</li>
+        <li>陽子同士は<strong>正電荷で反発</strong>するが、<strong>核力（強い力）</strong>が結びつける</li>
+        <li><strong>質量欠損</strong> → 核子の質量合計より軽い → 差が<strong>結合エネルギー</strong></li>
+        <li>ラザフォード散乱で「原子はほとんど空間」とわかった</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const ISOTOPES = {
+        H:  { name: "¹H（水素）", sym: "¹H", Z: 1, N: 0, A: 1,  abundance: "99.98%", bindE: 0,    nucDiam: "~1.7 fm", hint: "<strong>¹H</strong> — 陽子1個だけの原子核。中性子なし。最もシンプルな原子。" },
+        D:  { name: "²H（重水素）", sym: "²H(D)", Z: 1, N: 1, A: 2, abundance: "0.02%", bindE: 2.22, nucDiam: "~2.1 fm", hint: "<strong>²H（重水素 D）</strong> — 陽子1 + 中性子1。水素の同位体。質量が2倍近く。" },
+        T:  { name: "³H（三重水素）", sym: "³H(T)", Z: 1, N: 2, A: 3, abundance: "人工", bindE: 8.48, nucDiam: "~2.4 fm", hint: "<strong>³H（三重水素 T）</strong> — 陽子1 + 中性子2。放射性同位体。" },
+        C12:{ name: "¹²C（炭素12）", sym: "¹²C", Z: 6, N: 6, A: 12, abundance: "98.9%", bindE: 92.16, nucDiam: "~4.5 fm", hint: "<strong>¹²C</strong> — 陽子6 + 中性子6。原子量の基準。6個の電子。" },
+        C13:{ name: "¹³C（炭素13）", sym: "¹³C", Z: 6, N: 7, A: 13, abundance: "1.1%", bindE: 97.11, nucDiam: "~4.6 fm", hint: "<strong>¹³C</strong> — 陽子6 + 中性子7。¹²Cの同位体。化学的性質は同じ。" },
+      };
+
+      const MP = 938.27;
+      const MN = 939.57;
+      const INIT_ROT_X = 0.3, INIT_ROT_Y = 0.45, INIT_ZOOM = 11;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+
+      let viewMode = "atom";
+      let isoKey = "H";
+      let customN = null;
+      let blend = 1;
+      let targetZ = 1, targetN = 0;
+      let currentZ = 1, currentN = 0;
+      let nucZoom = 1;
+      let orbitSpeed = 1;
+      let paused = false;
+      let alphaDemo = false;
+      let simTime = 0;
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let atomGroup, nucleusGroup, nucleonMeshes = [];
+      let electronMeshes = [], forceArrows = [];
+      let alphaParticles = [], alphaTrails = [];
+      const ALPHA_TRAIL_MAX = 120;
+
+      function getIso() {
+        if (customN !== null) {
+          const base = ISOTOPES[isoKey];
+          return { ...base, N: customN, A: base.Z + customN, name: base.sym.split("(")[0] + "+" + customN + "n" };
+        }
+        return ISOTOPES[isoKey];
+      }
+
+      function fibSpherePos(i, total, r) {
+        const phi = Math.acos(1 - 2 * (i + 0.5) / total);
+        const th = Math.PI * (1 + Math.sqrt(5)) * i;
+        return {
+          x: r * Math.sin(phi) * Math.cos(th),
+          y: r * Math.sin(phi) * Math.sin(th),
+          z: r * Math.cos(phi),
+        };
+      }
+
+      function massDefectMeV(Z, N) {
+        if (Z + N <= 1) return 0;
+        const iso = Object.values(ISOTOPES).find((i) => i.Z === Z && i.N === N);
+        if (iso) return iso.bindE;
+        return (Z * MP + N * MN - (Z + N) * 930) * 0.15;
+      }
+
+      function updateHUD() {
+        const iso = getIso();
+        const Z = iso.Z, N = iso.N, A = Z + N;
+        document.getElementById("hudName").textContent = iso.name;
+        document.getElementById("hudZ").textContent = String(Z);
+        document.getElementById("hudN").textContent = String(N);
+        document.getElementById("hudA").textContent = String(A);
+        document.getElementById("hudE").textContent = String(Z);
+        document.getElementById("hudNucSize").textContent = iso.nucDiam || "~" + (1.2 + Math.cbrt(A) * 0.5).toFixed(1) + " fm";
+        document.getElementById("hudBindE").textContent = (iso.bindE || massDefectMeV(Z, N)).toFixed(2) + " MeV";
+        document.getElementById("hudMassDef").textContent = N + Z <= 1 ? "—" : "Δm·c² ≈ " + (iso.bindE || massDefectMeV(Z, N)).toFixed(2) + " MeV";
+        document.getElementById("modeBadge").textContent = iso.sym + "\nZ=" + Z + " N=" + N + " A=" + A;
+        document.getElementById("hintText").innerHTML = iso.hint || ISOTOPES[isoKey].hint;
+        document.querySelectorAll(".iso-btn").forEach((b) => {
+          b.classList.toggle("active", customN === null && b.dataset.iso === isoKey);
+        });
+        document.getElementById("isoTableBody").querySelectorAll("tr").forEach((tr) => {
+          tr.classList.toggle("active", tr.dataset.iso === isoKey && customN === null);
+        });
+        document.getElementById("slNeutron").min = 0;
+        document.getElementById("slNeutron").max = iso.Z <= 1 ? 3 : 10;
+        document.getElementById("lblNeutron").textContent = String(customN !== null ? customN : N);
+      }
+
+      function buildIsoTable() {
+        const tbody = document.getElementById("isoTableBody");
+        tbody.innerHTML = "";
+        Object.entries(ISOTOPES).forEach(([key, iso]) => {
+          const tr = document.createElement("tr");
+          tr.dataset.iso = key;
+          tr.innerHTML = `<td class="sym">${iso.sym}</td><td>${iso.name.split("（")[1]?.replace("）","") || iso.name}</td>
+            <td>${iso.Z}</td><td>${iso.N}</td><td>${iso.A}</td><td>${iso.Z}</td>
+            <td>${iso.abundance}</td><td>${iso.bindE} MeV</td>`;
+          tr.addEventListener("click", () => selectIsotope(key));
+          tbody.appendChild(tr);
+        });
+      }
+
+      function selectIsotope(key) {
+        isoKey = key;
+        customN = null;
+        targetZ = ISOTOPES[key].Z;
+        targetN = ISOTOPES[key].N;
+        blend = 0;
+        document.getElementById("slNeutron").value = ISOTOPES[key].N;
+        rebuildNucleus(targetZ, targetN);
+        rebuildElectrons(targetZ);
+        updateHUD();
+      }
+
+      function clearGroup(grp, dispose) {
+        while (grp.children.length) {
+          const c = grp.children[0];
+          grp.remove(c);
+          if (dispose && c.geometry) c.geometry.dispose();
+          if (dispose && c.material) {
+            if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose());
+            else c.material.dispose();
+          }
+        }
+      }
+
+      function rebuildNucleus(Z, N) {
+        clearGroup(nucleusGroup, true);
+        nucleonMeshes = [];
+        const total = Z + N;
+        const r = 0.06 + Math.cbrt(total) * 0.035;
+        const types = [];
+        for (let i = 0; i < Z; i++) types.push("p");
+        for (let i = 0; i < N; i++) types.push("n");
+        for (let i = types.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [types[i], types[j]] = [types[j], types[i]];
+        }
+        types.forEach((type, i) => {
+          const pos = fibSpherePos(i, total, r);
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.045, 12, 12),
+            new THREE.MeshPhysicalMaterial({
+              color: type === "p" ? 0xf87171 : 0x94a3b8,
+              emissive: type === "p" ? 0xef4444 : 0x64748b,
+              emissiveIntensity: type === "p" ? 0.9 : 0.4,
+              metalness: 0.35, roughness: 0.25,
+            })
+          );
+          m.position.set(pos.x, pos.y, pos.z);
+          m.userData = { type, phase: Math.random() * Math.PI * 2, basePos: { x: pos.x, y: pos.y, z: pos.z } };
+          nucleusGroup.add(m);
+          nucleonMeshes.push(m);
+        });
+        if (viewMode === "nucleus") buildForceArrows(Z);
+      }
+
+      function buildForceArrows(Z) {
+        forceArrows.forEach((a) => nucleusGroup.remove(a));
+        forceArrows = [];
+        const protons = nucleonMeshes.filter((m) => m.userData.type === "p");
+        if (protons.length < 2) return;
+        protons.slice(0, 4).forEach((p, i) => {
+          const q = protons[(i + 1) % protons.length];
+          const dir = new THREE.Vector3().subVectors(q.position, p.position).normalize();
+          const rep = dir.clone().multiplyScalar(0.12);
+          const arr = new THREE.ArrowHelper(rep, p.position.clone(), 0.12, 0xf87171, 0.04, 0.025);
+          nucleusGroup.add(arr);
+          forceArrows.push(arr);
+          const bind = dir.clone().multiplyScalar(-0.1);
+          const arr2 = new THREE.ArrowHelper(bind, p.position.clone().add(dir.clone().multiplyScalar(0.05)), 0.1, 0x38bdf8, 0.035, 0.02);
+          nucleusGroup.add(arr2);
+          forceArrows.push(arr2);
+        });
+      }
+
+      function rebuildElectrons(Z) {
+        clearGroup(atomGroup, true);
+        electronMeshes = [];
+        const shellRadii = [];
+        let rem = Z, shell = 1;
+        const maxPerShell = [2, 8, 8];
+        while (rem > 0 && shell <= 3) {
+          const cap = maxPerShell[shell - 1];
+          const n = Math.min(rem, cap);
+          shellRadii.push({ shell, count: n, r: 0.55 + shell * 0.45 });
+          rem -= n;
+          shell++;
+        }
+        shellRadii.forEach((sh) => {
+          for (let i = 0; i < sh.count; i++) {
+            const e = new THREE.Mesh(
+              new THREE.SphereGeometry(0.05, 10, 10),
+              new THREE.MeshPhysicalMaterial({
+                color: 0x38bdf8, emissive: 0x60a5fa, emissiveIntensity: 1.4,
+              })
+            );
+            e.userData = {
+              shell: sh.shell, idx: i, total: sh.count,
+              radius: sh.r, angle: (i / sh.count) * Math.PI * 2,
+              speed: 1.8 / sh.shell,
+            };
+            atomGroup.add(e);
+            electronMeshes.push(e);
+          }
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(sh.r, 0.008, 6, 48),
+            new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+          );
+          ring.rotation.x = Math.PI / 2;
+          atomGroup.add(ring);
+        });
+      }
+
+      function setViewMode(mode) {
+        viewMode = mode;
+        document.querySelectorAll(".mode-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.mode === mode);
+        });
+        if (mode === "nucleus") {
+          buildForceArrows(getIso().Z);
+          document.getElementById("statusBadge").textContent = "赤＝反発 · 青＝核力（強い力）";
+        } else if (mode === "atom") {
+          forceArrows.forEach((a) => nucleusGroup.remove(a));
+          forceArrows = [];
+          document.getElementById("statusBadge").textContent = "ドラッグで回転 · スクロールで拡大";
+        }
+        if (alphaDemo) {
+          document.getElementById("statusBadge").textContent = "α線散乱 — 黄色い線＝軌道（リセットで消去）";
+        }
+      }
+
+      function createAlphaTrail() {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(ALPHA_TRAIL_MAX * 3), 3));
+        geo.setDrawRange(0, 0);
+        const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.6 }));
+        worldGroup.add(line);
+        alphaTrails.push(line);
+        return { line, points: [], max: ALPHA_TRAIL_MAX };
+      }
+
+      function appendTrail(d, x, y, z) {
+        if (!d.trail) return;
+        const t = d.trail;
+        const last = t.points[t.points.length - 1];
+        if (last && last[0] === x && last[1] === y && last[2] === z) return;
+        t.points.push([x, y, z]);
+        if (t.points.length > t.max) t.points.shift();
+        const pos = t.line.geometry.attributes.position.array;
+        for (let i = 0; i < t.points.length; i++) {
+          pos[i * 3] = t.points[i][0];
+          pos[i * 3 + 1] = t.points[i][1];
+          pos[i * 3 + 2] = t.points[i][2];
+        }
+        t.line.geometry.setDrawRange(0, t.points.length);
+        t.line.geometry.attributes.position.needsUpdate = true;
+      }
+
+      function emitAlphaParticle() {
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 10, 10),
+          new THREE.MeshPhysicalMaterial({ color: 0xfde047, emissive: 0xfbbf24, emissiveIntensity: 1.5 })
+        );
+        const x = -5 + Math.random() * 0.4;
+        const z = (Math.random() - 0.5) * 0.6;
+        const y = 0.2;
+        const trail = createAlphaTrail();
+        trail.points.push([x, y, z]);
+        appendTrail({ trail }, x, y, z);
+        m.userData = { x, z, y, vx: 0.045 + Math.random() * 0.01, vz: 0, scattered: false, done: false, trail };
+        m.position.set(x, y, z);
+        worldGroup.add(m);
+        alphaParticles.push(m);
+        alphaDemo = true;
+      }
+
+      function emitAlphaBatch(n) {
+        for (let i = 0; i < n; i++) emitAlphaParticle();
+        document.getElementById("statusBadge").textContent = "α線散乱 — 黄色い線＝軌道（リセットで消去）";
+      }
+
+      function clearAlpha() {
+        alphaParticles.forEach((p) => { worldGroup.remove(p); p.geometry.dispose(); p.material.dispose(); });
+        alphaParticles = [];
+        alphaTrails.forEach((t) => { worldGroup.remove(t.line); t.line.geometry.dispose(); t.line.material.dispose(); });
+        alphaTrails = [];
+        alphaDemo = false;
+      }
+
+      function updateAlpha() {
+        if (!alphaDemo && alphaParticles.length === 0) return;
+        alphaParticles = alphaParticles.filter((p) => {
+          const d = p.userData;
+          if (d.done) {
+            appendTrail(d, d.x, d.y, d.z);
+            return true;
+          }
+          if (!d.scattered && d.x > -0.35 && Math.random() < 0.08) {
+            d.scattered = true;
+            d.vx = -0.02 - Math.random() * 0.03;
+            d.vz = (Math.random() - 0.5) * 0.06;
+          }
+          if (d.scattered && d.x < 0.25 && Math.random() < 0.03) {
+            d.vx = 0.04;
+            d.vz = (Math.random() - 0.5) * 0.08;
+          }
+          d.x += d.vx;
+          d.z += d.vz;
+          p.position.set(d.x, d.y, d.z);
+          appendTrail(d, d.x, d.y, d.z);
+          if (d.x > 6.5 || d.x < -6.5 || Math.abs(d.z) > 4.5) {
+            d.done = true;
+          }
+          return true;
+        });
+        alphaDemo = alphaParticles.some((p) => !p.userData.done) || alphaTrails.length > 0;
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, rw / rh, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(rw, rh);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.55));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+
+        atomGroup = new THREE.Group();
+        nucleusGroup = new THREE.Group();
+        worldGroup.add(atomGroup);
+        worldGroup.add(nucleusGroup);
+
+        const grid = new THREE.GridHelper(12, 24, 0x475569, 0x1e293b);
+        grid.position.y = -1.6;
+        worldGroup.add(grid);
+
+        rebuildNucleus(1, 0);
+        rebuildElectrons(1);
+
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = Math.max(6, Math.min(20, zoom + e.deltaY * 0.006));
+        }, { passive: false });
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = Math.max(-0.9, Math.min(0.9, rotX));
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        new ResizeObserver(() => {
+          const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(w, h);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        }).observe(wrap);
+      }
+
+      function applyViewLayout() {
+        const iso = getIso();
+        const s = 0.08 + Math.cbrt(iso.A) * 0.02;
+        atomGroup.visible = true;
+        nucleusGroup.visible = true;
+        nucleusGroup.position.set(0, 0, 0);
+        if (viewMode === "nucleus") {
+          nucleusGroup.scale.setScalar(nucZoom * 3.5);
+        } else {
+          nucleusGroup.scale.setScalar(s * nucZoom);
+          if (alphaDemo) nucleusGroup.scale.setScalar(s * 0.8);
+        }
+        const electronDim = viewMode === "nucleus" ? 0.35 : 1;
+        atomGroup.children.forEach((c) => {
+          if (!c.material || !("opacity" in c.material)) return;
+          if (c.userData.baseOpacity == null) c.userData.baseOpacity = c.material.opacity;
+          c.material.opacity = c.userData.baseOpacity * electronDim;
+          c.material.transparent = c.material.opacity < 1 || c.userData.baseOpacity < 1;
+        });
+      }
+
+      function bindControls() {
+        document.querySelectorAll(".mode-btn").forEach((b) => {
+          b.addEventListener("click", () => {
+            if (b.dataset.mode === "rutherford") return;
+            setViewMode(b.dataset.mode);
+          });
+        });
+        document.querySelectorAll(".iso-btn").forEach((b) => {
+          b.addEventListener("click", () => selectIsotope(b.dataset.iso));
+        });
+        document.getElementById("btnRutherford").addEventListener("click", () => {
+          clearAlpha();
+          setViewMode("atom");
+          emitAlphaBatch(5);
+        });
+        document.getElementById("btnReset").addEventListener("click", () => {
+          clearAlpha();
+          customN = null;
+          isoKey = "H";
+          blend = 1;
+          currentZ = 1; currentN = 0;
+          targetZ = 1; targetN = 0;
+          nucZoom = 1;
+          zoom = INIT_ZOOM;
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y;
+          document.getElementById("slNucZoom").value = 1;
+          document.getElementById("slNeutron").value = 0;
+          document.getElementById("lblNucZoom").textContent = "1.0×";
+          setViewMode("atom");
+          rebuildNucleus(1, 0);
+          rebuildElectrons(1);
+          updateHUD();
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").classList.toggle("active", !paused);
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("slNucZoom").addEventListener("input", (e) => {
+          nucZoom = +e.target.value;
+          document.getElementById("lblNucZoom").textContent = nucZoom.toFixed(1) + "×";
+        });
+        document.getElementById("slOrbitSpd").addEventListener("input", (e) => {
+          orbitSpeed = +e.target.value;
+          document.getElementById("lblOrbitSpd").textContent = orbitSpeed.toFixed(1) + "×";
+        });
+        document.getElementById("slNeutron").addEventListener("input", (e) => {
+          const iso = ISOTOPES[isoKey];
+          customN = +e.target.value;
+          targetN = customN;
+          targetZ = iso.Z;
+          blend = 0;
+          rebuildNucleus(targetZ, targetN);
+          updateHUD();
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = paused ? 0 : Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        if (!paused) simTime += dt;
+
+        if (blend < 1) {
+          blend = Math.min(1, blend + dt * 2.5);
+          if (blend >= 1) { currentZ = targetZ; currentN = targetN; }
+        }
+
+        nucleonMeshes.forEach((m) => {
+          const bp = m.userData.basePos;
+          const ph = m.userData.phase + simTime * 0.4;
+          const w = 0.0008;
+          m.position.set(
+            bp.x + Math.sin(ph) * w,
+            bp.y + Math.cos(ph * 1.1) * w,
+            bp.z + Math.sin(ph * 0.9) * w
+          );
+        });
+
+        electronMeshes.forEach((e) => {
+          const d = e.userData;
+          const ang = d.angle + simTime * d.speed * orbitSpeed;
+          e.position.set(Math.cos(ang) * d.radius, Math.sin(ang) * d.radius * 0.3, Math.sin(ang) * d.radius);
+        });
+
+        updateAlpha();
+
+        applyViewLayout();
+        if (!paused && !dragging) rotY += dt * 0.012;
+        const dist = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * dist,
+          Math.sin(rotX) * dist + 0.6,
+          Math.cos(rotY) * Math.cos(rotX) * dist
+        );
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        buildIsoTable();
+        initThree();
+        bindControls();
+        updateHUD();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

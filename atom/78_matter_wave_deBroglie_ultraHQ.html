@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 — 物質波 · ド・ブロイ波長 λ=h/p 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1280px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(96,165,250,0.35), rgba(129,140,248,0.35));
+      border: 1px solid rgba(244,114,182,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbcfe8; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(96,165,250,0.12));
+      border: 1px solid rgba(244,114,182,0.32);
+    }
+    .formula-main { font-size: 0.9rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "graphs" "hud" "ctrl";
+    }
+    @media (min-width: 1000px) {
+      .sim-grid { grid-template-columns: 1.25fr 0.75fr; grid-template-areas: "viz graphs" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-graphs { grid-area: graphs; display: flex; flex-direction: column; gap: 10px; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0A0A0A; border: 1px solid rgba(244,114,182,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; border: 1px solid rgba(255,255,255,0.3); }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(620px, 70dvh); min-height: 420px;
+      cursor: grab; touch-action: none; background: #0A0A0A;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge, .status-badge {
+      position: absolute; z-index: 5; pointer-events: none; padding: 8px 12px; border-radius: 10px;
+      background: rgba(2,6,23,0.96); font-size: 0.72rem; font-weight: 700; line-height: 1.55; white-space: pre-line;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.55); text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+    .mode-badge { top: 12px; left: 12px; border: 1px solid rgba(125,211,252,0.7); color: #bae6fd; }
+    .status-badge { top: 12px; right: 12px; border: 1px solid rgba(129,140,248,0.65); color: #c7d2fe; }
+    .status-badge.on { border-color: rgba(134,239,172,0.75); color: #bbf7d0; }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .mode-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .mode-btn.active { background: rgba(96,165,250,0.28); color: #e0f2fe; border-color: rgba(96,165,250,0.6); }
+    .viz-foot button.active { background: rgba(244,114,182,0.22); color: #fce7f3; }
+    #btnFastForward.active {
+      background: rgba(251,191,36,0.28); color: #fde68a;
+      border-color: rgba(251,191,36,0.65);
+    }
+    .answer-btn {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 10px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(74,222,128,0.45); background: rgba(74,222,128,0.12); color: #86efac;
+    }
+    .answer-btn.active { background: rgba(74,222,128,0.28); color: #dcfce7; border-color: rgba(74,222,128,0.7); }
+    .answer-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .answer-label { width: 100%; font-size: 0.66rem; font-weight: 700; color: #86efac; margin-bottom: 2px; }
+    .graph-panel {
+      padding: 12px; border-radius: 10px; flex: 1;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.18);
+    }
+    .graph-title { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; margin-bottom: 5px; }
+    .graph-legend-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.6rem; color: #cbd5e1; margin-bottom: 5px; }
+    .graph-wrap {
+      position: relative; width: 100%; border-radius: 8px; background: rgba(8,12,24,0.92);
+      border: 1px solid rgba(148,163,184,0.28); overflow: hidden;
+    }
+    .graph-wrap.int { height: min(220px, 26dvh); min-height: 160px; }
+    .graph-wrap.fringe { height: min(140px, 16dvh); min-height: 100px; }
+    .graph-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-axis { font-size: 0.58rem; color: #94a3b8; margin-top: 4px; text-align: right; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1000px) { .hud-grid { grid-template-columns: repeat(6, 1fr); } }
+    .hud-card {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card .lbl { font-size: 0.64rem; color: #cbd5e1; }
+    .hud-card .num { font-size: 0.78rem; font-weight: 700; color: #fef08a; margin-top: 3px; }
+    .hud-card.col-b .num { color: #7dd3fc; }
+    .hud-card.col-w .num { color: #f8fafc; }
+    .hud-card.highlight .num { color: #86efac; }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #60a5fa; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2);
+      font-size: 0.74rem; color: #cbd5e1; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    @media (max-width: 800px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fbcfe8; margin-bottom: 4px; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+    .ctrl-row.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">〰️</div>
+      <p class="chapter-label">第27章 ⑧ — 原子の構造</p>
+      <h2>物質波 — ド・ブロイ波長 λ = h/p 3Dラボ</h2>
+      <p class="tagline">電子の波動性 · 二重スリット · 干渉縞 · 結晶回折</p>
+      <a id="back" href="../00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — 物質波の流れ</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step1"><strong>Step 1 加速</strong>電子銃 · eV=½mv²</div>
+        <div class="journey-step" id="step2"><strong>Step 2 物質波</strong>λ=h/p · 波＋粒子</div>
+        <div class="journey-step" id="step3"><strong>Step 3 干渉</strong>スリット/結晶で重ね合わせ</div>
+        <div class="journey-step" id="step4"><strong>Step 4 縞</strong>1個ずつでも干渉パターン</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">λ = h/p = h/(mv) · eV = ½mv² · 2d sinθ = nλ（結晶）</div>
+        <div class="formula-sub">電子源 → 物質波 → 二重スリット/結晶 → 干渉・回折パターン</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">物質波 — 3D干渉ビュー</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>電子（粒子）</span>
+              <span><i class="color-chip" style="background:#e0f2fe;color:#e0f2fe"></i>物質波</span>
+              <span><i class="color-chip" style="background:#64748b;color:#64748b"></i>スリット/結晶</span>
+              <span><i class="color-chip" style="background:#f8fafc;color:#f8fafc"></i>干渉縞</span>
+            </div>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">λ — · V —</div>
+              <div class="status-badge" id="statusBadge">電子飛行中</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="mode-btn active" data-mode="slit">二重スリット</button>
+              <button type="button" class="mode-btn" data-mode="crystal">結晶回折</button>
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnFastForward">⏩ 早送り</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-graphs">
+          <div class="graph-panel">
+            <div class="graph-title"><span>干渉強度 I(x)</span><span id="graphVal">—</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#f8fafc;width:12px;height:3px"></i>理論 I(x)</span>
+              <span><i style="background:#38bdf8;width:12px;height:8px;border-radius:2px"></i>着弾の累積</span>
+              <span><i style="background:#1e293b;width:12px;height:8px"></i>弱い縞</span>
+              <span id="graphNote">λ↓ → 縞が細かく</span>
+            </div>
+            <div class="graph-wrap int"><canvas id="graphInt"></canvas></div>
+            <div class="graph-axis">横軸：スクリーン位置 x · 縦軸：強度 · 青＝電子着弾が積み重なって干渉パターンに</div>
+          </div>
+          <div class="graph-panel">
+            <div class="graph-title"><span>干渉縞パターン（スクリーン）</span><span id="fringeVal">—</span></div>
+            <div class="graph-legend-row">
+              <span><i style="background:#f8fafc;width:14px;height:8px;border-radius:2px"></i>明るい縞（強め合い）</span>
+              <span><i style="background:#60a5fa;width:14px;height:8px;border-radius:2px"></i>中</span>
+              <span><i style="background:#020617;width:14px;height:8px;border-radius:2px;border:1px solid #334155"></i>暗い縞（弱め合い）</span>
+              <span>青点＝電子1個ずつの着弾</span>
+            </div>
+            <div class="graph-wrap fringe"><canvas id="graphFringe"></canvas></div>
+            <div class="graph-axis">実際のスクリーンに見える縞模様 · V↑でλ↓ → 縞が細かく</div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">リアルタイム物理量</p>
+            <div class="formula-box" id="formulaLive">λ = h/p</div>
+            <div class="hud-grid">
+              <div class="hud-card col-b"><div class="lbl">加速電圧 V</div><div class="num" id="hudV">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">速度 v</div><div class="num" id="hudVelec">—</div></div>
+              <div class="hud-card col-b"><div class="lbl">運動量 p=mv</div><div class="num" id="hudP">—</div></div>
+              <div class="hud-card highlight"><div class="lbl">ド・ブロイ波長 λ</div><div class="num" id="hudLam">—</div></div>
+              <div class="hud-card"><div class="lbl">縞の間隔 Δx</div><div class="num" id="hudFringe">—</div></div>
+              <div class="hud-card"><div class="lbl">着弾電子数</div><div class="num" id="hudCount">—</div></div>
+              <div class="hud-card col-w" id="hudSlitA"><div class="lbl">スリット間隔 a</div><div class="num" id="hudA">—</div></div>
+              <div class="hud-card col-w" id="hudSlitW"><div class="lbl">スリット幅 w</div><div class="num" id="hudW">—</div></div>
+              <div class="hud-card col-w hidden" id="hudCrystalD"><div class="lbl">面間隔 d</div><div class="num" id="hudD">—</div></div>
+              <div class="hud-card col-w hidden" id="hudCrystalTheta"><div class="lbl">入射角 θ</div><div class="num" id="hudTheta">—</div></div>
+              <div class="hud-card col-w hidden" id="hudCrystalN"><div class="lbl">次数 n · 2d sinθ</div><div class="num" id="hudBragg">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>加速電圧 V <span class="slider-val" id="valV">5.0 kV</span></label>
+              <input type="range" id="slV" min="100" max="50000" value="5000" step="100">
+            </div>
+            <div class="ctrl-row" id="rowA">
+              <label>スリット間隔 a <span class="slider-val" id="valA">200 nm</span></label>
+              <input type="range" id="slA" min="50" max="800" value="200" step="10">
+            </div>
+            <div class="ctrl-row" id="rowW">
+              <label>スリット幅 w <span class="slider-val" id="valW">40 nm</span></label>
+              <input type="range" id="slW" min="10" max="150" value="40" step="5">
+            </div>
+            <div class="ctrl-row hidden" id="rowD">
+              <label>結晶面間隔 d <span class="slider-val" id="valD">0.14 nm</span></label>
+              <input type="range" id="slD" min="80" max="400" value="140" step="5">
+            </div>
+            <div class="ctrl-row hidden" id="rowTheta">
+              <label>入射角 θ <span class="slider-val" id="valTheta">12°</span></label>
+              <input type="range" id="slTheta" min="0" max="60" value="12" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">0.4×</span></label>
+              <input type="range" id="slSpeed" min="1" max="12" value="4" step="1">
+            </div>
+          </div>
+          <div class="answer-row">
+            <span class="answer-label">● ド・ブロイ波長と干渉の代表例</span>
+            <button type="button" class="answer-btn" data-answer="low">● 低電圧（太い縞）</button>
+            <button type="button" class="answer-btn" data-answer="high">● 高電圧（細かい縞）</button>
+            <button type="button" class="answer-btn" data-answer="bragg">● 結晶ブラッグ正解</button>
+          </div>
+          <div class="hint-box" id="hintText">電圧 V を上げると v と p が増え、λ = h/p は短くなります。干渉縞は細かくなります。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>電子は<strong>物質波</strong>— ド・ブロイ波長 λ = h/p</li>
+        <li>加速電圧 V↑ → v↑ → p↑ → <strong>λ↓</strong> → 干渉縞が細かくなる</li>
+        <li>二重スリットで<strong>干渉縞</strong>ができる（波動性の証拠）</li>
+        <li>電子を<strong>1個ずつ</strong>飛ばしても縞ができる（量子力学の核心）</li>
+        <li>結晶でも <strong>2d sinθ = nλ</strong> のブラッグ回折が起こる</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const H = 6.62607015e-34;
+      const ME = 9.1093837015e-31;
+      const E_CHARGE = 1.602176634e-19;
+      const VIS_SMOOTH = 0.22;
+      const WAVE_ANIM = 0.65;
+      const SCREEN_L = 5.2;
+      const GUN_X = -5.5;
+      const SLIT_X = 0;
+      const SCREEN_X = 5.5;
+      const INIT_ROT_X = 0.38, INIT_ROT_Y = 0.5, INIT_ZOOM = 11;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+      const graphInt = document.getElementById("graphInt");
+      const graphFringe = document.getElementById("graphFringe");
+
+      let paused = false, fastForward = false, autoSpin = true, simTime = 0, timeScale = 0.4;
+      const FAST_SPAWN_MUL = 18;
+      const FAST_SPEED_MUL = 7;
+      const FAST_BURST_PER_FRAME = 6;
+      let simMode = "slit";
+      const target = { V: 5000, a: 200e-9, w: 40e-9, d: 0.14e-9, theta: 12, speed: 0.4, n: 1 };
+      const smooth = { V: 5000, a: 200e-9, w: 40e-9, d: 0.14e-9, theta: 12, speed: 0.4, n: 1 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+
+      let scene, camera, renderer, worldGroup;
+      let slitGroup, crystalGroup, screenMesh, gunGroup, waveGroup;
+      let screenTexCanvas, screenTexture;
+      let electrons = [];
+      let hits = [];
+      const MAX_HITS = 800;
+      const MAX_ELECTRONS = 12;
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      function deg2rad(d) { return d * Math.PI / 180; }
+
+      function deBroglie(V) {
+        const v = Math.sqrt(2 * E_CHARGE * V / ME);
+        const p = ME * v;
+        const lam = H / p;
+        return { v, p, lam };
+      }
+
+      function braggLHS(d, thetaDeg) { return 2 * d * Math.sin(deg2rad(thetaDeg)); }
+      function braggMatch(d, theta, lam, n) {
+        return Math.abs(braggLHS(d, theta) - n * lam) < lam * 0.08;
+      }
+
+      function slitIntensity(x, lam, a, w, L) {
+        const sinT = x / Math.sqrt(x * x + L * L);
+        const beta = Math.PI * w * sinT / lam;
+        const alpha = Math.PI * a * sinT / lam;
+        const env = Math.abs(beta) < 1e-6 ? 1 : Math.pow(Math.sin(beta) / beta, 2);
+        const fringe = Math.pow(Math.cos(alpha), 2);
+        return Math.max(0, env * fringe);
+      }
+
+      function crystalIntensity(x, lam, d, thetaDeg, L) {
+        let I = 0.05;
+        for (let n = 1; n <= 3; n++) {
+          const sinT = n * lam / (2 * d);
+          if (sinT > 1) continue;
+          const refl = Math.asin(sinT);
+          const spotX = Math.tan(refl * 0.85) * L * 0.35 * (n - 2);
+          const str = braggMatch(d, thetaDeg, lam, n) ? 1 : 0.25;
+          const dist = x - spotX;
+          I += str * Math.exp(-dist * dist / (lam * L * 0.8 + 1e-30));
+        }
+        return I;
+      }
+
+      function sampleHitX(lam, a, w, d, theta, mode) {
+        const L = SCREEN_L;
+        let bestX = 0, bestI = -1;
+        for (let t = 0; t < 80; t++) {
+          const x = (Math.random() * 2 - 1) * 2.2;
+          const I = mode === "slit"
+            ? slitIntensity(x, lam, a, w, L)
+            : crystalIntensity(x, lam, d, theta, L);
+          if (I > bestI) { bestI = I; bestX = x; }
+          if (Math.random() < I) return x;
+        }
+        return bestX;
+      }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.V = lerp(smooth.V, target.V, k);
+        smooth.a = lerp(smooth.a, target.a, k);
+        smooth.w = lerp(smooth.w, target.w, k);
+        smooth.d = lerp(smooth.d, target.d, k);
+        smooth.theta = lerp(smooth.theta, target.theta, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+      }
+
+      function buildWaves() {
+        waveGroup = new THREE.Group();
+        for (let i = 0; i < 14; i++) {
+          const geo = new THREE.PlaneGeometry(0.4, 2.2);
+          const mat = new THREE.MeshBasicMaterial({
+            color: 0xe0f2fe, transparent: true, opacity: 0.22,
+            side: THREE.DoubleSide, depthWrite: false,
+          });
+          const m = new THREE.Mesh(geo, mat);
+          m.userData.phase = i * 0.45;
+          waveGroup.add(m);
+        }
+        worldGroup.add(waveGroup);
+      }
+
+      function buildSlit() {
+        slitGroup = new THREE.Group();
+        const barrierMat = new THREE.MeshStandardMaterial({
+          color: 0x475569, emissive: 0x334155, emissiveIntensity: 0.4,
+          metalness: 0.6, roughness: 0.35, transparent: true, opacity: 0.92,
+        });
+        const top = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.6, 0.8), barrierMat);
+        top.position.set(SLIT_X, 0.9, 0);
+        const bot = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.6, 0.8), barrierMat);
+        bot.position.set(SLIT_X, -0.9, 0);
+        const mid = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.8), barrierMat);
+        mid.position.set(SLIT_X, 0, 0);
+        slitGroup.add(top, bot, mid);
+        worldGroup.add(slitGroup);
+      }
+
+      function buildCrystal() {
+        crystalGroup = new THREE.Group();
+        crystalGroup.visible = false;
+        const dummy = new THREE.Object3D();
+        const geo = new THREE.SphereGeometry(0.08, 8, 8);
+        const matA = new THREE.MeshPhysicalMaterial({ color: 0x60a5fa, emissive: 0x38bdf8, emissiveIntensity: 1.1 });
+        const matB = new THREE.MeshPhysicalMaterial({ color: 0xa78bfa, emissive: 0x8b5cf6, emissiveIntensity: 0.8 });
+        const meshA = new THREE.InstancedMesh(geo, matA, 48);
+        const meshB = new THREE.InstancedMesh(geo, matB, 48);
+        let idx = 0;
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 3; j++) {
+            dummy.position.set(SLIT_X + 0.1, (i - 1.5) * 0.35, (j - 1) * 0.4);
+            dummy.updateMatrix();
+            meshA.setMatrixAt(idx, dummy.matrix);
+            dummy.position.set(SLIT_X + 0.35, (i - 1.5) * 0.35 + 0.17, (j - 1) * 0.4 + 0.2);
+            dummy.updateMatrix();
+            meshB.setMatrixAt(idx, dummy.matrix);
+            idx++;
+          }
+        }
+        meshA.instanceMatrix.needsUpdate = true;
+        meshB.instanceMatrix.needsUpdate = true;
+        crystalGroup.add(meshA, meshB);
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.4, 1.8),
+          new THREE.MeshPhysicalMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+        );
+        plane.position.set(SLIT_X + 0.2, 0, 0);
+        crystalGroup.add(plane);
+        worldGroup.add(crystalGroup);
+      }
+
+      function buildGun() {
+        gunGroup = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.25, 0.3, 1.2, 14),
+          new THREE.MeshStandardMaterial({ color: 0x334155, emissive: 0x1e293b, emissiveIntensity: 0.5, metalness: 0.7, roughness: 0.3 })
+        );
+        body.rotation.z = Math.PI / 2;
+        body.position.set(GUN_X, 0, 0);
+        gunGroup.add(body);
+        const tip = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 })
+        );
+        tip.position.set(GUN_X + 0.55, 0, 0);
+        gunGroup.add(tip);
+        worldGroup.add(gunGroup);
+      }
+
+      function buildScreen() {
+        screenTexCanvas = document.createElement("canvas");
+        screenTexCanvas.width = 256;
+        screenTexCanvas.height = 320;
+        screenTexture = new THREE.CanvasTexture(screenTexCanvas);
+        screenMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.4, 3.0),
+          new THREE.MeshStandardMaterial({
+            color: 0x111827, emissive: 0xffffff, emissiveIntensity: 0.75,
+            emissiveMap: screenTexture, map: screenTexture, metalness: 0.15, roughness: 0.5,
+          })
+        );
+        screenMesh.position.set(SCREEN_X, 0.1, 0);
+        worldGroup.add(screenMesh);
+      }
+
+      function buildScene3D() {
+        buildGun();
+        buildSlit();
+        buildCrystal();
+        buildWaves();
+        buildScreen();
+        const grid = new THREE.GridHelper(14, 28, 0x475569, 0x1e293b);
+        grid.position.y = -1.6;
+        worldGroup.add(grid);
+      }
+
+      function spawnElectron() {
+        const cap = fastForward ? 28 : MAX_ELECTRONS;
+        if (electrons.length >= cap) electrons.shift();
+        electrons.push({
+          x: GUN_X + 0.6,
+          phase: Math.random(),
+          hitX: null,
+          age: 0,
+        });
+      }
+
+      function registerHit(lam, x) {
+        const hitX = x != null
+          ? x
+          : sampleHitX(lam, smooth.a, smooth.w, smooth.d, smooth.theta, simMode);
+        const I = simMode === "slit"
+          ? slitIntensity(hitX, lam, smooth.a, smooth.w, SCREEN_L)
+          : crystalIntensity(hitX, lam, smooth.d, smooth.theta, SCREEN_L);
+        hits.push({ x: hitX, I, sy: 0.2 + Math.random() * 0.6 });
+        if (hits.length > MAX_HITS) hits.shift();
+      }
+
+      function burstHits(lam, count) {
+        const n = Math.min(count, MAX_HITS - hits.length);
+        for (let i = 0; i < n; i++) registerHit(lam);
+      }
+
+      function updateWaves3D(lamVis, dir, originX) {
+        waveGroup.children.forEach((m) => {
+          const phase = m.userData.phase + simTime * WAVE_ANIM * timeScale;
+          const offset = (phase % 1) * lamVis * 1.8;
+          m.position.set(originX + offset, 0, 0);
+          m.lookAt(m.position.x + dir.x, m.position.y + dir.y, m.position.z + dir.z);
+          m.material.opacity = 0.14 + 0.12 * Math.sin(phase * Math.PI * 2);
+        });
+      }
+
+      function drawInterferenceGraph() {
+        if (!graphInt) return;
+        const parent = graphInt.parentElement;
+        const w = Math.max(parent.clientWidth, 200), h = Math.max(parent.clientHeight, 200);
+        const dpr = Math.min(devicePixelRatio, 2);
+        graphInt.width = Math.round(w * dpr);
+        graphInt.height = Math.round(h * dpr);
+        const ctx = graphInt.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const db = deBroglie(smooth.V);
+        const lam = db.lam;
+        const L = SCREEN_L;
+        const M = { l: 44, r: 10, t: 16, b: 30 };
+        const pw = w - M.l - M.r, ph = h - M.t - M.b;
+        ctx.fillStyle = "rgba(8,14,32,0.95)";
+        ctx.fillRect(M.l, M.t, pw, ph);
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.strokeRect(M.l, M.t, pw, ph);
+
+        const xMin = -2.2, xMax = 2.2;
+        const xMap = (x) => M.l + ((x - xMin) / (xMax - xMin)) * pw;
+        const yBase = M.t + ph;
+        let iMax = 0;
+        const curve = [];
+        for (let i = 0; i <= 200; i++) {
+          const x = xMin + (xMax - xMin) * (i / 200);
+          const I = simMode === "slit"
+            ? slitIntensity(x, lam, smooth.a, smooth.w, L)
+            : crystalIntensity(x, lam, smooth.d, smooth.theta, L);
+          curve.push({ x, I });
+          if (I > iMax) iMax = I;
+        }
+        iMax = Math.max(iMax, 0.1);
+
+        ctx.beginPath();
+        curve.forEach((pt, i) => {
+          const px = xMap(pt.x), py = yBase - (pt.I / iMax) * ph * 0.9;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        const grad = ctx.createLinearGradient(0, M.t, 0, yBase);
+        grad.addColorStop(0, "rgba(96,165,250,0.55)");
+        grad.addColorStop(1, "rgba(96,165,250,0.05)");
+        ctx.lineTo(xMap(xMax), yBase);
+        ctx.lineTo(xMap(xMin), yBase);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        curve.forEach((pt, i) => {
+          const px = xMap(pt.x), py = yBase - (pt.I / iMax) * ph * 0.9;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+
+        const BIN_COUNT = 88;
+        const bins = new Float32Array(BIN_COUNT);
+        const binW = (xMax - xMin) / BIN_COUNT;
+        hits.forEach((h) => {
+          let bi = Math.floor((h.x - xMin) / binW);
+          if (bi < 0) bi = 0;
+          if (bi >= BIN_COUNT) bi = BIN_COUNT - 1;
+          bins[bi] += 1;
+        });
+        let maxBin = 0;
+        for (let i = 0; i < BIN_COUNT; i++) if (bins[i] > maxBin) maxBin = bins[i];
+
+        if (hits.length > 0) {
+          const barHalf = (pw / BIN_COUNT) * 0.44;
+          const histScale = (ph * 0.88) / Math.max(maxBin, 1);
+          for (let i = 0; i < BIN_COUNT; i++) {
+            if (bins[i] <= 0) continue;
+            const x = xMin + (i + 0.5) * binW;
+            const px = xMap(x);
+            const barH = bins[i] * histScale;
+            const t = bins[i] / maxBin;
+            ctx.fillStyle = "rgba(56,189,248," + (0.22 + t * 0.58) + ")";
+            ctx.fillRect(px - barHalf, yBase - barH, barHalf * 2, barH);
+          }
+          if (hits.length > 12) {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(125,211,252,0.95)";
+            ctx.lineWidth = 1.6;
+            for (let i = 0; i < BIN_COUNT; i++) {
+              const x = xMin + (i + 0.5) * binW;
+              const px = xMap(x);
+              const py = yBase - bins[i] * histScale;
+              if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+          }
+        }
+
+        hits.slice(-160).forEach((h) => {
+          const px = xMap(h.x);
+          const py = yBase - 2 - (h.sy || 0.5) * 10;
+          ctx.fillStyle = "rgba(186,230,253,0.9)";
+          ctx.beginPath();
+          ctx.arc(px, py, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.strokeStyle = "rgba(203,213,225,0.55)";
+        ctx.beginPath();
+        ctx.moveTo(M.l, yBase);
+        ctx.lineTo(M.l + pw, yBase);
+        ctx.stroke();
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "10px Noto Sans JP, sans-serif";
+        ctx.fillText("スクリーン位置 x", M.l + pw - 72, h - 8);
+        ctx.save();
+        ctx.translate(14, M.t + ph / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("強度 I", 0, 0);
+        ctx.restore();
+      }
+
+      function intensityColor(t) {
+        if (t > 0.72) return { r: 255, g: 255, b: 255, a: 0.92 + t * 0.08 };
+        if (t > 0.38) return { r: 96, g: 165, b: 250, a: 0.55 + t * 0.35 };
+        return { r: 8, g: 12, b: 24, a: 0.85 + t * 0.15 };
+      }
+
+      function drawFringePattern() {
+        if (!graphFringe) return;
+        const parent = graphFringe.parentElement;
+        const w = Math.max(parent.clientWidth, 200), h = Math.max(parent.clientHeight, 90);
+        const dpr = Math.min(devicePixelRatio, 2);
+        graphFringe.width = Math.round(w * dpr);
+        graphFringe.height = Math.round(h * dpr);
+        const ctx = graphFringe.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const db = deBroglie(smooth.V);
+        const lam = db.lam;
+        const L = SCREEN_L;
+        const margin = 10;
+        const pw = w - margin * 2, ph = h - margin * 2;
+        const xMin = -2.2, xMax = 2.2;
+
+        let iMax = 0;
+        const cols = [];
+        for (let c = 0; c < pw; c++) {
+          const x = xMin + (xMax - xMin) * (c / Math.max(pw - 1, 1));
+          const I = simMode === "slit"
+            ? slitIntensity(x, lam, smooth.a, smooth.w, L)
+            : crystalIntensity(x, lam, smooth.d, smooth.theta, L);
+          cols.push(I);
+          if (I > iMax) iMax = I;
+        }
+        iMax = Math.max(iMax, 0.08);
+
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(148,163,184,0.4)";
+        ctx.strokeRect(margin, margin, pw, ph);
+
+        const img = ctx.createImageData(pw, ph);
+        for (let c = 0; c < pw; c++) {
+          const t = cols[c] / iMax;
+          const col = intensityColor(t);
+          const a = Math.round(col.a * 255);
+          for (let r = 0; r < ph; r++) {
+            const idx = (r * pw + c) * 4;
+            img.data[idx] = col.r;
+            img.data[idx + 1] = col.g;
+            img.data[idx + 2] = col.b;
+            img.data[idx + 3] = a;
+          }
+        }
+        ctx.putImageData(img, margin, margin);
+
+        const xMap = (x) => margin + ((x - xMin) / (xMax - xMin)) * pw;
+        hits.forEach((hit) => {
+          const px = xMap(hit.x);
+          const py = margin + ph * (hit.sy || 0.5);
+          ctx.fillStyle = "rgba(56,189,248,0.9)";
+          ctx.beginPath();
+          ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.5)";
+          ctx.beginPath();
+          ctx.arc(px, py, 1, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        const centerX = margin + pw / 2;
+        ctx.strokeStyle = "rgba(148,163,184,0.25)";
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(centerX, margin);
+        ctx.lineTo(centerX, margin + ph);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "9px Noto Sans JP, sans-serif";
+        ctx.fillText("スクリーン", margin + 4, margin + ph - 4);
+        ctx.fillText("x →", margin + pw - 28, margin + ph - 4);
+
+        if (simMode === "slit") {
+          const fringeMm = (lam * L / smooth.a) * 1e3;
+          ctx.fillStyle = "#86efac";
+          ctx.font = "bold 9px Inter, sans-serif";
+          ctx.fillText("Δx≈" + fringeMm.toFixed(2) + "mm", margin + pw - 72, margin + 12);
+        }
+      }
+
+      function drawScreenTexture() {
+        if (!screenTexCanvas) return;
+        const tw = 256, th = 320;
+        const tctx = screenTexCanvas.getContext("2d");
+        const db = deBroglie(smooth.V);
+        const lam = db.lam;
+        const L = SCREEN_L;
+        let iMax = 0;
+        const cols = [];
+        for (let c = 0; c < tw; c++) {
+          const x = ((c / tw) - 0.5) * 4.4;
+          const I = simMode === "slit"
+            ? slitIntensity(x, lam, smooth.a, smooth.w, L)
+            : crystalIntensity(x, lam, smooth.d, smooth.theta, L);
+          cols.push(I);
+          if (I > iMax) iMax = I;
+        }
+        iMax = Math.max(iMax, 0.05);
+
+        const img = tctx.createImageData(tw, th);
+        for (let c = 0; c < tw; c++) {
+          const t = cols[c] / iMax;
+          let r0, g0, b0, a0;
+          if (t > 0.65) { r0 = 255; g0 = 255; b0 = 255; a0 = 0.15 + t * 0.55; }
+          else if (t > 0.3) { r0 = 96; g0 = 165; b0 = 250; a0 = 0.1 + t * 0.4; }
+          else { r0 = 15; g0 = 23; b0 = 42; a0 = 0.2 + t * 0.3; }
+          const a = Math.round(a0 * 255);
+          for (let r = 0; r < th; r++) {
+            const idx = (r * tw + c) * 4;
+            img.data[idx] = r0;
+            img.data[idx + 1] = g0;
+            img.data[idx + 2] = b0;
+            img.data[idx + 3] = a;
+          }
+        }
+        tctx.putImageData(img, 0, 0);
+
+        hits.slice(-200).forEach((h) => {
+          const cx = ((h.x / 4.4) + 0.5) * tw;
+          const cy = th * (h.sy || 0.5);
+          const grd = tctx.createRadialGradient(cx, cy, 0, cx, cy, 5);
+          grd.addColorStop(0, "rgba(56,189,248,0.95)");
+          grd.addColorStop(1, "rgba(56,189,248,0)");
+          tctx.fillStyle = grd;
+          tctx.beginPath();
+          tctx.arc(cx, cy, 5, 0, Math.PI * 2);
+          tctx.fill();
+        });
+
+        screenTexture.needsUpdate = true;
+      }
+
+      function updateElectrons(dt) {
+        const db = deBroglie(smooth.V);
+        const ffSpeed = fastForward ? FAST_SPEED_MUL : 1;
+        const speed = clamp(db.v * 1.2e-7, 1.5, 8) * timeScale * ffSpeed;
+        const lamVis = db.lam * 1.5e10;
+
+        if (!paused) {
+          const spawnChance = 0.04 * timeScale * (fastForward ? FAST_SPAWN_MUL : 1);
+          if (Math.random() < spawnChance) spawnElectron();
+          if (fastForward && Math.random() < spawnChance * 0.65) spawnElectron();
+          if (fastForward) burstHits(db.lam, FAST_BURST_PER_FRAME);
+        }
+
+        electrons = electrons.filter((e) => {
+          e.age += dt;
+          e.x += speed * dt * 2.5;
+          if (e.x > SCREEN_X - 0.3 && e.hitX === null) {
+            e.hitX = sampleHitX(db.lam, smooth.a, smooth.w, smooth.d, smooth.theta, simMode);
+            registerHit(db.lam, e.hitX);
+          }
+          return e.x < SCREEN_X + 0.5 && e.age < 12;
+        });
+
+        updateWaves3D(lamVis, new THREE.Vector3(1, 0, 0), GUN_X + 0.5);
+      }
+
+      function updateHUD() {
+        const db = deBroglie(smooth.V);
+        const lamPm = db.lam * 1e12;
+        const fringe = simMode === "slit"
+          ? (db.lam * SCREEN_L / smooth.a) * 1e3
+          : db.lam * 1e12 * 0.5;
+
+        document.getElementById("hudV").textContent = (smooth.V / 1000).toFixed(1) + " kV";
+        document.getElementById("hudVelec").textContent = (db.v / 1000).toFixed(1) + " km/s";
+        document.getElementById("hudP").textContent = (db.p * 1e24).toFixed(2) + "×10⁻²⁴ kg·m/s";
+        document.getElementById("hudLam").textContent = lamPm.toFixed(2) + " pm";
+        document.getElementById("hudFringe").textContent = fringe.toFixed(2) + (simMode === "slit" ? " mm" : " pm");
+        document.getElementById("hudCount").textContent = String(hits.length);
+        document.getElementById("hudA").textContent = (smooth.a * 1e9).toFixed(0) + " nm";
+        document.getElementById("hudW").textContent = (smooth.w * 1e9).toFixed(0) + " nm";
+        document.getElementById("hudD").textContent = (smooth.d * 1e9).toFixed(2) + " nm";
+        document.getElementById("hudTheta").textContent = smooth.theta.toFixed(0) + "°";
+        const lhs = braggLHS(smooth.d, smooth.theta);
+        const match = braggMatch(smooth.d, smooth.theta, db.lam, 1);
+        document.getElementById("hudBragg").textContent =
+          "n=1 · " + lhs.toFixed(4) + " nm " + (match ? "✓" : "");
+
+        document.getElementById("valV").textContent = (smooth.V / 1000).toFixed(1) + " kV";
+        document.getElementById("valA").textContent = (smooth.a * 1e9).toFixed(0) + " nm";
+        document.getElementById("valW").textContent = (smooth.w * 1e9).toFixed(0) + " nm";
+        document.getElementById("valD").textContent = (smooth.d * 1e9).toFixed(2) + " nm";
+        document.getElementById("valTheta").textContent = smooth.theta.toFixed(0) + "°";
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        document.getElementById("formulaLive").innerHTML =
+          "λ = h/p = <strong>" + lamPm.toFixed(2) + " pm</strong> · eV = " + (smooth.V / 1000).toFixed(1) + " kV";
+
+        document.getElementById("modeBadge").textContent =
+          "V=" + (smooth.V / 1000).toFixed(1) + " kV · v=" + (db.v / 1e6).toFixed(1) + "×10⁶ m/s\n" +
+          "λ=" + lamPm.toFixed(2) + " pm · " + (simMode === "slit" ? "二重スリット" : "結晶回折");
+
+        document.getElementById("statusBadge").textContent =
+          (fastForward ? "⏩ 早送り中 · " : "") +
+          (simMode === "slit" ? "干渉縞形成中 · 電子" + hits.length + "個着弾" : "ブラッグ回折 · " + (match ? "成立✓" : "調整中"));
+        document.getElementById("statusBadge").className = "status-badge" + (match && simMode === "crystal" ? " on" : "");
+
+        document.getElementById("graphVal").textContent = "Δx≈" + fringe.toFixed(1) + (simMode === "slit" ? "mm" : "pm");
+        document.getElementById("fringeVal").textContent =
+          simMode === "slit" ? "縞間隔 Δx≈" + fringe.toFixed(2) + " mm" : "回折スポット";
+        document.getElementById("graphNote").textContent =
+          hits.length > 20
+            ? "着弾" + hits.length + "個 · 青ヒストグラムが理論曲線に近づく"
+            : (simMode === "slit" ? "λ↓ → 縞が細かく" : "2d sinθ=nλ スポット");
+
+        document.getElementById("step1").classList.toggle("active", smooth.V > 500);
+        document.getElementById("step2").classList.toggle("active", true);
+        document.getElementById("step3").classList.toggle("active", hits.length > 5);
+        document.getElementById("step4").classList.toggle("active", hits.length > 30);
+
+        drawInterferenceGraph();
+        drawFringePattern();
+        drawScreenTexture();
+      }
+
+      function setMode(mode) {
+        simMode = mode;
+        slitGroup.visible = mode === "slit";
+        crystalGroup.visible = mode === "crystal";
+        document.querySelectorAll(".mode-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.mode === mode);
+        });
+        document.getElementById("rowA").classList.toggle("hidden", mode !== "slit");
+        document.getElementById("rowW").classList.toggle("hidden", mode !== "slit");
+        document.getElementById("rowD").classList.toggle("hidden", mode !== "crystal");
+        document.getElementById("rowTheta").classList.toggle("hidden", mode !== "crystal");
+        document.getElementById("hudSlitA").classList.toggle("hidden", mode !== "slit");
+        document.getElementById("hudSlitW").classList.toggle("hidden", mode !== "slit");
+        document.getElementById("hudCrystalD").classList.toggle("hidden", mode !== "crystal");
+        document.getElementById("hudCrystalTheta").classList.toggle("hidden", mode !== "crystal");
+        document.getElementById("hudCrystalN").classList.toggle("hidden", mode !== "crystal");
+        hits = [];
+      }
+
+      function applyAnswer(key) {
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.answer === key);
+        });
+        if (key === "low") {
+          setMode("slit");
+          target.V = 1000;
+          document.getElementById("slV").value = 1000;
+          document.getElementById("hintText").innerHTML = "<strong>低電圧 1 kV</strong> — λ が長く、干渉縞は<strong>太く</strong>並びます。";
+        } else if (key === "high") {
+          setMode("slit");
+          target.V = 30000;
+          document.getElementById("slV").value = 30000;
+          document.getElementById("hintText").innerHTML = "<strong>高電圧 30 kV</strong> — λ が短く、干渉縞は<strong>細かく</strong>なります。";
+        } else if (key === "bragg") {
+          setMode("crystal");
+          target.V = 15000;
+          target.d = 0.14e-9;
+          target.theta = 12;
+          document.getElementById("slV").value = 15000;
+          document.getElementById("slD").value = 140;
+          document.getElementById("slTheta").value = 12;
+          document.getElementById("hintText").innerHTML = "<strong>結晶ブラッグ正解</strong> — 2d sinθ ≈ nλ で回折スポットが現れます。";
+        }
+      }
+
+      function resetSim() {
+        simTime = 0;
+        hits = [];
+        electrons = [];
+        target.V = 5000; target.a = 200e-9; target.w = 40e-9;
+        target.d = 0.14e-9; target.theta = 12; target.speed = 0.4;
+        smooth.V = 5000; smooth.a = 200e-9; smooth.w = 40e-9;
+        smooth.d = 0.14e-9; smooth.theta = 12; smooth.speed = 0.4;
+        document.getElementById("slV").value = 5000;
+        document.getElementById("slA").value = 200;
+        document.getElementById("slW").value = 40;
+        document.getElementById("slD").value = 140;
+        document.getElementById("slTheta").value = 12;
+        document.getElementById("slSpeed").value = 4;
+        document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        setMode("slit");
+        rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+      }
+
+      function bindControls() {
+        document.getElementById("slV").addEventListener("input", (e) => {
+          target.V = +e.target.value;
+          hits = [];
+          electrons = [];
+          document.querySelectorAll(".answer-btn").forEach((b) => b.classList.remove("active"));
+        });
+        document.getElementById("slA").addEventListener("input", (e) => { target.a = +e.target.value * 1e-9; hits = []; electrons = []; });
+        document.getElementById("slW").addEventListener("input", (e) => { target.w = +e.target.value * 1e-9; hits = []; electrons = []; });
+        document.getElementById("slD").addEventListener("input", (e) => { target.d = +e.target.value / 1000 * 1e-9; hits = []; electrons = []; });
+        document.getElementById("slTheta").addEventListener("input", (e) => { target.theta = +e.target.value; hits = []; electrons = []; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.querySelectorAll(".mode-btn").forEach((b) => {
+          b.addEventListener("click", () => setMode(b.dataset.mode));
+        });
+        document.querySelectorAll(".answer-btn").forEach((b) => {
+          b.addEventListener("click", () => applyAnswer(b.dataset.answer));
+        });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnFastForward").addEventListener("click", () => {
+          fastForward = !fastForward;
+          const btn = document.getElementById("btnFastForward");
+          btn.textContent = fastForward ? "⏩ 早送り中" : "⏩ 早送り";
+          btn.classList.toggle("active", fastForward);
+        });
+        document.getElementById("btnReset").addEventListener("click", resetSim);
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0A0A0A);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x506080, 0.6));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(4, 6, 3);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x38bdf8, 0.5, 20);
+        rim.position.set(-3, 2, 2);
+        scene.add(rim);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.9, 0.9);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.006, 6, 18);
+        }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function renderElectrons() {
+        while (worldGroup.children.find((c) => c.name === "electronDots")) {
+          worldGroup.remove(worldGroup.getObjectByName("electronDots"));
+        }
+        const grp = new THREE.Group();
+        grp.name = "electronDots";
+        electrons.forEach((e) => {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 10, 10),
+            new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, emissive: 0x60a5fa, emissiveIntensity: 1.5 })
+          );
+          m.position.set(e.x, (Math.random() - 0.5) * 0.08, 0);
+          grp.add(m);
+        });
+        worldGroup.add(grp);
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        if (!paused) simTime += dt * timeScale;
+        updateElectrons(dt);
+        renderElectrons();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.025;
+        const d = zoom;
+        camera.position.set(
+          Math.sin(rotY) * Math.cos(rotX) * d,
+          Math.sin(rotX) * d + 1.0,
+          Math.cos(rotY) * Math.cos(rotX) * d
+        );
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        setMode("slit");
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>アルキメデスの原理 — 浮力</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", "Poppins", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #003366;
+      padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #004c99;
+      text-shadow: 0 0 8px #aee0ff;
+    }
+
+    .chapter-label { margin: 4px 0 0; font-size: 0.82rem; color: #4a7099; }
+    .page-header { display: flex; flex-direction: column; align-items: center; }
+
+    #back {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #00aaff;
+      color: white;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 0 10px #66d0ff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui {
+      width: 90%;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 100, 200, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tab-label { margin: 0; font-size: 0.88rem; font-weight: 600; color: #004c99; }
+
+    .tab-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-row a, .tab-row button {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      min-height: 44px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: 2px solid rgba(0, 170, 255, 0.22);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.65);
+      color: #004c99;
+      cursor: pointer;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab-row a.active, .tab-row button.active {
+      background: #00aaff;
+      color: white;
+      border-color: #00aaff;
+      box-shadow: 0 0 10px #66d0ff;
+    }
+
+    label { font-size: 15px; font-weight: 500; }
+    input[type="range"] { width: 100%; height: 30px; }
+
+    .hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #4a7099;
+      line-height: 1.55;
+    }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+
+    .btn-row button {
+      flex: 1;
+      padding: 14px 12px;
+      min-height: 48px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #startBtn { background: #00aaff; color: white; box-shadow: 0 0 10px #66d0ff; }
+
+    #resetBtn {
+      background: rgba(255, 255, 255, 0.75);
+      color: #004c99;
+      border: 2px solid rgba(0, 170, 255, 0.35);
+    }
+
+    #motionStatus {
+      width: 90%;
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.5);
+      border: 2px solid rgba(0, 140, 220, 0.2);
+    }
+
+    #motionStatus.rise { color: #007744; }
+    #motionStatus.sink { color: #cc3355; }
+    #motionStatus.rest { color: #004c99; }
+
+    .canvas-section { width: 95vw; max-width: 100%; margin-top: 8px; }
+
+    .canvas-label {
+      margin: 0 0 4px 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a7099;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: min(480px, 58dvh);
+      min-height: 340px;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      box-shadow: 0 0 16px rgba(0, 150, 255, 0.25);
+    }
+
+    .formula-box {
+      width: 90%;
+      margin: 10px 0 16px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.45);
+      font-size: 0.88rem;
+      line-height: 1.75;
+      color: #004c99;
+    }
+
+    .formula-box strong { color: #007744; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>アルキメデスの原理</h2>
+    <p class="chapter-label">4章　流体と圧力 — 浮力</p>
+    <a id="back" href="../index.html">← ホームへ戻る</a>
+  </div>
+
+  <div id="ui">
+    <p class="tab-label">シミュレーション</p>
+    <div class="tab-row">
+      <a href="pressure_buoyancy.html">水圧・浮力</a>
+      <a href="archimedes.html" class="active">アルキメデスの原理</a>
+    </div>
+
+    <label>
+      物体の密度 (kg/m³):
+      <input id="rhoSlider" type="range" min="200" max="2000" step="10" value="600">
+      <span id="rhoValue">600</span>
+    </label>
+
+    <label>
+      位置（水面下の中心の深さ m）:
+      <input id="depthSlider" type="range" min="-0.08" max="2.5" step="0.02" value="0.8">
+      <span id="depthValue">0.80</span>
+    </label>
+
+    <label>
+      重力 g (m/s²):
+      <input id="gSlider" type="range" min="1" max="20" step="0.1" value="9.8">
+      <span id="gValue">9.8</span>
+    </label>
+
+    <p class="hint">
+      立方体（一辺 20 cm）。浮力 FB は<strong>押しのけた水の重さ</strong>と等しい：
+      FB = ρ<sub>水</sub> g V<sub>浸</sub>。スタート前はスライダーで位置を変えられます。
+    </p>
+
+    <div class="btn-row">
+      <button id="startBtn" type="button">スタート</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </div>
+
+  <div id="motionStatus" class="rest">スタートで浮力と重力のつり合いを確認</div>
+
+  <div class="canvas-section">
+    <p class="canvas-label">左：押しのけた水　／　右：力と式</p>
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    <strong>アルキメデスの原理</strong><br>
+    物体に働く浮力 = 物体が押しのけた流体の重さ<br>
+    FB = ρ<sub>水</sub> g V<sub>浸</sub>　　（V<sub>浸</sub> は水中に入った部分の体積）
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.getElementById("canvasWrap");
+    const motionStatus = document.getElementById("motionStatus");
+    const rhoSlider = document.getElementById("rhoSlider");
+    const depthSlider = document.getElementById("depthSlider");
+    const gSlider = document.getElementById("gSlider");
+
+    const RHO_WATER = 1000;
+    const CUBE_SIDE = 0.2;
+    const V_TOTAL = CUBE_SIDE ** 3;
+    const TANK_DEPTH = 3;
+    const MAX_DT = 1 / 30;
+    const DEFAULTS = { rho: 600, depth: 0.8, g: 9.8 };
+
+    let centerDepth = DEFAULTS.depth;
+    let objVel = 0;
+    let running = false;
+
+    function fmt(v, d) {
+      return Number(v).toFixed(d);
+    }
+
+    function syncSliders() {
+      document.getElementById("rhoValue").textContent = rhoSlider.value;
+      document.getElementById("depthValue").textContent = fmt(parseFloat(depthSlider.value), 2);
+      document.getElementById("gValue").textContent = fmt(parseFloat(gSlider.value), 1);
+    }
+
+    function submergedVolume(centerD) {
+      const half = CUBE_SIDE / 2;
+      const top = centerD - half;
+      const bottom = centerD + half;
+      if (bottom <= 0) return 0;
+      if (top >= 0) return V_TOTAL;
+      return CUBE_SIDE ** 2 * bottom;
+    }
+
+    function physicsState(centerD) {
+      const g = parseFloat(gSlider.value);
+      const rhoObj = parseFloat(rhoSlider.value);
+      const Vsub = submergedVolume(centerD);
+      const frac = Vsub / V_TOTAL;
+      const m = rhoObj * V_TOTAL;
+      const FB = RHO_WATER * g * Vsub;
+      const Fg = m * g;
+      const Wdisp = FB;
+      const Fnet = FB - Fg;
+      const half = CUBE_SIDE / 2;
+      return {
+        g, rhoObj, centerD, Vsub, frac, m, FB, Fg, Wdisp, Fnet,
+        top: centerD - half,
+        bottom: centerD + half
+      };
+    }
+
+    function resetSimulation() {
+      rhoSlider.value = DEFAULTS.rho;
+      depthSlider.value = DEFAULTS.depth;
+      gSlider.value = DEFAULTS.g;
+      centerDepth = DEFAULTS.depth;
+      objVel = 0;
+      running = false;
+      syncSliders();
+    }
+
+    function startSimulation() {
+      centerDepth = parseFloat(depthSlider.value);
+      objVel = 0;
+      running = true;
+      syncSliders();
+    }
+
+    function applyDepthFromSlider() {
+      if (running) return;
+      centerDepth = parseFloat(depthSlider.value);
+      objVel = 0;
+    }
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(280, Math.round(rect.height));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    [rhoSlider, depthSlider, gSlider].forEach((s) => {
+      s.addEventListener("input", () => {
+        syncSliders();
+        if (s === depthSlider) applyDepthFromSlider();
+      });
+      s.addEventListener("change", syncSliders);
+    });
+
+    document.getElementById("startBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      startSimulation();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      resetSimulation();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+    }
+
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      resetSimulation();
+    });
+
+    function update(dt) {
+      if (!running) return;
+      const state = physicsState(centerDepth);
+      if (Math.abs(state.Fnet) < 0.02) {
+        objVel = 0;
+        running = false;
+        return;
+      }
+      const a = state.Fnet / state.m;
+      objVel += a * dt;
+      centerDepth -= objVel * dt;
+
+      const minCenter = -CUBE_SIDE / 2 + 0.01;
+      const maxCenter = TANK_DEPTH - CUBE_SIDE / 2;
+      if (centerDepth < minCenter) {
+        centerDepth = minCenter;
+        objVel = 0;
+        running = false;
+      } else if (centerDepth > maxCenter) {
+        centerDepth = maxCenter;
+        objVel = 0;
+        running = false;
+      }
+
+      if (running) {
+        depthSlider.value = centerDepth.toFixed(2);
+      }
+    }
+
+    function layout(w, h) {
+      const pad = 12;
+      const splitX = Math.floor(w * 0.48);
+      const tank = { left: pad + 6, right: splitX - pad, top: pad + 8, bottom: h - pad - 8 };
+      const info = { left: splitX + pad, right: w - pad - 8, top: pad + 8, bottom: h - pad - 8 };
+      const waterY = tank.top + 28;
+      const pxPerM = (tank.bottom - waterY - 20) / TANK_DEPTH;
+      function depthToY(d) {
+        return waterY + d * pxPerM;
+      }
+      return { tank, info, waterY, pxPerM, depthToY, cubePx: CUBE_SIDE * pxPerM };
+    }
+
+    function drawArrow(x, y, dx, dy, color, lw) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 2) return;
+      const tx = x + dx;
+      const ty = y + dy;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+      const ang = Math.atan2(dy, dx);
+      const head = Math.min(11, len * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawTankPanel(state, L) {
+      const t = L.tank;
+      const cx = (t.left + t.right) / 2;
+      const cy = L.depthToY(state.centerD);
+      const halfPx = L.cubePx / 2;
+      const waterY = L.waterY;
+
+      ctx.fillStyle = "rgba(170, 215, 255, 0.5)";
+      ctx.fillRect(t.left, waterY, t.right - t.left, t.bottom - waterY);
+      ctx.strokeStyle = "#0077bb";
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(t.left, t.top, t.right - t.left, t.bottom - t.top);
+
+      ctx.strokeStyle = "#0099dd";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(t.left, waterY);
+      ctx.lineTo(t.right, waterY);
+      ctx.stroke();
+      ctx.fillStyle = "#004c99";
+      ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.fillText("水面", t.left + 6, waterY - 8);
+
+      const cubeTop = cy - halfPx;
+      const cubeBottom = cy + halfPx;
+      const cubeLeft = cx - halfPx;
+      const cubeRight = cx + halfPx;
+
+      if (state.Vsub > 0) {
+        const subTop = Math.max(cubeTop, waterY);
+        const subBottom = cubeBottom;
+        const subH = subBottom - subTop;
+        if (subH > 0) {
+          ctx.fillStyle = "rgba(0, 130, 220, 0.35)";
+          ctx.fillRect(cubeLeft, subTop, L.cubePx, subH);
+        }
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.strokeStyle = "#334455";
+      ctx.lineWidth = 2.5;
+      ctx.fillRect(cubeLeft, cubeTop, L.cubePx, L.cubePx);
+      ctx.strokeRect(cubeLeft, cubeTop, L.cubePx, L.cubePx);
+
+      if (state.Vsub > 0 && state.top < 0) {
+        const dispH = Math.min(L.cubePx, state.frac * L.cubePx);
+        const dispW = L.cubePx;
+        const dispX = t.right + 8 > L.info.left - 20 ? cx + halfPx + 14 : t.right - dispW - 10;
+        const dispY = waterY - dispH - 6;
+        ctx.fillStyle = "rgba(0, 150, 255, 0.25)";
+        ctx.strokeStyle = "#0088cc";
+        ctx.setLineDash([5, 4]);
+        ctx.fillRect(dispX, dispY, dispW, dispH);
+        ctx.strokeRect(dispX, dispY, dispW, dispH);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#006699";
+        ctx.font="10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("押しのけた水", dispX, dispY - 4);
+        ctx.beginPath();
+        ctx.moveTo(cx + halfPx * 0.3, cubeTop);
+        ctx.lineTo(dispX + dispW / 2, dispY + dispH);
+        ctx.strokeStyle = "rgba(0,120,200,0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "12px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("V浸（水中の部分）", cx, t.bottom + 16);
+      ctx.textAlign = "start";
+    }
+
+    function drawInfoPanel(state, L) {
+      const p = L.info;
+      const panelW = p.right - p.left;
+      const cx = (p.left + p.right) / 2;
+
+      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.fillRect(p.left, p.top, panelW, p.bottom - p.top);
+      ctx.strokeStyle = "rgba(0, 120, 200, 0.22)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(p.left, p.top, panelW, p.bottom - p.top);
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "13px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("アルキメデスの原理", cx, p.top + 22);
+      ctx.textAlign = "start";
+
+      const diagramTop = p.top + 40;
+      const diagramCy = diagramTop + 70;
+      const half = 32;
+      const scale = 0.55;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#334455";
+      ctx.lineWidth = 2;
+      ctx.fillRect(cx - half, diagramCy - half, half * 2, half * 2);
+      ctx.strokeRect(cx - half, diagramCy - half, half * 2, half * 2);
+
+      const fbLen = Math.max(12, state.FB * scale);
+      const fgLen = Math.max(12, state.Fg * scale);
+      drawArrow(cx - 16, diagramCy, 0, -fbLen, "#22aa55", 3.5);
+      drawArrow(cx + 16, diagramCy, 0, fgLen, "#ee4455", 3.5);
+      ctx.font = "bold 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#22aa55";
+      ctx.textAlign = "right";
+      ctx.fillText(`FB=${fmt(state.FB, 1)}N`, cx - 22, diagramCy - fbLen - 4);
+      ctx.fillStyle = "#ee4455";
+      ctx.textAlign = "left";
+      ctx.fillText(`Fg=${fmt(state.Fg, 1)}N`, cx + 22, diagramCy + fgLen + 12);
+      ctx.textAlign = "start";
+
+      const boxX = p.left + 10;
+      const boxY = diagramTop + 155;
+      const boxW = panelW - 20;
+      const boxH = p.bottom - boxY - 10;
+      ctx.fillStyle = "rgba(232, 244, 255, 0.96)";
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+      ctx.strokeStyle = "rgba(0, 76, 153, 0.15)";
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+      ctx.fillStyle = "#004c99";
+      ctx.font = "11px Inter, Poppins, Noto Sans JP, sans-serif";
+      const lines = [
+        `V全 = ${fmt(V_TOTAL, 4)} m³　V浸 = ${fmt(state.Vsub, 4)} m³（${fmt(state.frac * 100, 0)}%）`,
+        `押しのけた水の重さ = ρ水 g V浸 = ${fmt(state.Wdisp, 1)} N`,
+        `浮力 FB = ${fmt(state.FB, 1)} N  ← 等しい！`,
+        `物体の重さ Fg = ${fmt(state.Fg, 1)} N`,
+        `合力 Fnet = FB − Fg = ${fmt(state.Fnet, 1)} N`
+      ];
+      lines.forEach((line, i) => {
+        if (i === 2) ctx.fillStyle = "#007744";
+        else ctx.fillStyle = "#004c99";
+        ctx.fillText(line, boxX + 8, boxY + 22 + i * 20);
+      });
+
+      if (Math.abs(state.Fnet) < 0.05) {
+        ctx.fillStyle = "#007744";
+        ctx.font = "bold 12px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("→ 浮力と重力がつり合っている", boxX + 8, boxY + boxH - 12);
+      } else if (state.Fnet > 0) {
+        ctx.fillStyle = "#007744";
+        ctx.fillText("→ FB ＞ Fg：上向き（浮く）", boxX + 8, boxY + boxH - 12);
+      } else {
+        ctx.fillStyle = "#cc3355";
+        ctx.fillText("→ FB ＜ Fg：下向き（沈む）", boxX + 8, boxY + boxH - 12);
+      }
+    }
+
+    function draw() {
+      syncSliders();
+      const state = physicsState(centerDepth);
+      const w = canvas.width;
+      const h = canvas.height;
+      const L = layout(w, h);
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#f8fcff";
+      ctx.fillRect(0, 0, w, h);
+
+      drawTankPanel(state, L);
+      drawInfoPanel(state, L);
+
+      ctx.strokeStyle = "rgba(0, 120, 200, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(w * 0.48), 8);
+      ctx.lineTo(Math.floor(w * 0.48), h - 8);
+      ctx.stroke();
+
+      const floating = state.rhoObj < RHO_WATER && state.centerD <= CUBE_SIDE / 2 + 0.04;
+      if (!running) {
+        if (Math.abs(state.Fnet) < 0.05) {
+          motionStatus.textContent = floating
+            ? `水面で浮いている（V浸 = ${fmt(state.frac * 100, 0)}%）`
+            : "浮力 ＝ 重力 — つり合い";
+          motionStatus.className = floating ? "rise" : "rest";
+        } else if (state.Fnet > 0) {
+          motionStatus.textContent = "FB ＞ Fg — スタートで浮上";
+          motionStatus.className = "rise";
+        } else {
+          motionStatus.textContent = "FB ＜ Fg — スタートで沈下";
+          motionStatus.className = "sink";
+        }
+      } else if (state.Fnet > 0.05) {
+        motionStatus.textContent = "浮力 ＞ 重力 → 上昇中";
+        motionStatus.className = "rise";
+      } else if (state.Fnet < -0.05) {
+        motionStatus.textContent = "浮力 ＜ 重力 → 沈下中";
+        motionStatus.className = "sink";
+      } else {
+        motionStatus.textContent = "浮力 ＝ 重力 → 静止";
+        motionStatus.className = "rest";
+      }
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

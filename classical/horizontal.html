@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>2章 — 水平投射</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0c1428 45%, #101828 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1180px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(14,165,233,0.4), rgba(56,189,248,0.35));
+      border: 1px solid rgba(14,165,233,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #7dd3fc; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #bae6fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #e0f2fe; background: rgba(14,165,233,0.14);
+      border: 1px solid rgba(14,165,233,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(14, 165, 233, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #7dd3fc; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.08));
+      border: 1px solid rgba(14,165,233,0.32);
+    }
+    .formula-main { font-size: 1.05rem; font-weight: 800; color: #bae6fd; line-height: 1.55; }
+    .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+    .guide-callout {
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 10px; text-align: center;
+      background: linear-gradient(135deg, rgba(14,165,233,0.15), rgba(56,189,248,0.08));
+      border: 2px solid rgba(14,165,233,0.45);
+      font-size: 0.82rem; font-weight: 700; color: #e0f2fe; line-height: 1.55;
+    }
+    .guide-bar { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; justify-content: center; }
+    .guide-step {
+      flex: 1; min-width: 64px; padding: 7px 4px; border-radius: 9px; text-align: center;
+      background: rgba(15,23,42,0.6); border: 1px solid rgba(148,163,184,0.25);
+      font-size: 0.56rem; font-weight: 700; color: #64748b; transition: all 0.35s;
+    }
+    .guide-step .gs-num { display: block; font-size: 0.95rem; font-weight: 800; margin-bottom: 2px; }
+    .guide-step.active { color: #e0f2fe; border-color: rgba(14,165,233,0.7); background: rgba(12,74,110,0.35); }
+    .guide-step.done { color: #86efac; border-color: rgba(74,222,128,0.5); background: rgba(20,83,45,0.2); }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.55fr 0.45fr; grid-template-areas: "viz hud"; align-items: start; } }
+    .area-viz { grid-area: viz; }
+    .area-hud { grid-area: hud; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(14,165,233,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #7dd3fc; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    .motion-wrap { position: relative; background: #0a0e14; min-height: 380px; }
+    #motionCanvas { display: block; width: 100%; height: min(520px, 58dvh); min-height: 380px; }
+    .graph-row { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid rgba(148,163,184,0.1); }
+    @media (min-width: 640px) { .graph-row { grid-template-columns: 1fr 1fr; } }
+    .graph-wrap { position: relative; background: #0a0e14; min-height: 200px; border-top: 1px solid rgba(148,163,184,0.08); }
+    @media (min-width: 640px) { .graph-wrap + .graph-wrap { border-left: 1px solid rgba(148,163,184,0.08); border-top: none; } }
+    .graph-wrap canvas { display: block; width: 100%; height: min(240px, 28dvh); min-height: 200px; }
+    .graph-tag {
+      position: absolute; top: 8px; left: 12px; z-index: 2;
+      padding: 3px 10px; border-radius: 6px; font-size: 0.68rem; font-weight: 800;
+      background: rgba(8,12,28,0.85); border: 1px solid rgba(148,163,184,0.2);
+    }
+    .graph-tag.xt { color: #0ea5e9; border-color: rgba(14,165,233,0.35); }
+    .graph-tag.yt { color: #38bdf8; border-color: rgba(56,189,248,0.35); }
+    .explain-panel {
+      padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #animPhase {
+      padding: 8px 12px; border-radius: 10px; background: rgba(2,6,23,0.8);
+      border: 1px solid rgba(14,165,233,0.45); font-size: 0.8rem; font-weight: 700; color: #e0f2fe; line-height: 1.5;
+    }
+    #animPhase .phase-num {
+      display: inline-block; background: #0ea5e9; color: #f0f9ff; border-radius: 6px;
+      padding: 2px 8px; margin-right: 6px; font-size: 0.72rem; font-weight: 800;
+    }
+    #eqBanner { padding: 8px 12px; border-radius: 10px; text-align: center; background: rgba(0,0,0,0.35); border: 1px solid rgba(14,165,233,0.3); }
+    #eqBanner .eq { font-size: 0.95rem; font-weight: 800; color: #fff; }
+    #eqBanner .eq .hl { color: #7dd3fc; }
+    #eqBanner .sub { font-size: 0.72rem; color: #38bdf8; margin-top: 4px; font-weight: 600; }
+    #eventFlash {
+      padding: 6px 14px; border-radius: 8px; text-align: center; font-size: 0.88rem; font-weight: 800;
+      color: #fde047; background: rgba(12,74,110,0.3); border: 1px solid rgba(125,211,252,0.45);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    #eventFlash.show { opacity: 1; }
+    #hintBox { font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px; background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); }
+    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
+    .viz-foot button, .act-btn {
+      flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(14,165,233,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .act-btn.guided { background: linear-gradient(135deg, rgba(14,165,233,0.35), rgba(56,189,248,0.2)); color: #fff; border-color: #0ea5e9; font-weight: 800; }
+    .act-btn.primary { background: rgba(14,165,233,0.25); color: #e0f2fe; border-color: rgba(14,165,233,0.55); font-weight: 800; }
+    .act-btn.active { background: rgba(56,189,248,0.22); color: #e0f2fe; border-color: rgba(56,189,248,0.55); }
+    .act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px; height: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(14,165,233,0.2);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #7dd3fc; }
+    .hud-card {
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
+    }
+    .hud-card.highlight { border-color: rgba(14,165,233,0.45); background: rgba(12,74,110,0.15); }
+    .hud-card.x { border-color: rgba(14,165,233,0.45); background: rgba(8,47,73,0.15); }
+    .hud-card.y { border-color: rgba(56,189,248,0.45); background: rgba(12,74,110,0.12); }
+    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
+    .hud-card .val.big { font-size: 1.05rem; }
+    .hud-card .val.x { color: #0ea5e9; }
+    .hud-card .val.y { color: #38bdf8; }
+    .hud-card .val.t { color: #7dd3fc; }
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .vel-bar-wrap { height: 10px; border-radius: 5px; background: rgba(0,0,0,0.4); overflow: hidden; margin-top: 4px; }
+    .vel-bar-fill { height: 100%; width: 0%; transition: width 0.1s linear; background: linear-gradient(90deg, #0369a1, #38bdf8); box-shadow: 0 0 8px rgba(56,189,248,0.4); }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; }
+    .slider-row input[type=range] { width: 100%; accent-color: #0ea5e9; }
+    .calc-line { font-size: 0.72rem; color: #cbd5e1; line-height: 1.55; margin: 2px 0; }
+    .calc-line.sub { color: #94a3b8; }
+    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">→</div>
+      <p class="chapter-label">第2章 — 落体の運動</p>
+      <h2>水平投射</h2>
+      <p class="tagline">台の端から水平に投げ出す — 飛距離 · 滞空時間 · x–t / y–t グラフ</p>
+      <a id="back" href="../00_folder_classical.html#chapter-2">← 力学フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">水平 <strong>v₀</strong> + 鉛直 <strong>自由落下</strong> — 運動の合成</div>
+        <div class="formula-sub">x = v₀t（等速） · y = H − ½gt²（落下） · 軌道 y = H − gx²/(2v₀²)</div>
+      </div>
+      <div class="guide-callout" id="guideCallout">👇 まず <strong>「はじめから体験する」</strong> — 発射→水平→落下→軌道→グラフを順番に見よう</div>
+      <div class="guide-bar" id="guideBar">
+        <div class="guide-step active" data-step="1"><span class="gs-num">①</span>発射</div>
+        <div class="guide-step" data-step="2"><span class="gs-num">②</span>水平</div>
+        <div class="guide-step" data-step="3"><span class="gs-num">③</span>落下</div>
+        <div class="guide-step" data-step="4"><span class="gs-num">④</span>軌道</div>
+        <div class="guide-step" data-step="5"><span class="gs-num">⑤</span>グラフ</div>
+        <div class="guide-step" data-step="6"><span class="gs-num">⑥</span>まとめ</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label" id="vizLabel">水平投射アニメ — 台の端から飛び出す</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#0ea5e9;color:#0ea5e9"></i>実軌道</span>
+              <span><i class="color-chip" style="background:#64748b;color:#64748b"></i>予測軌道</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>v_x（一定）</span>
+              <span><i class="color-chip" style="background:#7dd3fc;color:#7dd3fc"></i>v_y（増加）</span>
+            </div>
+            <div class="motion-wrap" id="motionWrap">
+              <canvas id="motionCanvas"></canvas>
+            </div>
+            <div class="graph-row">
+              <div class="graph-wrap" id="xtWrap">
+                <span class="graph-tag xt">x–t グラフ</span>
+                <canvas id="xtCanvas"></canvas>
+              </div>
+              <div class="graph-wrap" id="ytWrap">
+                <span class="graph-tag yt">y–t グラフ</span>
+                <canvas id="ytCanvas"></canvas>
+              </div>
+            </div>
+            <div class="explain-panel">
+              <div id="animPhase"><span class="phase-num">START</span>「はじめから体験する」で始めよう</div>
+              <div id="eqBanner">
+                <div class="eq" id="eqText">x(t) = <span class="hl">v₀t</span>　y(t) = <span class="hl">H − ½gt²</span></div>
+                <div class="sub" id="eqSub">水平等速 + 鉛直自由落下</div>
+              </div>
+              <div id="eventFlash"></div>
+              <div id="hintBox">高さ H の台の端から、水平方向に v₀ で投げ出します。角度は 0° 固定。</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" class="act-btn guided" id="btnGuided">▶ はじめから体験する</button>
+              <button type="button" class="act-btn primary" id="btnStart">発射</button>
+              <button type="button" class="act-btn" id="btnStop" disabled>停止</button>
+              <button type="button" id="btnReset">初期化</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-panel">
+            <p class="hud-title">水平投射 HUD</p>
+            <div class="hud-card highlight">
+              <div class="lbl">状態</div>
+              <div class="val big t" id="hudStatus">待機中</div>
+            </div>
+            <div class="hud-grid">
+              <div class="hud-card"><div class="lbl">時刻 t</div><div class="val big t" id="hudT">0.00 s</div></div>
+              <div class="hud-card x"><div class="lbl">位置 x</div><div class="val big x" id="hudX">0.0 m</div></div>
+              <div class="hud-card y"><div class="lbl">位置 y</div><div class="val big y" id="hudY">60.0 m</div></div>
+              <div class="hud-card x"><div class="lbl">v_x</div><div class="val x" id="hudVx">80 m/s</div></div>
+              <div class="hud-card y"><div class="lbl">v_y</div><div class="val y" id="hudVy">0.0 m/s</div></div>
+              <div class="hud-card highlight"><div class="lbl">飛距離 R</div><div class="val big x" id="hudR">— m</div></div>
+            </div>
+            <div class="hud-card y">
+              <div class="lbl">|v| の大きさ</div>
+              <div class="vel-bar-wrap"><div class="vel-bar-fill" id="velBar"></div></div>
+            </div>
+            <div class="hud-card highlight">
+              <div class="lbl">式</div>
+              <div class="calc-line" id="calcX">x(t) = v₀t</div>
+              <div class="calc-line" id="calcY">y(t) = H − ½gt²</div>
+              <div class="calc-line sub" id="calcTrack">y = H − gx²/(2v₀²)</div>
+            </div>
+            <p class="hud-title" style="margin-top:4px">コントロール</p>
+            <div class="slider-row">
+              <label>初速度 v₀ <span id="lblV0">80 m/s</span></label>
+              <input type="range" id="slV0" min="10" max="200" value="80" step="1">
+            </div>
+            <div class="slider-row">
+              <label>高さ H <span id="lblH">60 m</span></label>
+              <input type="range" id="slH" min="20" max="100" value="60" step="1">
+            </div>
+            <div class="slider-row">
+              <label>重力 g <span id="lblG">9.8 m/s²</span></label>
+              <input type="range" id="slG" min="0" max="20" value="9.8" step="0.1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント（高校物理）</h3>
+      <ul class="edu-list">
+        <li><strong>運動の合成</strong>：水平方向は等速運動（v_x = v₀）、鉛直方向は自由落下（v_y = gt）</li>
+        <li><strong>滞空時間</strong>：T = √(2H/g) — 高さだけで決まる（v₀ には依存しない）</li>
+        <li><strong>飛距離</strong>：R = v₀T = v₀√(2H/g) — v₀ が大きいほど遠くへ</li>
+        <li><strong>軌道</strong>：放物線 y = H − gx²/(2v₀²) — x についての下に凸</li>
+        <li><strong>x–t グラフ</strong>：原点を通る直線（傾き = v₀）</li>
+        <li><strong>y–t グラフ</strong>：下に凸の放物線（y = H − ½gt²）</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const COL = {
+        accent: "#0ea5e9", accentLight: "#38bdf8", vel: "#7dd3fc",
+        grid: "rgba(148, 163, 184, 0.08)", axis: "rgba(148, 163, 184, 0.35)",
+        axisText: "#64748b", ground: "rgba(14, 165, 233, 0.45)",
+      };
+
+      const motionWrap = document.getElementById("motionWrap");
+      const xtWrap = document.getElementById("xtWrap");
+      const ytWrap = document.getElementById("ytWrap");
+      const motionCanvas = document.getElementById("motionCanvas");
+      const xtCanvas = document.getElementById("xtCanvas");
+      const ytCanvas = document.getElementById("ytCanvas");
+      const motionCtx = motionCanvas.getContext("2d");
+      const xtCtx = xtCanvas.getContext("2d");
+      const ytCtx = ytCanvas.getContext("2d");
+
+      const MAX_DT = 1 / 30;
+      const MARGIN = { left: 48, right: 16, top: 20, bottom: 32 };
+      const PATH_SAMPLES = 80;
+
+      let v0 = 80, H = 60, g = 9.8;
+      let simV0 = v0, simH = H, simG = g;
+      let t = 0, running = false, stopped = false, landed = false;
+      let xtHistory = [{ t: 0, x: 0 }];
+      let ytHistory = [{ t: 0, y: 60 }];
+      let pathWorld = [{ x: 0, y: 60 }];
+      let guidedTimers = [];
+
+      const layouts = { motion: { w: 0, h: 0, dpr: 1 }, xt: { w: 0, h: 0, dpr: 1 }, yt: { w: 0, h: 0, dpr: 1 } };
+
+      function fmt(v, d) { return Number(v).toFixed(d); }
+      function formatTick(value) {
+        if (Math.abs(value) < 0.05) return "0";
+        if (Math.abs(value) >= 100) return String(Math.round(value));
+        const rounded = Math.round(value * 10) / 10;
+        return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+      }
+
+      function flightInfo() {
+        if (simG <= 0) return { tLand: 4, range: simV0 * 4, tShow: 4 };
+        const tLand = Math.sqrt((2 * simH) / simG);
+        return { tLand, range: simV0 * tLand, tShow: tLand };
+      }
+
+      function positionAtTime(time) {
+        const fall = 0.5 * simG * time * time;
+        return { x: simV0 * time, y: Math.max(0, simH - fall) };
+      }
+
+      function velocityAt(time) {
+        return { vx: simV0, vy: -simG * time };
+      }
+
+      function setGuideStep(n) {
+        document.querySelectorAll(".guide-step").forEach((el) => {
+          const s = +el.dataset.step;
+          el.classList.remove("active", "done");
+          if (s < n) el.classList.add("done");
+          else if (s === n) el.classList.add("active");
+        });
+      }
+      function setPhase(n, text) {
+        document.getElementById("animPhase").innerHTML = '<span class="phase-num">' + n + '</span>' + text;
+      }
+      function setEq(eq, sub) {
+        document.getElementById("eqText").innerHTML = eq;
+        document.getElementById("eqSub").textContent = sub;
+      }
+      function setHint(text) { document.getElementById("hintBox").textContent = text; }
+      function flash(text) {
+        const el = document.getElementById("eventFlash");
+        el.textContent = text;
+        el.classList.add("show");
+        clearTimeout(flash._t);
+        flash._t = setTimeout(() => el.classList.remove("show"), 2200);
+      }
+
+      function updateFormulas() {
+        document.getElementById("calcX").textContent = "x(t) = " + v0 + "t";
+        document.getElementById("calcY").textContent = "y(t) = " + H + " − ½gt²";
+        const trackB = g > 0 ? g / (2 * v0 * v0) : 0;
+        document.getElementById("calcTrack").textContent = "y = " + H + " − " + trackB.toFixed(6) + " x²";
+        setHint("高さ " + H + " m の台の端から、水平方向に " + v0 + " m/s で投げ出します。");
+      }
+
+      function syncSliders() {
+        v0 = +document.getElementById("slV0").value;
+        H = +document.getElementById("slH").value;
+        g = +document.getElementById("slG").value;
+        document.getElementById("lblV0").textContent = v0 + " m/s";
+        document.getElementById("lblH").textContent = H + " m";
+        document.getElementById("lblG").textContent = (Number.isInteger(g) ? g : g.toFixed(1)) + " m/s²";
+        if (!running && !stopped && !landed) {
+          simV0 = v0; simH = H; simG = g;
+          updateFormulas();
+          if (t === 0) resetHistory();
+        }
+      }
+
+      function updateHud(pos, vel) {
+        const info = flightInfo();
+        const vMag = Math.sqrt(vel.vx * vel.vx + vel.vy * vel.vy);
+        let status = "待機中";
+        if (running) status = "飛行中";
+        else if (landed) status = "着地（R = " + fmt(info.range, 1) + " m）";
+        else if (stopped) status = "一時停止";
+        document.getElementById("hudStatus").textContent = status;
+        document.getElementById("hudT").textContent = fmt(t, 2) + " s";
+        document.getElementById("hudX").textContent = fmt(pos.x, 1) + " m";
+        document.getElementById("hudY").textContent = fmt(pos.y, 1) + " m";
+        document.getElementById("hudVx").textContent = fmt(vel.vx, 1) + " m/s";
+        document.getElementById("hudVy").textContent = fmt(vel.vy, 1) + " m/s";
+        document.getElementById("hudR").textContent = fmt(info.range, 1) + " m";
+        const vMax = Math.max(simV0, simG * info.tShow, 1);
+        document.getElementById("velBar").style.width = (vMag / vMax * 100) + "%";
+      }
+
+      function resetHistory() {
+        const y0 = running || stopped || landed ? simH : H;
+        xtHistory = [{ t: 0, x: 0 }];
+        ytHistory = [{ t: 0, y: y0 }];
+        pathWorld = [{ x: 0, y: y0 }];
+      }
+
+      function resetSimulation() {
+        syncSliders();
+        simV0 = v0; simH = H; simG = g;
+        t = 0; running = false; stopped = false; landed = false;
+        resetHistory();
+        document.getElementById("btnStop").disabled = true;
+        document.getElementById("btnStart").classList.remove("active");
+        ["slV0", "slH", "slG"].forEach((id) => { document.getElementById(id).disabled = false; });
+      }
+
+      function stopSimulation() {
+        if (!running) return;
+        running = false; stopped = true;
+        document.getElementById("btnStop").disabled = true;
+        document.getElementById("btnStart").classList.remove("active");
+      }
+
+      function startSimulation() {
+        if (running) return;
+        syncSliders();
+        simV0 = v0; simH = H; simG = g;
+        t = 0; running = true; stopped = false; landed = false;
+        resetHistory();
+        document.getElementById("btnStop").disabled = false;
+        document.getElementById("btnStart").classList.add("active");
+        ["slV0", "slH", "slG"].forEach((id) => { document.getElementById(id).disabled = true; });
+        flash("発射！ 水平等速 + 鉛直落下");
+      }
+
+      function resizeOne(canvas, wrap, key, minH) {
+        const rect = wrap.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        const w = Math.max(200, Math.round(rect.width));
+        const h = Math.max(minH, Math.round(rect.height));
+        const cw = Math.round(w * dpr), ch = Math.round(h * dpr);
+        if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+        layouts[key] = { w, h, dpr };
+      }
+      function resizeCanvases() {
+        resizeOne(motionCanvas, motionWrap, "motion", 380);
+        resizeOne(xtCanvas, xtWrap, "xt", 200);
+        resizeOne(ytCanvas, ytWrap, "yt", 200);
+      }
+      function setupCtx(ctx, layout) {
+        ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+      }
+
+      function drawDarkBg(c, w, h) {
+        const bg = c.createLinearGradient(0, 0, w, h);
+        bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
+        c.fillStyle = bg; c.fillRect(0, 0, w, h);
+        const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+        glow.addColorStop(0, "rgba(14, 165, 233, 0.12)");
+        glow.addColorStop(0.45, "rgba(56, 189, 248, 0.05)");
+        glow.addColorStop(1, "rgba(20, 24, 36, 0)");
+        c.fillStyle = glow; c.fillRect(0, 0, w, h);
+        c.strokeStyle = "rgba(148, 163, 184, 0.05)"; c.lineWidth = 1;
+        for (let i = 0; i < w; i += 40) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, h); c.stroke(); }
+        for (let j = 0; j < h; j += 40) { c.beginPath(); c.moveTo(0, j); c.lineTo(w, j); c.stroke(); }
+      }
+
+      function drawGlowBall(c, x, y, r) {
+        c.save();
+        c.shadowBlur = 20; c.shadowColor = COL.accent;
+        const grad = c.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+        grad.addColorStop(0, "#e0f2fe"); grad.addColorStop(0.45, COL.accent); grad.addColorStop(1, "#0284c7");
+        c.fillStyle = grad;
+        c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+        c.shadowBlur = 0;
+        c.strokeStyle = "rgba(255,255,255,0.55)"; c.lineWidth = 2; c.stroke();
+        c.restore();
+      }
+
+      function niceStep(range, targetTicks) {
+        if (range <= 0) return 1;
+        const rough = range / targetTicks;
+        const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+        const candidates = [1, 2, 5, 10];
+        for (let i = 0; i < candidates.length; i++) {
+          if (candidates[i] * pow >= rough) return candidates[i] * pow;
+        }
+        return pow * 10;
+      }
+
+      function motionScale() {
+        const info = flightInfo();
+        const layout = layouts.motion;
+        const drawW = layout.w - MARGIN.left - MARGIN.right;
+        const drawH = layout.h - MARGIN.top - MARGIN.bottom;
+        const worldW = Math.max(info.range * 1.08, 1);
+        const worldH = Math.max(simH * 1.2, 1);
+        return Math.min(drawW / worldW, drawH / worldH);
+      }
+
+      function worldToCanvas(x, y, scale) {
+        const layout = layouts.motion;
+        return {
+          x: MARGIN.left + x * scale,
+          y: layout.h - MARGIN.bottom - y * scale
+        };
+      }
+
+      function buildPathWorld(endTime) {
+        const path = [{ x: 0, y: simH }];
+        for (let i = 1; i <= PATH_SAMPLES; i++) {
+          const ti = (endTime * i) / PATH_SAMPLES;
+          path.push(positionAtTime(ti));
+        }
+        return path;
+      }
+
+      function drawVelComponents(ctx, ball, vel, scale, s) {
+        const vxLen = Math.min(60, vel.vx * 0.5 * scale);
+        const vyLen = Math.min(60, Math.abs(vel.vy) * 0.5 * scale);
+        if (vxLen > 6) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(14, 165, 233, 0.9)"; ctx.lineWidth = 2.5 * s;
+          ctx.shadowBlur = 8; ctx.shadowColor = COL.accent;
+          ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x + vxLen, ball.y); ctx.stroke();
+          ctx.restore();
+        }
+        if (vyLen > 6) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(125, 211, 252, 0.9)"; ctx.lineWidth = 2.5 * s;
+          ctx.shadowBlur = 8; ctx.shadowColor = COL.vel;
+          ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x, ball.y + vyLen); ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawPath(ctx, pathWorld, color, lineWidth, dashed, scale) {
+        if (pathWorld.length < 2) return;
+        ctx.save();
+        ctx.strokeStyle = color; ctx.lineWidth = lineWidth;
+        if (dashed) ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        pathWorld.forEach((p, i) => {
+          const c = worldToCanvas(p.x, p.y, scale);
+          if (i === 0) ctx.moveTo(c.x, c.y); else ctx.lineTo(c.x, c.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawMotionView(pos, vel) {
+        const layout = layouts.motion;
+        const ctx = motionCtx, w = layout.w, h = layout.h;
+        const s = Math.max(1, Math.min(1.5, Math.min(w, h) / 380));
+        const scale = motionScale();
+        setupCtx(ctx, layout);
+        drawDarkBg(ctx, w, h);
+
+        const info = flightInfo();
+        const groundY = worldToCanvas(0, 0, scale).y;
+
+        ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+        for (let x = MARGIN.left; x <= w - MARGIN.right; x += 40) {
+          ctx.beginPath(); ctx.moveTo(x, MARGIN.top); ctx.lineTo(x, h - MARGIN.bottom); ctx.stroke();
+        }
+        for (let y = groundY; y >= MARGIN.top; y -= 40) {
+          ctx.beginPath(); ctx.moveTo(MARGIN.left, y); ctx.lineTo(w - MARGIN.right, y); ctx.stroke();
+        }
+
+        ctx.strokeStyle = COL.ground; ctx.lineWidth = 3 * s;
+        ctx.beginPath(); ctx.moveTo(MARGIN.left - 8, groundY); ctx.lineTo(w - MARGIN.right + 8, groundY); ctx.stroke();
+
+        const platform = worldToCanvas(0, simH, scale);
+        ctx.fillStyle = "rgba(14, 165, 233, 0.12)";
+        ctx.fillRect(MARGIN.left - 10, platform.y, 18, groundY - platform.y);
+        ctx.strokeStyle = "rgba(14, 165, 233, 0.35)"; ctx.lineWidth = 2;
+        ctx.strokeRect(MARGIN.left - 10, platform.y, 18, groundY - platform.y);
+        ctx.fillStyle = COL.accentLight; ctx.font = "700 " + (10 * s) + "px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("H = " + simH + " m", MARGIN.left - 6, platform.y - 8);
+
+        const previewPath = buildPathWorld(info.tShow);
+        if (!running && !landed && !stopped) {
+          drawPath(ctx, previewPath, "rgba(100, 116, 139, 0.45)", 2, true, scale);
+        }
+
+        if (pathWorld.length > 1) {
+          ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = COL.accent;
+          drawPath(ctx, pathWorld, COL.accentLight, 2.5, false, scale);
+          ctx.restore();
+        }
+
+        const ball = worldToCanvas(pos.x, pos.y, scale);
+        drawVelComponents(ctx, ball, vel, scale, s);
+        drawGlowBall(ctx, ball.x, ball.y, 10 * s);
+
+        const landing = worldToCanvas(info.range, 0, scale);
+        ctx.fillStyle = "rgba(100, 116, 139, 0.85)";
+        ctx.beginPath(); ctx.arc(landing.x, landing.y, 5 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = COL.axisText; ctx.font = (10 * s) + "px Inter, Noto Sans JP, sans-serif";
+        ctx.fillText("R", landing.x + 8, landing.y - 4);
+      }
+
+      function drawAxisLabels(ctx, w, h, xLabel, yLabel) {
+        ctx.fillStyle = COL.axisText; ctx.font = "10px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "right"; ctx.fillText(xLabel, w - 4, h - 8);
+        ctx.textAlign = "start"; ctx.save();
+        ctx.translate(12, MARGIN.top + 12); ctx.rotate(-Math.PI / 2);
+        ctx.fillText(yLabel, 0, 0); ctx.restore();
+      }
+      function drawTimeTicks(ctx, w, h, tMax, tToPx) {
+        const tStep = niceStep(tMax, 5);
+        ctx.fillStyle = COL.axisText; ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.strokeStyle = COL.axis; ctx.lineWidth = 1; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        for (let time = 0; time <= tMax + tStep * 0.01; time += tStep) {
+          const px = tToPx(time);
+          if (px < MARGIN.left - 1 || px > w - MARGIN.right + 1) continue;
+          ctx.beginPath(); ctx.moveTo(px, h - MARGIN.bottom); ctx.lineTo(px, h - MARGIN.bottom + 5); ctx.stroke();
+          ctx.fillText(formatTick(time), px, h - MARGIN.bottom + 7);
+        }
+        ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+      }
+      function drawValueTicks(ctx, w, h, valMin, valMax, valStep, valToPx) {
+        ctx.fillStyle = COL.axisText; ctx.font = "9px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        for (let val = Math.ceil(valMin / valStep) * valStep; val <= valMax + valStep * 0.01; val += valStep) {
+          const py = valToPx(val);
+          if (py < MARGIN.top - 1 || py > h - MARGIN.bottom + 1) continue;
+          ctx.fillText(formatTick(val), MARGIN.left - 6, py);
+        }
+        ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+      }
+
+      function drawXtGraph() {
+        const layout = layouts.xt;
+        const ctx = xtCtx, w = layout.w, h = layout.h;
+        setupCtx(ctx, layout); drawDarkBg(ctx, w, h);
+        const info = flightInfo();
+        const tMax = Math.max(t, info.tShow * 1.1, 1);
+        const xMax = Math.max(simV0 * tMax * 1.05, 1);
+        const plotW = w - MARGIN.left - MARGIN.right, plotH = h - MARGIN.top - MARGIN.bottom;
+        function tToPx(time) { return MARGIN.left + (time / tMax) * plotW; }
+        function xToPx(x) { return MARGIN.top + plotH * ((xMax - x) / xMax); }
+
+        ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+        const xStep = niceStep(xMax, 4);
+        for (let x = 0; x <= xMax; x += xStep) {
+          const py = xToPx(x);
+          ctx.beginPath(); ctx.moveTo(MARGIN.left, py); ctx.lineTo(w - MARGIN.right, py); ctx.stroke();
+        }
+        const tStep = niceStep(tMax, 5);
+        for (let time = 0; time <= tMax; time += tStep) {
+          const px = tToPx(time);
+          ctx.beginPath(); ctx.moveTo(px, MARGIN.top); ctx.lineTo(px, h - MARGIN.bottom); ctx.stroke();
+        }
+        ctx.strokeStyle = COL.axis; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(MARGIN.left, MARGIN.top); ctx.lineTo(MARGIN.left, h - MARGIN.bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(MARGIN.left, h - MARGIN.bottom); ctx.lineTo(w - MARGIN.right, h - MARGIN.bottom); ctx.stroke();
+
+        ctx.strokeStyle = COL.accent; ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 10; ctx.shadowColor = COL.accent;
+        ctx.beginPath();
+        xtHistory.forEach((p, i) => {
+          const px = tToPx(p.t), py = xToPx(p.x);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke(); ctx.shadowBlur = 0;
+
+        if (xtHistory.length > 0) {
+          const last = xtHistory[xtHistory.length - 1];
+          drawGlowBall(ctx, tToPx(last.t), xToPx(last.x), 6);
+        }
+        drawValueTicks(ctx, w, h, 0, xMax, xStep, xToPx);
+        drawTimeTicks(ctx, w, h, tMax, tToPx);
+        drawAxisLabels(ctx, w, h, "t (s)", "x (m)");
+      }
+
+      function drawYtGraph() {
+        const layout = layouts.yt;
+        const ctx = ytCtx, w = layout.w, h = layout.h;
+        setupCtx(ctx, layout); drawDarkBg(ctx, w, h);
+        const info = flightInfo();
+        const tMax = Math.max(t, info.tShow * 1.1, 1);
+        const yMin = 0, yMax = simH * 1.1;
+        const plotW = w - MARGIN.left - MARGIN.right, plotH = h - MARGIN.top - MARGIN.bottom;
+        function tToPx(time) { return MARGIN.left + (time / tMax) * plotW; }
+        function yToPx(y) { return MARGIN.top + plotH * ((yMax - y) / (yMax - yMin)); }
+
+        ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+        const yStep = niceStep(yMax - yMin, 4);
+        for (let y = yMin; y <= yMax; y += yStep) {
+          const py = yToPx(y);
+          ctx.beginPath(); ctx.moveTo(MARGIN.left, py); ctx.lineTo(w - MARGIN.right, py); ctx.stroke();
+        }
+        const tStep = niceStep(tMax, 5);
+        for (let time = 0; time <= tMax; time += tStep) {
+          const px = tToPx(time);
+          ctx.beginPath(); ctx.moveTo(px, MARGIN.top); ctx.lineTo(px, h - MARGIN.bottom); ctx.stroke();
+        }
+        if (yMin <= 0) {
+          ctx.strokeStyle = "rgba(14, 165, 233, 0.35)"; ctx.lineWidth = 1.5;
+          const gy = yToPx(0);
+          ctx.beginPath(); ctx.moveTo(MARGIN.left, gy); ctx.lineTo(w - MARGIN.right, gy); ctx.stroke();
+        }
+        ctx.strokeStyle = COL.axis; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(MARGIN.left, MARGIN.top); ctx.lineTo(MARGIN.left, h - MARGIN.bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(MARGIN.left, h - MARGIN.bottom); ctx.lineTo(w - MARGIN.right, h - MARGIN.bottom); ctx.stroke();
+
+        ctx.strokeStyle = COL.accentLight; ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 10; ctx.shadowColor = COL.accentLight;
+        ctx.beginPath();
+        ytHistory.forEach((p, i) => {
+          const px = tToPx(p.t), py = yToPx(p.y);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke(); ctx.shadowBlur = 0;
+
+        if (ytHistory.length > 0) {
+          const last = ytHistory[ytHistory.length - 1];
+          drawGlowBall(ctx, tToPx(last.t), yToPx(last.y), 6);
+        }
+        drawValueTicks(ctx, w, h, yMin, yMax, yStep, yToPx);
+        drawTimeTicks(ctx, w, h, tMax, tToPx);
+        drawAxisLabels(ctx, w, h, "t (s)", "y (m)");
+      }
+
+      function update(dt) {
+        if (!running || landed) return;
+        const info = flightInfo();
+        t += dt;
+
+        if (simG <= 0) {
+          const pos = positionAtTime(t);
+          pathWorld.push(pos);
+          xtHistory.push({ t, x: pos.x });
+          ytHistory.push({ t, y: pos.y });
+          if (pos.x >= info.range) {
+            running = false; landed = true;
+            document.getElementById("btnStop").disabled = true;
+            document.getElementById("btnStart").classList.remove("active");
+            ["slV0", "slH", "slG"].forEach((id) => { document.getElementById(id).disabled = false; });
+            flash("着地！ 飛距離 R = " + fmt(info.range, 1) + " m");
+          }
+          return;
+        }
+
+        if (t >= info.tLand) {
+          t = info.tLand;
+          running = false; landed = true;
+          pathWorld = buildPathWorld(info.tLand);
+          const pos = positionAtTime(t);
+          xtHistory.push({ t, x: pos.x });
+          ytHistory.push({ t, y: pos.y });
+          document.getElementById("btnStop").disabled = true;
+          document.getElementById("btnStart").classList.remove("active");
+          ["slV0", "slH", "slG"].forEach((id) => { document.getElementById(id).disabled = false; });
+          flash("着地！ T = " + fmt(info.tLand, 2) + " s、R = " + fmt(info.range, 1) + " m");
+          return;
+        }
+
+        const pos = positionAtTime(t);
+        pathWorld.push(pos);
+        xtHistory.push({ t, x: pos.x });
+        ytHistory.push({ t, y: pos.y });
+        if (xtHistory.length > 2000) xtHistory.shift();
+        if (ytHistory.length > 2000) ytHistory.shift();
+      }
+
+      function draw() {
+        if (!running) syncSliders();
+        const pos = (running || landed || stopped) ? positionAtTime(t) : { x: 0, y: simH };
+        const vel = velocityAt(t);
+        updateHud(pos, vel);
+        drawMotionView(pos, vel);
+        drawXtGraph();
+        drawYtGraph();
+      }
+
+      function clearGuided() {
+        guidedTimers.forEach(clearTimeout);
+        guidedTimers = [];
+        document.getElementById("btnGuided").classList.remove("active");
+        document.getElementById("guideCallout").style.display = "";
+      }
+      function schedule(ms, fn) { guidedTimers.push(setTimeout(fn, ms)); }
+
+      function startGuided() {
+        clearGuided();
+        resetSimulation();
+        document.getElementById("btnGuided").classList.add("active");
+        document.getElementById("guideCallout").style.display = "none";
+        setGuideStep(1);
+        setPhase("①", "台の端から水平に発射");
+        setEq("x(t) = <span class='hl'>v₀t</span>　y(t) = <span class='hl'>H − ½gt²</span>", "水平等速 + 鉛直自由落下");
+        flash("水平投射をスタート");
+        schedule(800, startSimulation);
+
+        schedule(3500, () => {
+          setGuideStep(2);
+          setPhase("②", "水平方向 — v_x = v₀（一定）");
+          setEq("v_x = <span class='hl'>v₀</span>（等速）", "x–t グラフは直線");
+          setHint("水平方向には力が働かないので、速度は変わりません。");
+        });
+
+        schedule(7000, () => {
+          setGuideStep(3);
+          setPhase("③", "鉛直方向 — 自由落下（v_y = gt）");
+          setEq("v_y = <span class='hl'>−gt</span>", "y–t グラフは下に凸の放物線");
+          setHint("台を離れた瞬間から、重力だけが働いて下向きに加速します。");
+        });
+
+        schedule(11000, () => {
+          setGuideStep(4);
+          setPhase("④", "軌道 — 放物線 y = H − gx²/(2v₀²)");
+          flash("軌道に注目");
+        });
+
+        schedule(14000, () => {
+          stopSimulation();
+          setGuideStep(5);
+          setPhase("⑤", "x–t / y–t グラフ — 時間変化を比較");
+          setHint("x–t は直線、y–t は放物線。2方向の運動が独立に進んでいます。");
+        });
+
+        schedule(18000, () => {
+          resetSimulation();
+          setGuideStep(6);
+          setPhase("⑥", "まとめ — v₀ と H を変えて飛距離を予測しよう");
+          setEq("R = v₀√(2H/g)", "T = √(2H/g) — 滞空時間は H のみで決まる");
+          setHint("飛距離 R = v₀ × T。v₀ を大きくするか H を高くすると遠くへ飛びます。");
+          flash("お疲れさま！ 水平投射をマスター");
+          document.getElementById("btnGuided").classList.remove("active");
+        });
+      }
+
+      ["slV0", "slH", "slG"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", () => {
+          syncSliders();
+          if (!running && t === 0) resetHistory();
+        });
+      });
+      document.getElementById("btnStart").addEventListener("click", () => { clearGuided(); startSimulation(); });
+      document.getElementById("btnStop").addEventListener("click", stopSimulation);
+      document.getElementById("btnReset").addEventListener("click", () => { clearGuided(); resetSimulation(); });
+      document.getElementById("btnGuided").addEventListener("click", startGuided);
+
+      window.addEventListener("resize", resizeCanvases);
+      if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvases);
+      if (typeof ResizeObserver !== "undefined") {
+        const ro = new ResizeObserver(resizeCanvases);
+        [motionWrap, xtWrap, ytWrap].forEach((el) => ro.observe(el));
+      }
+
+      updateFormulas();
+      resetSimulation();
+      requestAnimationFrame(() => { resizeCanvases(); draw(); });
+
+      let last = performance.now();
+      function loop(now) {
+        update(Math.min((now - last) / 1000, MAX_DT));
+        last = now;
+        draw();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

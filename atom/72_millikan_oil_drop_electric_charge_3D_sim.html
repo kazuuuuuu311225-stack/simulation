@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>27章 原子の構造 — ミリカン油滴実験 3Dラボ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
+      background: linear-gradient(165deg, #030712 0%, #0f172a 40%, #1e1b4b 100%);
+      color: #e2e8f0; min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+    }
+    .page-shell { width: min(1220px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-header { text-align: center; }
+    .hero-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(253,224,71,0.35), rgba(96,165,250,0.35));
+      border: 1px solid rgba(244,114,182,0.45); font-size: 1.6rem;
+    }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: #fbcfe8; font-size: 1.35rem; }
+    .tagline { margin: 0; font-size: 0.88rem; color: #93c5fd; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    #back {
+      display: inline-block; margin-top: 8px; padding: 9px 16px;
+      color: #fce7f3; background: rgba(244,114,182,0.14);
+      border: 1px solid rgba(244,114,182,0.38); border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+    }
+    section.panel {
+      border-radius: 16px; padding: 16px 18px;
+      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(244, 114, 182, 0.28);
+    }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fbcfe8; }
+    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(253,224,71,0.1), rgba(96,165,250,0.1));
+      border: 1px solid rgba(244,114,182,0.32);
+    }
+    .formula-main { font-size: 0.88rem; font-weight: 800; color: #fde68a; line-height: 1.65; }
+    .formula-sub { font-size: 0.76rem; color: #94a3b8; margin-top: 6px; }
+    .sim-grid {
+      display: grid; gap: 14px; grid-template-columns: 1fr;
+      grid-template-areas: "viz" "edu" "hud" "ctrl";
+    }
+    @media (min-width: 960px) {
+      .sim-grid { grid-template-columns: 1.35fr 0.65fr; grid-template-areas: "viz edu" "hud hud" "ctrl ctrl"; }
+    }
+    .area-viz { grid-area: viz; }
+    .area-edu { grid-area: edu; }
+    .area-hud { grid-area: hud; }
+    .area-ctrl { grid-area: ctrl; }
+    .edu-col { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #111; border: 1px solid rgba(244,114,182,0.32); }
+    .viz-head { padding: 10px 14px 0; }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
+    .color-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #cbd5e1; }
+    .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    #field3dWrap {
+      position: relative; width: 100%; height: min(640px, 72dvh); min-height: 420px;
+      cursor: grab; touch-action: none; background: #111;
+    }
+    #field3dWrap canvas { display: block; width: 100% !important; height: 100% !important; }
+    #field3dWrap:active { cursor: grabbing; }
+    #simError {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 20px; color: #f87171; background: rgba(0,0,0,0.88); z-index: 6; font-size: 0.9rem; text-align: center;
+    }
+    #simError.show { display: flex; }
+    .mode-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); border: 1px solid rgba(244,114,182,0.45);
+      font-size: 0.74rem; font-weight: 700; color: #fbcfe8; line-height: 1.5; white-space: pre-line;
+    }
+    .balance-badge {
+      position: absolute; top: 12px; right: 12px; z-index: 5; pointer-events: none;
+      padding: 8px 12px; border-radius: 10px;
+      background: rgba(15,23,42,0.92); border: 1px solid rgba(96,165,250,0.4);
+      font-size: 0.72rem; font-weight: 700; color: #93c5fd; line-height: 1.55;
+    }
+    .balance-badge.hover { border-color: rgba(74,222,128,0.7); box-shadow: 0 0 14px rgba(74,222,128,0.2); }
+    .viz-foot {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .viz-foot button, .act-btn, .toggle-btn {
+      flex: 1; min-width: 72px; min-height: 36px; padding: 6px 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    }
+    .viz-foot button.active, .act-btn.active, .toggle-btn.on {
+      background: rgba(244,114,182,0.22); color: #fce7f3; border-color: rgba(244,114,182,0.55);
+    }
+    .toggle-btn.on.e-btn { background: rgba(96,165,250,0.22); border-color: rgba(96,165,250,0.55); color: #bfdbfe; }
+    .toggle-btn.on.x-btn { background: rgba(253,224,71,0.2); border-color: rgba(253,224,71,0.55); color: #fef3c7; }
+    .spray-btn {
+      flex: 1.6; min-width: 140px; min-height: 40px;
+      background: linear-gradient(135deg, rgba(253,224,71,0.32), rgba(251,191,36,0.18));
+      border: 1px solid rgba(253,224,71,0.62); color: #fef9c3; font-weight: 800; font-size: 0.78rem;
+      box-shadow: 0 0 14px rgba(253,224,71,0.15);
+    }
+    .spray-btn:hover { background: linear-gradient(135deg, rgba(253,224,71,0.42), rgba(251,191,36,0.28)); }
+    .spray-btn.active {
+      background: linear-gradient(135deg, rgba(253,224,71,0.5), rgba(251,191,36,0.35));
+      border-color: rgba(253,224,71,0.85); color: #fffbeb;
+      box-shadow: 0 0 18px rgba(253,224,71,0.35);
+    }
+    .spray-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .motion-btn {
+      flex: 1; min-width: 88px; min-height: 38px; font-weight: 800; font-size: 0.76rem;
+    }
+    .rise-btn {
+      background: rgba(56,189,248,0.18); border-color: rgba(56,189,248,0.55); color: #bae6fd;
+    }
+    .rise-btn:hover, .rise-btn.active { background: rgba(56,189,248,0.32); color: #e0f2fe; box-shadow: 0 0 14px rgba(56,189,248,0.25); }
+    .fall-btn {
+      background: rgba(251,191,36,0.16); border-color: rgba(251,191,36,0.55); color: #fde68a;
+    }
+    .fall-btn:hover, .fall-btn.active { background: rgba(251,191,36,0.3); color: #fef3c7; box-shadow: 0 0 14px rgba(251,191,36,0.22); }
+    .bal-btn {
+      background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.55); color: #86efac;
+    }
+    .bal-btn:hover, .bal-btn.active { background: rgba(74,222,128,0.3); color: #bbf7d0; box-shadow: 0 0 14px rgba(74,222,128,0.28); }
+    .balance-badge.rise { border-color: rgba(56,189,248,0.65); color: #7dd3fc; }
+    .balance-badge.fall { border-color: rgba(251,191,36,0.65); color: #fcd34d; }
+    .hud-section {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .hud-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .hud-card {
+      padding: 12px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-card .lbl { font-size: 0.66rem; color: #94a3b8; line-height: 1.35; }
+    .hud-card .num { font-size: 0.84rem; font-weight: 700; color: #fde68a; margin-top: 4px; }
+    .hud-card.col-e .num { color: #60a5fa; }
+    .hud-card.col-q .num { color: #fde047; }
+    .hud-card.col-drop .num { color: #fbbf24; }
+    .hud-card.highlight .num { color: #4ade80; }
+    .hud-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 600px) { .hud-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px) { .hud-grid { grid-template-columns: repeat(6, 1fr); } }
+    .formula-box {
+      padding: 12px 14px; border-radius: 10px; text-align: center; margin: 0 0 12px;
+      background: rgba(253,224,71,0.08); border: 1px solid rgba(253,224,71,0.25);
+      font-size: 0.76rem; font-weight: 700; color: #fde68a; line-height: 1.65;
+    }
+    .charge-table {
+      margin-top: 8px; font-size: 0.72rem; color: #cbd5e1; line-height: 1.7;
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(148,163,184,0.15);
+      max-height: 120px; overflow-y: auto;
+    }
+    .edu-list { margin: 0; padding: 0 0 0 1.1rem; font-size: 0.78rem; color: #cbd5e1; line-height: 1.75; }
+    .edu-panel {
+      padding: 12px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.2);
+    }
+    .edu-panel h4 { margin: 0 0 10px; font-size: 0.8rem; font-weight: 800; color: #fbcfe8; }
+    .motion-state {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px;
+      background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.2);
+      margin-bottom: 10px;
+    }
+    .motion-state .ms-icon {
+      font-size: 2rem; font-weight: 900; line-height: 1; width: 48px; text-align: center;
+    }
+    .motion-state.rise { border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.08); }
+    .motion-state.rise .ms-icon { color: #38bdf8; }
+    .motion-state.fall { border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.08); }
+    .motion-state.fall .ms-icon { color: #f59e0b; }
+    .motion-state.hover { border-color: rgba(74,222,128,0.55); background: rgba(74,222,128,0.08); }
+    .motion-state.hover .ms-icon { color: #4ade80; }
+    .motion-state.wait { border-color: rgba(148,163,184,0.3); }
+    .motion-state.wait .ms-icon { color: #94a3b8; }
+    .ms-text { font-size: 0.82rem; font-weight: 700; color: #e2e8f0; line-height: 1.55; }
+    .ms-sub { display: block; font-size: 0.72rem; font-weight: 500; color: #94a3b8; margin-top: 3px; }
+    .force-visual { margin-top: 4px; }
+    .fv-row { display: grid; grid-template-columns: 88px 1fr 52px; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .fv-label { font-size: 0.68rem; font-weight: 700; color: #cbd5e1; }
+    .fv-label.up { color: #7dd3fc; }
+    .fv-label.down { color: #fcd34d; }
+    .fv-track {
+      height: 14px; border-radius: 7px; background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(148,163,184,0.15); overflow: hidden;
+    }
+    .fv-fill { height: 100%; border-radius: 7px; transition: width 0.35s ease; min-width: 2px; }
+    .fv-fill.fe { background: linear-gradient(90deg, #38bdf8, #60a5fa); }
+    .fv-fill.fg { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .fv-val { font-size: 0.66rem; font-weight: 700; color: #fde68a; text-align: right; }
+    .fv-verdict {
+      margin-top: 8px; padding: 10px 12px; border-radius: 10px; text-align: center;
+      font-size: 0.78rem; font-weight: 800; line-height: 1.5;
+    }
+    .fv-verdict.rise { background: rgba(56,189,248,0.12); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.3); }
+    .fv-verdict.fall { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+    .fv-verdict.hover { background: rgba(74,222,128,0.12); color: #86efac; border: 1px solid rgba(74,222,128,0.35); }
+    .fv-verdict.neutral { background: rgba(148,163,184,0.08); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
+    .charge-ladder {
+      display: flex; gap: 4px; align-items: flex-end; min-height: 100px; padding: 8px 4px 4px;
+    }
+    .ladder-step {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .ladder-bar {
+      width: 100%; border-radius: 6px 6px 2px 2px;
+      background: rgba(148,163,184,0.15); border: 1px solid rgba(148,163,184,0.2);
+      position: relative; min-height: 24px;
+    }
+    .ladder-bar.hit {
+      background: rgba(74,222,128,0.25); border-color: rgba(74,222,128,0.55);
+      box-shadow: 0 0 10px rgba(74,222,128,0.2);
+    }
+    .ladder-dot {
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #e2e8f0; border: 2px solid #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.5);
+    }
+    .ladder-n { font-size: 0.62rem; font-weight: 700; color: #94a3b8; }
+    .ladder-e { font-size: 0.58rem; color: #64748b; }
+    .ladder-caption { margin: 6px 0 0; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; text-align: center; }
+    .story-box {
+      font-size: 0.76rem; color: #cbd5e1; line-height: 1.7; padding: 10px 12px;
+      border-radius: 10px; background: rgba(253,224,71,0.06); border: 1px solid rgba(253,224,71,0.2);
+    }
+    .story-box strong { color: #fde68a; }
+    .demo-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .demo-btn {
+      flex: 1; min-width: 64px; padding: 7px 6px; border-radius: 8px; cursor: pointer;
+      font-family: inherit; font-size: 0.68rem; font-weight: 700;
+      border: 1px solid rgba(244,114,182,0.35); background: rgba(255,255,255,0.05); color: #cbd5e1;
+    }
+    .demo-btn:hover { background: rgba(244,114,182,0.15); }
+    .demo-btn.active { background: rgba(244,114,182,0.25); color: #fce7f3; border-color: rgba(244,114,182,0.55); }
+    .hud-simple { display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 700px) { .hud-simple { grid-template-columns: 1fr; } }
+    .hud-block {
+      padding: 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    }
+    .hud-block h5 { margin: 0 0 8px; font-size: 0.72rem; font-weight: 800; color: #fbcfe8; }
+    .hud-line { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; margin-bottom: 4px; }
+    .hud-line span { color: #fde68a; font-weight: 700; }
+    .area-ctrl {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(244,114,182,0.16);
+    }
+    .ctrl-section-title { margin: 0 0 10px; font-size: 0.82rem; font-weight: 800; color: #fbcfe8; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ctrl-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr; } }
+    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }
+    .slider-val { color: #fde68a; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #f472b6; }
+    .hint-box {
+      margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2);
+      font-size: 0.74rem; color: #94a3b8; line-height: 1.6;
+    }
+    .journey-steps { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 10px; }
+    @media (max-width: 900px) { .journey-steps { grid-template-columns: repeat(2, 1fr); } }
+    .journey-step {
+      padding: 10px 12px; border-radius: 10px; font-size: 0.74rem; line-height: 1.55;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); color: #cbd5e1;
+    }
+    .journey-step strong { display: block; color: #fbcfe8; margin-bottom: 4px; font-size: 0.78rem; }
+    .journey-step.active { border-color: rgba(244,114,182,0.55); background: rgba(244,114,182,0.1); }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="hero-icon">💧</div>
+      <p class="chapter-label">第27章 ③ — 原子の構造</p>
+      <h2>ミリカン油滴実験 — 電気素量 e 3Dラボ</h2>
+      <p class="tagline">油滴の「上がる・下がる・止まる」から電気素量 e を発見する</p>
+      <a id="back" href="../00_folder_atom.html#chapter-27">← 原子フォルダへ戻る</a>
+    </header>
+
+    <section class="panel">
+      <h3>探検ルート — ミリカンの実験手順</h3>
+      <div class="journey-steps">
+        <div class="journey-step" id="step0"><strong>Step 0 霧吹き</strong>観測室の上から油滴をスプレーして投入</div>
+        <div class="journey-step" id="step1"><strong>Step 1 落下</strong>電場OFF → 終端速度 v<sub>f</sub> で半径 r を求める</div>
+        <div class="journey-step" id="step2"><strong>Step 2 X線</strong>油滴に電荷 q（e の整数倍）を付与</div>
+        <div class="journey-step" id="step3"><strong>Step 3 浮遊</strong>電場ON → qE = mg で静止する V を見つける</div>
+        <div class="journey-step" id="step4"><strong>Step 4 e 決定</strong>複数の q から最小単位 e を決める</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="formula-top">
+        <div class="formula-main">mg = 6πηrv<sub>f</sub> · qE = mg · q = ne · E = V/d</div>
+        <div class="formula-sub">ストークスの法則 → 半径 · 電場と重力の釣り合い → 電荷 · 電気素量 e の整数倍</div>
+      </div>
+
+      <div class="sim-grid">
+        <div class="area-viz">
+          <div class="viz-block">
+            <div class="viz-head"><p class="viz-label">ミリカン観測室 — 3Dビュー</p></div>
+            <div class="color-legend">
+              <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>油滴</span>
+              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>上昇</span>
+              <span><i class="color-chip" style="background:#f59e0b;color:#f59e0b"></i>落下</span>
+              <span><i class="color-chip" style="background:#60a5fa;color:#60a5fa"></i>電場 E</span>
+              <span><i class="color-chip" style="background:#fde047;color:#fde047"></i>X線</span>
+              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>上極板＋</span>
+            </div>
+            <p class="viz-legend" id="vizLegend">細かい油滴の粒 · 青＝上昇 · 橙＝落下 · 緑＝静止 · 矢印は選択油滴の動き</p>
+            <div id="field3dWrap">
+              <div id="simError"></div>
+              <div class="mode-badge" id="modeBadge">電場：OFF · X線：OFF</div>
+              <div class="balance-badge" id="balanceBadge">浮遊油滴：0 個</div>
+            </div>
+            <div class="viz-foot">
+              <button type="button" id="btnSpray" class="spray-btn">💨 油滴霧吹きスタート</button>
+              <button type="button" id="btnFall" class="motion-btn fall-btn">↓ 落下</button>
+              <button type="button" id="btnBalance" class="motion-btn bal-btn">● つり合い</button>
+              <button type="button" id="btnRise" class="motion-btn rise-btn">↑ 上昇</button>
+              <button type="button" id="btnE" class="toggle-btn e-btn">電場 OFF</button>
+              <button type="button" id="btnX" class="toggle-btn x-btn">X線 OFF</button>
+              <button type="button" id="btnPause">一時停止</button>
+              <button type="button" id="btnReset">初期化</button>
+              <button type="button" id="btnSpin" class="active">自動回転</button>
+              <button type="button" id="btnResetView">視点リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-edu">
+          <div class="edu-col">
+            <div class="motion-state wait" id="motionState">
+              <span class="ms-icon">💧</span>
+              <span class="ms-text">油滴を霧吹きして実験スタート<span class="ms-sub">観測室に油滴を入れてください</span></span>
+            </div>
+            <div class="edu-panel">
+              <h4>力のバランス — なぜ動く？</h4>
+              <div class="force-visual">
+                <div class="fv-row">
+                  <span class="fv-label up">↑ F<sub>E</sub>=qE</span>
+                  <div class="fv-track"><div class="fv-fill fe" id="barFe" style="width:0%"></div></div>
+                  <span class="fv-val" id="valFeBar">—</span>
+                </div>
+                <div class="fv-row">
+                  <span class="fv-label down">↓ F<sub>g</sub>=mg</span>
+                  <div class="fv-track"><div class="fv-fill fg" id="barFg" style="width:0%"></div></div>
+                  <span class="fv-val" id="valFgBar">—</span>
+                </div>
+                <div class="fv-verdict neutral" id="forceVerdict">電場の力と重力を比べよう</div>
+              </div>
+            </div>
+            <div class="edu-panel">
+              <h4>電荷は e の整数倍</h4>
+              <div class="charge-ladder" id="chargeLadder"></div>
+              <p class="ladder-caption" id="ladderCaption">浮遊させると q が記録され、e の階段に並びます</p>
+            </div>
+            <div class="edu-panel">
+              <h4>実験ガイド（ワンクリック）</h4>
+              <div class="story-box" id="storyBox">ミリカンは<strong>油滴の動き</strong>から電荷を測り、電気の最小単位 <strong>e</strong> を見つけました。</div>
+              <div class="demo-row">
+                <button type="button" class="demo-btn" id="demoSpray">①霧吹き</button>
+                <button type="button" class="demo-btn" id="demoFall">②落下</button>
+                <button type="button" class="demo-btn" id="demoXray">③X線</button>
+                <button type="button" class="demo-btn" id="demoHover">④浮遊</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-hud">
+          <div class="hud-section">
+            <p class="hud-section-title">選択油滴（3Dをクリックで切替）</p>
+            <div class="formula-box" id="formulaLive">r = √(9ηv<sub>f</sub> / 2ρg) · q = mg/E</div>
+            <div class="hud-simple">
+              <div class="hud-block">
+                <h5>油滴の大きさ</h5>
+                <div class="hud-line">半径 r <span id="hudR">—</span></div>
+                <div class="hud-line">質量 m <span id="hudM">—</span></div>
+                <div class="hud-line">終端速度 <span id="hudVf">—</span></div>
+              </div>
+              <div class="hud-block">
+                <h5>電場と力</h5>
+                <div class="hud-line">電場 E <span id="hudE">0 V/m</span></div>
+                <div class="hud-line">重力 F<sub>g</sub> <span id="hudFg">—</span></div>
+                <div class="hud-line">電場力 F<sub>E</sub> <span id="hudFe">—</span></div>
+              </div>
+              <div class="hud-block">
+                <h5>電荷の測定</h5>
+                <div class="hud-line">電荷 q <span id="hudQ">—</span></div>
+                <div class="hud-line">q/e <span id="hudQe">—</span></div>
+                <div class="hud-line">電気素量 e <span id="hudEVal">—</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="hud-section" style="margin-top:10px">
+            <p class="hud-section-title">測定した電荷一覧</p>
+            <div class="charge-table" id="chargeTable">浮遊させて q を記録するとここに表示されます</div>
+          </div>
+        </div>
+
+        <div class="area-ctrl">
+          <p class="ctrl-section-title">操作パネル</p>
+          <div class="btn-row">
+            <button type="button" id="btnSpray2" class="spray-btn">💨 油滴霧吹きスタート</button>
+            <button type="button" id="btnFall2" class="motion-btn fall-btn">↓ 落下（電場弱）</button>
+            <button type="button" id="btnBalance2" class="motion-btn bal-btn">● つり合い（qE=mg）</button>
+            <button type="button" id="btnRise2" class="motion-btn rise-btn">↑ 上昇（電場強）</button>
+          </div>
+          <div class="ctrl-grid">
+            <div class="ctrl-row">
+              <label>電圧 V <span class="slider-val" id="valVolt">1500 V</span></label>
+              <input type="range" id="slVolt" min="0" max="5000" value="1500" step="50">
+            </div>
+            <div class="ctrl-row">
+              <label>極板間隔 d <span class="slider-val" id="valD">5.0 mm</span></label>
+              <input type="range" id="slD" min="10" max="100" value="50" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>粘性係数 η <span class="slider-val" id="valEta">1.81×10⁻⁵</span></label>
+              <input type="range" id="slEta" min="50" max="300" value="181" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>X線強度 <span class="slider-val" id="valX">中</span></label>
+              <input type="range" id="slX" min="1" max="5" value="3" step="1">
+            </div>
+            <div class="ctrl-row">
+              <label>表示速度 <span class="slider-val" id="valSpeed">1.0×</span></label>
+              <input type="range" id="slSpeed" min="2" max="20" value="10" step="1">
+            </div>
+          </div>
+          <div class="hint-box" id="hintText">「油滴霧吹きスタート」で観測室に油滴を入れてから実験を始めましょう</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li><strong>霧吹き</strong>で油滴を入れ、まず電場OFFで<strong>落下</strong>を見る</li>
+        <li><strong>X線</strong>で油滴に電荷 q を付ける（マイナスの電荷）</li>
+        <li>電場ONで V を変えると、油滴は<strong>↑上昇・↓落下・●静止</strong>する</li>
+        <li>静止するとき <strong>qE = mg</strong> → 電荷 q が求まる</li>
+        <li>測った q はいつも <strong>e の整数倍</strong>（1e, 2e, 3e …）→ 電気素量 e ≈ 1.6×10⁻¹⁹ C</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const E_CHARGE = 1.602e-19;
+      const G = 9.8;
+      const RHO = 920;
+      const VIS_SMOOTH = 0.22;
+      const N_DROPS = 40;
+      const CHAMBER_HALF = 0.95;
+      const VIS_SCALE = 9e4;
+      const MIN_DROP_VIS = 0.0045;
+      const Y_MIN = -0.86;
+      const Y_MAX = 0.86;
+      const VIS_VEL_SCALE = 3.5e6;
+      const MIN_VIS_SPEED = 0.022;
+      const VEL_SMOOTH = 5.5;
+      const HOVER_BAND = 0.25;
+      const INIT_ROT_X = 0.22, INIT_ROT_Y = 0.55, INIT_ZOOM = 4.8;
+      const ZOOM_MIN = 3, ZOOM_MAX = 8.5;
+
+      const wrap = document.getElementById("field3dWrap");
+      const errBox = document.getElementById("simError");
+
+      let paused = false, autoSpin = true, eFieldOn = false, xrayOn = false;
+      let spraying = false, sprayTimer = 0, spraySpawned = 0;
+      const SPRAY_RATE = 0.1;
+      let simTime = 0, timeScale = 1;
+      const target = { volt: 1500, dMm: 5, eta: 1.81e-5, xLevel: 3, speed: 1 };
+      const smooth = { volt: 1500, dMm: 5, eta: 1.81e-5, xLevel: 3, speed: 1 };
+      let rotX = INIT_ROT_X, rotY = INIT_ROT_Y, zoom = INIT_ZOOM;
+      let dragging = false, lx = 0, ly = 0;
+      let selectedDrop = 0;
+      const measuredCharges = [];
+
+      let scene, camera, renderer, worldGroup, floorGrid;
+      let chamberBox, plateTop, plateBot, xrayMesh, xrayGlow;
+      let sprayNozzle, mistMesh;
+      let eFieldArrows = [], dropMesh, dropRings = [], velArrow = null;
+      let fgArrow = null, feArrow = null;
+      let drops = [];
+
+      function lerp(a, b, r) { return a + (b - a) * r; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+      function massFromR(r) { return RHO * (4 / 3) * Math.PI * r * r * r; }
+
+      function radiusFromVf(vf, eta) {
+        return Math.sqrt((9 * eta * Math.abs(vf)) / (2 * RHO * G));
+      }
+
+      function terminalVf(r, eta) {
+        const m = massFromR(r);
+        return (m * G) / (6 * Math.PI * eta * r);
+      }
+
+      function calcE() {
+        const d = smooth.dMm * 1e-3;
+        return d > 0 ? smooth.volt / d : 0;
+      }
+
+      function spawnDrop(i, fromSpray) {
+        const eta = smooth.eta;
+        const vfTarget = (2 + Math.random() * 6) * 1e-5;
+        const r = radiusFromVf(vfTarget, eta);
+        const m = massFromR(r);
+        const nMax = Math.max(1, smooth.xLevel);
+        const n = xrayOn ? Math.floor(1 + Math.random() * nMax * 2) : 0;
+        const q = n === 0 ? 0 : -n * E_CHARGE * (0.9 + Math.random() * 0.2);
+        return {
+          id: i,
+          y: fromSpray ? CHAMBER_HALF * (0.82 + Math.random() * 0.1) : CHAMBER_HALF * (0.35 + Math.random() * 0.55),
+          x: fromSpray ? (Math.random() - 0.5) * 0.42 : (Math.random() - 0.5) * 0.42,
+          z: fromSpray ? (Math.random() - 0.5) * 0.28 : (Math.random() - 0.5) * 0.28,
+          vy: 0,
+          visVy: fromSpray ? -MIN_VIS_SPEED * (0.4 + Math.random() * 0.4) : 0,
+          r, m, q,
+          vf: terminalVf(r, eta),
+          hovering: false,
+          measured: false,
+          motion: "fall",
+        };
+      }
+
+      function hoverVoltage(d) {
+        if (!d || Math.abs(d.q) < 1e-22) return 2200;
+        return (d.m * G / Math.abs(d.q)) * smooth.dMm * 1e-3;
+      }
+
+      function ensureDemoReady() {
+        eFieldOn = true;
+        xrayOn = true;
+        drops.forEach((drop) => {
+          if (drop.q === 0) {
+            const n = 2;
+            drop.q = -n * E_CHARGE;
+            drop.measured = false;
+          }
+        });
+        setToggleUI();
+      }
+
+      function demoFall() {
+        if (!drops.length) return;
+        ensureDemoReady();
+        const d = getSelected() || drops[0];
+        const vHover = hoverVoltage(d);
+        target.volt = clamp(Math.round(vHover * 0.38), 0, 5000);
+        document.getElementById("slVolt").value = target.volt;
+        drops.forEach((drop) => {
+          if (drop.y <= Y_MIN + 0.02 && drop.visVy >= 0) drop.visVy = -MIN_VIS_SPEED * 0.6;
+        });
+        setMotionBtnActive("fall");
+      }
+
+      function demoRise() {
+        if (!drops.length) return;
+        ensureDemoReady();
+        const d = getSelected() || drops[0];
+        const vHover = hoverVoltage(d);
+        target.volt = clamp(Math.round(vHover * 1.62), 300, 5000);
+        document.getElementById("slVolt").value = target.volt;
+        drops.forEach((drop) => {
+          if (drop.y >= Y_MAX - 0.02 && drop.visVy <= 0) drop.visVy = MIN_VIS_SPEED * 0.6;
+        });
+        setMotionBtnActive("rise");
+      }
+
+      function demoBalance() {
+        if (!drops.length) return;
+        ensureDemoReady();
+        const d = getSelected() || drops[0];
+        const vHover = hoverVoltage(d);
+        target.volt = clamp(vHover, 0, 5000);
+        smooth.volt = target.volt;
+        document.getElementById("slVolt").value = Math.round(target.volt);
+        const holdUntil = simTime + 4;
+        drops.forEach((drop) => {
+          const dropV = hoverVoltage(drop);
+          const vDiff = Math.abs(dropV - target.volt) / Math.max(dropV, 50);
+          if (drop === d || vDiff < 0.18) {
+            drop.visVy = 0;
+            drop.forceHover = holdUntil;
+            drop.motion = "hover";
+            if (drop.y <= Y_MIN + 0.06 || drop.y >= Y_MAX - 0.06) drop.y = 0.1 + Math.random() * 0.25;
+          } else {
+            drop.visVy *= 0.3;
+          }
+        });
+        const story = document.getElementById("storyBox");
+        if (story) {
+          story.innerHTML = "● <strong>つり合い</strong> — qE = mg！電場の力と重力が等しく、油滴は<strong>静止（浮遊）</strong>します。ここで q = mg/E。";
+        }
+        setMotionBtnActive("balance");
+      }
+
+      function setMotionBtnActive(mode) {
+        const map = { fall: ["btnFall", "btnFall2"], rise: ["btnRise", "btnRise2"], balance: ["btnBalance", "btnBalance2"] };
+        ["btnFall", "btnFall2", "btnRise", "btnRise2", "btnBalance", "btnBalance2"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const on = map[mode] && map[mode].includes(id);
+          el.classList.toggle("active", on);
+        });
+      }
+
+      function clearDrops() {
+        drops.length = 0;
+        measuredCharges.length = 0;
+        selectedDrop = 0;
+        spraying = false;
+        sprayTimer = 0;
+        spraySpawned = 0;
+      }
+
+      function startSpray() {
+        if (spraying) return;
+        clearDrops();
+        spraying = true;
+        sprayTimer = 0;
+        spraySpawned = 0;
+        setSprayUI();
+      }
+
+      function stepSpray(dt) {
+        if (!spraying) return;
+        sprayTimer += dt * timeScale;
+        while (sprayTimer >= SPRAY_RATE && spraySpawned < N_DROPS) {
+          sprayTimer -= SPRAY_RATE;
+          drops.push(spawnDrop(spraySpawned, true));
+          spraySpawned++;
+          if (selectedDrop >= drops.length) selectedDrop = 0;
+        }
+        if (spraySpawned >= N_DROPS) {
+          spraying = false;
+          setSprayUI();
+        }
+      }
+
+      function resetDrops() {
+        clearDrops();
+      }
+
+      function stepDrops(dt) {
+        if (!drops.length) return;
+        const E = eFieldOn ? calcE() : 0;
+        const eta = smooth.eta;
+        const moveDt = dt * timeScale;
+        const blend = 1 - Math.exp(-VEL_SMOOTH * moveDt);
+
+        drops.forEach((d) => {
+          const fg = d.m * G;
+          const feUp = d.q < 0 ? Math.abs(d.q) * E : 0;
+          const net = feUp - fg;
+          const dragK = 6 * Math.PI * eta * d.r;
+          const vHoverD = hoverVoltage(d);
+          const vMatch = eFieldOn && d.q !== 0 && Math.abs(vHoverD - smooth.volt) / Math.max(vHoverD, 80) < 0.18;
+          const forced = d.forceHover && simTime < d.forceHover;
+          const inHoverBand = forced || vMatch || (eFieldOn && d.q !== 0 && Math.abs(net) < fg * HOVER_BAND);
+
+          let vTarget = dragK > 0 ? (net / dragK) * VIS_VEL_SCALE : 0;
+
+          if (inHoverBand) {
+            vTarget = 0;
+            if (forced) d.visVy = 0;
+          } else if (!eFieldOn || d.q === 0) {
+            vTarget = -Math.max(Math.abs(vTarget), MIN_VIS_SPEED * 1.6);
+          } else if (net > fg * 0.1) {
+            vTarget = Math.max(vTarget, MIN_VIS_SPEED);
+          } else if (net < -fg * 0.1) {
+            vTarget = Math.min(vTarget, -MIN_VIS_SPEED);
+          }
+
+          vTarget = clamp(vTarget, -0.42, 0.42);
+
+          if (d.visVy === undefined) d.visVy = 0;
+          d.visVy += (vTarget - d.visVy) * blend;
+          if (inHoverBand) d.visVy *= 0.82;
+          d.vy = d.visVy / VIS_VEL_SCALE;
+
+          d.y += d.visVy * moveDt;
+
+          if (d.y <= Y_MIN) {
+            d.y = Y_MIN;
+            if (d.visVy < 0) d.visVy = 0;
+          }
+          if (d.y >= Y_MAX) {
+            d.y = Y_MAX;
+            if (d.visVy > 0) d.visVy = 0;
+          }
+
+          const vTh = 0.025;
+          const atBottom = d.y <= Y_MIN + 0.015;
+          const atTop = d.y >= Y_MAX - 0.015;
+
+          if (inHoverBand && Math.abs(d.visVy) < vTh * 2) {
+            d.motion = "hover";
+          } else if (atBottom && d.visVy <= vTh && !inHoverBand) {
+            d.motion = "rest";
+          } else if (atTop && d.visVy <= vTh && !inHoverBand) {
+            d.motion = "rest";
+          } else if (!eFieldOn || d.q === 0) {
+            d.motion = "fall";
+          } else if (d.visVy > vTh) {
+            d.motion = "rise";
+          } else if (d.visVy < -vTh) {
+            d.motion = "fall";
+          } else {
+            d.motion = net >= 0 ? "rise" : "fall";
+          }
+
+          d.hovering = eFieldOn && E > 50 && d.motion === "hover";
+
+          if (d.hovering && !d.measured) {
+            const qMeas = (d.m * G) / E * (d.q < 0 ? -1 : 1);
+            const nRound = Math.round(Math.abs(qMeas) / E_CHARGE);
+            const qSnap = -nRound * E_CHARGE;
+            measuredCharges.push({ t: simTime, q: qSnap, n: nRound, id: d.id });
+            d.measured = true;
+            d.q = qSnap;
+          }
+
+          if (xrayOn && !d.hovering && !forced && Math.random() < 0.002 * smooth.xLevel * moveDt * 60) {
+            const n = Math.floor(1 + Math.random() * smooth.xLevel * 2);
+            d.q = -n * E_CHARGE;
+            d.measured = false;
+          }
+        });
+      }
+
+      function estimateE() {
+        if (measuredCharges.length < 2) return E_CHARGE;
+        const absQs = measuredCharges.map((m) => Math.abs(m.q)).sort((a, b) => a - b);
+        let best = absQs[0];
+        let bestErr = Infinity;
+        for (const candidate of absQs) {
+          if (candidate < E_CHARGE * 0.3) continue;
+          let err = 0;
+          absQs.forEach((q) => { err += Math.abs(q / candidate - Math.round(q / candidate)); });
+          if (err < bestErr) { bestErr = err; best = candidate; }
+        }
+        return best;
+      }
+
+      function updateSmooth() {
+        const k = VIS_SMOOTH;
+        smooth.volt = lerp(smooth.volt, target.volt, k);
+        smooth.dMm = lerp(smooth.dMm, target.dMm, k);
+        smooth.eta = lerp(smooth.eta, target.eta, k);
+        smooth.xLevel = lerp(smooth.xLevel, target.xLevel, k);
+        smooth.speed = lerp(smooth.speed, target.speed, k);
+        timeScale = smooth.speed;
+      }
+
+      function getSelected() { return drops[selectedDrop] || drops[0] || null; }
+
+      function formatShort(v) {
+        if (!isFinite(v) || v === 0) return "0";
+        const a = Math.abs(v);
+        if (a >= 1e-15) return (v * 1e15).toFixed(1) + "f";
+        if (a >= 1e-18) return (v * 1e18).toFixed(1) + "a";
+        return v.toExponential(1);
+      }
+
+      function buildScene3D() {
+        const g = new THREE.Group();
+
+        chamberBox = new THREE.Mesh(
+          new THREE.BoxGeometry(2.2, 2.2, 1.4),
+          new THREE.MeshPhysicalMaterial({
+            color: 0x94a3b8, transparent: true, opacity: 0.08,
+            roughness: 0.05, metalness: 0.1, side: THREE.DoubleSide, depthWrite: false,
+          })
+        );
+        g.add(chamberBox);
+
+        const edge = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(2.2, 2.2, 1.4)),
+          new THREE.LineBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.55 })
+        );
+        g.add(edge);
+
+        plateTop = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 0.06, 0.9),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, emissive: 0xf87171, emissiveIntensity: 0.35, metalness: 0.85, roughness: 0.25 })
+        );
+        plateTop.position.set(0, 1.02, 0);
+        g.add(plateTop);
+
+        plateBot = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 0.06, 0.9),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, emissive: 0x60a5fa, emissiveIntensity: 0.35, metalness: 0.85, roughness: 0.25 })
+        );
+        plateBot.position.set(0, -1.02, 0);
+        g.add(plateBot);
+
+        for (let i = 0; i < 5; i++) {
+          const arr = new THREE.ArrowHelper(
+            new THREE.Vector3(0, -1, 0),
+            new THREE.Vector3(-0.5 + i * 0.25, 0.75, 0.35),
+            0.35, 0x60a5fa, 0.12, 0.07
+          );
+          arr.visible = false;
+          g.add(arr);
+          eFieldArrows.push(arr);
+        }
+
+        xrayMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.5, 0.4),
+          new THREE.MeshStandardMaterial({ color: 0x475569, emissive: 0xfde047, emissiveIntensity: 0.1, metalness: 0.7, roughness: 0.3 })
+        );
+        xrayMesh.position.set(-1.35, 0.2, 0);
+        g.add(xrayMesh);
+        xrayGlow = new THREE.PointLight(0xfde047, 0, 2.5, 2);
+        xrayGlow.position.copy(xrayMesh.position);
+        g.add(xrayGlow);
+
+        const xLabel = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 10, 10),
+          new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.8 })
+        );
+        xLabel.position.set(-1.35, 0.55, 0);
+        g.add(xLabel);
+
+        sprayNozzle = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.06, 0.12, 12),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, emissive: 0xfde047, emissiveIntensity: 0.15, metalness: 0.75, roughness: 0.3 })
+        );
+        sprayNozzle.position.set(0, 1.18, 0);
+        g.add(sprayNozzle);
+
+        const mistGeo = new THREE.BufferGeometry();
+        const mistCount = 48;
+        const mistPos = new Float32Array(mistCount * 3);
+        mistGeo.setAttribute("position", new THREE.BufferAttribute(mistPos, 3));
+        mistMesh = new THREE.Points(
+          mistGeo,
+          new THREE.PointsMaterial({ color: 0xfbbf24, size: 0.014, transparent: true, opacity: 0, depthWrite: false })
+        );
+        g.add(mistMesh);
+
+        dropMesh = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 8, 8),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xfbbf24, emissive: 0xfbbf24, emissiveIntensity: 0.28,
+            transparent: true, opacity: 0.55, roughness: 0.2, metalness: 0.02,
+          }),
+          N_DROPS
+        );
+        dropMesh.frustumCulled = false;
+        g.add(dropMesh);
+
+        for (let i = 0; i < N_DROPS; i++) {
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(0.03, 0.005, 6, 16),
+            new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0 })
+          );
+          g.add(ring);
+          dropRings.push(ring);
+        }
+
+        velArrow = new THREE.ArrowHelper(
+          new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3(0, 0, 0),
+          0.2, 0x38bdf8, 0.07, 0.04
+        );
+        velArrow.visible = false;
+        g.add(velArrow);
+
+        fgArrow = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 0.15, 0xf59e0b, 0.05, 0.03);
+        feArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.15, 0x38bdf8, 0.05, 0.03);
+        fgArrow.visible = false;
+        feArrow.visible = false;
+        g.add(fgArrow);
+        g.add(feArrow);
+
+        worldGroup.add(g);
+      }
+
+      function updateVisuals() {
+        const E = calcE();
+        const eOn = eFieldOn && E > 10;
+        plateTop.material.emissiveIntensity = eOn ? 0.65 : 0.3;
+        plateBot.material.emissiveIntensity = eOn ? 0.65 : 0.3;
+
+        eFieldArrows.forEach((arr) => {
+          arr.visible = eOn;
+          const s = 0.2 + (E / 5e5) * 0.35;
+          arr.setLength(clamp(s, 0.15, 0.55), s * 0.35, s * 0.18);
+        });
+
+        if (xrayGlow) {
+          xrayGlow.intensity = xrayOn ? 0.4 + 0.5 * Math.sin(simTime * 4) : 0;
+          xrayMesh.material.emissiveIntensity = xrayOn ? 0.5 : 0.08;
+        }
+
+        if (sprayNozzle) {
+          sprayNozzle.material.emissiveIntensity = spraying ? 0.55 + 0.25 * Math.sin(simTime * 18) : 0.12;
+        }
+        if (mistMesh) {
+          mistMesh.material.opacity = spraying ? 0.55 + 0.2 * Math.sin(simTime * 12) : 0;
+          const pos = mistMesh.geometry.attributes.position;
+          const mistCount = pos.count;
+          for (let i = 0; i < mistCount; i++) {
+            const t = simTime * 2.5 + i * 0.31;
+            const spread = spraying ? 0.12 + (i % 5) * 0.02 : 0;
+            pos.setXYZ(
+              i,
+              Math.sin(t * 1.7 + i) * spread,
+              1.05 - ((t * 0.18 + i * 0.04) % 0.55),
+              Math.cos(t * 1.3 + i) * spread * 0.7
+            );
+          }
+          pos.needsUpdate = true;
+        }
+
+        const dummy = new THREE.Object3D();
+        let selArrowShown = false;
+        for (let i = 0; i < N_DROPS; i++) {
+          const d = drops[i];
+          if (!d) {
+            dummy.position.set(0, -3, 0);
+            dummy.scale.setScalar(0.001);
+            dummy.updateMatrix();
+            dropMesh.setMatrixAt(i, dummy.matrix);
+            const ring = dropRings[i];
+            ring.material.opacity = 0;
+            continue;
+          }
+          const vs = Math.max(d.r * VIS_SCALE, MIN_DROP_VIS);
+          dummy.position.set(d.x, d.y, d.z);
+          dummy.scale.setScalar(vs);
+          dummy.updateMatrix();
+          dropMesh.setMatrixAt(i, dummy.matrix);
+
+          let col = 0xfbbf24;
+          if (d.q !== 0 && eFieldOn) {
+            if (d.motion === "rise") col = 0x38bdf8;
+            else if (d.motion === "fall") col = 0xf59e0b;
+            else if (d.motion === "hover") col = 0x4ade80;
+            else col = 0x7dd3fc;
+          } else if (d.q !== 0) {
+            col = 0x7dd3fc;
+          }
+          dropMesh.setColorAt(i, new THREE.Color(col));
+
+          const ring = dropRings[i];
+          ring.position.set(d.x, d.y, d.z);
+          ring.rotation.x = Math.PI / 2;
+          ring.scale.setScalar(vs * 2.2);
+          ring.material.opacity = i === selectedDrop ? 0.9 : d.hovering ? 0.5 : 0;
+          ring.material.color.setHex(d.motion === "rise" ? 0x38bdf8 : d.motion === "fall" ? 0xf59e0b : 0x4ade80);
+
+          if (i === selectedDrop && eFieldOn && d.q !== 0 && Math.abs(d.visVy) > 0.008) {
+            const dir = d.visVy >= 0 ? 1 : -1;
+            const len = clamp(Math.abs(d.visVy) * 2.2, 0.1, 0.38);
+            velArrow.position.set(d.x, d.y, d.z);
+            velArrow.setDirection(new THREE.Vector3(0, dir, 0));
+            velArrow.setLength(len, len * 0.35, len * 0.2);
+            velArrow.setColor(d.motion === "rise" ? 0x38bdf8 : 0xf59e0b);
+            velArrow.visible = true;
+            selArrowShown = true;
+          }
+        }
+        if (velArrow && !selArrowShown) velArrow.visible = false;
+
+        const sd = getSelected();
+        if (sd && drops.length) {
+          const fg = sd.m * G;
+          const feUp = sd.q < 0 ? Math.abs(sd.q) * calcE() : 0;
+          const fMax = Math.max(fg, feUp, 1e-20);
+          const fgLen = clamp(0.08 + (fg / fMax) * 0.28, 0.06, 0.32);
+          const feLen = clamp(0.08 + (feUp / fMax) * 0.28, 0.06, 0.32);
+          if (fgArrow) {
+            fgArrow.position.set(sd.x + 0.07, sd.y, sd.z);
+            fgArrow.setLength(fgLen, fgLen * 0.35, fgLen * 0.2);
+            fgArrow.visible = true;
+          }
+          if (feArrow) {
+            feArrow.position.set(sd.x - 0.07, sd.y, sd.z);
+            feArrow.setLength(feLen, feLen * 0.35, feLen * 0.2);
+            feArrow.visible = eFieldOn && sd.q !== 0;
+          }
+        } else {
+          if (fgArrow) fgArrow.visible = false;
+          if (feArrow) feArrow.visible = false;
+        }
+
+        dropMesh.instanceMatrix.needsUpdate = true;
+        if (dropMesh.instanceColor) dropMesh.instanceColor.needsUpdate = true;
+      }
+
+      function formatSci(v, unit) {
+        if (!isFinite(v)) return "—";
+        const a = Math.abs(v);
+        if (a >= 1e-6 && a < 1e-2) return (v * 1e9).toFixed(1) + " n" + unit;
+        if (a >= 1e-9) return (v * 1e12).toFixed(1) + " p" + unit;
+        if (a < 1e-12) return v.toExponential(2) + " " + unit;
+        return v.toExponential(2) + " " + unit;
+      }
+
+      function updateChargeLadder() {
+        const ladder = document.getElementById("chargeLadder");
+        const caption = document.getElementById("ladderCaption");
+        if (!ladder) return;
+        const maxN = Math.max(5, ...measuredCharges.map((m) => m.n), 3);
+        const hitNs = new Set(measuredCharges.map((m) => m.n));
+        let html = "";
+        for (let n = 1; n <= maxN; n++) {
+          const h = 28 + n * 14;
+          const hit = hitNs.has(n);
+          html += '<div class="ladder-step"><div class="ladder-bar' + (hit ? ' hit' : '') + '" style="height:' + h + 'px">' +
+            (hit ? '<div class="ladder-dot"></div>' : '') + '</div><span class="ladder-n">n=' + n + '</span><span class="ladder-e">' + n + 'e</span></div>';
+        }
+        ladder.innerHTML = html;
+        const eEst = estimateE();
+        if (measuredCharges.length >= 2) {
+          caption.textContent = "最小の段が電気素量 e ≈ " + formatSci(eEst, "C") + " ！どの q も e の整数倍";
+        } else if (measuredCharges.length === 1) {
+          caption.textContent = "もう1つ浮遊させると、e の整数倍であることが見えてきます";
+        } else {
+          caption.textContent = "浮遊させると q が記録され、e の階段に並びます";
+        }
+      }
+
+      function updateEduPanel(d, E) {
+        const ms = document.getElementById("motionState");
+        const verdict = document.getElementById("forceVerdict");
+        const barFe = document.getElementById("barFe");
+        const barFg = document.getElementById("barFg");
+        const valFeBar = document.getElementById("valFeBar");
+        const valFgBar = document.getElementById("valFgBar");
+
+        if (!d || !drops.length) {
+          ms.className = "motion-state wait";
+          ms.innerHTML = '<span class="ms-icon">💧</span><span class="ms-text">油滴を霧吹きして実験スタート<span class="ms-sub">観測室に油滴を入れてください</span></span>';
+          if (barFe) barFe.style.width = "0%";
+          if (barFg) barFg.style.width = "0%";
+          if (valFeBar) valFeBar.textContent = "—";
+          if (valFgBar) valFgBar.textContent = "—";
+          if (verdict) { verdict.className = "fv-verdict neutral"; verdict.textContent = "電場の力と重力を比べよう"; }
+          updateChargeLadder();
+          return;
+        }
+
+        const fg = d.m * G;
+        const fe = d.q < 0 ? Math.abs(d.q) * E : 0;
+        const fMax = Math.max(fg, fe, 1e-20);
+        const atBottom = d.y <= Y_MIN + 0.015;
+        const atTop = d.y >= Y_MAX - 0.015;
+        if (barFe) barFe.style.width = (fe / fMax * 100).toFixed(0) + "%";
+        if (barFg) barFg.style.width = (fg / fMax * 100).toFixed(0) + "%";
+        if (valFeBar) valFeBar.textContent = formatShort(fe) + "N";
+        if (valFgBar) valFgBar.textContent = formatShort(fg) + "N";
+
+        if (!eFieldOn || d.q === 0) {
+          if (d.motion === "rest" && atBottom) {
+            ms.className = "motion-state fall";
+            ms.innerHTML = '<span class="ms-icon">▼</span><span class="ms-text">下極板に到達<span class="ms-sub">落下完了 — X線で帯電して電場実験へ</span></span>';
+            if (verdict) { verdict.className = "fv-verdict fall"; verdict.textContent = "下極板まで落下完了"; }
+          } else {
+            ms.className = "motion-state fall";
+            ms.innerHTML = '<span class="ms-icon">↓</span><span class="ms-text">重力だけ → 落下中<span class="ms-sub">下極板まで滑らかに落ちます</span></span>';
+            if (verdict) { verdict.className = "fv-verdict fall"; verdict.textContent = "F_E = 0 → 重力で落下"; }
+          }
+        } else if (d.motion === "rest" && atBottom) {
+          ms.className = "motion-state fall";
+          ms.innerHTML = '<span class="ms-icon">▼</span><span class="ms-text">下極板に到達<span class="ms-sub">「↑上昇」で電場を強くすると上がります</span></span>';
+          if (verdict) { verdict.className = "fv-verdict fall"; verdict.textContent = "下極板まで落下完了"; }
+        } else if (d.motion === "rest" && atTop) {
+          ms.className = "motion-state rise";
+          ms.innerHTML = '<span class="ms-icon">▲</span><span class="ms-text">上極板に到達<span class="ms-sub">「↓落下」で電場を弱くすると下がります</span></span>';
+          if (verdict) { verdict.className = "fv-verdict rise"; verdict.textContent = "上極板まで上昇完了"; }
+        } else if (d.motion === "rise") {
+          ms.className = "motion-state rise";
+          ms.innerHTML = '<span class="ms-icon">↑</span><span class="ms-text">電場が強い → 上昇<span class="ms-sub">qE > mg · 電場の力が重力に勝っている</span></span>';
+          if (verdict) { verdict.className = "fv-verdict rise"; verdict.textContent = "qE > mg → 上昇！"; }
+        } else if (d.motion === "fall") {
+          ms.className = "motion-state fall";
+          ms.innerHTML = '<span class="ms-icon">↓</span><span class="ms-text">電場が弱い → 落下<span class="ms-sub">qE < mg · 重力の方が強い</span></span>';
+          if (verdict) { verdict.className = "fv-verdict fall"; verdict.textContent = "qE < mg → 落下"; }
+        } else if (d.hovering || d.motion === "hover") {
+          ms.className = "motion-state hover";
+          ms.innerHTML = '<span class="ms-icon">●</span><span class="ms-text">釣り合い → 静止（浮遊）<span class="ms-sub">qE = mg · ここで q = mg/E が求まる！</span></span>';
+          if (verdict) { verdict.className = "fv-verdict hover"; verdict.textContent = "qE = mg ✓ 浮遊成功！"; }
+        } else {
+          ms.className = "motion-state wait";
+          ms.innerHTML = '<span class="ms-icon">↕</span><span class="ms-text">V を調整して動きを変えよう<span class="ms-sub">↑上昇 / ↓落下 ボタンでも試せます</span></span>';
+          if (verdict) { verdict.className = "fv-verdict neutral"; verdict.textContent = "V を変えて力のバランスを変えよう"; }
+        }
+        updateChargeLadder();
+      }
+
+      function updateHUD() {
+        const d = getSelected();
+        const E = calcE();
+        const eEst = estimateE();
+
+        if (!d) {
+          document.getElementById("hudR").textContent = "—";
+          document.getElementById("hudM").textContent = "—";
+          document.getElementById("hudVf").textContent = "—";
+          document.getElementById("hudE").textContent = E >= 1000 ? (E / 1000).toFixed(1) + " kV/m" : E.toFixed(0) + " V/m";
+          document.getElementById("hudFg").textContent = "—";
+          document.getElementById("hudFe").textContent = "—";
+          document.getElementById("hudQ").textContent = "—";
+          document.getElementById("hudQe").textContent = "—";
+          document.getElementById("hudEVal").textContent = "—";
+        } else {
+          const fg = d.m * G;
+          const fe = d.q < 0 ? Math.abs(d.q) * E : 0;
+
+          document.getElementById("hudR").textContent = (d.r * 1e6).toFixed(2) + " µm";
+          document.getElementById("hudM").textContent = formatSci(d.m, "kg");
+          document.getElementById("hudVf").textContent = (Math.abs(d.visVy) * 1000).toFixed(1) + " mm/s";
+          document.getElementById("hudE").textContent = E >= 1000 ? (E / 1000).toFixed(1) + " kV/m" : E.toFixed(0) + " V/m";
+          document.getElementById("hudFg").textContent = formatShort(fg) + "N";
+          document.getElementById("hudFe").textContent = d.q === 0 ? "0" : formatShort(fe) + "N";
+          document.getElementById("hudQ").textContent = d.q === 0 ? "0（未帯電）" : formatSci(d.q, "C");
+          document.getElementById("hudQe").textContent = d.q === 0 ? "—" : (d.q / eEst).toFixed(1) + " ×e";
+          document.getElementById("hudEVal").textContent = measuredCharges.length >= 2 ? formatSci(eEst, "C") : "—";
+        }
+
+        document.getElementById("valVolt").textContent = Math.round(smooth.volt) + " V";
+        document.getElementById("valD").textContent = smooth.dMm.toFixed(1) + " mm";
+        document.getElementById("valEta").textContent = smooth.eta.toExponential(2) + " Pa·s";
+        document.getElementById("valX").textContent = ["弱", "やや弱", "中", "やや強", "強"][Math.round(smooth.xLevel) - 1] || "中";
+        document.getElementById("valSpeed").textContent = smooth.speed.toFixed(1) + "×";
+
+        const hoverCount = drops.filter((x) => x.hovering).length;
+        const riseCount = drops.filter((x) => x.motion === "rise").length;
+        const fallCount = drops.filter((x) => x.motion === "fall").length;
+        const dropLabel = spraying
+          ? "霧吹き中 " + spraySpawned + "/" + N_DROPS
+          : drops.length
+            ? "油滴 " + drops.length + " 粒"
+            : "油滴なし";
+        const selMotion = d && eFieldOn && d.q !== 0
+          ? (d.motion === "rise" ? " · 選択：↑上昇" : d.motion === "fall" ? " · 選択：↓落下" : d.motion === "hover" ? " · 選択：●静止" : "")
+          : "";
+        document.getElementById("modeBadge").textContent =
+          dropLabel + selMotion + "\n" +
+          (eFieldOn ? "電場 ON · E=" + (E / 1000).toFixed(1) + " kV/m · V=" + Math.round(smooth.volt) + "V" : "電場 OFF") +
+          "\n" + (xrayOn ? "X線 ON · 帯電中" : "X線 OFF");
+        const bal = document.getElementById("balanceBadge");
+        bal.textContent = "↑上昇 " + riseCount + " · ↓落下 " + fallCount + " · ●静止 " + hoverCount + " · 測定 " + measuredCharges.length;
+        bal.classList.toggle("hover", hoverCount > 0);
+        bal.classList.toggle("rise", riseCount > fallCount && eFieldOn);
+        bal.classList.toggle("fall", fallCount > riseCount && eFieldOn);
+
+        document.getElementById("formulaLive").innerHTML = !d
+          ? "観測室の上から油滴を霧吹き → 落下で v<sub>f</sub> → 電場で浮遊"
+          : d.hovering
+            ? "qE = mg ✓ · q = " + formatSci((d.m * G) / E * (d.q < 0 ? -1 : 1), "C")
+            : "r = √(9ηv<sub>f</sub>/2ρg) · q = mg/E";
+
+        let tbl = "";
+        measuredCharges.forEach((m, i) => {
+          tbl += "q" + (i + 1) + " = " + formatSci(m.q, "C") + " （n = " + m.n + "）<br>";
+        });
+        if (measuredCharges.length >= 2) {
+          tbl += "<strong style='color:#4ade80'>e ≈ " + formatSci(eEst, "C") + "</strong>";
+        }
+        document.getElementById("chargeTable").innerHTML = tbl || "浮遊させて q を記録するとここに表示されます";
+
+        updateEduPanel(d, E);
+
+        let hintMsg;
+        if (spraying) {
+          hintMsg = "霧吹き中… 観測室の上から油滴がスプレーされています（" + spraySpawned + "/" + N_DROPS + "）";
+        } else if (!drops.length) {
+          hintMsg = "「油滴霧吹きスタート」を押して、観測室に油滴を入れてください。";
+        } else if (d && d.hovering) {
+          hintMsg = "浮遊成功！q = mg/E が記録されました。別の油滴でも繰り返して e の整数倍性を確認しましょう。";
+        } else if (d && eFieldOn && d.q !== 0) {
+          if (d.motion === "rise") hintMsg = "電場が強い（qE > mg）→ 油滴が上昇しています。「↓落下」で V を下げて比較しましょう。";
+          else if (d.motion === "fall") hintMsg = "電場が弱い（qE < mg）→ 油滴が落下しています。「●つり合い」か「↑上昇」で比較しましょう。";
+          else hintMsg = "「●つり合い」ボタンで qE = mg の静止点を一発設定できます。";
+        } else if (eFieldOn) {
+          hintMsg = "電場ON — X線で帯電させると、V の大小で上昇・落下が変わります。";
+        } else {
+          hintMsg = "電場OFF — 油滴が終端速度で落下。v<sub>f</sub> から r が決まります。";
+        }
+        document.getElementById("hintText").innerHTML = hintMsg;
+
+        document.getElementById("step0").classList.toggle("active", spraying || !drops.length);
+        document.getElementById("step1").classList.toggle("active", drops.length > 0 && !eFieldOn && !spraying);
+        document.getElementById("step2").classList.toggle("active", xrayOn);
+        document.getElementById("step3").classList.toggle("active", hoverCount > 0);
+        document.getElementById("step4").classList.toggle("active", measuredCharges.length >= 3);
+      }
+
+      function setDemoActive(id) {
+        document.querySelectorAll(".demo-btn").forEach((b) => b.classList.toggle("active", b.id === id));
+      }
+
+      function runDemo(step) {
+        if (step === "spray") {
+          startSpray();
+          document.getElementById("storyBox").innerHTML = "① <strong>霧吹き</strong> — 観測室に細かい油滴を入れます。まず電場OFFで落下を見ましょう。";
+          setDemoActive("demoSpray");
+          return;
+        }
+        if (!drops.length) { startSpray(); return; }
+        if (step === "fall") {
+          eFieldOn = false; xrayOn = false;
+          target.volt = 0;
+          document.getElementById("slVolt").value = 0;
+          setToggleUI();
+          document.getElementById("storyBox").innerHTML = "② <strong>落下</strong> — 重力と空気抵抗が釣り合い、一定の速さで落ちます（終端速度 v<sub>f</sub>）。";
+          setDemoActive("demoFall");
+        } else if (step === "xray") {
+          xrayOn = true;
+          eFieldOn = false;
+          drops.forEach((drop) => {
+            if (drop.q === 0) drop.q = -(1 + Math.floor(Math.random() * 3)) * E_CHARGE;
+          });
+          setToggleUI();
+          document.getElementById("storyBox").innerHTML = "③ <strong>X線</strong> — 油滴にマイナスの電荷 q が付きます。電荷は後で e の整数倍だと分かります。";
+          setDemoActive("demoXray");
+        } else if (step === "hover") {
+          demoBalance();
+          setDemoActive("demoHover");
+        }
+      }
+
+      function setSprayUI() {
+        const label = spraying
+          ? "💨 霧吹き中… " + spraySpawned + "/" + N_DROPS
+          : drops.length
+            ? "💨 もう一度霧吹き"
+            : "💨 油滴霧吹きスタート";
+        ["btnSpray", "btnSpray2"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.textContent = label;
+          el.classList.toggle("active", spraying);
+          el.disabled = spraying;
+        });
+      }
+
+      function setToggleUI() {
+        document.getElementById("btnE").textContent = eFieldOn ? "電場 ON" : "電場 OFF";
+        document.getElementById("btnX").textContent = xrayOn ? "X線 ON" : "X線 OFF";
+        document.getElementById("btnE").classList.toggle("on", eFieldOn);
+        document.getElementById("btnX").classList.toggle("on", xrayOn);
+      }
+
+      function bindControls() {
+        document.getElementById("slVolt").addEventListener("input", (e) => { target.volt = +e.target.value; });
+        document.getElementById("slD").addEventListener("input", (e) => { target.dMm = +e.target.value / 10; });
+        document.getElementById("slEta").addEventListener("input", (e) => { target.eta = +e.target.value * 1e-7; });
+        document.getElementById("slX").addEventListener("input", (e) => { target.xLevel = +e.target.value; });
+        document.getElementById("slSpeed").addEventListener("input", (e) => { target.speed = +e.target.value / 10; });
+        document.getElementById("btnE").addEventListener("click", () => { eFieldOn = !eFieldOn; setToggleUI(); });
+        document.getElementById("btnX").addEventListener("click", () => { xrayOn = !xrayOn; setToggleUI(); });
+        document.getElementById("btnPause").addEventListener("click", () => {
+          paused = !paused;
+          document.getElementById("btnPause").textContent = paused ? "再開" : "一時停止";
+        });
+        document.getElementById("btnReset").addEventListener("click", () => {
+          simTime = 0;
+          target.volt = 1500; target.dMm = 5; target.eta = 1.81e-5; target.xLevel = 3; target.speed = 1;
+          smooth.volt = 1500; smooth.dMm = 5; smooth.eta = 1.81e-5; smooth.xLevel = 3; smooth.speed = 1;
+          eFieldOn = false; xrayOn = false;
+          document.getElementById("slVolt").value = 1500;
+          document.getElementById("slD").value = 50;
+          document.getElementById("slEta").value = 181;
+          document.getElementById("slX").value = 3;
+          document.getElementById("slSpeed").value = 10;
+          setToggleUI();
+          clearDrops();
+          setSprayUI();
+        });
+        document.getElementById("btnSpray").addEventListener("click", startSpray);
+        document.getElementById("btnSpray2").addEventListener("click", startSpray);
+        document.getElementById("btnFall").addEventListener("click", demoFall);
+        document.getElementById("btnFall2").addEventListener("click", demoFall);
+        document.getElementById("btnBalance").addEventListener("click", demoBalance);
+        document.getElementById("btnBalance2").addEventListener("click", demoBalance);
+        document.getElementById("btnRise").addEventListener("click", demoRise);
+        document.getElementById("btnRise2").addEventListener("click", demoRise);
+        document.getElementById("demoSpray").addEventListener("click", () => runDemo("spray"));
+        document.getElementById("demoFall").addEventListener("click", () => runDemo("fall"));
+        document.getElementById("demoXray").addEventListener("click", () => runDemo("xray"));
+        document.getElementById("demoHover").addEventListener("click", () => runDemo("hover"));
+        document.getElementById("btnSpin").addEventListener("click", () => {
+          autoSpin = !autoSpin;
+          document.getElementById("btnSpin").classList.toggle("active", autoSpin);
+        });
+        document.getElementById("btnResetView").addEventListener("click", () => {
+          rotX = INIT_ROT_X; rotY = INIT_ROT_Y; zoom = INIT_ZOOM;
+        });
+      }
+
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const w = Math.max(wrap.clientWidth, 1), h = Math.max(wrap.clientHeight, 320);
+        camera = new THREE.PerspectiveCamera(48, w / h, 0.05, 50);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+        wrap.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x404060, 0.7));
+        const key = new THREE.DirectionalLight(0xffffff, 1.1);
+        key.position.set(3, 4, 2);
+        scene.add(key);
+
+        floorGrid = new THREE.GridHelper(4, 20, 0x334155, 0x1e293b);
+        floorGrid.position.y = -1.35;
+        scene.add(floorGrid);
+
+        worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+        buildScene3D();
+        clearDrops();
+
+        renderer.domElement.addEventListener("pointerdown", (e) => {
+          dragging = true; lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          rotY += (e.clientX - lx) * 0.008;
+          rotX += (e.clientY - ly) * 0.008;
+          rotX = clamp(rotX, -0.85, 0.85);
+          lx = e.clientX; ly = e.clientY;
+        });
+        renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+        renderer.domElement.addEventListener("click", () => {
+          if (drops.length) selectedDrop = (selectedDrop + 1) % drops.length;
+        });
+        wrap.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          zoom = clamp(zoom + e.deltaY * 0.004, ZOOM_MIN, ZOOM_MAX);
+        }, { passive: false });
+        window.addEventListener("resize", () => {
+          const rw = Math.max(wrap.clientWidth, 1), rh = Math.max(wrap.clientHeight, 320);
+          renderer.setSize(rw, rh);
+          camera.aspect = rw / rh;
+          camera.updateProjectionMatrix();
+        });
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!renderer) return;
+        const dt = Math.min(0.05, (now - (animate.last || now)) / 1000);
+        animate.last = now;
+        updateSmooth();
+        if (!paused) {
+          simTime += dt * timeScale;
+          stepSpray(dt);
+          stepDrops(dt);
+        }
+        updateVisuals();
+        updateHUD();
+        if (autoSpin && !dragging) rotY += dt * 0.04;
+        const d = zoom;
+        camera.position.set(Math.sin(rotY) * Math.cos(rotX) * d, Math.sin(rotX) * d + 0.2, Math.cos(rotY) * Math.cos(rotX) * d);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
+
+      try {
+        if (typeof THREE === "undefined") throw new Error("Three.js の読み込みに失敗しました");
+        initThree();
+        bindControls();
+        setToggleUI();
+        setSprayUI();
+        animate(0);
+      } catch (e) {
+        errBox.textContent = e.message || String(e);
+        errBox.classList.add("show");
+      }
+    })();
+  </script>
+</body>
+</html>
