@@ -6,10 +6,11 @@
 
 | 種類 | 規則 | 例 |
 |------|------|-----|
-| 章 sim | `{章番号2桁}_{topic}.html` | `22_capacitor_parallel_connection.html` |
-| 3D sim | 上記 + `_3D_sim` 等 | `54_electromagnetic_induction_3D_sim.html` |
-| 探究 sim | `{topic}_simulation.html` | `brownian_motion_simulation.html` |
-| 分野索引 | `00_folder_{分野}.html` | `00_folder_electromagnetism.html` |
+| 章 sim | `{章番号2桁}_{topic}.html` | `classical/22_capacitor_parallel_connection.html` |
+| 3D sim | 上記 + `_3D_sim` 等 | `electromagnetism/54_electromagnetic_induction_3D_sim.html` |
+| 探究 sim | `{topic}_simulation.html` | `thermo/brownian_motion_simulation.html` |
+| 分野索引 | `00_folder_{分野}.html`（ルート） | `00_folder_electromagnetism.html` |
+| 分野フォルダ | `classical/` `thermo/` `waves/` `electromagnetism/` `atom/` `ex/` | 各100件以内 |
 | トップ | `00_physLabo_top.html` | — |
 
 ## `<head>` 必須タグ（sim ページ）
@@ -45,7 +46,7 @@
 
 **文言:** `← {分野名} · 第{N}章`（EX は `← EX · 探究`）
 
-**href:** `00_folder_{分野}.html#chapter-{N}`
+**href:** `../00_folder_{分野}.html#chapter-{N}`（sim は分野サブフォルダ内）
 
 | 分野 | フォルダ | 表示名 |
 |------|----------|--------|
@@ -59,13 +60,13 @@
 例:
 
 ```html
-<a id="back" href="00_folder_electromagnetism.html#chapter-22">← 電磁気 · 第22章</a>
+<a id="back" href="../00_folder_electromagnetism.html#chapter-22">← 電磁気 · 第22章</a>
 ```
 
 ## 新 sim 追加手順
 
-1. 上記規約に従い HTML を作成
-2. 該当 `00_folder_*.html` の章 `<ul class="sim-list">` に `menu-link` を追加
+1. 上記規約に従い HTML を該当分野フォルダ（例: `electromagnetism/`）に作成
+2. 該当 `00_folder_*.html` の章 `<ul class="sim-list">` に `menu-link` を追加（`href="electromagnetism/…"`）
 3. `00_physLabo_top.html` の章 sim 数（`chapter-count`）を更新（必要なら）
 4. `assets/` を編集した場合は `sync-assets-to-sim.ps1` を実行
 5. ブラウザで PC / スマホ表示・戻るリンク・章アコーディオン展開を確認
@@ -84,7 +85,7 @@
 ## アセット同期
 
 ```
-powershell -File sync-assets-to-sim.ps1
+powershell -File tools/dev/sync-assets-to-sim.ps1
 ```
 
 リポジトリルート `assets/` → `projectile-sim/assets/` にミラーします。
@@ -92,16 +93,16 @@ powershell -File sync-assets-to-sim.ps1
 ## 一括メンテナンス
 
 ```
-node apply-high-priority-migrations.mjs
-node apply-medium-priority-migrations.mjs
+node tools/dev/apply-high-priority-migrations.mjs
+node tools/dev/apply-medium-priority-migrations.mjs
 ```
 
 ## テンプレート（新規 sim 用）
 
 | ファイル | 用途 |
 |----------|------|
-| `TEMPLATE_2d_panel.html` | 2D canvas + panel 型 |
-| `TEMPLATE_3d_simgrid.html` | Three.js + sim-grid 型 |
+| `tools/templates/TEMPLATE_2d_panel.html` | 2D canvas + panel 型 |
+| `tools/templates/TEMPLATE_3d_simgrid.html` | Three.js + sim-grid 型 |
 
 ## 数式表示
 

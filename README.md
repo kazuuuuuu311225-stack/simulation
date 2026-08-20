@@ -7,9 +7,12 @@
 ```
 00_physLabo_top.html      … トップ（6分野カード）
 00_folder_*.html          … 分野別章一覧（6ファイル）
-{章}_{topic}.html         … 各シミュレーション（約200本）
+classical/ thermo/ …      … 分野ごとの sim HTML（各フォルダ100件以内）
 assets/                   … 共通 CSS / JS
+tools/                    … サーバー・開発スクリプト
 ```
+
+GitHub 向けに **1フォルダあたり100ファイル以内** となるよう sim は上記6分野フォルダに配置しています。
 
 ## 閲覧方法
 
@@ -38,6 +41,25 @@ GitHub Pages 等に `projectile-sim/` ごとデプロイする運用を想定し
 
 設定ファイル: `assets/js/auth-gate.js`
 
+## NEWS（お知らせ）
+
+| ファイル | 役割 |
+|----------|------|
+| `data/news.json` | 公開記事データ（HP が読み込む） |
+| `admin/news.html` | 管理画面（ID/パスワード） |
+| `tools/news-server.mjs` | 記事保存 API + ローカル配信 |
+
+### 使い方
+
+1. `data/news-admin.example.json` を `data/news-admin.json` にコピーし、**ID とパスワード**を設定（Git には含めない）
+2. `tools/start-news-server.bat` または `node tools/news-server.mjs` を実行
+3. ブラウザで `http://localhost:8790/admin/news.html` を開きログイン
+4. 記事を書いて **「HPに反映」** → `data/news.json` が更新され、トップの NEWS に表示
+
+初回のみ `news-admin.json` が無い場合、サーバーが `admin` / `admin123` を自動作成します。**必ず変更してください。**
+
+GitHub Pages 等にデプロイする場合は、更新後の `data/news.json` を一緒にアップロードしてください。
+
 ## 開発
 
 新規 sim・更新ルールは **`CONVENTIONS.md`** を参照してください。
@@ -45,19 +67,26 @@ GitHub Pages 等に `projectile-sim/` ごとデプロイする運用を想定し
 ### アセット同期（ルート → projectile-sim）
 
 ```powershell
-powershell -File sync-assets-to-sim.ps1
+powershell -File tools/dev/sync-assets-to-sim.ps1
+```
+
+### フォルダ整理（sim を分野サブフォルダへ移動）
+
+```powershell
+node tools/reorganize-sims-into-folders.mjs --dry-run
+node tools/reorganize-sims-into-folders.mjs
 ```
 
 ### 高優先度メンテ一括適用
 
 ```powershell
-node apply-high-priority-migrations.mjs
+node tools/dev/apply-high-priority-migrations.mjs
 ```
 
 ### 中優先度メンテ一括適用
 
 ```powershell
-node apply-medium-priority-migrations.mjs
+node tools/dev/apply-medium-priority-migrations.mjs
 ```
 
 - `physlabo-a11y.js` を sim に追加
@@ -73,8 +102,8 @@ node apply-medium-priority-migrations.mjs
 
 ## 新規 sim テンプレート
 
-- `TEMPLATE_2d_panel.html` — 2D panel 型
-- `TEMPLATE_3d_simgrid.html` — 3D sim-grid 型
+- `tools/templates/TEMPLATE_2d_panel.html` — 2D panel 型
+- `tools/templates/TEMPLATE_3d_simgrid.html` — 3D sim-grid 型
 
 ## 主な共通アセット
 
