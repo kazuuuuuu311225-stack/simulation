@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
   <title>5章 — 振り子とエネルギー保存</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
+  <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
+<style>
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
@@ -45,143 +47,149 @@
     .formula-main { font-size: 1.05rem; font-weight: 800; color: #6ee7b7; line-height: 1.55; }
     .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
     .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
-    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
-    .area-viz { grid-area: viz; }
-    .area-hud { grid-area: hud; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; min-width: 0; }
+    .area-hud { grid-area: hud; min-width: 0; }
     .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(52,211,153,0.32); }
-    .viz-head { padding: 10px 14px 0; }
-    .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #6ee7b7; }
+    .viz-head {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 10px 14px 0;
+    }
+    .speed-row { display: flex; align-items: center; gap: 5px; }
+    .speed-row .speed-lbl { font-size: 0.66rem; color: #64748b; font-weight: 700; margin-right: 2px; }
+    .speed-btn {
+      padding: 4px 9px; min-height: 26px; font-family: inherit; font-size: 0.68rem; font-weight: 700;
+      border-radius: 999px; cursor: pointer; color: #94a3b8;
+      border: 1px solid rgba(148,163,184,0.28); background: rgba(255,255,255,0.04);
+    }
+    .speed-btn.is-active { color: #fff; background: rgba(52,211,153,0.32); border-color: rgba(52,211,153,0.6); }
+    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #6ee7b7; }
     .color-legend {
       display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
       border-bottom: 1px solid rgba(148,163,184,0.1);
     }
     .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
     .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
-    #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
-    #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
+    .canvas-wrap { position: relative; background: #0a0e14; }
+    .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
     .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
-    .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
+    .live-strip {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+      padding: 10px 14px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: rgba(15,23,42,0.55);
+    }
+    .live-cell { padding: 7px 6px; border-radius: 9px; text-align: center; background: rgba(0,0,0,0.28); border: 1px solid rgba(148,163,184,0.16); }
+    .live-cell .k { display: block; font-size: 0.58rem; color: #64748b; font-weight: 700; margin-bottom: 3px; }
+    .live-cell .v { display: block; font-size: 0.78rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #f1f5f9; }
+    .live-cell.t .v { color: #fde68a; }
+    .live-cell.th .v { color: #7dd3fc; }
+    .live-cell.h .v { color: #c4b5fd; }
+    .live-cell.u .v { color: #38bdf8; }
+    .live-cell.ke .v { color: #34d399; }
+    .live-cell.e .v { color: #a78bfa; }
+    @media (max-width: 720px) { .live-strip { grid-template-columns: repeat(3, 1fr); } }
+    .graph-block { border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; background: #0a0e14; }
+    .graph-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; padding: 0 14px 6px; }
+    .graph-title { margin: 0; font-size: 0.78rem; font-weight: 700; color: #6ee7b7; }
+    .graph-legend { margin: 0; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
     .explain-panel {
       padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
       background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,14,20,0.98));
-      display: flex; flex-direction: column; gap: 8px;
     }
-    #statusPanel, #hintBox {
+    #statusPanel {
       font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px;
       background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2);
     }
-    #statusPanel.balanced, #statusPanel.pos-work, #statusPanel.p-low { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
-    #statusPanel.rotating, #statusPanel.neg-work, #statusPanel.p-high { color: #fda4af; border-color: rgba(251,113,133,0.35); }
-    #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
-    #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
-    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.done { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
     .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
     .viz-foot button, .act-btn, .btn-row button {
       flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
       font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
       border: 1px solid rgba(52,211,153,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
     }
-    .act-btn.primary, #startBtn, #dropBtn, #releaseBtn, #shotBtn {
-      background: rgba(52,211,153,0.25); color: #fff; border-color: rgba(52,211,153,0.55); font-weight: 800;
-    }
+    .act-btn.primary, #dropBtn { background: rgba(52,211,153,0.25); color: #fff; border-color: rgba(52,211,153,0.55); font-weight: 800; }
     .hud-panel {
       padding: 14px 16px; border-radius: 14px; height: 100%;
       background: rgba(255,255,255,0.03); border: 1px solid rgba(52,211,153,0.2);
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 8px; max-height: min(820px, 85dvh); overflow-y: auto;
     }
     .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #6ee7b7; }
-    .hud-card {
-      padding: 8px 10px; border-radius: 10px;
-      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
-    }
-    .hud-card.highlight { border-color: rgba(52,211,153,0.45); background: rgba(30,20,10,0.2); }
-    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
-    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
     .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
-    .slider-row label, label.slider-label {
-      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+    .slider-row label {
+      font-size: 0.72rem; color: #cbd5e1; font-weight: 600; display: flex; justify-content: space-between; gap: 8px;
     }
-    .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #34d399; }
-    .side-group {
-      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
-      border: 1px solid rgba(148,163,184,0.2); margin-bottom: 8px;
+    .slider-row label .val { color: #6ee7b7; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .slider-row input[type=range] { width: 100%; accent-color: #34d399; }
+    .preset-block { margin: 2px 0 8px; }
+    .preset-title { margin: 0 0 5px; font-size: 0.68rem; font-weight: 700; color: #64748b; }
+    .preset-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .preset-btn {
+      padding: 5px 9px; min-height: 30px; font-family: inherit; font-size: 0.68rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; color: #cbd5e1;
+      border: 1px solid rgba(148,163,184,0.26); background: rgba(255,255,255,0.05);
     }
-    .side-group.left { border-left: 3px solid #38bdf8; }
-    .side-group.right { border-left: 3px solid #fb7185; }
-    .side-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
-    .dir-row { display: flex; gap: 6px; margin-top: 4px; }
-    .dir-row button, .dir-btn {
-      flex: 1; padding: 8px 6px; min-height: 36px; font-family: inherit; font-size: 0.72rem;
-      font-weight: 600; border: 1px solid rgba(148,163,184,0.28); border-radius: 8px;
-      background: rgba(255,255,255,0.06); color: #cbd5e1; cursor: pointer;
+    .preset-btn.is-active { color: #fff; background: rgba(52,211,153,0.28); border-color: rgba(52,211,153,0.55); }
+    .preset-btn .pv { color: #94a3b8; font-weight: 700; margin-left: 4px; font-size: 0.64rem; }
+    .preset-btn.is-active .pv { color: #a7f3d0; }
+    .formula-box {
+      margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(52,211,153,0.1);
+      font-size: 0.78rem; font-weight: 600; color: #6ee7b7; text-align: center; line-height: 1.55;
     }
-    .dir-row button.active, .dir-btn.active {
-      background: rgba(52,211,153,0.3); color: #fff; border-color: rgba(52,211,153,0.55);
-    }
-    .mass-row { display: flex; flex-direction: column; gap: 8px; }
-    .mass-item {
-      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
-      border: 1px solid rgba(148,163,184,0.2);
-    }
-    .mass-item:nth-child(1) { border-left: 3px solid #38bdf8; }
-    .mass-item:nth-child(2) { border-left: 3px solid #fbbf24; }
-    .mass-item:nth-child(3) { border-left: 3px solid #fb7185; }
-    .mass-label { display: block; font-size: 0.72rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
     .hint { margin: 0 0 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; }
-    .formula-box { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(52,211,153,0.1);
-      font-size: 0.78rem; font-weight: 600; color: #6ee7b7; text-align: center; line-height: 1.55; }
     .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    #formulaPanel, #calcPanel {
+    #calcPanel {
       margin-top: 12px; padding: 12px 14px; border-radius: 12px;
       background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.2);
     }
-    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #6ee7b7; }
+    #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #6ee7b7; }
     .concept { margin: 0 0 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.55; }
-    .formula-block, .calc-block {
+    .calc-block {
       margin-bottom: 10px; padding: 10px; border-radius: 10px;
       background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
     }
-    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
-    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #34d399; }
-    .formula-line, .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
-    .formula-line.sub, .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
-    .num, .num-before { font-weight: 600; color: #7dd3fc; }
-    .num-after { font-weight: 600; color: #fda4af; }
-    .num-dp, .num-cm { font-weight: 600; color: #c4b5fd; }
-    .num-to-bat { font-weight: 600; color: #fde68a; }
-    #liveReadout {
-      margin: 10px 14px 12px; padding: 12px 14px; border-radius: 12px;
-      background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.2);
-      display: grid; gap: 8px;
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #34d399; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
+    .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
+    .num { font-weight: 600; color: #7dd3fc; }
+    .view-tabs { display: flex; gap: 8px; margin-bottom: 0; }
+    .view-tab {
+      flex: 1; max-width: 220px; padding: 10px 14px; border-radius: 12px 12px 0 0;
+      border: 1px solid rgba(148,163,184,0.18); border-bottom: none;
+      background: rgba(18,24,36,0.45); color: #94a3b8;
+      font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
     }
-    #liveReadout.cols3 { grid-template-columns: 1fr auto 1fr; }
-    #liveReadout.cols4 { grid-template-columns: 1fr 1fr 1fr; }
-    .live-col { font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
-    .live-col.left, .live-col.m1 { color: #7dd3fc; }
-    .live-col.right, .live-col.m3 { color: #fda4af; text-align: right; }
-    .live-col.m2 { color: #fde68a; }
-    .live-col.center { text-align: center; color: #fde68a; border-left: 1px solid rgba(148,163,184,0.15);
-      border-right: 1px solid rgba(148,163,184,0.15); padding: 0 8px; }
-    .live-col .title { display: block; font-weight: 700; font-size: 0.68rem; margin-bottom: 4px; }
-    .live-col .state { display: block; margin-top: 4px; font-weight: 700; font-size: 0.82rem; }
-    .live-col .state.balanced { color: #6ee7b7; }
-    .live-col .state.rotating { color: #fda4af; }
-    .live-col.g-row { grid-column: 1 / -1; text-align: center; color: #fde68a; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
-    .graph-block { margin-top: 10px; border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; }
-    .graph-legend { margin: 0 14px 6px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
-    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
+    .view-tab.is-active { color: #ecfdf5; background: rgba(18,24,36,0.88); border-color: rgba(52,211,153,0.35); box-shadow: inset 0 2px 0 #34d399; }
+    .view-tab .tab-count { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 0.72rem; background: rgba(52,211,153,0.18); color: #a7f3d0; }
+    #simView.is-hidden, #recordPanel.is-hidden { display: none; }
+    #recordPanel { margin-top: 0; padding: 14px 16px; border-radius: 0 0 14px 14px; background: rgba(15,23,42,0.55); border: 1px solid rgba(52,211,153,0.22); border-top: none; }
+    #recordPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #6ee7b7; }
+    .record-desc { margin: 0 0 12px; font-size: 0.76rem; color: #94a3b8; line-height: 1.55; }
+    .record-meta { display: grid; gap: 8px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.18); font-size: 0.76rem; color: #cbd5e1; line-height: 1.65; }
+    @media (min-width: 640px) { .record-meta { grid-template-columns: repeat(2, 1fr); } }
+    .record-meta strong { color: #a7f3d0; }
+    .record-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .record-tools button { padding: 7px 12px; min-height: 34px; font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer; color: #cbd5e1; border: 1px solid rgba(148,163,184,0.28); background: rgba(255,255,255,0.05); }
+    .record-table-wrap { max-height: min(420px, 52dvh); overflow: auto; border-radius: 10px; border: 1px solid rgba(148,163,184,0.14); background: rgba(0,0,0,0.22); }
+    .record-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+    .record-table th, .record-table td { padding: 7px 8px; text-align: center; border-bottom: 1px solid rgba(148,163,184,0.1); white-space: nowrap; }
+    .record-table th { position: sticky; top: 0; z-index: 1; font-size: 0.68rem; color: #94a3b8; background: rgba(12,16,24,0.98); }
+    .record-table tr.is-latest { background: rgba(52,211,153,0.14) !important; }
+    .record-table .col-u { color: #38bdf8; font-weight: 600; }
+    .record-table .col-k { color: #34d399; font-weight: 600; }
+    .record-empty { margin: 0; padding: 24px 12px; text-align: center; font-size: 0.8rem; color: #64748b; line-height: 1.6; }
+    .theory-grid { display: grid; gap: 10px; grid-template-columns: 1fr; margin-top: 12px; }
+    @media (min-width: 720px) { .theory-grid { grid-template-columns: repeat(3, 1fr); } }
+    .theory-card { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.16); }
+    .theory-card .tc-label { margin: 0 0 5px; font-size: 0.7rem; font-weight: 700; color: #34d399; }
+    .theory-card .tc-formula { margin: 0 0 5px; font-size: 0.8rem; color: #e2e8f0; line-height: 1.5; }
+    .theory-card .tc-value { margin: 0; font-size: 0.78rem; color: #94a3b8; }
+    .theory-card .tc-value strong { color: #6ee7b7; font-variant-numeric: tabular-nums; }
     .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
     .edu-list li { margin-bottom: 6px; }
-    .legend { display: none; }
-    .sim-layout { display: contents; }
-    .canvas-section { display: contents; }
-    @media (max-width: 520px) {
-      #liveReadout.cols3 { grid-template-columns: 1fr 1fr; }
-      .live-col.center { grid-column: 1 / -1; border: none; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
-      .live-col.right { text-align: left; }
-    }
-
-  </style>
+</style>
 </head>
 <body>
   <div class="page-shell">
@@ -190,98 +198,146 @@
       <p class="chapter-label">第5章 — 仕事とエネルギー</p>
       <h2>振り子とエネルギー保存</h2>
       <p class="tagline">U + K = E · 空気抵抗 k で E が減る</p>
-      <a id="back" href="../00_folder_classical.html#chapter-5">← 力学フォルダへ戻る</a>
+      <a id="back" href="../00_folder_classical.html#chapter-5">← 力学 · 第5章</a>
     </header>
 
     <section class="panel">
       <div class="formula-top">
         <div class="formula-main"><strong>U = mgh</strong> · <strong>K = ½mv²</strong> · <strong>E = U + K</strong></div>
-        <div class="formula-sub">h = L(1−cosθ) · k = 0 で E 一定</div>
+        <div class="formula-sub">h = L(1−cosθ) · k = 0 で E 一定 · 端で U 最大 · 最下点で K 最大</div>
       </div>
-      <div class="sim-grid">
-        <div class="area-viz">
-          <div class="viz-block">
 
-            <div class="viz-head"><p class="viz-label">振り子 · U と K の棒グラフ · E = U + K</p></div>
-            <div class="color-legend">
-              <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>位置 U</span>
-              <span><i class="color-chip" style="background:#f87171;color:#f87171"></i>運動 K</span>
-              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>全 E</span>
+      <div class="view-tabs">
+        <button type="button" class="view-tab is-active" id="tabSim">シミュレーション</button>
+        <button type="button" class="view-tab" id="tabRecord">記録<span class="tab-count" id="tabRecordCount">0</span></button>
+      </div>
+
+      <div id="simView">
+        <div class="sim-grid">
+          <div class="area-viz">
+            <div class="viz-block">
+              <div class="viz-head">
+                <p class="viz-label">振り子 · U と K の棒グラフ · E = U + K</p>
+                <div class="speed-row">
+                  <span class="speed-lbl">再生速度</span>
+                  <button type="button" class="speed-btn" data-speed="0.25">0.25×</button>
+                  <button type="button" class="speed-btn" data-speed="0.5">0.5×</button>
+                  <button type="button" class="speed-btn is-active" data-speed="1">1×</button>
+                </div>
+              </div>
+              <div class="color-legend">
+                <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>位置 U</span>
+                <span><i class="color-chip" style="background:#34d399;color:#34d399"></i>運動 K</span>
+                <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>全 E</span>
+                <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>質点</span>
+              </div>
+              <div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+              <div class="live-strip">
+                <div class="live-cell t"><span class="k">t</span><span class="v" id="liveT">0.00 s</span></div>
+                <div class="live-cell th"><span class="k">θ</span><span class="v" id="liveTheta">40°</span></div>
+                <div class="live-cell h"><span class="k">h</span><span class="v" id="liveH">— m</span></div>
+                <div class="live-cell u"><span class="k">U</span><span class="v" id="liveU">— J</span></div>
+                <div class="live-cell ke"><span class="k">K</span><span class="v" id="liveK">— J</span></div>
+                <div class="live-cell e"><span class="k">E</span><span class="v" id="liveE">— J</span></div>
+              </div>
+              <div class="graph-block">
+                <div class="graph-head">
+                  <p class="graph-title">エネルギー – 時間グラフ</p>
+                  <p class="graph-legend" id="graphLegendNote">U ↔ K が入れ替わり E（紫破線）は一定</p>
+                </div>
+                <div class="canvas-wrap graph" id="graphWrap"><canvas id="graphCanvas"></canvas></div>
+              </div>
+              <div class="explain-panel">
+                <div id="statusPanel">角度を設定して「離す」</div>
+              </div>
+              <div class="viz-foot">
+                <button id="dropBtn" type="button" class="act-btn primary">離す</button>
+                <button id="pauseBtn" type="button">停止</button>
+                <button id="resetBtn" type="button">リセット</button>
+              </div>
             </div>
-            <div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
           </div>
-        </div>
-        <div class="area-hud">
-          <div class="hud-panel">
-            <p class="hud-title">コントロール</p>
-<div class="slider-row"><label class="slider-label">最初の角度 θ (°):
-      <input id="thetaSlider" type="range" min="5" max="75" step="1" value="40">
-      <span id="thetaValue">40</span></label></div>
-            <div class="slider-row"><label class="slider-label">糸の長さ L (m):
-      <input id="lSlider" type="range" min="1" max="5" step="0.1" value="2.5">
-      <span id="lValue">2.5</span></label></div>
-            <div class="slider-row"><label class="slider-label">質量 m (kg):
-      <input id="mSlider" type="range" min="1" max="20" step="0.5" value="5">
-      <span id="mValue">5.0</span></label></div>
-            <div class="slider-row"><label class="slider-label">重力 g (m/s²):
-      <input id="gSlider" type="range" min="5" max="15" step="0.1" value="9.8">
-      <span id="gValue">9.8</span></label></div>
-            <div class="slider-row"><label class="slider-label">空気抵抗 k:
-      <input id="dragSlider" type="range" min="0" max="10" step="0.5" value="0">
-      <span id="dragValue">0.0</span></label></div>
-            <p class="formula-box">
-      U = m g h　　K = ½ m v²　　E = U + K<br>
-      h = L(1 − cos θ)　　v = √(2gh)（h は落ちた高さ・抵抗なし）
-    </p>
+          <div class="area-hud">
+            <div class="hud-panel">
+              <p class="hud-title">コントロール</p>
+              <div class="slider-row"><label for="thetaSlider"><span>初期角度 θ</span><span class="val"><span id="thetaValue">40</span>°</span></label>
+                <input id="thetaSlider" type="range" min="5" max="75" step="1" value="40">
+              </div>
+              <div class="slider-row"><label for="lSlider"><span>糸の長さ L</span><span class="val"><span id="lValue">2.5</span> m</span></label>
+                <input id="lSlider" type="range" min="1" max="5" step="0.1" value="2.5">
+              </div>
+              <div class="slider-row"><label for="mSlider"><span>質量 m</span><span class="val"><span id="mValue">5.0</span> kg</span></label>
+                <input id="mSlider" type="range" min="1" max="20" step="0.5" value="5">
+              </div>
+              <div class="slider-row"><label for="gSlider"><span>重力 g</span><span class="val"><span id="gValue">9.8</span> m/s²</span></label>
+                <input id="gSlider" type="range" min="5" max="15" step="0.1" value="9.8">
+              </div>
+              <div class="slider-row"><label for="dragSlider"><span>空気抵抗 k</span><span class="val"><span id="dragValue">0.0</span></span></label>
+                <input id="dragSlider" type="range" min="0" max="10" step="0.5" value="0">
+              </div>
 
-    <p class="hint">
-      角度を設定して「離す」と振り子が揺れます。空気抵抗 k を上げると振幅が小さくなり、E は減っていきます（k = 0 で E は一定）。
-    </p>
+              <div class="preset-block">
+                <p class="preset-title">プリセット</p>
+                <div class="preset-row" id="presetRow">
+                  <button type="button" class="preset-btn is-active" data-theta="40" data-l="2.5" data-m="5" data-g="9.8" data-drag="0">標準<span class="pv">θ40°</span></button>
+                  <button type="button" class="preset-btn" data-theta="60" data-l="2.5" data-m="5" data-g="9.8" data-drag="0">大振幅<span class="pv">θ60°</span></button>
+                  <button type="button" class="preset-btn" data-theta="15" data-l="2.5" data-m="5" data-g="9.8" data-drag="0">小振幅<span class="pv">θ15°</span></button>
+                  <button type="button" class="preset-btn" data-theta="40" data-l="2.5" data-m="5" data-g="9.8" data-drag="5">空気抵抗<span class="pv">k5</span></button>
+                  <button type="button" class="preset-btn" data-theta="30" data-l="4" data-m="3" data-g="9.8" data-drag="0">長い糸<span class="pv">L4</span></button>
+                </div>
+              </div>
 
-    <div class="btn-row">
-      <button id="dropBtn" type="button">離す</button>
-      <button id="pauseBtn" type="button">停止</button>
-      <button id="resetBtn" type="button">リセット</button>
-    </div></label></div>
-            <div id="statusPanel">角度を設定して「離す」</div>aria-label="振り子のエネルギー保存">
-    <h3>力学的エネルギー保存（振り子）</h3>
-    <p class="concept" id="conceptText">最下点を h = 0 とします。糸の質量は無視します。空気抵抗 k = 0 のとき E = U + K は一定です。</p>
+              <p class="formula-box">U = m g h　　K = ½ m v²　　h = L(1−cosθ)　　v = Lω</p>
+              <p class="hint">角度を設定して「離す」と振り子が揺れます。k = 0 なら E は一定、k &gt; 0 なら E は減少します。<br>Space キーで離す/停止、R キーでリセット。</p>
 
-    <div class="formula-block">
-      <p class="formula-label">① 高さ</p>
-      <p class="formula-line">h = L(1 − cos θ)</p>
-      <p class="formula-line sub">→ h = <span id="fL" class="num">—</span> × (1 − cos <span id="fTheta" class="num">—</span>°) = <span id="fH" class="num">—</span> m</p>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">② 位置エネルギー</p>
-      <p class="formula-line">U = m g h</p>
-      <p class="formula-line sub">→ U = <span id="fM" class="num">—</span> × <span id="fG" class="num">—</span> × <span id="fH2" class="num">—</span> = <span id="fU" class="num">—</span> J</p>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">③ 速さ（エネルギー保存）</p>
-      <p class="formula-line">½ m v² = m g h　→　v = √(2gh)（h = h₀ − h<sub>今</sub>）</p>
-      <p class="formula-line sub">h₀ = <span id="fH0" class="num">—</span> m、h<sub>今</sub> = <span id="fHcur" class="num">—</span> m → 落ちた高さ h = <span id="fDeltaH" class="num">—</span> m</p>
-      <p class="formula-line sub" id="fVidealLine">→ v = √(2 × <span id="fGv" class="num">—</span> × <span id="fDeltaH2" class="num">—</span>) = <span id="fVenergy" class="num">—</span> m/s</p>
-      <p class="formula-line sub" id="fVdragNote" style="display:none">空気抵抗あり → 実際の v = L ω = <span id="fVactual" class="num">—</span> m/s</p>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">④ 運動エネルギー</p>
-      <p class="formula-line">v = L ω　　K = ½ m v²</p>
-      <p class="formula-line sub">→ v = <span id="fL2" class="num">—</span> × <span id="fOmega" class="num">—</span> = <span id="fV" class="num">—</span> m/s</p>
-      <p class="formula-line sub">→ K = ½ × <span id="fM2" class="num">—</span> × (<span id="fV2" class="num">—</span>)² = <span id="fK" class="num">—</span> J</p>
-    </div>
-
-    <div class="formula-block">
-      <p class="formula-label">⑤ 力学的エネルギー</p>
-      <p class="formula-line" id="fELine">E = U + K = 一定</p>
-      <p class="formula-line sub">→ E = <span id="fU2" class="num">—</span> + <span id="fK2" class="num">—</span> = <span id="fE" class="num">—</span> J</p>
-    </div>
+              <section id="calcPanel" aria-label="計算過程">
+                <h3>計算過程</h3>
+                <p class="concept" id="conceptText">最下点を h = 0 とします。空気抵抗 k = 0 のとき E = U + K は一定です。</p>
+                <div class="calc-block">
+                  <p class="calc-label">① 高さと位置エネルギー</p>
+                  <p class="calc-line">h = L(1 − cos θ) = <span id="cH" class="num">—</span> m</p>
+                  <p class="calc-line sub">U = m g h = <span id="cU" class="num">—</span> J</p>
+                </div>
+                <div class="calc-block">
+                  <p class="calc-label">② 速さと運動エネルギー</p>
+                  <p class="calc-line">v = L ω = <span id="cV" class="num">—</span> m/s</p>
+                  <p class="calc-line sub">K = ½ m v² = <span id="cK" class="num">—</span> J</p>
+                  <p class="calc-line sub" id="cVenergyLine">保存則 v = √(2gΔh) = <span id="cVideal" class="num">—</span> m/s</p>
+                </div>
+                <div class="calc-block">
+                  <p class="calc-label">③ 力学的エネルギー</p>
+                  <p class="calc-line" id="cELine">E = U + K = 一定</p>
+                  <p class="calc-line sub">E = <span id="cE" class="num">—</span> J · E₀ = <span id="cE0" class="num">—</span> J</p>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>
+
+      <section id="recordPanel" class="is-hidden" aria-label="記録">
+        <h3>運動記録 — 離すたびの初期条件</h3>
+        <p class="record-desc">「離す」ごとに θ₀, L, m, E₀, 理論 v<sub>max</sub> を記録。空気抵抗ありの場合は E が時間とともに減ります。</p>
+        <div class="record-meta" id="recordMeta">
+          <div>実行条件：<strong id="recCond">—</strong></div>
+          <div>記録件数：<strong id="recCount">0</strong> 回</div>
+          <div>最終状態：<strong id="recFinal">—</strong></div>
+          <div>現在の E：<strong id="recE">—</strong></div>
+        </div>
+        <div class="record-tools">
+          <button type="button" id="copyRecordBtn">表をコピー（TSV）</button>
+          <button type="button" id="clearRecordBtn">記録を消去</button>
+        </div>
+        <div class="record-table-wrap" id="recordTableWrap">
+          <table class="record-table" id="recordTable" hidden>
+            <thead>
+              <tr><th>回</th><th>t (s)</th><th>θ₀ (°)</th><th>L</th><th>m</th><th>k</th><th>E₀ (J)</th><th>v<sub>max</sub></th></tr>
+            </thead>
+            <tbody id="recordBody"></tbody>
+          </table>
+          <p class="record-empty" id="recordEmpty">まだ記録がありません。</p>
+        </div>
+      </section>
     </section>
 
     <section class="panel">
@@ -292,181 +348,217 @@
         <li>空気抵抗 k = 0 なら <strong>E = U + K</strong> は一定</li>
         <li>空気抵抗あり → E は時間とともに減少</li>
       </ul>
+      <div class="theory-grid">
+        <div class="theory-card">
+          <p class="tc-label">端点での U<sub>max</sub></p>
+          <p class="tc-formula">U<sub>max</sub> = mgL(1−cosθ₀) = E₀</p>
+          <p class="tc-value">U<sub>max</sub> = <strong id="thUmax">—</strong> J</p>
+        </div>
+        <div class="theory-card">
+          <p class="tc-label">最下点での v<sub>max</sub></p>
+          <p class="tc-formula">½mv² = mgL(1−cosθ₀) → v = √(2gh₀)</p>
+          <p class="tc-value">v<sub>max</sub> = <strong id="thVmax">—</strong> m/s</p>
+        </div>
+        <div class="theory-card">
+          <p class="tc-label">小振幅の周期（参考）</p>
+          <p class="tc-formula">T ≈ 2π√(L/g)</p>
+          <p class="tc-value">T ≈ <strong id="thT">—</strong> s</p>
+        </div>
+      </div>
     </section>
   </div>
 
-  <script>    let layout = { w: 0, h: 0, dpr: 1 };
-    let fdLayout = { w: 0, h: 0, dpr: 1 };
+  <script>
+    "use strict";
 
-    function drawDarkBg(c, w, h, glowRgb) {
-      const g = glowRgb || "52,211,153";
+    const el = (id) => document.getElementById(id);
+    const fmt = (n, d) => Number(n).toFixed(d);
+    const DEG = Math.PI / 180;
+    const MAX_DT = 1 / 30;
+    const DRAG_SCALE = 0.1;
+    const MARGIN = { left: 72, right: 128, top: 40, bottom: 48 };
+    const COL = { u: "#38bdf8", k: "#34d399", e: "#a78bfa", bob: "#fb7185" };
+    const DEFAULTS = { theta: 40, L: 2.5, m: 5, g: 9.8, drag: 0 };
+
+    let layout = { w: 0, h: 0 };
+    let glayout = { w: 0, h: 0 };
+    let theta = DEFAULTS.theta * DEG;
+    let omega = 0;
+    let theta0 = theta;
+    let E0 = 0;
+    let simM = DEFAULTS.m;
+    let simL = DEFAULTS.L;
+    let simG = DEFAULTS.g;
+    let simDrag = DEFAULTS.drag;
+    let swinging = false;
+    let running = false;
+    let paused = false;
+    let simTime = 0;
+    let speedFactor = 1;
+    let activeView = "sim";
+    let energySamples = [];
+    let releaseHistory = [];
+    let bobTrail = [];
+
+    const canvas = el("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = el("canvasWrap");
+    const graphCanvas = el("graphCanvas");
+    const gctx = graphCanvas.getContext("2d");
+    const graphWrap = el("graphWrap");
+    const statusPanel = el("statusPanel");
+    const thetaSlider = el("thetaSlider");
+    const lSlider = el("lSlider");
+    const mSlider = el("mSlider");
+    const gSlider = el("gSlider");
+    const dragSlider = el("dragSlider");
+
+    function drawDarkBg(c, w, h) {
       const bg = c.createLinearGradient(0, 0, w, h);
       bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
       c.fillStyle = bg; c.fillRect(0, 0, w, h);
       const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
-      glow.addColorStop(0, "rgba(" + g + ",0.12)");
-      glow.addColorStop(0.45, "rgba(" + g + ",0.05)");
+      glow.addColorStop(0, "rgba(52,211,153,0.10)");
+      glow.addColorStop(0.45, "rgba(52,211,153,0.04)");
       glow.addColorStop(1, "rgba(20,24,36,0)");
       c.fillStyle = glow; c.fillRect(0, 0, w, h);
     }
 
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const canvasWrap = document.getElementById("canvasWrap");
-    const statusPanel = document.getElementById("statusPanel");
-    const thetaSlider = document.getElementById("thetaSlider");
-    const lSlider = document.getElementById("lSlider");
-    const mSlider = document.getElementById("mSlider");
-    const gSlider = document.getElementById("gSlider");
-    const dragSlider = document.getElementById("dragSlider");
-
-    const MAX_DT = 1 / 30;
-    const DRAG_SCALE = 0.1;
-    const MARGIN = { left: 72, right: 128, top: 40, bottom: 48 };
-    const DEG = Math.PI / 180;
-    const COL = { u: "#38bdf8", k: "#f87171", e: "#a78bfa", string: "#94a3b8", bob: "#fb7185" };
-
-    let theta = 40 * DEG;
-    let omega = 0;
-    let theta0 = 40 * DEG;
-    let E0 = 0;
-    let simM = 5;
-    let simL = 2.5;
-    let simG = 9.8;
-    let simDrag = 0;
-    let swinging = false;
-    let running = false;
-    let paused = false;
-    let bobTrail = [];
-
-    const DEFAULTS = { theta: 40, L: 2.5, m: 5, g: 9.8, drag: 0 };
-
-    function fmt(n, d) {
-      return Number(n).toFixed(d);
-    }
-
-    function getM() {
-      return swinging ? simM : parseFloat(mSlider.value);
-    }
-
-    function getL() {
-      return swinging ? simL : parseFloat(lSlider.value);
-    }
-
-    function getG() {
-      return swinging ? simG : parseFloat(gSlider.value);
-    }
-
-    function getDrag() {
-      return swinging ? simDrag : parseFloat(dragSlider.value);
-    }
-
-    function getDragGamma() {
-      return getDrag() * DRAG_SCALE;
-    }
-
-    function getH() {
-      return getL() * (1 - Math.cos(theta));
-    }
-
-    function getH0() {
-      const L = getL();
-      const th0 = swinging ? theta0 : theta;
-      return L * (1 - Math.cos(th0));
-    }
-
-    function getDeltaH() {
-      return Math.max(0, getH0() - getH());
-    }
-
+    function getM() { return swinging ? simM : parseFloat(mSlider.value); }
+    function getL() { return swinging ? simL : parseFloat(lSlider.value); }
+    function getG() { return swinging ? simG : parseFloat(gSlider.value); }
+    function getDrag() { return swinging ? simDrag : parseFloat(dragSlider.value); }
+    function getDragGamma() { return getDrag() * DRAG_SCALE; }
+    function getH() { return getL() * (1 - Math.cos(theta)); }
+    function getH0() { return getL() * (1 - Math.cos(swinging ? theta0 : theta)); }
+    function getDeltaH() { return Math.max(0, getH0() - getH()); }
+    function getU() { return getM() * getG() * Math.max(0, getH()); }
+    function getK() { return (!swinging && !running) ? 0 : 0.5 * getM() * Math.pow(getL() * omega, 2); }
+    function getV() { return Math.abs(getL() * omega); }
+    function getE() { return getU() + getK(); }
+    function getEref() { return Math.max(E0, getE(), 1); }
     function getVFromEnergy() {
       if (!swinging && !running) return 0;
-      return Math.sqrt(2 * getG() * getDeltaH());
+      return Math.sqrt(Math.max(0, 2 * getG() * getDeltaH()));
     }
-
-    function getU() {
-      return getM() * getG() * Math.max(0, getH());
-    }
-
-    function getK() {
-      if (!swinging && !running) return 0;
-      return 0.5 * getM() * Math.pow(getL() * omega, 2);
-    }
-
-    function getV() {
-      return Math.abs(getL() * omega);
-    }
-
-    function getEref() {
-      return Math.max(E0, 1);
-    }
-
-    function calcE(m, L, g, th) {
-      const h = L * (1 - Math.cos(th));
-      return m * g * h;
-    }
+    function calcE(m, L, g, th) { return m * g * L * (1 - Math.cos(th)); }
 
     function syncSliders() {
-      if (!swinging) {
-        theta = parseFloat(thetaSlider.value) * DEG;
-      }
-      document.getElementById("thetaValue").textContent = fmt(
-        swinging ? theta / DEG : parseFloat(thetaSlider.value),
-        0
-      );
-      document.getElementById("lValue").textContent = fmt(parseFloat(lSlider.value), 1);
-      document.getElementById("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
-      document.getElementById("gValue").textContent = fmt(parseFloat(gSlider.value), 1);
-      document.getElementById("dragValue").textContent = fmt(parseFloat(dragSlider.value), 1);
-      updateFormulaPanel();
+      if (!swinging) theta = parseFloat(thetaSlider.value) * DEG;
+      el("thetaValue").textContent = fmt(swinging ? theta / DEG : parseFloat(thetaSlider.value), 0);
+      el("lValue").textContent = fmt(parseFloat(lSlider.value), 1);
+      el("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
+      el("gValue").textContent = fmt(parseFloat(gSlider.value), 1);
+      el("dragValue").textContent = fmt(parseFloat(dragSlider.value), 1);
+      document.querySelectorAll(".preset-btn").forEach((b) => {
+        const match = Math.abs(parseFloat(b.dataset.theta) - parseFloat(thetaSlider.value)) < 0.6
+          && Math.abs(parseFloat(b.dataset.l) - parseFloat(lSlider.value)) < 0.15
+          && Math.abs(parseFloat(b.dataset.m) - parseFloat(mSlider.value)) < 0.6
+          && Math.abs(parseFloat(b.dataset.g) - parseFloat(gSlider.value)) < 0.15
+          && Math.abs(parseFloat(b.dataset.drag) - parseFloat(dragSlider.value)) < 0.3;
+        b.classList.toggle("is-active", match);
+      });
+      updateTheory();
+      updateCalcPanel();
+      updateLiveStrip();
     }
 
-    function updateFormulaPanel() {
+    function setText(id, t) { const e2 = el(id); if (e2) e2.textContent = t; }
+
+    function updateTheory() {
       const m = getM();
       const L = getL();
       const g = getG();
-      const drag = getDrag();
-      const hasDrag = drag > 0.001;
+      const th0 = swinging ? theta0 : parseFloat(thetaSlider.value) * DEG;
+      const h0 = L * (1 - Math.cos(th0));
+      const E = m * g * h0;
+      setText("thUmax", fmt(E, 1) + " J");
+      setText("thVmax", fmt(Math.sqrt(Math.max(0, 2 * g * h0)), 2) + " m/s");
+      setText("thT", fmt(2 * Math.PI * Math.sqrt(L / g), 2) + " s");
+    }
+
+    function updateCalcPanel() {
+      const hasDrag = getDrag() > 0.001;
       const hVal = getH();
-      const h0Val = getH0();
-      const deltaH = getDeltaH();
-      const thetaDeg = theta / DEG;
-      const v = getV();
-      const vEnergy = getVFromEnergy();
       const U = getU();
       const K = getK();
       const E = U + K;
+      setText("conceptText", hasDrag
+        ? "最下点を h = 0 とします。空気抵抗 F ∝ v（k = " + fmt(getDrag(), 1) + "）により E = U + K は時間とともに減ります。"
+        : "最下点を h = 0 とします。空気抵抗 k = 0 のとき E = U + K は一定です。");
+      setText("graphLegendNote", hasDrag ? "空気抵抗で E（紫破線）が減少 · U ↔ K が入れ替わる" : "U ↔ K が入れ替わり E（紫破線）は一定");
+      setText("cELine", hasDrag ? "E = U + K（空気抵抗で E は減る）" : "E = U + K = 一定");
+      setText("cH", fmt(hVal, 2));
+      setText("cU", fmt(U, 1));
+      setText("cV", fmt(getV(), 2));
+      setText("cK", fmt(K, 1));
+      setText("cVideal", fmt(getVFromEnergy(), 2));
+      setText("cE", fmt(E, 1));
+      setText("cE0", fmt(E0 > 0 ? E0 : calcE(getM(), getL(), getG(), swinging ? theta0 : theta), 1));
+      const vLine = el("cVenergyLine");
+      if (vLine) vLine.style.display = (swinging || running) && hasDrag && getV() > 0.01 ? "none" : "block";
+    }
 
-      document.getElementById("conceptText").textContent = hasDrag
-        ? `最下点を h = 0 とします。空気抵抗 F ∝ v（k = ${fmt(drag, 1)}）により、E = U + K は時間とともに減ります。`
-        : "最下点を h = 0 とします。糸の質量は無視します。空気抵抗 k = 0 のとき E = U + K は一定です。";
-      document.getElementById("legendENote").textContent = hasDrag ? "（空気抵抗で減少）" : "（一定）";
-      document.getElementById("fELine").textContent = hasDrag ? "E = U + K（空気抵抗で E は減る）" : "E = U + K = 一定";
-      document.getElementById("fVdragNote").style.display = hasDrag && (swinging || running) ? "block" : "none";
-      document.getElementById("fVactual").textContent = fmt(v, 2);
+    function updateLiveStrip() {
+      setText("liveT", fmt(simTime, 2) + " s");
+      setText("liveTheta", fmt(theta / DEG, 1) + "°");
+      setText("liveH", fmt(getH(), 2) + " m");
+      setText("liveU", fmt(getU(), 1) + " J");
+      setText("liveK", fmt(getK(), 1) + " J");
+      setText("liveE", fmt(getE(), 1) + " J");
+    }
 
-      document.getElementById("fL").textContent = fmt(L, 1);
-      document.getElementById("fTheta").textContent = fmt(thetaDeg, 0);
-      document.getElementById("fH").textContent = fmt(hVal, 2);
-      document.getElementById("fM").textContent = fmt(m, 1);
-      document.getElementById("fG").textContent = fmt(g, 1);
-      document.getElementById("fH2").textContent = fmt(hVal, 2);
-      document.getElementById("fU").textContent = fmt(U, 1);
-      document.getElementById("fH0").textContent = fmt(h0Val, 2);
-      document.getElementById("fHcur").textContent = fmt(hVal, 2);
-      document.getElementById("fDeltaH").textContent = fmt(deltaH, 2);
-      document.getElementById("fGv").textContent = fmt(g, 1);
-      document.getElementById("fDeltaH2").textContent = fmt(deltaH, 2);
-      document.getElementById("fVenergy").textContent = fmt(vEnergy, 2);
-      document.getElementById("fL2").textContent = fmt(L, 1);
-      document.getElementById("fOmega").textContent = fmt(omega, 2);
-      document.getElementById("fV").textContent = fmt(v, 2);
-      document.getElementById("fM2").textContent = fmt(m, 1);
-      document.getElementById("fV2").textContent = fmt(v, 2);
-      document.getElementById("fK").textContent = fmt(K, 1);
-      document.getElementById("fU2").textContent = fmt(U, 1);
-      document.getElementById("fK2").textContent = fmt(K, 1);
-      document.getElementById("fE").textContent = fmt(E, 1);
+    function setActiveView(view) {
+      activeView = view;
+      el("simView").classList.toggle("is-hidden", view !== "sim");
+      el("recordPanel").classList.toggle("is-hidden", view !== "record");
+      el("tabSim").classList.toggle("is-active", view === "sim");
+      el("tabRecord").classList.toggle("is-active", view === "record");
+      if (view === "record") updateRecordPanel(true);
+      requestAnimationFrame(resizeCanvas);
+    }
+
+    function updateRecordPanel(scroll) {
+      setText("tabRecordCount", String(releaseHistory.length));
+      setText("recCount", String(releaseHistory.length));
+      const tbody = el("recordBody");
+      const table = el("recordTable");
+      const empty = el("recordEmpty");
+      const wrap = el("recordTableWrap");
+      if (releaseHistory.length === 0) {
+        if (tbody) tbody.innerHTML = "";
+        if (table) table.hidden = true;
+        if (empty) empty.hidden = false;
+        setText("recCond", "—");
+        setText("recE", "—");
+        setText("recFinal", swinging ? (running && !paused ? "振動中" : "一時停止") : "待機中");
+        return;
+      }
+      const last = releaseHistory[releaseHistory.length - 1];
+      setText("recCond", "θ₀=" + fmt(last.theta0, 0) + "° · L=" + fmt(last.L, 1) + " · m=" + fmt(last.m, 1) + " · k=" + fmt(last.drag, 1));
+      setText("recE", fmt(getE(), 1) + " J");
+      setText("recFinal", running && !paused ? "振動中 t=" + fmt(simTime, 2) + " s" : (paused ? "一時停止" : "待機中"));
+      if (table) table.hidden = false;
+      if (empty) empty.hidden = true;
+      if (tbody) {
+        tbody.innerHTML = releaseHistory.map((r) =>
+          "<tr><td>" + r.n + "</td><td>" + fmt(r.t, 2) + "</td><td class=\"col-u\">" + fmt(r.theta0, 0) +
+          "</td><td>" + fmt(r.L, 1) + "</td><td>" + fmt(r.m, 1) + "</td><td>" + fmt(r.drag, 1) +
+          "</td><td class=\"col-k\">" + fmt(r.E0, 1) + "</td><td>" + fmt(r.vmax, 2) + "</td></tr>"
+        ).join("");
+      }
+      if (scroll && wrap) wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    function recordAsTsv() {
+      const head = ["回", "t(s)", "theta0(deg)", "L", "m", "k", "E0(J)", "vmax"].join("\t");
+      const lines = releaseHistory.map((r) => [r.n, fmt(r.t, 3), fmt(r.theta0, 1), r.L, r.m, r.drag, fmt(r.E0, 2), fmt(r.vmax, 3)].join("\t"));
+      return [head].concat(lines).join("\n");
+    }
+
+    function setSlidersEnabled(on) {
+      [thetaSlider, lSlider, mSlider, gSlider, dragSlider].forEach((s) => { s.disabled = !on; });
+      document.querySelectorAll(".preset-btn").forEach((b) => { b.disabled = !on; });
     }
 
     function resetSimulation() {
@@ -486,11 +578,16 @@
       swinging = false;
       running = false;
       paused = false;
+      simTime = 0;
+      energySamples = [];
       bobTrail = [];
-      [thetaSlider, lSlider, mSlider, gSlider, dragSlider].forEach((el) => { el.disabled = false; });
+      setSlidersEnabled(true);
+      el("pauseBtn").textContent = "停止";
       syncSliders();
       statusPanel.textContent = "角度を設定して「離す」";
       statusPanel.className = "";
+      setActiveView("sim");
+      updateRecordPanel(false);
     }
 
     function startSwing() {
@@ -499,6 +596,7 @@
         theta = parseFloat(thetaSlider.value) * DEG;
         if (Math.abs(theta) < 2 * DEG) {
           statusPanel.textContent = "θ ≥ 5° で「離す」してください";
+          statusPanel.className = "";
           return;
         }
         theta0 = theta;
@@ -507,24 +605,43 @@
         simG = parseFloat(gSlider.value);
         simDrag = parseFloat(dragSlider.value);
         omega = 0;
+        simTime = 0;
         E0 = calcE(simM, simL, simG, theta);
+        energySamples = [{ t: 0, U: E0, K: 0, E: E0 }];
         bobTrail = [];
         swinging = true;
-        [thetaSlider, lSlider, mSlider, gSlider, dragSlider].forEach((el) => { el.disabled = true; });
+        setSlidersEnabled(false);
+        const h0 = simL * (1 - Math.cos(theta0));
+        releaseHistory.push({
+          n: releaseHistory.length + 1,
+          t: simTime,
+          theta0: theta0 / DEG,
+          L: simL,
+          m: simM,
+          drag: simDrag,
+          E0,
+          vmax: Math.sqrt(Math.max(0, 2 * simG * h0)),
+        });
+        updateRecordPanel(activeView === "record");
       }
       running = true;
       paused = false;
+      el("pauseBtn").textContent = "停止";
       syncSliders();
     }
 
     function pauseSimulation() {
-      if (!running) return;
-      paused = !paused;
+      if (!running && !swinging) return;
+      if (running && !paused) {
+        paused = true;
+        el("pauseBtn").textContent = "再開";
+      } else if (paused) {
+        paused = false;
+        el("pauseBtn").textContent = "停止";
+      }
       statusPanel.textContent = paused
-        ? "一時停止中"
-        : getDrag() > 0.001
-          ? "振動中 — 空気抵抗で E が減っています"
-          : "振動中 — E = U + K は一定";
+        ? "一時停止 — 「再開」または「リセット」"
+        : getDrag() > 0.001 ? "振動中 — 空気抵抗で E が減っています" : "振動中 — E = U + K は一定";
     }
 
     function resizeCanvas() {
@@ -532,66 +649,34 @@
       function fit(cv, wrap, minH) {
         const rect = wrap.getBoundingClientRect();
         const w = Math.max(280, Math.round(rect.width));
-        const h = Math.max(minH || 220, Math.round(rect.height));
+        const h = Math.max(minH, Math.round(rect.height));
         cv.width = Math.round(w * dpr);
         cv.height = Math.round(h * dpr);
         cv.style.width = w + "px";
         cv.style.height = h + "px";
-        const c = cv.getContext("2d");
-        c.setTransform(dpr, 0, 0, dpr, 0, 0);
-        return { w, h, dpr };
+        cv.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h };
       }
-      layout = fit(canvas, canvasWrap, 260);
-      if (typeof fdCanvas !== "undefined" && fdCanvas) fdLayout = fit(fdCanvas, fdWrap, 180);
+      layout = fit(canvas, canvasWrap, 340);
+      glayout = fit(graphCanvas, graphWrap, 180);
     }
 
-    thetaSlider.addEventListener("input", () => {
-      if (!swinging) {
-        theta = parseFloat(thetaSlider.value) * DEG;
-        E0 = calcE(getM(), getL(), getG(), theta);
-      }
-      syncSliders();
-    });
-    [lSlider, mSlider, gSlider, dragSlider].forEach((slider) => {
-      slider.addEventListener("input", () => {
-        if (!swinging) E0 = calcE(getM(), getL(), getG(), theta);
-        syncSliders();
-      });
-    });
-
-    document.getElementById("dropBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      startSwing();
-    });
-    document.getElementById("pauseBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      pauseSimulation();
-    });
-    document.getElementById("resetBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      resetSimulation();
-    });
-
-    window.addEventListener("resize", resizeCanvas);
-    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
-    if (typeof ResizeObserver !== "undefined") {
-      new ResizeObserver(resizeCanvas).observe(canvasWrap);
-    }
-
-    requestAnimationFrame(() => {
-      resizeCanvas();
-      resetSimulation();
-    });
-
-    function update(dt) {
+    function update(dtReal) {
       if (!running || paused || !swinging) return;
-      const steps = 4;
+      const dt = dtReal * speedFactor;
+      const steps = 8;
       const sub = dt / steps;
       const gamma = getDragGamma();
       for (let i = 0; i < steps; i += 1) {
         omega += (-(simG / simL) * Math.sin(theta) - gamma * omega) * sub;
         theta += omega * sub;
       }
+      simTime += dt;
+      const bob = bobPos(getLayout(layout.w, layout.h));
+      bobTrail.push({ x: bob.x, y: bob.y });
+      if (bobTrail.length > 36) bobTrail.shift();
+      energySamples.push({ t: simTime, U: getU(), K: getK(), E: getE() });
+      if (energySamples.length > 3000) energySamples.splice(0, 500);
       if (gamma > 0 && Math.abs(omega) < 0.015 && Math.abs(theta) < 0.02) {
         omega = 0;
         theta = 0;
@@ -617,54 +702,54 @@
       };
     }
 
-    function drawSideBar(x, yTop, barH, value, color, label, eref) {
-      const bw = 26;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(x - 5, yTop - 20, bw + 10, barH + 34);
-      ctx.strokeStyle = "rgba(136,68,204,0.3)";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x - 5, yTop - 20, bw + 10, barH + 34);
-      ctx.fillStyle = "rgba(0,76,153,0.06)";
-      ctx.fillRect(x, yTop, bw, barH);
-      const frac = eref > 0 ? Math.min(1, value / eref) : 0;
+    function drawEnergyBar(bx, yTop, barH, val, maxE, color, label) {
+      const bw = 30;
+      ctx.fillStyle = "rgba(8,12,20,0.92)";
+      ctx.strokeStyle = "rgba(52,211,153,0.25)";
+      ctx.lineWidth = 1;
+      ctx.fillRect(bx - 4, yTop - 20, bw + 8, barH + 32);
+      ctx.strokeRect(bx - 4, yTop - 20, bw + 8, barH + 32);
+      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      ctx.fillRect(bx, yTop, bw, barH);
+      const fill = maxE > 0 ? Math.min(1, val / maxE) : 0;
       ctx.fillStyle = color;
-      ctx.fillRect(x, yTop + barH * (1 - frac), bw, barH * frac);
+      ctx.fillRect(bx, yTop + barH * (1 - fill), bw, barH * fill);
       ctx.fillStyle = color;
-      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(label, x + bw / 2, yTop - 6);
-      ctx.fillText(`${fmt(value, 0)}J`, x + bw / 2, yTop + barH + 14);
+      ctx.fillText(label, bx + bw / 2, yTop - 6);
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText(fmt(val, 0) + " J", bx + bw / 2, yTop + barH + 14);
       ctx.textAlign = "left";
     }
 
     function drawConservationStack(cx, yTop, barH, U, K, eref) {
       const bw = 44;
       const x = cx - bw / 2;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(x - 8, yTop - 28, bw + 16, barH + 44);
-      ctx.strokeStyle = "#8844cc";
+      ctx.fillStyle = "rgba(8,12,20,0.92)";
+      ctx.strokeStyle = COL.e;
       ctx.lineWidth = 2;
+      ctx.fillRect(x - 8, yTop - 28, bw + 16, barH + 44);
       ctx.strokeRect(x, yTop, bw, barH);
       const uFrac = eref > 0 ? U / eref : 0;
       const kFrac = eref > 0 ? K / eref : 0;
-      const uH = barH * uFrac;
-      const kH = barH * kFrac;
-      ctx.fillStyle = "#0088dd";
-      ctx.fillRect(x, yTop + barH - uH, bw, uH);
-      ctx.fillStyle = "#cc3344";
-      ctx.fillRect(x, yTop, bw, kH);
-      ctx.fillStyle = "#8844cc";
+      ctx.fillStyle = COL.u;
+      ctx.fillRect(x, yTop + barH - barH * uFrac, bw, barH * uFrac);
+      ctx.fillStyle = COL.k;
+      ctx.fillRect(x, yTop + barH - barH * (uFrac + kFrac), bw, barH * kFrac);
+      ctx.fillStyle = COL.e;
       ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("E = U+K", cx, yTop - 10);
+      ctx.fillText("E=U+K", cx, yTop - 10);
       ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText(`${fmt(U + K, 0)} J`, cx, yTop + barH + 18);
+      ctx.fillText(fmt(U + K, 0) + " J", cx, yTop + barH + 18);
       ctx.textAlign = "left";
     }
 
     function drawScene() {
       const w = layout.w;
       const ht = layout.h;
+      if (w < 1 || ht < 1) return;
       const lay = getLayout(w, ht);
       const bob = bobPos(lay);
       const lowY = lay.pivotY + lay.L * lay.pxPerM;
@@ -674,52 +759,67 @@
       const eref = getEref();
       const barTop = lay.plotTop + 8;
       const barH = lay.plotH - 16;
-      const bobR = 14 + Math.min(12, getM() * 0.5);
+      const bobR = 12 + Math.min(12, getM() * 0.4);
 
       ctx.clearRect(0, 0, w, ht);
-      drawDarkBg(ctx, w, h);
+      drawDarkBg(ctx, w, ht);
 
-      ctx.fillStyle = "#eef6ff";
+      ctx.fillStyle = "rgba(10,20,35,0.55)";
       ctx.fillRect(MARGIN.left, lay.plotTop, w - MARGIN.left - MARGIN.right, lay.plotH);
 
-      ctx.strokeStyle = "rgba(0,100,180,0.12)";
-      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "rgba(52,211,153,0.35)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
       ctx.beginPath();
       ctx.moveTo(lay.pivotX - lay.L * lay.pxPerM - 20, lowY);
       ctx.lineTo(lay.pivotX + lay.L * lay.pxPerM + 20, lowY);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = "#4a7099";
+      ctx.fillStyle = "#6ee7b7";
       ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
       ctx.fillText("最下点 h = 0", lay.pivotX + lay.L * lay.pxPerM + 24, lowY + 4);
 
       const arcR = lay.L * lay.pxPerM;
-      ctx.strokeStyle = "rgba(0,140,220,0.15)";
+      ctx.strokeStyle = "rgba(56,189,248,0.18)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(lay.pivotX, lay.pivotY, arcR, 0, Math.PI * 2);
       ctx.stroke();
 
-      ctx.strokeStyle = "#556677";
+      if (bobTrail.length > 2 && swinging) {
+        ctx.strokeStyle = "rgba(251,113,133,0.35)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        bobTrail.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#64748b";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(lay.pivotX - 18, lay.pivotY);
       ctx.lineTo(lay.pivotX + 18, lay.pivotY);
       ctx.stroke();
-      ctx.fillStyle = "#334455";
+      ctx.fillStyle = "#475569";
       ctx.beginPath();
       ctx.arc(lay.pivotX, lay.pivotY, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = "#445566";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(148,163,184,0.85)";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(lay.pivotX, lay.pivotY);
       ctx.lineTo(bob.x, bob.y);
       ctx.stroke();
 
-      ctx.fillStyle = "#ee4455";
-      ctx.strokeStyle = "#aa2233";
+      const grad = ctx.createRadialGradient(bob.x - 4, bob.y - 4, 2, bob.x, bob.y, bobR);
+      grad.addColorStop(0, "#fda4af");
+      grad.addColorStop(1, COL.bob);
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = "#be123c";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(bob.x, bob.y, bobR, 0, Math.PI * 2);
@@ -729,67 +829,196 @@
       if (Math.abs(omega) > 0.05) {
         const tx = -Math.cos(theta);
         const ty = Math.sin(theta);
-        ctx.strokeStyle = "rgba(204,51,68,0.65)";
+        const vLen = Math.min(48, Math.abs(omega * arcR * 0.45));
+        ctx.strokeStyle = "rgba(52,211,153,0.75)";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(bob.x, bob.y);
-        ctx.lineTo(bob.x + tx * Math.min(40, Math.abs(omega * arcR * 0.5)), bob.y + ty * Math.min(40, Math.abs(omega * arcR * 0.5)));
+        ctx.lineTo(bob.x + tx * vLen * Math.sign(omega), bob.y + ty * vLen * Math.sign(omega));
         ctx.stroke();
       }
 
-      ctx.fillStyle = "#0088dd";
+      ctx.fillStyle = COL.u;
       ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`h = ${fmt(getH(), 2)} m`, bob.x, bob.y - bobR - 10);
+      ctx.fillText("h = " + fmt(getH(), 2) + " m", bob.x, bob.y - bobR - 10);
       ctx.textAlign = "left";
 
-      drawSideBar(14, barTop, barH, U, "#0088dd", "U", eref);
+      drawEnergyBar(14, barTop, barH, U, eref, COL.u, "U");
       drawConservationStack(w - MARGIN.right + 36, barTop, barH, U, K, eref);
-      drawSideBar(w - MARGIN.right + 78, barTop, barH, K, "#cc3344", "K", eref);
+      drawEnergyBar(w - MARGIN.right + 78, barTop, barH, K, eref, COL.k, "K");
 
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(12, 12, 200, 128);
-      ctx.strokeStyle = "rgba(0,76,153,0.12)";
-      ctx.strokeRect(12, 12, 200, 128);
+      ctx.fillStyle = "rgba(8,12,20,0.92)";
+      ctx.strokeStyle = "rgba(52,211,153,0.3)";
+      ctx.lineWidth = 1;
+      ctx.fillRect(12, 12, 196, 108);
+      ctx.strokeRect(12, 12, 196, 108);
       ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
-      ctx.fillStyle = "#004c99";
-      ctx.fillText(`θ = ${fmt(theta / DEG, 0)}°`, 22, 32);
-      ctx.fillText(`L = ${fmt(getL(), 1)} m`, 22, 52);
-      ctx.fillStyle = "#0088dd";
-      ctx.fillText(`U = ${fmt(U, 0)} J`, 22, 72);
-      ctx.fillStyle = "#cc3344";
-      ctx.fillText(`K = ${fmt(K, 0)} J`, 22, 92);
-      ctx.fillStyle = "#8844cc";
-      ctx.fillText(`E = ${fmt(E, 0)} J`, 22, 112);
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("θ = " + fmt(theta / DEG, 0) + "°", 22, 32);
+      ctx.fillText("L = " + fmt(getL(), 1) + " m", 22, 50);
+      ctx.fillStyle = COL.u;
+      ctx.fillText("U = " + fmt(U, 1) + " J", 22, 68);
+      ctx.fillStyle = COL.k;
+      ctx.fillText("K = " + fmt(K, 1) + " J", 22, 86);
+      ctx.fillStyle = COL.e;
+      ctx.fillText("E = " + fmt(E, 1) + " J", 22, 104);
       if (swinging || running) {
-        ctx.fillStyle = "#cc3344";
         const vShow = getDrag() > 0.001 ? getV() : getVFromEnergy();
-        ctx.fillText(`v = ${fmt(vShow, 2)} m/s`, 22, 132);
+        ctx.fillStyle = "#fde68a";
+        ctx.fillText("v = " + fmt(vShow, 2) + " m/s", 22, 122);
       }
 
       if (swinging && running && !paused) {
         const hasDrag = getDrag() > 0.001;
         statusPanel.textContent = Math.abs(theta) < 3 * DEG && Math.abs(omega) > 0.3
-          ? hasDrag ? "最下点付近 — K 最大、E は空気抵抗で減少" : "最下点付近 — K 最大、E = U + K は一定"
-          : hasDrag ? "振動中 — 空気抵抗で E が減っています" : "振動中 — 端で U 最大、E = U + K は一定";
+          ? (hasDrag ? "最下点付近 — K 最大、E は空気抵抗で減少" : "最下点付近 — K 最大、E = U + K は一定")
+          : (hasDrag ? "振動中 — 空気抵抗で E が減っています" : "振動中 — 端で U 最大、E = U + K は一定");
         statusPanel.className = "swinging";
       } else if (!swinging) {
-        statusPanel.textContent = `E = ${fmt(E0, 0)} J — 「離す」で振らせる`;
-        statusPanel.className = "";
+        statusPanel.textContent = "E = " + fmt(E0, 0) + " J — 「離す」で振らせる";
+        statusPanel.className = Math.abs(theta) >= 2 * DEG ? "ready" : "";
       }
     }
 
+    function drawGraph() {
+      const w = glayout.w;
+      const h = glayout.h;
+      if (!w || !h) return;
+      drawDarkBg(gctx, w, h);
+      const ox = 46;
+      const oy = h - 34;
+      const pw = w - ox - 16;
+      const ph = h - 18 - 34;
+      const tMax = Math.max(4, simTime * 1.08, 2);
+      const Eref = getEref();
+      const gx = (t) => ox + (t / tMax) * pw;
+      const gy = (e) => oy - (e / (Eref * 1.08)) * ph;
+
+      gctx.fillStyle = "rgba(10,16,30,0.5)";
+      gctx.fillRect(ox, 18, pw, ph);
+      gctx.setLineDash([5, 4]);
+      gctx.strokeStyle = "rgba(167,139,250,0.45)";
+      gctx.lineWidth = 1.2;
+      gctx.beginPath();
+      gctx.moveTo(ox, gy(E0 || Eref));
+      gctx.lineTo(ox + pw, gy(E0 || Eref));
+      gctx.stroke();
+      gctx.setLineDash([]);
+
+      if (energySamples.length > 1) {
+        [["U", COL.u, (s) => s.U], ["K", COL.k, (s) => s.K]].forEach(([, color, fn]) => {
+          gctx.strokeStyle = color;
+          gctx.lineWidth = 2;
+          gctx.beginPath();
+          energySamples.forEach((s, i) => {
+            const sx = gx(s.t);
+            const sy = gy(fn(s));
+            if (i === 0) gctx.moveTo(sx, sy);
+            else gctx.lineTo(sx, sy);
+          });
+          gctx.stroke();
+        });
+        if (getDrag() > 0.001) {
+          gctx.strokeStyle = COL.e;
+          gctx.lineWidth = 1.5;
+          gctx.setLineDash([4, 3]);
+          gctx.beginPath();
+          energySamples.forEach((s, i) => {
+            const sx = gx(s.t);
+            const sy = gy(s.E);
+            if (i === 0) gctx.moveTo(sx, sy);
+            else gctx.lineTo(sx, sy);
+          });
+          gctx.stroke();
+          gctx.setLineDash([]);
+        }
+      }
+      gctx.fillStyle = "#64748b";
+      gctx.font = "500 9px Inter, sans-serif";
+      gctx.fillText("E (J)", 6, 22);
+      gctx.textAlign = "right";
+      gctx.fillText("t (s)", w - 6, oy + 16);
+      gctx.textAlign = "left";
+    }
+
+    el("tabSim").addEventListener("click", () => setActiveView("sim"));
+    el("tabRecord").addEventListener("click", () => setActiveView("record"));
+    thetaSlider.addEventListener("input", () => {
+      if (!swinging) {
+        theta = parseFloat(thetaSlider.value) * DEG;
+        E0 = calcE(getM(), getL(), getG(), theta);
+      }
+      syncSliders();
+    });
+    [lSlider, mSlider, gSlider, dragSlider].forEach((s) => {
+      s.addEventListener("input", () => {
+        if (!swinging) E0 = calcE(getM(), getL(), getG(), theta);
+        syncSliders();
+      });
+    });
+    document.querySelectorAll(".preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (swinging) return;
+        thetaSlider.value = btn.dataset.theta;
+        lSlider.value = btn.dataset.l;
+        mSlider.value = btn.dataset.m;
+        gSlider.value = btn.dataset.g;
+        dragSlider.value = btn.dataset.drag;
+        thetaSlider.dispatchEvent(new Event("input"));
+      });
+    });
+    document.querySelectorAll(".speed-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        speedFactor = parseFloat(btn.dataset.speed);
+        document.querySelectorAll(".speed-btn").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+      });
+    });
+    el("dropBtn").addEventListener("click", (e) => { e.preventDefault(); startSwing(); });
+    el("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    el("resetBtn").addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+    el("copyRecordBtn").addEventListener("click", () => {
+      const btn = el("copyRecordBtn");
+      if (releaseHistory.length === 0) btn.textContent = "記録がありません";
+      else if (navigator.clipboard) navigator.clipboard.writeText(recordAsTsv()).then(() => { btn.textContent = "コピーしました"; });
+      setTimeout(() => { btn.textContent = "表をコピー（TSV）"; }, 1800);
+    });
+    el("clearRecordBtn").addEventListener("click", () => { releaseHistory = []; updateRecordPanel(false); });
+    document.addEventListener("keydown", (ev) => {
+      const tag = (ev.target && ev.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON") return;
+      if (ev.code === "Space") {
+        ev.preventDefault();
+        if (running && !paused) pauseSimulation();
+        else if (paused) pauseSimulation();
+        else startSwing();
+      } else if (ev.key === "r" || ev.key === "R") {
+        ev.preventDefault();
+        resetSimulation();
+      }
+    });
+    window.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => resizeCanvas());
+      ro.observe(canvasWrap);
+      ro.observe(graphWrap);
+    }
+
+    resizeCanvas();
+    resetSimulation();
     let last = performance.now();
     function loop(now) {
       const dt = Math.min((now - last) / 1000, MAX_DT);
       last = now;
       update(dt);
-      syncSliders();
+      if (!swinging) syncSliders();
+      else { updateCalcPanel(); updateLiveStrip(); }
       drawScene();
+      drawGraph();
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
-  
   </script>
 </body>
 </html>

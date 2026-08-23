@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>7章 — 分裂と合体</title>
+    <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
+<title>7章 — 分裂と合体</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
+    <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
+<style>
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
@@ -190,7 +192,7 @@
       <p class="chapter-label">第7章 — 運動量保存と反発係数</p>
       <h2>運動量の分裂と合体</h2>
       <p class="tagline">1つ → 2つ · 2つ → 1つ · p 保存</p>
-      <a id="back" href="../00_folder_classical.html#chapter-7">← 力学フォルダへ戻る</a>
+      <a id="back" href="../00_folder_classical.html#chapter-7">← 力学 · 第7章</a>
     </header>
 
     <section class="panel">
@@ -354,8 +356,8 @@
 
     const DEFAULTS = {
       mA: 1, mB: 1,
-      vASpeed: 4.12, thetaA: 14,
-      vBSpeed: 3, thetaB: 180,
+      vAx: 4, vAy: 1,
+      vBx: -3, vBy: 0,
       thetaAp: 30, thetaBp: 150,
       aX: -0.8, aY: 0.2,
       bX: 0.9, bY: -0.1,
@@ -382,10 +384,10 @@
 
     function getMA() { return parseFloat(document.getElementById("mASlider").value); }
     function getMB() { return parseFloat(document.getElementById("mBSlider").value); }
-    function getVASpeed() { return parseFloat(document.getElementById("vASpeedSlider").value); }
-    function getVBSpeed() { return parseFloat(document.getElementById("vBSpeedSlider").value); }
-    function getThetaA() { return parseFloat(document.getElementById("thetaASlider").value); }
-    function getThetaB() { return parseFloat(document.getElementById("thetaBSlider").value); }
+    function getVAx() { return parseFloat(document.getElementById("vAxSlider").value); }
+    function getVAy() { return parseFloat(document.getElementById("vAySlider").value); }
+    function getVBx() { return parseFloat(document.getElementById("vBxSlider").value); }
+    function getVBy() { return parseFloat(document.getElementById("vBySlider").value); }
     function getThetaAp() { return parseFloat(document.getElementById("thetaApSlider").value); }
     function getThetaBp() { return parseFloat(document.getElementById("thetaBpSlider").value); }
 
@@ -420,16 +422,22 @@
         : "合体モード: |v| と θ で初速度を設定し、2球を衝突させます。";
     }
 
-    function getV0A() { return velocityFromSpeedAngle(getVASpeed(), getThetaA()); }
-    function getV0B() { return velocityFromSpeedAngle(getVBSpeed(), getThetaB()); }
+    function getV0A() { return { x: getVAx(), y: getVAy() }; }
+    function getV0B() { return { x: getVBx(), y: getVBy() }; }
+
+    function setVelocityComponents(which, vx, vy) {
+      if (which === "A") {
+        document.getElementById("vAxSlider").value = vx;
+        document.getElementById("vAySlider").value = vy;
+      } else {
+        document.getElementById("vBxSlider").value = vx;
+        document.getElementById("vBySlider").value = vy;
+      }
+    }
 
     function syncSliders() {
       document.getElementById("mAValue").textContent = fmt(getMA(), 2);
       document.getElementById("mBValue").textContent = fmt(getMB(), 2);
-      document.getElementById("vASpeedValue").textContent = fmt(getVASpeed(), 1);
-      document.getElementById("vBSpeedValue").textContent = fmt(getVBSpeed(), 1);
-      document.getElementById("thetaAValue").textContent = fmt(getThetaA(), 0);
-      document.getElementById("thetaBValue").textContent = fmt(getThetaB(), 0);
       const vA0 = getV0A();
       const vB0 = getV0B();
       document.getElementById("vAxValue").textContent = fmt(vA0.x, 1);
@@ -524,7 +532,10 @@
       const ball = draggingAngle === "thetaA" ? ballA : ballB;
       const origin = toScreen(ball.x, ball.y);
       const deg = angleDegFromScreen(sx, sy, origin.x, origin.y);
-      setAngleSlider(draggingAngle === "thetaA" ? "thetaASlider" : "thetaBSlider", deg);
+      const v0 = draggingAngle === "thetaA" ? getV0A() : getV0B();
+      const speed = len(v0) || 1;
+      const v = velocityFromSpeedAngle(speed, deg);
+      setVelocityComponents(draggingAngle === "thetaA" ? "A" : "B", v.x, v.y);
       syncSliders();
       updateCalcPanel(buildPreview());
     }
@@ -602,7 +613,10 @@
     }
 
     function updateCalcPanel(data) {
-      const set = (id, t) => { document.getElementById(id).textContent = t; };
+      const set = (id, t) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t;
+      };
       if (!data) return;
 
       const { mA, mB, vA, vB, pBefore, merge, split, mode, dist, thresh } = data;
@@ -644,7 +658,8 @@
       set("cSpeedBp", split.valid ? fmt(split.speedBp, 2) : "—");
       set("cPsx", split.valid ? fmt(split.pAfter.x, 2) : "—");
       set("cPsy", split.valid ? fmt(split.pAfter.y, 2) : "—");
-      document.getElementById("cSplitWarn").style.display = split.valid ? "none" : "block";
+      const splitWarn = document.getElementById("cSplitWarn");
+      if (splitWarn) splitWarn.style.display = split.valid ? "none" : "block";
 
       const active = outcomeData || (mode === "merge" ? merge : split);
       const pAfter = outcomeData
@@ -658,18 +673,26 @@
       set("cPay", fmt(pAfter.y, 2));
       set("cErr", fmt(err, 4));
 
-      document.getElementById("mergeBlock").style.opacity = mode === "merge" || phase === "merged" ? "1" : "0.45";
-      document.getElementById("splitBlock").style.opacity = mode === "split" || phase === "pendingSplit" || phase === "split" ? "1" : "0.45";
+      const mergeBlock = document.getElementById("mergeBlock");
+      const splitBlock = document.getElementById("splitBlock");
+      if (mergeBlock) mergeBlock.style.opacity = mode === "merge" || phase === "merged" ? "1" : "0.45";
+      if (splitBlock) splitBlock.style.opacity = mode === "split" || phase === "pendingSplit" || phase === "split" ? "1" : "0.45";
     }
 
     function updateSplitControlsVisibility() {
       splitControls.style.display = isSplitMode() || phase === "pendingSplit" ? "block" : "none";
-      document.querySelector("#mergeVelA .param-title").textContent = isSplitMode()
-        ? "合体前の運動量 — 球A（|v| と θ）"
-        : "衝突前 — 球A の初速度（|v| と θ）";
-      document.querySelector("#mergeVelB .param-title").textContent = isSplitMode()
-        ? "合体前の運動量 — 球B（|v| と θ）"
-        : "衝突前 — 球B の初速度（|v| と θ）";
+      const titleA = document.querySelector("#mergeVelA .param-title, #mergeVelA .vel-title");
+      const titleB = document.querySelector("#mergeVelB .param-title, #mergeVelB .vel-title");
+      if (titleA) {
+        titleA.textContent = isSplitMode()
+          ? "合体前の運動量 — 球A（|v| と θ）"
+          : "衝突前 — 球A の初速度（|v| と θ）";
+      }
+      if (titleB) {
+        titleB.textContent = isSplitMode()
+          ? "合体前の運動量 — 球B（|v| と θ）"
+          : "衝突前 — 球B の初速度（|v| と θ）";
+      }
       updateSplitAngleSlidersEnabled();
     }
 
@@ -681,7 +704,7 @@
     }
 
     function setControlsDisabled(disabled) {
-      ["mASlider", "mBSlider", "vASpeedSlider", "thetaASlider", "vBSpeedSlider", "thetaBSlider",
+      ["mASlider", "mBSlider", "vAxSlider", "vAySlider", "vBxSlider", "vBySlider",
         "modeMerge", "modeSplit"].forEach((id) => {
         document.getElementById(id).disabled = disabled;
       });
@@ -713,10 +736,10 @@
       updateModeHint();
       document.getElementById("mASlider").value = DEFAULTS.mA;
       document.getElementById("mBSlider").value = DEFAULTS.mB;
-      document.getElementById("vASpeedSlider").value = DEFAULTS.vASpeed;
-      document.getElementById("thetaASlider").value = DEFAULTS.thetaA;
-      document.getElementById("vBSpeedSlider").value = DEFAULTS.vBSpeed;
-      document.getElementById("thetaBSlider").value = DEFAULTS.thetaB;
+      document.getElementById("vAxSlider").value = DEFAULTS.vAx;
+      document.getElementById("vAySlider").value = DEFAULTS.vAy;
+      document.getElementById("vBxSlider").value = DEFAULTS.vBx;
+      document.getElementById("vBySlider").value = DEFAULTS.vBy;
       document.getElementById("thetaApSlider").value = DEFAULTS.thetaAp;
       document.getElementById("thetaBpSlider").value = DEFAULTS.thetaBp;
       document.getElementById("modeMerge").checked = true;
@@ -962,8 +985,8 @@
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
       return {
-        x: (cx - rect.left) * (canvas.width / rect.width),
-        y: (cy - rect.top) * (canvas.height / rect.height),
+        x: cx - rect.left,
+        y: cy - rect.top,
       };
     }
 
@@ -1044,7 +1067,7 @@
     canvas.addEventListener("touchmove", onPointerMove, { passive: false });
     window.addEventListener("touchend", onPointerUp);
 
-    const sliderIds = ["mASlider", "mBSlider", "vASpeedSlider", "thetaASlider", "vBSpeedSlider", "thetaBSlider"];
+    const sliderIds = ["mASlider", "mBSlider", "vAxSlider", "vAySlider", "vBxSlider", "vBySlider"];
     sliderIds.forEach((id) => {
       document.getElementById(id).addEventListener("input", () => {
         if (phase === "idle" || phase === "pendingSplit") {
@@ -1175,12 +1198,11 @@
     }
 
     function drawAxisGrid() {
-      ctx.fillStyle = "#f8fcff";
-      ctx.fillRect(0, 0, layout.w, layout.h);
-      ctx.fillStyle = "#eef6ff";
+      drawDarkBg(ctx, layout.w, layout.h);
+      ctx.fillStyle = "rgba(15,23,42,0.65)";
       ctx.fillRect(layout.ox, MARGIN.top, layout.plotW, layout.plotH);
 
-      ctx.strokeStyle = "rgba(0,100,180,0.1)";
+      ctx.strokeStyle = "rgba(148,163,184,0.14)";
       ctx.lineWidth = 1;
       for (let i = 0; i <= PLOT_W; i += 1) {
         const s = toScreen(-PLOT_W / 2 + i, 0);
@@ -1198,7 +1220,7 @@
       }
 
       const o = toScreen(0, 0);
-      ctx.strokeStyle = "rgba(0,100,180,0.35)";
+      ctx.strokeStyle = "rgba(148,163,184,0.35)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(layout.ox, o.y);
@@ -1206,7 +1228,7 @@
       ctx.moveTo(o.x, MARGIN.top);
       ctx.lineTo(o.x, layout.oy);
       ctx.stroke();
-      ctx.fillStyle = "#4a7099";
+      ctx.fillStyle = "#94a3b8";
       ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
       ctx.fillText("x", layout.ox + layout.plotW - 8, o.y + 14);
       ctx.fillText("y", o.x + 6, MARGIN.top + 10);

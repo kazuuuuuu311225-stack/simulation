@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>5章 — 弾性エネルギー U = ½kx²</title>
+    <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
+<title>5章 — 弾性エネルギー U = ½kx²</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
+    <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
+<style>
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
@@ -45,11 +47,23 @@
     .formula-main { font-size: 1.05rem; font-weight: 800; color: #6ee7b7; line-height: 1.55; }
     .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
     .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
-    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
-    .area-viz { grid-area: viz; }
-    .area-hud { grid-area: hud; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; min-width: 0; }
+    .area-hud { grid-area: hud; min-width: 0; }
     .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(52,211,153,0.32); }
-    .viz-head { padding: 10px 14px 0; }
+    .viz-head {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 10px 14px 0;
+    }
+    .speed-row { display: flex; align-items: center; gap: 5px; }
+    .speed-row .speed-lbl { font-size: 0.66rem; color: #64748b; font-weight: 700; margin-right: 2px; }
+    .speed-btn {
+      padding: 4px 9px; min-height: 26px; font-family: inherit; font-size: 0.68rem; font-weight: 700;
+      border-radius: 999px; cursor: pointer; color: #94a3b8;
+      border: 1px solid rgba(148,163,184,0.28); background: rgba(255,255,255,0.04);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .speed-btn.is-active { color: #fff; background: rgba(52,211,153,0.32); border-color: rgba(52,211,153,0.6); }
     .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #6ee7b7; }
     .color-legend {
       display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
@@ -75,6 +89,7 @@
     #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
     #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
     #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    #statusPanel.done { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
     .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
     .viz-foot button, .act-btn, .btn-row button {
       flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
@@ -99,8 +114,72 @@
     .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
     .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
     .slider-row label, label.slider-label {
-      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+      font-size: 0.72rem; color: #cbd5e1; font-weight: 600; display: flex; justify-content: space-between; gap: 8px;
     }
+    .slider-row label .val { color: #6ee7b7; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .preset-block { margin: 2px 0 8px; }
+    .preset-title { margin: 0 0 5px; font-size: 0.68rem; font-weight: 700; color: #64748b; }
+    .preset-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .preset-btn {
+      padding: 5px 9px; min-height: 30px; font-family: inherit; font-size: 0.68rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; color: #cbd5e1;
+      border: 1px solid rgba(148,163,184,0.26); background: rgba(255,255,255,0.05);
+    }
+    .preset-btn.is-active { color: #fff; background: rgba(52,211,153,0.28); border-color: rgba(52,211,153,0.55); }
+    .preset-btn .pv { color: #94a3b8; font-weight: 700; margin-left: 4px; font-size: 0.64rem; }
+    .preset-btn.is-active .pv { color: #a7f3d0; }
+    .live-strip {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+      padding: 10px 14px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: rgba(15,23,42,0.55);
+    }
+    .live-cell { padding: 7px 6px; border-radius: 9px; text-align: center; background: rgba(0,0,0,0.28); border: 1px solid rgba(148,163,184,0.16); }
+    .live-cell .k { display: block; font-size: 0.58rem; color: #64748b; font-weight: 700; margin-bottom: 3px; }
+    .live-cell .v { display: block; font-size: 0.8rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #f1f5f9; }
+    .live-cell.t .v { color: #fde68a; }
+    .live-cell.x .v { color: #38bdf8; }
+    .live-cell.u .v { color: #38bdf8; }
+    .live-cell.ke .v { color: #34d399; }
+    .live-cell.e .v { color: #a78bfa; }
+    @media (max-width: 640px) { .live-strip { grid-template-columns: repeat(3, 1fr); } }
+    .graph-block { border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; background: #0a0e14; }
+    .graph-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; padding: 0 14px 6px; }
+    .graph-title { margin: 0; font-size: 0.78rem; font-weight: 700; color: #6ee7b7; }
+    .graph-legend { margin: 0; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .view-tabs { display: flex; gap: 8px; margin-bottom: 0; }
+    .view-tab {
+      flex: 1; max-width: 220px; padding: 10px 14px; border-radius: 12px 12px 0 0;
+      border: 1px solid rgba(148,163,184,0.18); border-bottom: none;
+      background: rgba(18,24,36,0.45); color: #94a3b8;
+      font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    }
+    .view-tab.is-active { color: #ecfdf5; background: rgba(18,24,36,0.88); border-color: rgba(52,211,153,0.35); box-shadow: inset 0 2px 0 #34d399; }
+    .view-tab .tab-count { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 0.72rem; background: rgba(52,211,153,0.18); color: #a7f3d0; }
+    #simView.is-hidden, #recordPanel.is-hidden { display: none; }
+    #recordPanel { margin-top: 0; padding: 14px 16px; border-radius: 0 0 14px 14px; background: rgba(15,23,42,0.55); border: 1px solid rgba(52,211,153,0.22); border-top: none; }
+    #recordPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #6ee7b7; }
+    .record-desc { margin: 0 0 12px; font-size: 0.76rem; color: #94a3b8; line-height: 1.55; }
+    .record-meta { display: grid; gap: 8px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.18); font-size: 0.76rem; color: #cbd5e1; line-height: 1.65; }
+    @media (min-width: 640px) { .record-meta { grid-template-columns: repeat(2, 1fr); } }
+    .record-meta strong { color: #a7f3d0; }
+    .record-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .record-tools button { padding: 7px 12px; min-height: 34px; font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer; color: #cbd5e1; border: 1px solid rgba(148,163,184,0.28); background: rgba(255,255,255,0.05); }
+    .record-table-wrap { max-height: min(420px, 52dvh); overflow: auto; border-radius: 10px; border: 1px solid rgba(148,163,184,0.14); background: rgba(0,0,0,0.22); }
+    .record-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+    .record-table th, .record-table td { padding: 7px 8px; text-align: center; border-bottom: 1px solid rgba(148,163,184,0.1); white-space: nowrap; }
+    .record-table th { position: sticky; top: 0; z-index: 1; font-size: 0.68rem; color: #94a3b8; background: rgba(12,16,24,0.98); }
+    .record-table tr.is-latest { background: rgba(52,211,153,0.14) !important; }
+    .record-table .col-u { color: #38bdf8; font-weight: 600; }
+    .record-table .col-k { color: #34d399; font-weight: 600; }
+    .record-empty { margin: 0; padding: 24px 12px; text-align: center; font-size: 0.8rem; color: #64748b; line-height: 1.6; }
+    .theory-grid { display: grid; gap: 10px; grid-template-columns: 1fr; margin-top: 12px; }
+    @media (min-width: 720px) { .theory-grid { grid-template-columns: repeat(3, 1fr); } }
+    .theory-card { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.16); }
+    .theory-card .tc-label { margin: 0 0 5px; font-size: 0.7rem; font-weight: 700; color: #34d399; }
+    .theory-card .tc-formula { margin: 0 0 5px; font-size: 0.8rem; color: #e2e8f0; line-height: 1.5; }
+    .theory-card .tc-value { margin: 0; font-size: 0.78rem; color: #94a3b8; }
+    .theory-card .tc-value strong { color: #6ee7b7; font-variant-numeric: tabular-nums; }
+    .num-e { font-weight: 600; color: #6ee7b7; }
     .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #34d399; }
     .side-group {
       padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
@@ -190,99 +269,188 @@
       <p class="chapter-label">第5章 — 仕事とエネルギー</p>
       <h2>弾性エネルギー U = ½ k x²</h2>
       <p class="tagline">バネ定数 k · 伸び x · U + K = E</p>
-      <a id="back" href="../00_folder_classical.html#chapter-5">← 力学フォルダへ戻る</a>
+      <a id="back" href="../00_folder_classical.html#chapter-5">← 力学 · 第5章</a>
     </header>
 
     <section class="panel">
       <div class="formula-top">
-        <div class="formula-main"><strong>U = ½ k x²</strong> · <strong>F = −k x</strong> · <strong>U + K = E</strong></div>
-        <div class="formula-sub">離すと SHM — U が K に変換（抵抗なし）</div>
+        <div class="formula-main"><strong>U = ½ k x²</strong>　⇒　<strong>U + K = E</strong>（一定）</div>
+        <div class="formula-sub">離すと SHM — バネが縮むと U ↓ K ↑ · F = −k x</div>
       </div>
+
+      <div class="view-tabs">
+        <button type="button" class="view-tab is-active" id="tabSim">シミュレーション</button>
+        <button type="button" class="view-tab" id="tabRecord">記録<span class="tab-count" id="tabRecordCount">0</span></button>
+      </div>
+
+      <div id="simView">
       <div class="sim-grid">
         <div class="area-viz">
           <div class="viz-block">
-
-            <div class="viz-head"><p class="viz-label">バネの伸び x · 弾性エネルギー U と運動エネルギー K</p></div>
+            <div class="viz-head">
+              <p class="viz-label">バネの伸び x · 弾性エネルギー U と運動エネルギー K</p>
+              <div class="speed-row">
+                <span class="speed-lbl">再生速度</span>
+                <button type="button" class="speed-btn" data-speed="0.25">0.25×</button>
+                <button type="button" class="speed-btn" data-speed="0.5">0.5×</button>
+                <button type="button" class="speed-btn is-active" data-speed="1">1×</button>
+              </div>
+            </div>
             <div class="color-legend">
               <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>弾性 U</span>
               <span><i class="color-chip" style="background:#34d399;color:#34d399"></i>運動 K</span>
+              <span><i class="color-chip" style="background:#a78bfa;color:#a78bfa"></i>全エネルギー E</span>
               <span><i class="color-chip" style="background:#fb923c;color:#fb923c"></i>バネの力 F</span>
             </div>
-            <div class="canvas-wrap" id="canvasWrap"><canvas id="canvas"></canvas></div>
+            <div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+            <div class="live-strip">
+              <div class="live-cell t"><span class="k">t</span><span class="v" id="liveT">0.00 s</span></div>
+              <div class="live-cell x"><span class="k">x</span><span class="v" id="liveX">1.20 m</span></div>
+              <div class="live-cell u"><span class="k">U</span><span class="v" id="liveU">— J</span></div>
+              <div class="live-cell ke"><span class="k">K</span><span class="v" id="liveK">— J</span></div>
+              <div class="live-cell e"><span class="k">E</span><span class="v" id="liveE">— J</span></div>
+            </div>
+            <div class="graph-block">
+              <div class="graph-head">
+                <p class="graph-title">エネルギー – 時間グラフ</p>
+                <p class="graph-legend">U と K が入れ替わり E（紫破線）は一定</p>
+              </div>
+              <div class="canvas-wrap graph" id="graphWrap"><canvas id="graphCanvas"></canvas></div>
+            </div>
+            <div class="explain-panel">
+              <div id="statusPanel">x を設定して「離す」</div>
+            </div>
           </div>
         </div>
         <div class="area-hud">
           <div class="hud-panel">
             <p class="hud-title">コントロール</p>
-<div class="slider-row"><label class="slider-label">バネの伸び x (m):
-      <input id="xSlider" type="range" min="-2" max="2" step="0.05" value="1.2">
-      <span id="xValue">1.20</span></label></div>
-            <div class="slider-row"><label class="slider-label">バネ定数 k (N/m):
-      <input id="kSlider" type="range" min="10" max="200" step="5" value="80">
-      <span id="kValue">80</span></label></div>
-            <div class="slider-row"><label class="slider-label">質量 m (kg):
-      <input id="mSlider" type="range" min="1" max="10" step="0.5" value="2">
-      <span id="mValue">2.0</span></label></div>
-            <p class="formula-box">
-      F = −k x　　U = ½ k x²　　K = ½ m v²　　U + K = 一定
-    </p>
+            <div class="slider-row"><label class="slider-label" for="xSlider"><span>伸び x</span><span class="val"><span id="xValue">1.20</span> m</span></label>
+              <input id="xSlider" type="range" min="-2" max="2" step="0.05" value="1.2">
+            </div>
+            <div class="slider-row"><label class="slider-label" for="kSlider"><span>バネ定数 k</span><span class="val"><span id="kValue">80</span> N/m</span></label>
+              <input id="kSlider" type="range" min="10" max="200" step="5" value="80">
+            </div>
+            <div class="slider-row"><label class="slider-label" for="mSlider"><span>質量 m</span><span class="val"><span id="mValue">2.0</span> kg</span></label>
+              <input id="mSlider" type="range" min="1" max="10" step="0.5" value="2">
+            </div>
 
-    <p class="hint">
-      x = 0 が自然長（つり合い位置）。x をずらしてから「離す」と、バネが縮みながら U が K に変わります。
-    </p>
+            <div class="preset-block">
+              <p class="preset-title">プリセット</p>
+              <div class="preset-row" id="presetRow">
+                <button type="button" class="preset-btn is-active" data-k="80" data-x="1.2">標準<span class="pv">k80·x1.2</span></button>
+                <button type="button" class="preset-btn" data-k="30" data-x="1.5">弱いバネ<span class="pv">k30</span></button>
+                <button type="button" class="preset-btn" data-k="150" data-x="0.8">強いバネ<span class="pv">k150</span></button>
+                <button type="button" class="preset-btn" data-k="80" data-x="1.8">大振幅<span class="pv">x1.8</span></button>
+                <button type="button" class="preset-btn" data-k="80" data-x="0.5">小振幅<span class="pv">x0.5</span></button>
+              </div>
+            </div>
 
-    <div class="btn-row">
-      <button id="releaseBtn" type="button">離す</button>
-      <button id="pauseBtn" type="button">停止</button>
-      <button id="resetBtn" type="button">リセット</button>
-    </div>
-            <div id="statusPanel">x を設定して「離す」</div>
+            <p class="formula-box">F = −k x　　U = ½ k x²　　K = ½ m v²　　T = 2π√(m/k)</p>
+            <p class="hint">x = 0 が自然長。x をずらして「離す」と SHM が始まり U が K に変わります。<br>Space キーで離す/停止、R キーでリセット。</p>
+
+            <div class="btn-row">
+              <button id="releaseBtn" type="button">離す</button>
+              <button id="pauseBtn" type="button">停止</button>
+              <button id="resetBtn" type="button">リセット</button>
+            </div>
+
+            <section id="calcPanel" aria-label="計算過程">
+              <h3>計算過程</h3>
+              <p class="concept">伸び x に比例して U = ½kx² がたまります。離すと F = −kx で SHM が始まり、U と K が行き来します。</p>
+              <div class="calc-block">
+                <p class="calc-label">① 弾性エネルギー</p>
+                <p class="calc-line">U = ½ k x² = <span id="cU" class="num-before">—</span> J</p>
+                <p class="calc-line sub">k = <span id="cKval">—</span> N/m · x = <span id="cX">—</span> m</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">② 運動エネルギー</p>
+                <p class="calc-line">K = ½ m v² = <span id="cKeng" class="num-after">—</span> J</p>
+                <p class="calc-line sub">v = <span id="cV">—</span> m/s · m = <span id="cM">—</span> kg</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">③ 力と周期</p>
+                <p class="calc-line">F = −k x = <span id="cF" class="num-to-bat">—</span> N</p>
+                <p class="calc-line sub">T = 2π√(m/k) = <span id="cT" class="num-e">—</span> s · f = <span id="cFhz" class="num-e">—</span> Hz</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">④ エネルギー保存</p>
+                <p class="calc-line">E = U + K = <span id="cE" class="num-dp">—</span> J</p>
+                <p class="calc-line sub">最大 U（端点）= 最大 K（x=0）= E</p>
+              </div>
+            </section>
           </div>
         </div>
       </div>
+      </div>
+
+      <section id="recordPanel" class="is-hidden" aria-label="記録">
+        <h3>運動記録 — U と K のデータ</h3>
+        <p class="record-desc">「離す」ごとに初期条件と理論周期を記録。グラフで U↔K の入れ替わりを確認できます。</p>
+        <div class="record-meta" id="recordMeta">
+          <div>実行条件：<strong id="recCond">—</strong></div>
+          <div>記録件数：<strong id="recCount">0</strong> 回</div>
+          <div>最終状態：<strong id="recFinal">—</strong></div>
+          <div>全エネルギー E：<strong id="recE">—</strong></div>
+        </div>
+        <div class="record-tools">
+          <button type="button" id="copyRecordBtn">表をコピー（TSV）</button>
+          <button type="button" id="clearRecordBtn">記録を消去</button>
+        </div>
+        <div class="record-table-wrap" id="recordTableWrap">
+          <table class="record-table" id="recordTable" hidden>
+            <thead>
+              <tr><th>回</th><th>t (s)</th><th>x₀ (m)</th><th>k</th><th>m</th><th>E (J)</th><th>T (s)</th><th>v<sub>max</sub></th></tr>
+            </thead>
+            <tbody id="recordBody"></tbody>
+          </table>
+          <p class="record-empty" id="recordEmpty">まだ記録がありません。</p>
+        </div>
+      </section>
     </section>
 
     <section class="panel">
       <h3>ここがポイント（高校物理）</h3>
       <ul class="edu-list">
-        <li>自然長 x = 0 で F = 0、U = 0</li>
-        <li><strong>U = ½kx²</strong> — 伸び |x| が大きいほど U は大きい</li>
+        <li>自然長 <strong>x = 0</strong> で F = 0、U = 0</li>
+        <li><strong>U = ½kx²</strong> — |x| が大きいほど U は大きい（x² に比例）</li>
         <li>離すと <strong>F = −kx</strong> で SHM · U ↓ K ↑</li>
         <li>摩擦なしなら <strong>U + K = E</strong>（一定）</li>
+        <li>周期 <strong>T = 2π√(m/k)</strong> — k が大きいほど速い振動</li>
       </ul>
+      <div class="theory-grid">
+        <div class="theory-card">
+          <p class="tc-label">振幅 A での最大 U</p>
+          <p class="tc-formula">U<sub>max</sub> = ½ k A² = E</p>
+          <p class="tc-value">U<sub>max</sub> = <strong id="thUmax">—</strong> J</p>
+        </div>
+        <div class="theory-card">
+          <p class="tc-label">x = 0 での最大 K</p>
+          <p class="tc-formula">K<sub>max</sub> = ½ m v<sub>max</sub>² = E</p>
+          <p class="tc-value">v<sub>max</sub> = <strong id="thVmax">—</strong> m/s</p>
+        </div>
+        <div class="theory-card">
+          <p class="tc-label">周期と角振動数</p>
+          <p class="tc-formula">T = 2π√(m/k) · ω = √(k/m)</p>
+          <p class="tc-value">T = <strong id="thT">—</strong> s</p>
+        </div>
+      </div>
     </section>
   </div>
 
-  <script>    let layout = { w: 0, h: 0, dpr: 1 };
-    let fdLayout = { w: 0, h: 0, dpr: 1 };
+  <script>
+    "use strict";
 
-    function drawDarkBg(c, w, h, glowRgb) {
-      const g = glowRgb || "52,211,153";
-      const bg = c.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
-      c.fillStyle = bg; c.fillRect(0, 0, w, h);
-      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
-      glow.addColorStop(0, "rgba(" + g + ",0.12)");
-      glow.addColorStop(0.45, "rgba(" + g + ",0.05)");
-      glow.addColorStop(1, "rgba(20,24,36,0)");
-      c.fillStyle = glow; c.fillRect(0, 0, w, h);
-    }
-
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const canvasWrap = document.getElementById("canvasWrap");
-    const statusPanel = document.getElementById("statusPanel");
-    const xSlider = document.getElementById("xSlider");
-    const kSlider = document.getElementById("kSlider");
-    const mSlider = document.getElementById("mSlider");
-
+    const el = (id) => document.getElementById(id);
+    const fmt = (n, d) => Number(n).toFixed(d);
     const MAX_DT = 1 / 30;
     const X_MIN = -2;
     const X_MAX = 2;
     const MARGIN = { left: 88, right: 128, top: 44, bottom: 56 };
-    const E_MAX_REF = 0.5 * 200 * 4;
-    const COL = { u: "#38bdf8", k: "#34d399", e: "#a78bfa", spring: "#f59e0b", force: "#fb923c", track: "#64748b" };
+    const COL = { u: "#38bdf8", k: "#34d399", e: "#a78bfa", spring: "#f59e0b", force: "#fb923c" };
 
+    let layout = { w: 0, h: 0 };
+    let glayout = { w: 0, h: 0 };
     let x = 1.2;
     let v = 0;
     let simK = 80;
@@ -291,65 +459,167 @@
     let oscillating = false;
     let running = false;
     let paused = false;
+    let simTime = 0;
+    let speedFactor = 1;
+    let activeView = "sim";
+    let energySamples = [];
+    let releaseHistory = [];
     let xTrail = [];
 
+    const canvas = el("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = el("canvasWrap");
+    const graphCanvas = el("graphCanvas");
+    const gctx = graphCanvas.getContext("2d");
+    const graphWrap = el("graphWrap");
+    const statusPanel = el("statusPanel");
+    const xSlider = el("xSlider");
+    const kSlider = el("kSlider");
+    const mSlider = el("mSlider");
     const DEFAULTS = { x: 1.2, k: 80, m: 2 };
 
-    function fmt(n, d) {
-      return Number(n).toFixed(d);
+    function drawDarkBg(c, w, h) {
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
+      c.fillStyle = bg; c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(52,211,153,0.10)");
+      glow.addColorStop(0.45, "rgba(52,211,153,0.04)");
+      glow.addColorStop(1, "rgba(20,24,36,0)");
+      c.fillStyle = glow; c.fillRect(0, 0, w, h);
     }
 
-    function getK() {
-      return oscillating ? simK : parseFloat(kSlider.value);
-    }
-
-    function getM() {
-      return oscillating ? simM : parseFloat(mSlider.value);
-    }
-
-    function getU() {
-      return 0.5 * getK() * x * x;
-    }
-
-    function getKEnergy() {
-      if (!oscillating && !running) return 0;
-      return Math.max(0, E0 - getU());
-    }
-
-    function getForce() {
-      return -getK() * x;
-    }
+    function getK() { return oscillating ? simK : parseFloat(kSlider.value); }
+    function getM() { return oscillating ? simM : parseFloat(mSlider.value); }
+    function getU() { return 0.5 * getK() * x * x; }
+    function getKEnergy() { return Math.max(0, 0.5 * getM() * v * v); }
+    function getForce() { return -getK() * x; }
+    function getE() { return getU() + getKEnergy(); }
+    function getPeriod() { return 2 * Math.PI * Math.sqrt(getM() / getK()); }
+    function getVmax() { return Math.abs(x) * Math.sqrt(getK() / getM()); }
 
     function syncSliders() {
       if (!oscillating) x = parseFloat(xSlider.value);
-      document.getElementById("xValue").textContent = fmt(x, 2);
-      document.getElementById("kValue").textContent = fmt(parseFloat(kSlider.value), 0);
-      document.getElementById("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
+      el("xValue").textContent = fmt(x, 2);
+      el("kValue").textContent = fmt(parseFloat(kSlider.value), 0);
+      el("mValue").textContent = fmt(parseFloat(mSlider.value), 1);
+      document.querySelectorAll(".preset-btn").forEach((b) => {
+        const match = Math.abs(parseFloat(b.dataset.k) - parseFloat(kSlider.value)) < 3
+          && Math.abs(parseFloat(b.dataset.x) - parseFloat(xSlider.value)) < 0.06;
+        b.classList.toggle("is-active", match);
+      });
+      updateTheory();
+      updateCalcPanel();
+      updateLiveStrip();
+    }
+
+    function setText(id, t) { const e2 = el(id); if (e2) e2.textContent = t; }
+
+    function updateTheory() {
+      const k = getK();
+      const m = getM();
+      const amp = Math.abs(oscillating ? x : parseFloat(xSlider.value));
+      const E = 0.5 * k * amp * amp;
+      setText("thUmax", fmt(E, 2) + " J");
+      setText("thVmax", fmt(amp * Math.sqrt(k / m), 2) + " m/s");
+      setText("thT", fmt(getPeriod(), 2) + " s");
+    }
+
+    function updateCalcPanel() {
+      const k = getK();
+      const m = getM();
+      const U = getU();
+      const K = getKEnergy();
+      const E = U + K;
+      setText("cU", fmt(U, 2));
+      setText("cKeng", fmt(K, 2));
+      setText("cKval", fmt(k, 0));
+      setText("cX", fmt(x, 2));
+      setText("cV", fmt(v, 2));
+      setText("cM", fmt(m, 1));
+      setText("cF", fmt(getForce(), 1));
+      setText("cT", fmt(getPeriod(), 2));
+      setText("cFhz", fmt(1 / getPeriod(), 2));
+      setText("cE", fmt(E, 2));
+    }
+
+    function updateLiveStrip() {
+      setText("liveT", fmt(simTime, 2) + " s");
+      setText("liveX", fmt(x, 2) + " m");
+      setText("liveU", fmt(getU(), 2) + " J");
+      setText("liveK", fmt(getKEnergy(), 2) + " J");
+      setText("liveE", fmt(getE(), 2) + " J");
+    }
+
+    function setActiveView(view) {
+      activeView = view;
+      el("simView").classList.toggle("is-hidden", view !== "sim");
+      el("recordPanel").classList.toggle("is-hidden", view !== "record");
+      el("tabSim").classList.toggle("is-active", view === "sim");
+      el("tabRecord").classList.toggle("is-active", view === "record");
+      if (view === "record") updateRecordPanel(true);
+      requestAnimationFrame(resizeCanvas);
+    }
+
+    function updateRecordPanel(scroll) {
+      setText("tabRecordCount", String(releaseHistory.length));
+      setText("recCount", String(releaseHistory.length));
+      const tbody = el("recordBody");
+      const table = el("recordTable");
+      const empty = el("recordEmpty");
+      const wrap = el("recordTableWrap");
+      if (releaseHistory.length === 0) {
+        if (tbody) tbody.innerHTML = "";
+        if (table) table.hidden = true;
+        if (empty) empty.hidden = false;
+        setText("recCond", "—");
+        setText("recE", "—");
+        setText("recFinal", oscillating ? (running && !paused ? "運動中" : "一時停止") : "待機中");
+        return;
+      }
+      const last = releaseHistory[releaseHistory.length - 1];
+      setText("recCond", "x₀=" + fmt(last.x0, 2) + " m · k=" + fmt(last.k, 0) + " · m=" + fmt(last.m, 1));
+      setText("recE", fmt(last.E, 2) + " J");
+      setText("recFinal", running && !paused ? "運動中 t=" + fmt(simTime, 2) + " s" : (paused ? "一時停止" : "待機中"));
+      if (table) table.hidden = false;
+      if (empty) empty.hidden = true;
+      if (tbody) {
+        tbody.innerHTML = releaseHistory.map((r) =>
+          "<tr><td>" + r.n + "</td><td>" + fmt(r.t, 2) + "</td><td class=\"col-u\">" + fmt(r.x0, 2) +
+          "</td><td>" + fmt(r.k, 0) + "</td><td>" + fmt(r.m, 1) + "</td><td class=\"col-k\">" + fmt(r.E, 2) +
+          "</td><td>" + fmt(r.T, 2) + "</td><td>" + fmt(r.vmax, 2) + "</td></tr>"
+        ).join("");
+      }
+      if (scroll && wrap) wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    function recordAsTsv() {
+      const head = ["回", "t(s)", "x0(m)", "k", "m", "E(J)", "T(s)", "vmax"].join("\t");
+      const lines = releaseHistory.map((r) => [r.n, fmt(r.t, 3), fmt(r.x0, 3), r.k, r.m, fmt(r.E, 3), fmt(r.T, 3), fmt(r.vmax, 3)].join("\t"));
+      return [head].concat(lines).join("\n");
     }
 
     function setSlidersEnabled(on) {
       xSlider.disabled = !on;
       kSlider.disabled = !on;
       mSlider.disabled = !on;
+      document.querySelectorAll(".preset-btn").forEach((b) => { b.disabled = !on; });
     }
 
     function resetSimulation() {
       xSlider.value = DEFAULTS.x;
       kSlider.value = DEFAULTS.k;
       mSlider.value = DEFAULTS.m;
-      x = DEFAULTS.x;
-      v = 0;
-      simK = DEFAULTS.k;
-      simM = DEFAULTS.m;
+      x = DEFAULTS.x; v = 0; simK = DEFAULTS.k; simM = DEFAULTS.m;
       E0 = 0.5 * simK * x * x;
-      oscillating = false;
-      running = false;
-      paused = false;
-      xTrail = [];
+      oscillating = false; running = false; paused = false;
+      simTime = 0; energySamples = []; xTrail = [];
       setSlidersEnabled(true);
       syncSliders();
       statusPanel.textContent = "x を設定して「離す」";
       statusPanel.className = "";
+      setActiveView("sim");
+      updateRecordPanel(false);
     }
 
     function releaseSpring() {
@@ -364,20 +634,27 @@
         simK = parseFloat(kSlider.value);
         simM = parseFloat(mSlider.value);
         E0 = 0.5 * simK * x * x;
-        v = 0;
+        v = 0; simTime = 0;
+        energySamples = [{ t: 0, U: E0, K: 0, E: E0 }];
         xTrail = [];
         oscillating = true;
         setSlidersEnabled(false);
+        releaseHistory.push({
+          n: releaseHistory.length + 1, t: simTime, x0: x, k: simK, m: simM,
+          E: E0, T: 2 * Math.PI * Math.sqrt(simM / simK),
+          vmax: Math.abs(x) * Math.sqrt(simK / simM),
+        });
+        updateRecordPanel(activeView === "record");
       }
-      running = true;
-      paused = false;
+      running = true; paused = false;
       syncSliders();
     }
 
     function pauseSimulation() {
-      if (!running) return;
-      paused = !paused;
-      statusPanel.textContent = paused ? "一時停止中" : "運動中 — U が K に変わっています";
+      if (!running && !oscillating) return;
+      if (running && !paused) { paused = true; el("pauseBtn").textContent = "再開"; setSlidersEnabled(false); }
+      else if (paused) { paused = false; el("pauseBtn").textContent = "停止"; setSlidersEnabled(false); }
+      statusPanel.textContent = paused ? "一時停止 — 「再開」または「リセット」" : "運動中 — U ↔ K が入れ替わっています";
     }
 
     function resizeCanvas() {
@@ -385,64 +662,31 @@
       function fit(cv, wrap, minH) {
         const rect = wrap.getBoundingClientRect();
         const w = Math.max(280, Math.round(rect.width));
-        const h = Math.max(minH || 220, Math.round(rect.height));
-        cv.width = Math.round(w * dpr);
-        cv.height = Math.round(h * dpr);
-        cv.style.width = w + "px";
-        cv.style.height = h + "px";
-        const c = cv.getContext("2d");
-        c.setTransform(dpr, 0, 0, dpr, 0, 0);
-        return { w, h, dpr };
+        const h = Math.max(minH, Math.round(rect.height));
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+        cv.style.width = w + "px"; cv.style.height = h + "px";
+        cv.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h };
       }
-      layout = fit(canvas, canvasWrap, 260);
-      if (typeof fdCanvas !== "undefined" && fdCanvas) fdLayout = fit(fdCanvas, fdWrap, 180);
+      layout = fit(canvas, canvasWrap, 340);
+      glayout = fit(graphCanvas, graphWrap, 180);
     }
 
-    xSlider.addEventListener("input", () => {
-      if (!oscillating) {
-        x = parseFloat(xSlider.value);
-        E0 = 0.5 * getK() * x * x;
-      }
-      syncSliders();
-    });
-    [kSlider, mSlider].forEach((s) => {
-      s.addEventListener("input", () => {
-        if (!oscillating) E0 = 0.5 * getK() * x * x;
-        syncSliders();
-      });
-    });
-
-    document.getElementById("releaseBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      releaseSpring();
-    });
-    document.getElementById("pauseBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      pauseSimulation();
-    });
-    document.getElementById("resetBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      resetSimulation();
-    });
-
-    window.addEventListener("resize", resizeCanvas);
-    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
-    if (typeof ResizeObserver !== "undefined") {
-      new ResizeObserver(resizeCanvas).observe(canvasWrap);
-    }
-
-    requestAnimationFrame(() => {
-      resizeCanvas();
-      resetSimulation();
-    });
-
-    function update(dt) {
+    function update(dtReal) {
       if (!running || paused || !oscillating) return;
-      const k = simK;
-      const m = simM;
-      const a = (-k * x) / m;
-      v += a * dt;
-      x += v * dt;
+      const dt = dtReal * speedFactor;
+      const steps = 8;
+      const sub = dt / steps;
+      for (let i = 0; i < steps; i += 1) {
+        const a = (-simK * x) / simM;
+        v += a * sub;
+        x += v * sub;
+      }
+      simTime += dt;
+      xTrail.push(x);
+      if (xTrail.length > 40) xTrail.shift();
+      energySamples.push({ t: simTime, U: getU(), K: getKEnergy(), E: getE() });
+      if (energySamples.length > 3000) energySamples.splice(0, 500);
     }
 
     function layoutMetrics(w, h) {
@@ -455,217 +699,214 @@
       return { plotLeft, plotRight, plotW, cy, ppm, eqX, barTop: MARGIN.top + 8, barH: h - MARGIN.top - MARGIN.bottom - 16 };
     }
 
-    function xToPx(xM, lay) {
-      return lay.eqX + xM * lay.ppm;
-    }
+    function xToPx(xM, lay) { return lay.eqX + xM * lay.ppm; }
 
-    function drawVerticalBar(x, yTop, barH, fillVal, color, label, valueJ, maxE) {
-      const bw = 28;
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.fillRect(x - 6, yTop - 22, bw + 12, barH + 36);
-      ctx.strokeStyle = "rgba(0,76,153,0.12)";
-      ctx.strokeRect(x - 6, yTop - 22, bw + 12, barH + 36);
-      ctx.fillStyle = "rgba(0,76,153,0.08)";
-      ctx.fillRect(x, yTop, bw, barH);
-      const fill = maxE > 0 ? Math.min(1, fillVal / maxE) : 0;
+    function drawEnergyBar(bx, yTop, barH, val, maxE, color, label) {
+      const bw = 30;
+      ctx.fillStyle = "rgba(8,12,20,0.92)";
+      ctx.strokeStyle = "rgba(52,211,153,0.25)";
+      ctx.lineWidth = 1;
+      ctx.fillRect(bx - 4, yTop - 20, bw + 8, barH + 32);
+      ctx.strokeRect(bx - 4, yTop - 20, bw + 8, barH + 32);
+      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      ctx.fillRect(bx, yTop, bw, barH);
+      const fill = maxE > 0 ? Math.min(1, val / maxE) : 0;
       ctx.fillStyle = color;
-      ctx.fillRect(x, yTop + barH * (1 - fill), bw, barH * fill);
+      ctx.fillRect(bx, yTop + barH * (1 - fill), bw, barH * fill);
       ctx.fillStyle = color;
-      ctx.font = "600 11px Inter, Poppins, Noto Sans JP, sans-serif";
+      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(label, x + bw / 2, yTop - 8);
+      ctx.fillText(label, bx + bw / 2, yTop - 6);
       ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText(`${fmt(valueJ, 0)} J`, x + bw / 2, yTop + barH + 16);
-      ctx.textAlign = "start";
-    }
-
-    function drawWall(x, cy) {
-      ctx.fillStyle = "#556677";
-      ctx.fillRect(x - 14, cy - 70, 14, 140);
-      ctx.strokeStyle = "#334455";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x - 14, cy - 70, 14, 140);
-      for (let i = -60; i <= 60; i += 20) {
-        ctx.beginPath();
-        ctx.moveTo(x - 14, cy + i);
-        ctx.lineTo(x - 24, cy + i - 10);
-        ctx.stroke();
-      }
-    }
-
-    function drawHorizontalSpring(x1, y, x2) {
-      const coils = 10;
-      const amp = 10;
-      const len = Math.max(20, x2 - x1);
-      const steps = coils * 2;
-      const dx = len / steps;
-      ctx.strokeStyle = "#cc5500";
-      ctx.lineWidth = 4;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(x1, y);
-      let px = x1;
-      for (let i = 0; i < steps; i += 1) {
-        px += dx;
-        const py = y + (i % 2 === 0 ? amp : -amp);
-        ctx.lineTo(px, py);
-      }
-      ctx.lineTo(x2, y);
-      ctx.stroke();
-      ctx.strokeStyle = "#ffaa33";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x1, y);
-      px = x1;
-      for (let i = 0; i < steps; i += 1) {
-        px += dx;
-        const py = y + (i % 2 === 0 ? amp : -amp);
-        ctx.lineTo(px, py);
-      }
-      ctx.lineTo(x2, y);
-      ctx.stroke();
-    }
-
-    function drawBox(cx, cy) {
-      const bw = 56;
-      const bh = 44;
-      ctx.fillStyle = "#ddeeff";
-      ctx.strokeStyle = "#4488bb";
-      ctx.lineWidth = 2.5;
-      ctx.fillRect(cx - bw / 2, cy - bh / 2, bw, bh);
-      ctx.strokeRect(cx - bw / 2, cy - bh / 2, bw, bh);
+      ctx.fillText(fmt(val, 1) + " J", bx + bw / 2, yTop + barH + 14);
+      ctx.textAlign = "left";
     }
 
     function drawArrowFrom(x0, y0, dx, dy, color, lw) {
-      const len = Math.sqrt(dx * dx + dy * dy);
+      const len = Math.hypot(dx, dy);
       if (len < 3) return;
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = lw;
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x0 + dx, y0 + dy);
-      ctx.stroke();
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx, y0 + dy); ctx.stroke();
       const ang = Math.atan2(dy, dx);
       const head = Math.min(10, len * 0.28);
-      const tx = x0 + dx;
-      const ty = y0 + dy;
       ctx.beginPath();
-      ctx.moveTo(tx, ty);
-      ctx.lineTo(tx - head * Math.cos(ang - Math.PI / 7), ty - head * Math.sin(ang - Math.PI / 7));
-      ctx.lineTo(tx - head * Math.cos(ang + Math.PI / 7), ty - head * Math.sin(ang + Math.PI / 7));
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(x0 + dx, y0 + dy);
+      ctx.lineTo(x0 + dx - head * Math.cos(ang - Math.PI / 7), y0 + dy - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(x0 + dx - head * Math.cos(ang + Math.PI / 7), y0 + dy - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath(); ctx.fill();
     }
 
     function drawScene() {
-      const w = layout.w;
-      const h = layout.h;
+      const w = layout.w; const h = layout.h;
+      if (w < 1 || h < 1) return;
       const lay = layoutMetrics(w, h);
-      const U = getU();
-      const K = getKEnergy();
-      const E = U + K;
-      const maxE = Math.max(E0, E_MAX_REF * 0.25, E, 1);
+      const U = getU(); const K = getKEnergy(); const E = U + K;
+      const maxE = Math.max(E0, E, 1);
       const boxCx = xToPx(x, lay);
-      const boxHalf = 28;
       const wallX = lay.plotLeft - 14;
-      const springEnd = boxCx - boxHalf;
+      const springEnd = boxCx - 28;
 
       ctx.clearRect(0, 0, w, h);
       drawDarkBg(ctx, w, h);
 
-      ctx.fillStyle = "#eef6ff";
+      ctx.fillStyle = "rgba(10,20,35,0.55)";
       ctx.fillRect(lay.plotLeft, lay.cy - 78, lay.plotW, 156);
-
-      ctx.strokeStyle = "rgba(0,140,220,0.35)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(lay.eqX, lay.cy - 72);
-      ctx.lineTo(lay.eqX, lay.cy + 72);
-      ctx.stroke();
+      ctx.strokeStyle = "rgba(52,211,153,0.35)";
+      ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.moveTo(lay.eqX, lay.cy - 72); ctx.lineTo(lay.eqX, lay.cy + 72); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = "#5a8ab0";
-      ctx.font = "11px Inter, Poppins, sans-serif";
-      ctx.textAlign = "center";
+      ctx.fillStyle = "#6ee7b7"; ctx.font = "600 11px Inter, sans-serif"; ctx.textAlign = "center";
       ctx.fillText("x = 0", lay.eqX, lay.cy - 78);
 
-      ctx.strokeStyle = "rgba(0,100,180,0.12)";
-      ctx.lineWidth = 1;
       for (let i = 0; i <= 8; i += 1) {
         const xm = X_MIN + ((X_MAX - X_MIN) * i) / 8;
         const px = xToPx(xm, lay);
-        ctx.beginPath();
-        ctx.moveTo(px, lay.cy + 58);
-        ctx.lineTo(px, lay.cy + 68);
-        ctx.stroke();
-        if (i % 2 === 0) ctx.fillText(`${fmt(xm, 1)}`, px, lay.cy + 82);
+        ctx.strokeStyle = "rgba(148,163,184,0.15)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, lay.cy + 58); ctx.lineTo(px, lay.cy + 68); ctx.stroke();
+        if (i % 2 === 0) { ctx.fillStyle = "#94a3b8"; ctx.fillText(fmt(xm, 1), px, lay.cy + 82); }
       }
-      ctx.textAlign = "start";
+      ctx.textAlign = "left";
 
-      drawVerticalBar(18, lay.barTop, lay.barH, U, "#0088dd", "U", U, maxE);
-      drawVerticalBar(w - 46, lay.barTop, lay.barH, K, "#22aa55", "K", K, maxE);
+      if (xTrail.length > 1 && oscillating) {
+        ctx.strokeStyle = "rgba(56,189,248,0.35)"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        xTrail.forEach((tx, i) => {
+          const px = xToPx(tx, lay);
+          if (i === 0) ctx.moveTo(px, lay.cy);
+          else ctx.lineTo(px, lay.cy);
+        });
+        ctx.stroke();
+      }
 
-      drawWall(wallX, lay.cy);
-      if (springEnd > wallX + 8) drawHorizontalSpring(wallX, lay.cy, springEnd);
-      drawBox(boxCx, lay.cy);
+      drawEnergyBar(16, lay.barTop, lay.barH, U, maxE, COL.u, "U");
+      drawEnergyBar(w - 52, lay.barTop, lay.barH, K, maxE, COL.k, "K");
+
+      ctx.fillStyle = "#475569"; ctx.fillRect(wallX - 14, lay.cy - 70, 14, 140);
+      if (springEnd > wallX + 8) {
+        const coils = 10; const amp = 9; const len = springEnd - wallX; const steps = coils * 2; const dx = len / steps;
+        ctx.strokeStyle = COL.spring; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(wallX, lay.cy);
+        let px = wallX;
+        for (let i = 0; i < steps; i += 1) { px += dx; ctx.lineTo(px, lay.cy + (i % 2 === 0 ? amp : -amp)); }
+        ctx.lineTo(springEnd, lay.cy); ctx.stroke();
+      }
+
+      const grad = ctx.createLinearGradient(boxCx - 28, lay.cy - 22, boxCx + 28, lay.cy + 22);
+      grad.addColorStop(0, "#e0f2fe"); grad.addColorStop(1, "#0284c7");
+      ctx.fillStyle = grad; ctx.strokeStyle = "#0369a1"; ctx.lineWidth = 2;
+      ctx.fillRect(boxCx - 28, lay.cy - 22, 56, 44); ctx.strokeRect(boxCx - 28, lay.cy - 22, 56, 44);
 
       const F = getForce();
       if (Math.abs(F) > 0.5) {
-        const fScale = 0.55;
-        const fLen = Math.max(-80, Math.min(80, F * fScale));
-        drawArrowFrom(boxCx, lay.cy + 34, fLen, 0, "#ff8800", 3);
-        ctx.fillStyle = "#ff8800";
-        ctx.font = "bold 11px Inter, Noto Sans JP, sans-serif";
-        ctx.fillText(`F=${fmt(F, 0)}N`, boxCx + fLen + (fLen > 0 ? 6 : -58), lay.cy + 38);
+        const fLen = Math.max(-90, Math.min(90, F * 0.5));
+        drawArrowFrom(boxCx, lay.cy + 30, fLen, 0, COL.force, 3);
       }
-
       if (Math.abs(v) > 0.05 && oscillating) {
-        const vLen = Math.max(-70, Math.min(70, v * 12));
-        drawArrowFrom(boxCx, lay.cy - 38, vLen, 0, "#22aa55", 2.5);
+        drawArrowFrom(boxCx, lay.cy - 30, Math.max(-80, Math.min(80, v * 10)), 0, COL.k, 2.5);
       }
 
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(12, 12, 196, 108);
-      ctx.strokeStyle = "rgba(0,76,153,0.15)";
-      ctx.strokeRect(12, 12, 196, 108);
-      ctx.font = "600 13px Inter, Poppins, Noto Sans JP, sans-serif";
-      ctx.fillStyle = "#004c99";
-      ctx.fillText(`k = ${fmt(getK(), 0)} N/m`, 22, 32);
-      ctx.fillText(`x = ${fmt(x, 2)} m`, 22, 52);
-      ctx.fillStyle = "#0088dd";
-      ctx.fillText(`U = ${fmt(U, 1)} J`, 22, 72);
-      ctx.fillStyle = "#22aa55";
-      ctx.fillText(`K = ${fmt(K, 1)} J`, 22, 92);
-      ctx.fillStyle = "#8844cc";
-      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText(`E = U+K = ${fmt(E, 1)} J`, 22, 112);
+      ctx.fillStyle = "rgba(8,12,20,0.92)"; ctx.strokeStyle = "rgba(52,211,153,0.3)"; ctx.lineWidth = 1;
+      ctx.fillRect(12, 12, 188, 96); ctx.strokeRect(12, 12, 188, 96);
+      ctx.font = "600 12px Inter, Noto Sans JP, sans-serif";
+      ctx.fillStyle = "#cbd5e1"; ctx.fillText("k = " + fmt(getK(), 0) + " N/m", 22, 32);
+      ctx.fillText("x = " + fmt(x, 2) + " m", 22, 50);
+      ctx.fillStyle = COL.u; ctx.fillText("U = " + fmt(U, 2) + " J", 22, 68);
+      ctx.fillStyle = COL.k; ctx.fillText("K = " + fmt(K, 2) + " J", 22, 86);
+      ctx.fillStyle = COL.e; ctx.fillText("E = " + fmt(E, 2) + " J", 22, 104);
 
       if (oscillating && running && !paused) {
-        statusPanel.textContent = "運動中 — バネが縮むと U ↓、K ↑（E は一定）";
+        statusPanel.textContent = "運動中 — U ↓ K ↑（E = " + fmt(E, 1) + " J で一定）";
         statusPanel.className = "motion";
-      } else if (oscillating && paused) {
+      } else if (paused) {
         statusPanel.className = "";
       } else if (!oscillating) {
-        statusPanel.textContent = Math.abs(x) > 0.05
-          ? `U = ${fmt(U, 1)} J — 「離す」で K に変換`
-          : "|x| > 0 の位置で「離す」";
+        statusPanel.textContent = Math.abs(x) > 0.05 ? "U = " + fmt(U, 1) + " J — 「離す」で SHM 開始" : "|x| > 0 の位置で「離す」";
         statusPanel.className = Math.abs(x) > 0.05 ? "ready" : "";
       }
     }
 
+    function drawGraph() {
+      const w = glayout.w; const h = glayout.h;
+      if (!w || !h) return;
+      drawDarkBg(gctx, w, h);
+      const ox = 46; const oy = h - 34;
+      const pw = w - ox - 16; const ph = h - 18 - 34;
+      const tMax = Math.max(3, simTime * 1.08, 2);
+      const Eref = Math.max(E0, getE(), 1);
+      const gx = (t) => ox + (t / tMax) * pw;
+      const gy = (e) => oy - (e / (Eref * 1.08)) * ph;
+
+      gctx.fillStyle = "rgba(10,16,30,0.5)";
+      gctx.fillRect(ox, 18, pw, ph);
+      gctx.setLineDash([5, 4]); gctx.strokeStyle = "rgba(167,139,250,0.45)"; gctx.lineWidth = 1.2;
+      gctx.beginPath(); gctx.moveTo(ox, gy(Eref)); gctx.lineTo(ox + pw, gy(Eref)); gctx.stroke();
+      gctx.setLineDash([]);
+
+      if (energySamples.length > 1) {
+        [["U", COL.u, (s) => s.U], ["K", COL.k, (s) => s.K]].forEach(([label, color, fn]) => {
+          gctx.strokeStyle = color; gctx.lineWidth = 2; gctx.beginPath();
+          energySamples.forEach((s, i) => {
+            const sx = gx(s.t); const sy = gy(fn(s));
+            if (i === 0) gctx.moveTo(sx, sy); else gctx.lineTo(sx, sy);
+          });
+          gctx.stroke();
+        });
+      }
+      gctx.fillStyle = "#64748b"; gctx.font = "500 9px Inter, sans-serif";
+      gctx.fillText("E (J)", 6, 22); gctx.textAlign = "right"; gctx.fillText("t (s)", w - 6, oy + 16); gctx.textAlign = "left";
+    }
+
+    el("tabSim").addEventListener("click", () => setActiveView("sim"));
+    el("tabRecord").addEventListener("click", () => setActiveView("record"));
+    xSlider.addEventListener("input", () => { if (!oscillating) { x = parseFloat(xSlider.value); E0 = 0.5 * getK() * x * x; } syncSliders(); });
+    [kSlider, mSlider].forEach((s) => { s.addEventListener("input", () => { if (!oscillating) E0 = 0.5 * getK() * x * x; syncSliders(); }); });
+    document.querySelectorAll(".preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (oscillating) return;
+        kSlider.value = btn.dataset.k; xSlider.value = btn.dataset.x;
+        xSlider.dispatchEvent(new Event("input"));
+      });
+    });
+    document.querySelectorAll(".speed-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        speedFactor = parseFloat(btn.dataset.speed);
+        document.querySelectorAll(".speed-btn").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+      });
+    });
+    el("releaseBtn").addEventListener("click", (e) => { e.preventDefault(); releaseSpring(); });
+    el("pauseBtn").addEventListener("click", (e) => { e.preventDefault(); pauseSimulation(); });
+    el("resetBtn").addEventListener("click", (e) => { e.preventDefault(); resetSimulation(); });
+    el("copyRecordBtn").addEventListener("click", () => {
+      const btn = el("copyRecordBtn");
+      if (releaseHistory.length === 0) btn.textContent = "記録がありません";
+      else if (navigator.clipboard) navigator.clipboard.writeText(recordAsTsv()).then(() => { btn.textContent = "コピーしました"; });
+      setTimeout(() => { btn.textContent = "表をコピー（TSV）"; }, 1800);
+    });
+    el("clearRecordBtn").addEventListener("click", () => { releaseHistory = []; updateRecordPanel(false); });
+    document.addEventListener("keydown", (ev) => {
+      const tag = (ev.target && ev.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON") return;
+      if (ev.code === "Space") { ev.preventDefault(); if (running && !paused) pauseSimulation(); else if (paused) pauseSimulation(); else releaseSpring(); }
+      else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); resetSimulation(); }
+    });
+    window.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => resizeCanvas());
+      ro.observe(canvasWrap); ro.observe(graphWrap);
+    }
+
+    resizeCanvas(); resetSimulation();
     let last = performance.now();
     function loop(now) {
       const dt = Math.min((now - last) / 1000, MAX_DT);
       last = now;
       update(dt);
-      syncSliders();
-      drawScene();
+      if (!oscillating) syncSliders();
+      else { updateCalcPanel(); updateLiveStrip(); }
+      drawScene(); drawGraph();
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
-  
   </script>
 </body>
 </html>

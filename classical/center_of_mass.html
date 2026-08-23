@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>6章 — 重心 Center of Mass</title>
+    <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
+<title>6章 — 重心 Center of Mass</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
+    <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
+<style>
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
@@ -58,8 +60,10 @@
     .color-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
     .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
     #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
-    #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
-    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
+    #canvasWrap canvas, .canvas-wrap canvas {
+      display: block; width: 100%; height: auto; aspect-ratio: 3 / 2;
+      min-height: 280px; max-height: min(560px, 58dvh);
+    }
     .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
     .explain-panel {
       padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
@@ -190,7 +194,7 @@
       <p class="chapter-label">第6章 — 力のモーメントと重心</p>
       <h2>重心（Center of Mass）</h2>
       <p class="tagline">x_G = Σmx / Σm · 質量のつり合い点</p>
-      <a id="back" href="../00_folder_classical.html#chapter-6">← 力学フォルダへ戻る</a>
+      <a id="back" href="../00_folder_classical.html#chapter-6">← 力学 · 第6章</a>
     </header>
 
     <section class="panel">
@@ -360,10 +364,14 @@
       const plotW = w - MARGIN.left - MARGIN.right;
       const plotH = h - MARGIN.top - MARGIN.bottom;
       const scale = Math.min(plotW / PLOT_W_M, plotH / PLOT_H_M);
+      const usedW = PLOT_W_M * scale;
+      const usedH = PLOT_H_M * scale;
       layout = {
         ox: MARGIN.left,
         oy: h - MARGIN.bottom,
         scale,
+        usedW,
+        usedH,
         w,
         h,
         plotW,
@@ -389,14 +397,14 @@
     }
 
     function resizeCanvas() {
-      const rect = canvasWrap.getBoundingClientRect();
+      const wrapRect = canvasWrap.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-      const w = Math.max(280, Math.round(rect.width));
-      const ht = Math.max(280, Math.round(rect.height));
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(ht * dpr)) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(ht * dpr);
-      }
+      const w = Math.max(280, Math.round(wrapRect.width));
+      const ht = Math.max(Math.round(w * (PLOT_H_M / PLOT_W_M)), 220);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(ht * dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = ht + "px";
       layout.dpr = dpr;
       updateLayout(w, ht);
     }
@@ -499,7 +507,7 @@
       drawDarkBg(w, ht);
 
       ctx.fillStyle = "rgba(18, 24, 36, 0.55)";
-      ctx.fillRect(layout.ox, MARGIN.top, layout.plotW, layout.plotH);
+      ctx.fillRect(layout.ox, layout.oy - layout.usedH, layout.usedW, layout.usedH);
 
       ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
       ctx.lineWidth = 1;
@@ -514,7 +522,7 @@
         const s = toScreen(0, y);
         ctx.beginPath();
         ctx.moveTo(layout.ox, s.y);
-        ctx.lineTo(layout.ox + layout.plotW, s.y);
+        ctx.lineTo(layout.ox + layout.usedW, s.y);
         ctx.stroke();
       }
 
@@ -522,44 +530,57 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(layout.ox, layout.oy);
-      ctx.lineTo(layout.ox + layout.plotW, layout.oy);
+      ctx.lineTo(layout.ox + layout.usedW, layout.oy);
       ctx.moveTo(layout.ox, layout.oy);
-      ctx.lineTo(layout.ox, MARGIN.top);
+      ctx.lineTo(layout.ox, layout.oy - layout.usedH);
       ctx.stroke();
 
       ctx.fillStyle = "#9aa8bc";
       ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
       ctx.fillText("O", layout.ox - 14, layout.oy + 14);
-      ctx.fillText("x", layout.ox + layout.plotW - 8, layout.oy + 14);
-      ctx.fillText("y", layout.ox - 10, MARGIN.top + 4);
+      ctx.fillText("x", layout.ox + layout.usedW - 8, layout.oy + 14);
+      ctx.fillText("y", layout.ox - 10, layout.oy - layout.usedH + 4);
+    }
+
+    function drawSphere(cx, cy, r, color, label, font) {
+      const radius = Math.max(8, r);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      const hx = cx - radius * 0.32;
+      const hy = cy - radius * 0.32;
+      const grad = ctx.createRadialGradient(hx, hy, radius * 0.08, cx, cy, radius);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.52, color);
+      grad.addColorStop(1, "#1e293b");
+      ctx.fillStyle = grad;
+      ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (label) {
+        ctx.fillStyle = "#0c1018";
+        ctx.font = font || "700 12px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, cx, cy);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+      }
     }
 
     function drawPointMass(p, index) {
       const s = toScreen(p.x, p.y);
       const color = MASS_COLORS[index];
       const r = POINT_R + Math.min(8, p.m * 0.4);
-
-      ctx.save();
-      ctx.shadowBlur = 16;
-      ctx.shadowColor = color;
-      const grad = ctx.createRadialGradient(s.x - 5, s.y - 5, 2, s.x, s.y, r);
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.55, color);
-      grad.addColorStop(1, "#334155");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.fillStyle = "#0c1018";
-      ctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(String(index + 1), s.x, s.y + 4);
-      ctx.textAlign = "left";
-      ctx.restore();
+      drawSphere(s.x, s.y, r, color, String(index + 1));
     }
 
     function drawHelperLines(g) {
@@ -579,29 +600,7 @@
 
     function drawCenterMarker(g) {
       const s = toScreen(g.x, g.y);
-      const color = "#fbbf24";
-
-      ctx.save();
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = "rgba(251,191,36,0.7)";
-      const grad = ctx.createRadialGradient(s.x - 4, s.y - 4, 1, s.x, s.y, 14);
-      grad.addColorStop(0, "#fef3c7");
-      grad.addColorStop(0.6, color);
-      grad.addColorStop(1, "#92400e");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 13, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#fef3c7";
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      ctx.fillStyle = "#0c1018";
-      ctx.font = "800 12px Inter, Poppins, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("G", s.x, s.y + 4);
-      ctx.textAlign = "left";
-      ctx.restore();
+      drawSphere(s.x, s.y, 13, "#fbbf24", "G", "800 12px Inter, Noto Sans JP, sans-serif");
     }
 
     function updatePanels(g, ms) {

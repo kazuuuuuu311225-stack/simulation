@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
   <title>7章 — 地面反発</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
+  <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
+<style>
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
@@ -45,12 +47,24 @@
     .formula-main { font-size: 1.05rem; font-weight: 800; color: #fda4af; line-height: 1.55; }
     .formula-sub { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
     .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
-    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; } }
-    .area-viz { grid-area: viz; }
-    .area-hud { grid-area: hud; }
+    @media (min-width: 960px) { .sim-grid { grid-template-columns: 1.45fr 0.55fr; grid-template-areas: "viz hud"; } }
+    .area-viz { grid-area: viz; min-width: 0; }
+    .area-hud { grid-area: hud; min-width: 0; }
     .viz-block { border-radius: 14px; overflow: hidden; background: #0a0e14; border: 1px solid rgba(251,113,133,0.32); }
-    .viz-head { padding: 10px 14px 0; }
+    .viz-head {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 10px 14px 0;
+    }
     .viz-label, .canvas-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #fda4af; }
+    .speed-row { display: flex; align-items: center; gap: 5px; }
+    .speed-row .speed-lbl { font-size: 0.66rem; color: #64748b; font-weight: 700; margin-right: 2px; }
+    .speed-btn {
+      padding: 4px 9px; min-height: 26px; font-family: inherit; font-size: 0.68rem; font-weight: 700;
+      border-radius: 999px; cursor: pointer; color: #94a3b8;
+      border: 1px solid rgba(148,163,184,0.28); background: rgba(255,255,255,0.04);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .speed-btn.is-active { color: #fff; background: rgba(251,113,133,0.32); border-color: rgba(251,113,133,0.6); }
     .color-legend {
       display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px 10px;
       border-bottom: 1px solid rgba(148,163,184,0.1);
@@ -59,7 +73,7 @@
     .color-chip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
     #canvasWrap, .canvas-wrap { position: relative; background: #0a0e14; }
     #canvas, .canvas-wrap canvas { display: block; width: 100%; height: min(480px, 52dvh); min-height: 340px; }
-    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 420px; height: min(560px, 58dvh); }
+    .canvas-wrap.tall canvas, .canvas-wrap.tall { min-height: 400px; height: min(540px, 56dvh); }
     .canvas-caption { margin: 8px 14px 0; font-size: 0.74rem; color: #64748b; text-align: center; }
     .explain-panel {
       padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12);
@@ -70,18 +84,18 @@
       font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 8px 10px; border-radius: 8px;
       background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.2);
     }
-    #statusPanel.balanced, #statusPanel.pos-work, #statusPanel.p-low { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
-    #statusPanel.rotating, #statusPanel.neg-work, #statusPanel.p-high { color: #fda4af; border-color: rgba(251,113,133,0.35); }
-    #statusPanel.zero-work { color: #fde047; border-color: rgba(251,191,36,0.35); }
-    #statusPanel.p-mid { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
-    #statusPanel.swinging, #statusPanel.motion, #statusPanel.ready { color: #7dd3fc; }
+    #statusPanel.motion { color: #7dd3fc; border-color: rgba(56,189,248,0.35); }
+    #statusPanel.impact { color: #fda4af; border-color: rgba(251,113,133,0.45); }
+    #statusPanel.done { color: #6ee7b7; border-color: rgba(52,211,153,0.35); }
     .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
     .viz-foot button, .act-btn, .btn-row button {
       flex: 1; min-width: 72px; min-height: 38px; padding: 6px 8px;
-      font-family: inherit; font-size: 0.68rem; font-weight: 600; border-radius: 9px; cursor: pointer;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
       border: 1px solid rgba(251,113,133,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+      -webkit-tap-highlight-color: transparent;
     }
-    .act-btn.primary, #startBtn, #dropBtn, #releaseBtn, #shotBtn {
+    .btn-row button:hover { background: rgba(255,255,255,0.1); }
+    .act-btn.primary, #startBtn {
       background: rgba(251,113,133,0.25); color: #fff; border-color: rgba(251,113,133,0.55); font-weight: 800;
     }
     .hud-panel {
@@ -90,97 +104,155 @@
       display: flex; flex-direction: column; gap: 8px;
     }
     .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: #fda4af; }
-    .hud-card {
-      padding: 8px 10px; border-radius: 10px;
-      background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.28);
-    }
-    .hud-card.highlight { border-color: rgba(251,113,133,0.45); background: rgba(30,20,10,0.2); }
-    .hud-card .lbl { font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
-    .hud-card .val { font-size: 0.82rem; color: #f1f5f9; font-weight: 700; }
     .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
     .slider-row label, label.slider-label {
-      font-size: 0.7rem; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between;
+      font-size: 0.72rem; color: #cbd5e1; font-weight: 600; display: flex; justify-content: space-between; gap: 8px;
     }
+    .slider-row label .val { color: #fda4af; font-variant-numeric: tabular-nums; font-weight: 700; }
     .slider-row input[type=range], input[type=range] { width: 100%; accent-color: #fb7185; }
-    .side-group {
-      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
-      border: 1px solid rgba(148,163,184,0.2); margin-bottom: 8px;
+    .preset-block { margin: 2px 0 8px; }
+    .preset-title { margin: 0 0 5px; font-size: 0.68rem; font-weight: 700; color: #64748b; }
+    .preset-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .preset-btn {
+      padding: 5px 9px; min-height: 30px; font-family: inherit; font-size: 0.68rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; color: #cbd5e1;
+      border: 1px solid rgba(148,163,184,0.26); background: rgba(255,255,255,0.05);
+      -webkit-tap-highlight-color: transparent;
     }
-    .side-group.left { border-left: 3px solid #38bdf8; }
-    .side-group.right { border-left: 3px solid #fb7185; }
-    .side-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
-    .dir-row { display: flex; gap: 6px; margin-top: 4px; }
-    .dir-row button, .dir-btn {
-      flex: 1; padding: 8px 6px; min-height: 36px; font-family: inherit; font-size: 0.72rem;
-      font-weight: 600; border: 1px solid rgba(148,163,184,0.28); border-radius: 8px;
-      background: rgba(255,255,255,0.06); color: #cbd5e1; cursor: pointer;
-    }
-    .dir-row button.active, .dir-btn.active {
-      background: rgba(251,113,133,0.3); color: #fff; border-color: rgba(251,113,133,0.55);
-    }
-    .mass-row { display: flex; flex-direction: column; gap: 8px; }
-    .mass-item {
-      padding: 10px; border-radius: 10px; background: rgba(15,23,42,0.45);
-      border: 1px solid rgba(148,163,184,0.2);
-    }
-    .mass-item:nth-child(1) { border-left: 3px solid #38bdf8; }
-    .mass-item:nth-child(2) { border-left: 3px solid #fbbf24; }
-    .mass-item:nth-child(3) { border-left: 3px solid #fb7185; }
-    .mass-label { display: block; font-size: 0.72rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
+    .preset-btn.is-active { color: #fff; background: rgba(251,113,133,0.28); border-color: rgba(251,113,133,0.55); }
+    .preset-btn .pv { color: #94a3b8; font-weight: 700; margin-left: 4px; font-size: 0.64rem; }
+    .preset-btn.is-active .pv { color: #fecdd3; }
     .hint { margin: 0 0 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.55; }
-    .formula-box { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(251,113,133,0.1);
-      font-size: 0.78rem; font-weight: 600; color: #fda4af; text-align: center; line-height: 1.55; }
+    .formula-box {
+      margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(251,113,133,0.1);
+      font-size: 0.78rem; font-weight: 600; color: #fda4af; text-align: center; line-height: 1.55;
+    }
     .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    #formulaPanel, #calcPanel {
+    #calcPanel {
       margin-top: 12px; padding: 12px 14px; border-radius: 12px;
       background: rgba(15,23,42,0.55); border: 1px solid rgba(148,163,184,0.2);
     }
-    #formulaPanel h3, #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #fda4af; }
+    #calcPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #fda4af; }
     .concept { margin: 0 0 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.55; }
-    .formula-block, .calc-block {
+    .calc-block {
       margin-bottom: 10px; padding: 10px; border-radius: 10px;
       background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12);
     }
-    .formula-block:last-child, .calc-block:last-child { margin-bottom: 0; }
-    .formula-label, .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #fb7185; }
-    .formula-line, .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
-    .formula-line.sub, .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
+    .calc-block:last-child { margin-bottom: 0; }
+    .calc-label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; color: #fb7185; }
+    .calc-line { margin: 3px 0; font-size: 0.82rem; color: #e2e8f0; }
+    .calc-line.sub { font-size: 0.76rem; color: #94a3b8; margin-left: 0.4rem; }
     .num, .num-before { font-weight: 600; color: #7dd3fc; }
     .num-after { font-weight: 600; color: #fda4af; }
-    .num-dp, .num-cm { font-weight: 600; color: #c4b5fd; }
-    .num-to-bat { font-weight: 600; color: #fde68a; }
-    #liveReadout {
-      margin: 10px 14px 12px; padding: 12px 14px; border-radius: 12px;
-      background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.2);
-      display: grid; gap: 8px;
-    }
-    #liveReadout.cols3 { grid-template-columns: 1fr auto 1fr; }
-    #liveReadout.cols4 { grid-template-columns: 1fr 1fr 1fr; }
-    .live-col { font-size: 0.78rem; line-height: 1.55; color: #cbd5e1; }
-    .live-col.left, .live-col.m1 { color: #7dd3fc; }
-    .live-col.right, .live-col.m3 { color: #fda4af; text-align: right; }
-    .live-col.m2 { color: #fde68a; }
-    .live-col.center { text-align: center; color: #fde68a; border-left: 1px solid rgba(148,163,184,0.15);
-      border-right: 1px solid rgba(148,163,184,0.15); padding: 0 8px; }
-    .live-col .title { display: block; font-weight: 700; font-size: 0.68rem; margin-bottom: 4px; }
-    .live-col .state { display: block; margin-top: 4px; font-weight: 700; font-size: 0.82rem; }
-    .live-col .state.balanced { color: #6ee7b7; }
-    .live-col .state.rotating { color: #fda4af; }
-    .live-col.g-row { grid-column: 1 / -1; text-align: center; color: #fde68a; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
-    .graph-block { margin-top: 10px; border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; }
-    .graph-legend { margin: 0 14px 6px; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
-    .canvas-wrap.graph canvas { height: min(220px, 28dvh); min-height: 180px; }
-    .edu-list { font-size: 0.78rem; line-height: 1.65; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
-    .edu-list li { margin-bottom: 6px; }
-    .legend { display: none; }
-    .sim-layout { display: contents; }
-    .canvas-section { display: contents; }
-    @media (max-width: 520px) {
-      #liveReadout.cols3 { grid-template-columns: 1fr 1fr; }
-      .live-col.center { grid-column: 1 / -1; border: none; border-top: 1px solid rgba(148,163,184,0.15); padding-top: 8px; }
-      .live-col.right { text-align: left; }
-    }
+    .num-dp { font-weight: 600; color: #c4b5fd; }
+    .num-h { font-weight: 600; color: #fbbf24; }
+    .num-e { font-weight: 600; color: #6ee7b7; }
 
+    .live-strip {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      padding: 10px 14px; border-top: 1px solid rgba(148,163,184,0.12);
+      background: rgba(15,23,42,0.55);
+    }
+    .live-cell {
+      padding: 7px 8px; border-radius: 9px; text-align: center;
+      background: rgba(0,0,0,0.28); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .live-cell .k { display: block; font-size: 0.6rem; color: #64748b; font-weight: 700; margin-bottom: 3px; }
+    .live-cell .v { display: block; font-size: 0.86rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #f1f5f9; }
+    .live-cell.t .v { color: #fde68a; }
+    .live-cell.h .v { color: #fbbf24; }
+    .live-cell.v .v { color: #38bdf8; }
+    .live-cell.n .v { color: #fb7185; }
+    @media (max-width: 520px) { .live-strip { grid-template-columns: repeat(2, 1fr); } }
+
+    .graph-block { border-top: 1px solid rgba(148,163,184,0.12); padding-top: 10px; background: #0a0e14; }
+    .graph-head {
+      display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+      gap: 6px; padding: 0 14px 6px;
+    }
+    .graph-title { margin: 0; font-size: 0.78rem; font-weight: 700; color: #fda4af; }
+    .graph-legend { margin: 0; font-size: 0.68rem; color: #94a3b8; line-height: 1.5; }
+    .canvas-wrap.graph canvas { height: min(230px, 28dvh); min-height: 190px; }
+
+    .edu-list { font-size: 0.8rem; line-height: 1.7; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 7px; }
+    .edu-list strong { color: #fecdd3; }
+    .theory-grid { display: grid; gap: 10px; grid-template-columns: 1fr; margin-top: 12px; }
+    @media (min-width: 720px) { .theory-grid { grid-template-columns: repeat(3, 1fr); } }
+    .theory-card {
+      padding: 10px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.16);
+    }
+    .theory-card .tc-label { margin: 0 0 5px; font-size: 0.7rem; font-weight: 700; color: #fb7185; }
+    .theory-card .tc-formula { margin: 0 0 5px; font-size: 0.8rem; color: #e2e8f0; line-height: 1.5; }
+    .theory-card .tc-value { margin: 0; font-size: 0.78rem; color: #94a3b8; }
+    .theory-card .tc-value strong { color: #6ee7b7; font-variant-numeric: tabular-nums; }
+
+    .view-tabs { display: flex; gap: 8px; margin-bottom: 0; }
+    .view-tab {
+      flex: 1; max-width: 220px; padding: 10px 14px;
+      border-radius: 12px 12px 0 0;
+      border: 1px solid rgba(148, 163, 184, 0.18); border-bottom: none;
+      background: rgba(18, 24, 36, 0.45); color: #94a3b8;
+      font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .view-tab.is-active {
+      color: #ffe4e6; background: rgba(18, 24, 36, 0.88);
+      border-color: rgba(251, 113, 133, 0.35); box-shadow: inset 0 2px 0 #fb7185;
+    }
+    .view-tab .tab-count {
+      display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+      font-size: 0.72rem; background: rgba(251, 113, 133, 0.18); color: #fecdd3;
+    }
+    #simView.is-hidden, #recordPanel.is-hidden { display: none; }
+    #recordPanel {
+      margin-top: 0; padding: 14px 16px; border-radius: 0 0 14px 14px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(251, 113, 133, 0.22); border-top: none;
+    }
+    #recordPanel h3 { margin: 0 0 8px; font-size: 0.95rem; color: #fda4af; }
+    .record-desc { margin: 0 0 12px; font-size: 0.76rem; color: #94a3b8; line-height: 1.55; }
+    .record-meta {
+      display: grid; gap: 8px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(251, 113, 133, 0.08); border: 1px solid rgba(251, 113, 133, 0.18);
+      font-size: 0.76rem; color: #cbd5e1; line-height: 1.65;
+    }
+    @media (min-width: 640px) { .record-meta { grid-template-columns: repeat(2, 1fr); } }
+    .record-meta strong { color: #fecdd3; }
+    .record-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .record-tools button {
+      padding: 7px 12px; min-height: 34px; font-family: inherit; font-size: 0.72rem; font-weight: 600;
+      border-radius: 9px; cursor: pointer; color: #cbd5e1;
+      border: 1px solid rgba(148,163,184,0.28); background: rgba(255,255,255,0.05);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .record-table-wrap {
+      max-height: min(420px, 52dvh); overflow: auto; border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.14); background: rgba(0, 0, 0, 0.22);
+    }
+    .record-table {
+      width: 100%; border-collapse: collapse; font-size: 0.76rem; font-variant-numeric: tabular-nums;
+    }
+    .record-table th, .record-table td {
+      padding: 7px 8px; text-align: center;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1); white-space: nowrap;
+    }
+    .record-table th {
+      position: sticky; top: 0; z-index: 1;
+      font-size: 0.68rem; font-weight: 600; color: #94a3b8; background: rgba(12, 16, 24, 0.98);
+    }
+    .record-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+    .record-table tr.is-latest { background: rgba(251, 113, 133, 0.14) !important; }
+    .record-table .col-v { color: #38bdf8; font-weight: 600; }
+    .record-table .col-vp { color: #fb7185; font-weight: 600; }
+    .record-table .col-h { color: #fbbf24; font-weight: 600; }
+    .record-table .col-p { color: #a78bfa; font-weight: 600; }
+    .record-table .col-e { color: #6ee7b7; font-weight: 600; }
+    .record-empty {
+      margin: 0; padding: 24px 12px; text-align: center;
+      font-size: 0.8rem; color: #64748b; line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -190,216 +262,374 @@
       <p class="chapter-label">第7章 — 運動量保存と反発係数</p>
       <h2>地面との反発</h2>
       <p class="tagline">反発係数 e · v′ = −e v</p>
-      <a id="back" href="../00_folder_classical.html#chapter-7">← 力学フォルダへ戻る</a>
+      <a id="back" href="../00_folder_classical.html#chapter-7">← 力学 · 第7章</a>
     </header>
 
     <section class="panel">
       <div class="formula-top">
-        <div class="formula-main"><strong>v′ = −e v</strong>（法線方向）</div>
-        <div class="formula-sub">e = 1 完全弾性 · e = 0 完全非弾性</div>
+        <div class="formula-main"><strong>v′ = −e v</strong>　⇒　<strong>h′ = e² h</strong></div>
+        <div class="formula-sub">e = 1 完全弾性（高さが戻る） · e = 0 完全非弾性（跳ねない）</div>
       </div>
-      <div class="sim-grid">
-        <div class="area-viz">
-          <div class="viz-block">
 
-            <div class="viz-head"><p class="viz-label">地面反発 · 反発係数 e</p></div>
-            <div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+      <div class="view-tabs">
+        <button type="button" class="view-tab is-active" id="tabSim">シミュレーション</button>
+        <button type="button" class="view-tab" id="tabRecord">記録<span class="tab-count" id="tabRecordCount">0</span></button>
+      </div>
+
+      <div id="simView">
+        <div class="sim-grid">
+          <div class="area-viz">
+            <div class="viz-block">
+              <div class="viz-head">
+                <p class="viz-label">地面反発 · 反発係数 e</p>
+                <div class="speed-row">
+                  <span class="speed-lbl">再生速度</span>
+                  <button type="button" class="speed-btn" data-speed="0.25">0.25×</button>
+                  <button type="button" class="speed-btn" data-speed="0.5">0.5×</button>
+                  <button type="button" class="speed-btn is-active" data-speed="1">1×</button>
+                </div>
+              </div>
+              <div class="color-legend">
+                <span><i class="color-chip" style="background:#38bdf8;color:#38bdf8"></i>落下 v（下向き）</span>
+                <span><i class="color-chip" style="background:#fb7185;color:#fb7185"></i>反発 v′（上向き）</span>
+                <span><i class="color-chip" style="background:#fbbf24;color:#fbbf24"></i>到達高さ h</span>
+                <span><i class="color-chip" style="background:#6ee7b7;color:#6ee7b7"></i>予測ピーク e²ⁿh₀</span>
+              </div>
+
+              <div class="canvas-wrap tall" id="canvasWrap"><canvas id="canvas"></canvas></div>
+
+              <div class="live-strip">
+                <div class="live-cell t"><span class="k">経過時間 t</span><span class="v" id="liveT">0.00 s</span></div>
+                <div class="live-cell h"><span class="k">高さ y</span><span class="v" id="liveY">5.00 m</span></div>
+                <div class="live-cell v"><span class="k">速度 v</span><span class="v" id="liveV">0.00 m/s</span></div>
+                <div class="live-cell n"><span class="k">衝突回数</span><span class="v" id="liveN">0</span></div>
+              </div>
+
+              <div class="graph-block">
+                <div class="graph-head">
+                  <p class="graph-title">高さ – 時間グラフ（h–t）</p>
+                  <p class="graph-legend">ピークが 1 回ごとに e² 倍へ縮む様子が見えます</p>
+                </div>
+                <div class="canvas-wrap graph" id="graphWrap"><canvas id="graphCanvas"></canvas></div>
+              </div>
+
+              <div class="explain-panel">
+                <div id="statusPanel">h₀ と e を設定して「スタート」</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="area-hud">
+            <div class="hud-panel">
+              <p class="hud-title">コントロール</p>
+
+              <div class="slider-row"><label class="slider-label" for="h0Slider"><span>初期高さ h<sub>0</sub></span><span class="val"><span id="h0Value">5.0</span> m</span></label>
+                <input id="h0Slider" type="range" min="0.5" max="10" step="0.1" value="5">
+              </div>
+              <div class="slider-row"><label class="slider-label" for="mSlider"><span>質量 m</span><span class="val"><span id="mValue">1.0</span> kg</span></label>
+                <input id="mSlider" type="range" min="0.1" max="5" step="0.1" value="1">
+              </div>
+              <div class="slider-row"><label class="slider-label" for="eSlider"><span>反発係数 e</span><span class="val" id="eValue">0.80</span></label>
+                <input id="eSlider" type="range" min="0" max="1" step="0.01" value="0.8">
+              </div>
+
+              <div class="preset-block">
+                <p class="preset-title">材質プリセット（e の目安）</p>
+                <div class="preset-row" id="presetRow">
+                  <button type="button" class="preset-btn" data-e="0.9">スーパーボール<span class="pv">0.90</span></button>
+                  <button type="button" class="preset-btn" data-e="0.75">バスケ<span class="pv">0.75</span></button>
+                  <button type="button" class="preset-btn" data-e="0.7">テニス<span class="pv">0.70</span></button>
+                  <button type="button" class="preset-btn" data-e="0.5">木の球<span class="pv">0.50</span></button>
+                  <button type="button" class="preset-btn" data-e="0.05">粘土<span class="pv">0.05</span></button>
+                  <button type="button" class="preset-btn" data-e="1">完全弾性<span class="pv">1.00</span></button>
+                </div>
+              </div>
+
+              <p class="formula-box">g = 9.8 m/s²　v′ = −e v　h′ = e² h</p>
+              <p class="hint">落下 → 地面で v′ = −e v → 跳ね返り高さ h′ = e² h。e を変えて減り方を比べてください。<br>Space キーで開始／停止、R キーでリセット。</p>
+
+              <div class="btn-row">
+                <button id="startBtn" type="button">スタート</button>
+                <button id="pauseBtn" type="button">停止</button>
+                <button id="resetBtn" type="button">リセット</button>
+              </div>
+              <section id="calcPanel" aria-label="計算過程">
+                <h3>計算過程</h3>
+                <p class="concept">地面との衝突で法線方向の速度が e 倍になって反転します。跳ね返り高さは e² 倍、運動エネルギーも e² 倍になります。</p>
+
+                <div class="calc-block">
+                  <p class="calc-label">① 反発係数 e</p>
+                  <p class="calc-line">e = −v<sub>after</sub> / v<sub>before</sub>　（v<sub>before</sub> &lt; 0：落下）</p>
+                  <p class="calc-line sub">設定 e = <span id="cE" class="num-e">—</span></p>
+                </div>
+
+                <div class="calc-block">
+                  <p class="calc-label">② 衝突直前・直後の速度</p>
+                  <p class="calc-line">v<sub>before</sub> = <span id="cVbefore" class="num-before">—</span> m/s</p>
+                  <p class="calc-line">v<sub>after</sub> = −e · v<sub>before</sub> = <span id="cVafter" class="num-after">—</span> m/s</p>
+                  <p class="calc-line sub">現在 v = <span id="cVnow" class="num-before">—</span> m/s</p>
+                </div>
+
+                <div class="calc-block">
+                  <p class="calc-label">③ 跳ね返り高さ</p>
+                  <p class="calc-line">h<sub>before</sub> = v<sub>before</sub>² / (2g) = <span id="cHbefore" class="num-h">—</span> m</p>
+                  <p class="calc-line">h<sub>after</sub> = e² · h<sub>before</sub> = <span id="cHafter" class="num-h">—</span> m</p>
+                  <p class="calc-line sub">現在 y = <span id="cYnow" class="num-h">—</span> m</p>
+                </div>
+
+                <div class="calc-block">
+                  <p class="calc-label">④ 運動量（鉛直方向）</p>
+                  <p class="calc-line">p = m v</p>
+                  <p class="calc-line sub">p<sub>before</sub> = <span id="cPbefore" class="num-before">—</span> kg·m/s</p>
+                  <p class="calc-line sub">p<sub>after</sub> = <span id="cPafter" class="num-after">—</span> kg·m/s</p>
+                  <p class="calc-line sub">Δp = <span id="cDp" class="num-dp">—</span> kg·m/s（床が与えた力積）</p>
+                </div>
+
+                <div class="calc-block">
+                  <p class="calc-label">⑤ 運動エネルギー</p>
+                  <p class="calc-line">K = ½ m v²　→　K′ = e² K</p>
+                  <p class="calc-line sub">K<sub>before</sub> = <span id="cKbefore" class="num-before">—</span> J</p>
+                  <p class="calc-line sub">K<sub>after</sub> = <span id="cKafter" class="num-after">—</span> J</p>
+                  <p class="calc-line sub">失った分 = <span id="cKloss" class="num-e">—</span> J（累積 <span id="cKlossTotal" class="num-e">—</span> J）</p>
+                </div>
+
+                <div class="calc-block">
+                  <p class="calc-label">⑥ 最新の衝突</p>
+                  <p class="calc-line sub">記録 <span id="cBounces">0</span> 件 — 「記録」タブで全履歴</p>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
-        <div class="area-hud">
-          <div class="hud-panel">
-            <p class="hud-title">コントロール</p>
-<div class="slider-row"><label class="slider-label">初期高さ h<sub>0</sub> (m):
-      <input id="h0Slider" type="range" min="0.5" max="10" step="0.1" value="5">
-      <span id="h0Value">5.0</span>
-    </label>
-    <div class="slider-row"><label class="slider-label">質量 m (kg):
-      <input id="mSlider" type="range" min="0.1" max="5" step="0.1" value="1">
-      <span id="mValue">1.0</span>
-    </label>
-    <div class="slider-row"><label class="slider-label">反発係数 e (0〜1):
-      <input id="eSlider" type="range" min="0" max="1" step="0.01" value="0.8">
-      <span id="eValue">0.80</span>
-    </label>
-
-    <p class="formula-box">g = 9.8 m/s²　　v′ = −e v　　h′ = e² h</p>
-    <p class="hint">落下 → 地面で v′ = −e v → 跳ね返り高さ h′ = e² h。e を変えて比較してください。</p>
-
-    <div class="btn-row">
-      <button id="startBtn" type="button">スタート</button>
-      <button id="pauseBtn" type="button">停止</button>
-      <button id="resetBtn" type="button">リセット</button>
-    </div>
-            <div id="statusPanel">h₀ と e を設定して「スタート」</div>
-            <section id="calcPanel" aria-label="計算過程">
-      <h3>計算過程</h3>
-      <p class="concept">地面との衝突で法線方向の速度が e 倍に反転します。跳ね返り高さは e² 倍になります。</p>
-
-      <div class="calc-block">
-        <p class="calc-label">① 反発係数 e</p>
-        <p class="calc-line">e = −v<sub>after</sub> / v<sub>before</sub>　（v<sub>before</sub> &lt; 0：落下）</p>
-        <p class="calc-line sub">設定 e = <span id="cE" class="num-before">—</span></p>
       </div>
 
-      <div class="calc-block">
-        <p class="calc-label">② 衝突直前・直後の速度</p>
-        <p class="calc-line">v<sub>before</sub> = <span id="cVbefore" class="num-before">—</span> m/s</p>
-        <p class="calc-line">v<sub>after</sub> = −e · v<sub>before</sub> = <span id="cVafter" class="num-after">—</span> m/s</p>
-        <p class="calc-line sub">現在 v = <span id="cVnow" class="num-before">—</span> m/s</p>
-      </div>
-
-      <div class="calc-block">
-        <p class="calc-label">③ 跳ね返り高さ</p>
-        <p class="calc-line">h<sub>before</sub> = v<sub>before</sub>² / (2g) = <span id="cHbefore" class="num-h">—</span> m</p>
-        <p class="calc-line">h<sub>after</sub> = e² · h<sub>before</sub> = <span id="cHafter" class="num-h">—</span> m</p>
-        <p class="calc-line sub">現在 y = <span id="cYnow" class="num-h">—</span> m</p>
-      </div>
-
-      <div class="calc-block">
-        <p class="calc-label">④ 運動量（鉛直方向）</p>
-        <p class="calc-line">p = m v</p>
-        <p class="calc-line sub">p<sub>before</sub> = <span id="cPbefore" class="num-before">—</span> kg·m/s</p>
-        <p class="calc-line sub">p<sub>after</sub> = <span id="cPafter" class="num-after">—</span> kg·m/s</p>
-        <p class="calc-line sub">Δp = <span id="cDp" class="num-dp">—</span> kg·m/s</p>
-      </div>
-
-      <div class="calc-block">
-        <p class="calc-label">⑤ 最新の衝突</p>
-        <p class="calc-line sub">記録 <span id="cBounces">0</span> 件 — 「記録」タブで全履歴</p>
-      </div>
-          </div>
+      <section id="recordPanel" class="is-hidden" aria-label="衝突記録">
+        <h3>衝突記録 — 反発係数 e のデータ</h3>
+        <p class="record-desc">各衝突の v · v′ · h · h′ · 運動量 · エネルギー損失を時系列で記録します。シミュレーション終了後も残ります（リセットで消去）。</p>
+        <div class="record-meta" id="recordMeta">
+          <div>実行条件：<strong id="recCond">—</strong></div>
+          <div>記録件数：<strong id="recCount">0</strong> 回</div>
+          <div>最終状態：<strong id="recFinal">—</strong></div>
+          <div>反発係数 e：<strong id="recE">—</strong></div>
         </div>
-      </div>
+        <div class="record-tools">
+          <button type="button" id="copyRecordBtn">表をコピー（TSV）</button>
+          <button type="button" id="clearRecordBtn">記録を消去</button>
+        </div>
+        <div class="record-table-wrap" id="recordTableWrap">
+          <table class="record-table" id="recordTable" hidden>
+            <thead>
+              <tr>
+                <th>回</th>
+                <th>t (s)</th>
+                <th>v (m/s)</th>
+                <th>v′ (m/s)</th>
+                <th>h (m)</th>
+                <th>h′ (m)</th>
+                <th>p (kg·m/s)</th>
+                <th>p′ (kg·m/s)</th>
+                <th>Δp</th>
+                <th>損失 ΔK (J)</th>
+              </tr>
+            </thead>
+            <tbody id="recordBody"></tbody>
+          </table>
+          <p class="record-empty" id="recordEmpty">まだ記録がありません。シミュレーションをスタートして跳ね返りを観察してください。</p>
+        </div>
+      </section>
     </section>
 
     <section class="panel">
       <h3>ここがポイント（高校物理）</h3>
       <ul class="edu-list">
-        <li><strong>反発係数</strong> e = |v′/v|（法線方向）</li>
-        <li>e = 1：完全弾性（高さが保たれる）</li>
-        <li>e = 0：完全非弾性（跳ね返らない）</li>
-        <li>0 < e < 1：エネルギーが失われる</li>
+        <li><strong>反発係数</strong> e = |v′ / v|（地面に垂直な方向の速さの比）</li>
+        <li><strong>高さ</strong>は e² 倍：h′ = e²h。n 回目の跳ね返りでは h<sub>n</sub> = e<sup>2n</sup> h<sub>0</sub></li>
+        <li><strong>運動エネルギー</strong>も e² 倍：K′ = e²K。失われた分は熱・音・変形に変わる</li>
+        <li><strong>力積</strong>：床が球に与えた力積は Δp = m v′ − m v = m(1 + e)|v|</li>
+        <li>0 &lt; e &lt; 1 では跳ね返りが無限に続くが、<strong>総時間は有限</strong>（等比級数の和）</li>
       </ul>
+
+      <div class="theory-grid">
+        <div class="theory-card">
+          <p class="tc-label">n 回目のピーク高さ</p>
+          <p class="tc-formula">h<sub>n</sub> = e<sup>2n</sup> h<sub>0</sub></p>
+          <p class="tc-value">現在の設定：<strong id="thH">—</strong></p>
+        </div>
+        <div class="theory-card">
+          <p class="tc-label">静止するまでの総時間</p>
+          <p class="tc-formula">T = √(2h<sub>0</sub>/g) · (1 + e)/(1 − e)</p>
+          <p class="tc-value">T = <strong id="thT">—</strong></p>
+        </div>
+        <div class="theory-card">
+          <p class="tc-label">球が動く総距離</p>
+          <p class="tc-formula">L = h<sub>0</sub> · (1 + e²)/(1 − e²)</p>
+          <p class="tc-value">L = <strong id="thL">—</strong></p>
+        </div>
+      </div>
     </section>
   </div>
 
   <script>
-    function drawDarkBg(c, w, h, glowRgb) {
-      const g = glowRgb || "52,211,153";
-      const bg = c.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, "#0a0e14"); bg.addColorStop(0.55, "#0c1218"); bg.addColorStop(1, "#0f2847");
-      c.fillStyle = bg; c.fillRect(0, 0, w, h);
-      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
-      glow.addColorStop(0, "rgba(" + g + ",0.12)");
-      glow.addColorStop(0.45, "rgba(" + g + ",0.05)");
-      glow.addColorStop(1, "rgba(20,24,36,0)");
-      c.fillStyle = glow; c.fillRect(0, 0, w, h);
-    }
+    "use strict";
+
+    const G = 9.8;
+    const MAX_DT = 1 / 30;
+    const REST_V = 0.14;
+    const MAX_BOUNCES = 400;
+    const SQUASH_TIME = 0.10;
+    const FLASH_TIME = 0.9;
+    const TRAIL_MAX = 26;
+
+    const COL_V = "#38bdf8";
+    const COL_VP = "#fb7185";
+    const COL_H = "#fbbf24";
+    const COL_PRED = "#6ee7b7";
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const canvasWrap = document.getElementById("canvasWrap");
+    const graphCanvas = document.getElementById("graphCanvas");
+    const gctx = graphCanvas.getContext("2d");
+    const graphWrap = document.getElementById("graphWrap");
     const statusPanel = document.getElementById("statusPanel");
 
-    const G = 9.8;
-    const BALL_R = 0.22;
-    const PLOT_H = 10;
-    const MARGIN = { left: 48, right: 24, top: 28, bottom: 48 };
-    const MAX_DT = 1 / 30;
-    const V_ARROW_SEC = 0.32;
-    const VEL_REF_SPEED = 8;
-    const COLLISION_FLASH = 0.85;
-    const REST_VEL_STOP = 0.06;
-
-    const DEFAULTS = { h0: 5, m: 1, e: 0.8 };
+    const MARGIN = { left: 54, right: 22, top: 26, bottom: 52 };
+    const GMARGIN = { left: 46, right: 16, top: 18, bottom: 34 };
 
     let phase = "idle";
-    let y = DEFAULTS.h0;
+    let y = 5;
     let vy = 0;
     let bounceCount = 0;
     let lastCollision = null;
     let bounceHistory = [];
+    let peaks = [];
+    let samples = [];
+    let trail = [];
+    let ripples = [];
     let flashTimer = 0;
+    let squashTimer = 0;
     let activeView = "sim";
     let simTime = 0;
     let runMeta = null;
-    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0, plotH: 0 };
+    let speedFactor = 1;
+    let energyLost = 0;
+    let peakTracker = { rising: false, t: 0, h: 0 };
+    let layout = { ox: 0, oy: 0, scale: 1, w: 0, h: 0, plotH: 0, plotW: 0, viewH: 1 };
+    let glayout = { w: 0, h: 0 };
 
-    function fmt(n, d) { return Number(n).toFixed(d); }
+    const fmt = (n, d) => Number(n).toFixed(d);
+    const el = (id) => document.getElementById(id);
 
-    function getH0() { return parseFloat(document.getElementById("h0Slider").value); }
-    function getM() { return parseFloat(document.getElementById("mSlider").value); }
-    function getE() { return parseFloat(document.getElementById("eSlider").value); }
+    const getH0 = () => parseFloat(el("h0Slider").value);
+    const getM = () => parseFloat(el("mSlider").value);
+    const getE = () => parseFloat(el("eSlider").value);
 
     function syncSliders() {
-      document.getElementById("h0Value").textContent = fmt(getH0(), 1);
-      document.getElementById("mValue").textContent = fmt(getM(), 1);
-      document.getElementById("eValue").textContent = fmt(getE(), 2);
+      el("h0Value").textContent = fmt(getH0(), 1);
+      el("mValue").textContent = fmt(getM(), 1);
+      el("eValue").textContent = fmt(getE(), 2);
+      const e = getE();
+      document.querySelectorAll(".preset-btn").forEach((b) => {
+        b.classList.toggle("is-active", Math.abs(parseFloat(b.dataset.e) - e) < 0.005);
+      });
+      updateTheory();
     }
 
-    function heightFromSpeed(v) {
-      return (v * v) / (2 * G);
+    function updateTheory() {
+      const h0 = getH0();
+      const e = getE();
+      const thH = el("thH");
+      const thT = el("thT");
+      const thL = el("thL");
+      if (thH) {
+        const seq = [1, 2, 3].map((n) => "h" + n + "=" + fmt(Math.pow(e, 2 * n) * h0, 2) + "m");
+        thH.textContent = seq.join(" · ");
+      }
+      const tFall = Math.sqrt((2 * h0) / G);
+      if (thT) thT.textContent = e >= 0.999 ? "無限（減衰しない）" : fmt(tFall * (1 + e) / (1 - e), 2) + " s";
+      if (thL) thL.textContent = e >= 0.999 ? "無限（減衰しない）" : fmt(h0 * (1 + e * e) / (1 - e * e), 2) + " m";
     }
+
+    function heightFromSpeed(v) { return (v * v) / (2 * G); }
 
     function computeCollision(vBefore, e, m) {
       const vAfter = -e * vBefore;
       const hBefore = heightFromSpeed(vBefore);
       const hAfter = e * e * hBefore;
-      const pBefore = m * vBefore;
-      const pAfter = m * vAfter;
+      const kBefore = 0.5 * m * vBefore * vBefore;
+      const kAfter = 0.5 * m * vAfter * vAfter;
       return {
-        vBefore, vAfter, hBefore, hAfter,
-        pBefore, pAfter, dP: pAfter - pBefore, e,
+        vBefore, vAfter, hBefore, hAfter, e,
+        pBefore: m * vBefore,
+        pAfter: m * vAfter,
+        dP: m * vAfter - m * vBefore,
+        kBefore, kAfter, kLoss: kBefore - kAfter,
       };
     }
 
+    /* ---------------- view switching ---------------- */
+
     function setActiveView(view) {
       activeView = view;
-      document.getElementById("simView").classList.toggle("is-hidden", view !== "sim");
-      document.getElementById("recordPanel").classList.toggle("is-hidden", view !== "record");
-      document.getElementById("tabSim").classList.toggle("is-active", view === "sim");
-      document.getElementById("tabRecord").classList.toggle("is-active", view === "record");
+      const simView = el("simView");
+      const recordPanel = el("recordPanel");
+      if (!simView || !recordPanel) return;
+      simView.classList.toggle("is-hidden", view !== "sim");
+      recordPanel.classList.toggle("is-hidden", view !== "record");
+      el("tabSim").classList.toggle("is-active", view === "sim");
+      el("tabRecord").classList.toggle("is-active", view === "record");
       if (view === "record") updateRecordPanel(true);
+      requestAnimationFrame(resizeCanvas);
     }
 
+    /* ---------------- record panel ---------------- */
+
     function updateRecordPanel(scrollToLatest) {
-      const tbody = document.getElementById("recordBody");
-      const table = document.getElementById("recordTable");
-      const empty = document.getElementById("recordEmpty");
-      const wrap = document.getElementById("recordTableWrap");
-      tbody.innerHTML = "";
+      const tbody = el("recordBody");
+      if (!tbody) return;
+      const table = el("recordTable");
+      const empty = el("recordEmpty");
+      const wrap = el("recordTableWrap");
 
-      document.getElementById("tabRecordCount").textContent = String(bounceHistory.length);
-      document.getElementById("recCount").textContent = String(bounceHistory.length);
+      const tabCount = el("tabRecordCount");
+      if (tabCount) tabCount.textContent = String(bounceHistory.length);
+      const recCount = el("recCount");
+      if (recCount) recCount.textContent = String(bounceHistory.length);
 
+      const recCond = el("recCond");
+      const recE = el("recE");
       if (runMeta) {
-        document.getElementById("recCond").textContent =
+        if (recCond) recCond.textContent =
           "h₀=" + fmt(runMeta.h0, 1) + " m · m=" + fmt(runMeta.m, 1) + " kg · e=" + fmt(runMeta.e, 2);
-        document.getElementById("recE").textContent = fmt(runMeta.e, 2);
+        if (recE) recE.textContent = fmt(runMeta.e, 2);
       } else {
-        document.getElementById("recCond").textContent = "—";
-        document.getElementById("recE").textContent = fmt(getE(), 2);
+        if (recCond) recCond.textContent = "—";
+        if (recE) recE.textContent = fmt(getE(), 2);
       }
 
       let finalText = "待機中";
-      if (phase === "running") finalText = "シミュレーション実行中（t=" + fmt(simTime, 2) + " s）";
+      if (phase === "running") finalText = "実行中（t=" + fmt(simTime, 2) + " s）";
       else if (phase === "paused") finalText = "一時停止（t=" + fmt(simTime, 2) + " s）";
-      else if (bounceHistory.length > 0 && vy === 0) finalText = "静止 — 跳ね返り終了";
+      else if (bounceHistory.length > 0 && vy === 0) finalText = "静止 — 跳ね返り終了（総損失 " + fmt(energyLost, 2) + " J）";
       else if (bounceHistory.length > 0) finalText = "最新 v=" + fmt(vy, 2) + " m/s · y=" + fmt(y, 2) + " m";
-      document.getElementById("recFinal").textContent = finalText;
+      const recFinal = el("recFinal");
+      if (recFinal) recFinal.textContent = finalText;
 
       if (bounceHistory.length === 0) {
-        table.hidden = true;
-        empty.hidden = false;
+        tbody.innerHTML = "";
+        if (table) table.hidden = true;
+        if (empty) empty.hidden = false;
         return;
       }
 
-      table.hidden = false;
-      empty.hidden = true;
+      if (table) table.hidden = false;
+      if (empty) empty.hidden = true;
+
+      let html = "";
       bounceHistory.forEach((row, i) => {
-        const tr = document.createElement("tr");
-        if (i === bounceHistory.length - 1 && flashTimer > 0) tr.className = "is-latest";
-        tr.innerHTML =
+        const latest = i === bounceHistory.length - 1 && flashTimer > 0;
+        html +=
+          "<tr" + (latest ? " class=\"is-latest\"" : "") + ">" +
           "<td>" + row.n + "</td>" +
           "<td>" + fmt(row.t, 2) + "</td>" +
           "<td class=\"col-v\">" + fmt(row.vBefore, 2) + "</td>" +
@@ -408,41 +638,71 @@
           "<td class=\"col-h\">" + fmt(row.hAfter, 2) + "</td>" +
           "<td class=\"col-p\">" + fmt(row.pBefore, 2) + "</td>" +
           "<td class=\"col-p\">" + fmt(row.pAfter, 2) + "</td>" +
-          "<td class=\"col-p\">" + fmt(row.dP, 2) + "</td>";
-        tbody.appendChild(tr);
+          "<td class=\"col-p\">" + fmt(row.dP, 2) + "</td>" +
+          "<td class=\"col-e\">" + fmt(row.kLoss, 3) + "</td>" +
+          "</tr>";
       });
+      tbody.innerHTML = html;
 
-      if (scrollToLatest) {
-        wrap.scrollTop = wrap.scrollHeight;
-      }
+      if (scrollToLatest && wrap) wrap.scrollTop = wrap.scrollHeight;
     }
 
+    function recordAsTsv() {
+      const head = ["回", "t(s)", "v(m/s)", "v'(m/s)", "h(m)", "h'(m)", "p", "p'", "dp", "dK(J)"].join("\t");
+      const lines = bounceHistory.map((r) => [
+        r.n, fmt(r.t, 3), fmt(r.vBefore, 3), fmt(r.vAfter, 3),
+        fmt(r.hBefore, 3), fmt(r.hAfter, 3), fmt(r.pBefore, 3),
+        fmt(r.pAfter, 3), fmt(r.dP, 3), fmt(r.kLoss, 4),
+      ].join("\t"));
+      return [head].concat(lines).join("\n");
+    }
+
+    /* ---------------- calc panel ---------------- */
+
+    function setText(id, t) { const e2 = el(id); if (e2) e2.textContent = t; }
+
     function updateCalcPanel() {
-      const set = (id, t) => { document.getElementById(id).textContent = t; };
-      set("cE", fmt(getE(), 2));
-      set("cVnow", fmt(vy, 2));
-      set("cYnow", fmt(y, 2));
-      set("cBounces", String(bounceCount));
-      updateRecordPanel(false);
+      setText("cE", fmt(getE(), 2));
+      setText("cVnow", fmt(vy, 2));
+      setText("cYnow", fmt(y, 2));
+      setText("cBounces", String(bounceCount));
+      setText("cKlossTotal", fmt(energyLost, 3));
 
       const col = lastCollision;
       if (!col) {
-        ["cVbefore", "cVafter", "cHbefore", "cHafter", "cPbefore", "cPafter", "cDp"].forEach((id) => set(id, "—"));
+        ["cVbefore", "cVafter", "cHbefore", "cHafter", "cPbefore", "cPafter", "cDp", "cKbefore", "cKafter", "cKloss"]
+          .forEach((id) => setText(id, "—"));
         return;
       }
-      set("cVbefore", fmt(col.vBefore, 2));
-      set("cVafter", fmt(col.vAfter, 2));
-      set("cHbefore", fmt(col.hBefore, 2));
-      set("cHafter", fmt(col.hAfter, 2));
-      set("cPbefore", fmt(col.pBefore, 2));
-      set("cPafter", fmt(col.pAfter, 2));
-      set("cDp", fmt(col.dP, 2));
+      setText("cVbefore", fmt(col.vBefore, 2));
+      setText("cVafter", fmt(col.vAfter, 2));
+      setText("cHbefore", fmt(col.hBefore, 2));
+      setText("cHafter", fmt(col.hAfter, 2));
+      setText("cPbefore", fmt(col.pBefore, 2));
+      setText("cPafter", fmt(col.pAfter, 2));
+      setText("cDp", fmt(col.dP, 2));
+      setText("cKbefore", fmt(col.kBefore, 3));
+      setText("cKafter", fmt(col.kAfter, 3));
+      setText("cKloss", fmt(col.kLoss, 3));
     }
 
+    function updateLiveStrip() {
+      setText("liveT", fmt(simTime, 2) + " s");
+      setText("liveY", fmt(Math.max(y, 0), 2) + " m");
+      setText("liveV", fmt(vy, 2) + " m/s");
+      setText("liveN", String(bounceCount));
+    }
+
+    function setStatus(text, cls) {
+      statusPanel.textContent = text;
+      statusPanel.className = cls || "";
+    }
+
+    /* ---------------- simulation control ---------------- */
+
     function setSlidersDisabled(disabled) {
-      ["h0Slider", "mSlider", "eSlider"].forEach((id) => {
-        document.getElementById(id).disabled = disabled;
-      });
+      ["h0Slider", "mSlider", "eSlider"].forEach((id) => { el(id).disabled = disabled; });
+      document.querySelectorAll(".preset-btn").forEach((b) => { b.disabled = disabled; });
     }
 
     function resetSimulation() {
@@ -452,14 +712,23 @@
       bounceCount = 0;
       lastCollision = null;
       bounceHistory = [];
+      peaks = [];
+      samples = [];
+      trail = [];
+      ripples = [];
       flashTimer = 0;
+      squashTimer = 0;
       simTime = 0;
       runMeta = null;
+      energyLost = 0;
+      peakTracker = { rising: false, t: 0, h: getH0() };
       setSlidersDisabled(false);
       syncSliders();
       updateCalcPanel();
-      statusPanel.textContent = "h₀ と e を設定して「スタート」";
-      document.getElementById("startBtn").textContent = "スタート";
+      updateLiveStrip();
+      updateRecordPanel(false);
+      setStatus("h₀ と e を設定して「スタート」");
+      el("startBtn").textContent = "スタート";
     }
 
     function startSimulation() {
@@ -470,30 +739,50 @@
         bounceCount = 0;
         lastCollision = null;
         bounceHistory = [];
+        peaks = [{ t: 0, h: getH0(), n: 0 }];
+        samples = [{ t: 0, y: getH0() }];
+        trail = [];
+        ripples = [];
+        energyLost = 0;
         simTime = 0;
         runMeta = { h0: getH0(), m: getM(), e: getE() };
+        peakTracker = { rising: false, t: 0, h: getH0() };
       }
       phase = "running";
       setSlidersDisabled(true);
-      document.getElementById("startBtn").textContent = "再開";
-      statusPanel.textContent = "落下・跳ね返り中";
+      el("startBtn").textContent = "再開";
+      setStatus("落下中 — 地面に当たると v′ = −e v で跳ね返ります", "motion");
     }
 
     function pauseSimulation() {
       if (phase !== "running") return;
       phase = "paused";
       setSlidersDisabled(false);
-      statusPanel.textContent = "一時停止 — 「再開」または「リセット」";
+      setStatus("一時停止 — 「再開」または「リセット」", "");
+    }
+
+    function finishSimulation() {
+      vy = 0;
+      y = 0;
+      phase = "idle";
+      setSlidersDisabled(false);
+      el("startBtn").textContent = "スタート";
+      const e0 = runMeta ? runMeta.m * G * runMeta.h0 : 0;
+      setStatus(
+        "静止 — " + bounceCount + " 回の衝突で " + fmt(energyLost, 2) + " J が熱・音・変形に変わりました" +
+        "（はじめの力学的エネルギー " + fmt(e0, 2) + " J の " + fmt(e0 > 0 ? (energyLost / e0) * 100 : 0, 1) + " %）",
+        "done"
+      );
+      updateRecordPanel(activeView === "record");
     }
 
     function handleCollision(e, m) {
       const vBefore = vy;
-      if (vBefore >= -0.02) return false;
-
       lastCollision = computeCollision(vBefore, e, m);
       vy = lastCollision.vAfter;
-      y = BALL_R;
+      y = 0;
       bounceCount += 1;
+      energyLost += lastCollision.kLoss;
       bounceHistory.push({
         n: bounceCount,
         t: simTime,
@@ -504,300 +793,647 @@
         pBefore: lastCollision.pBefore,
         pAfter: lastCollision.pAfter,
         dP: lastCollision.dP,
+        kLoss: lastCollision.kLoss,
       });
-      flashTimer = COLLISION_FLASH;
+      flashTimer = FLASH_TIME;
+      squashTimer = SQUASH_TIME;
+      ripples.push({ t: 0, life: 0.55 });
+      // 頂点はサンプリングではなく解析値で記録する（跳ね返りが小さいとフレーム誤差が効くため）
+      peakTracker = { rising: true, t: simTime + lastCollision.vAfter / G, h: lastCollision.hAfter };
       updateCalcPanel();
-      if (activeView === "record") updateRecordPanel(true);
-      statusPanel.textContent = `第 ${bounceCount} 回衝突 — v′ = −e·v = ${fmt(lastCollision.vAfter, 2)} m/s、h′ = e²h = ${fmt(lastCollision.hAfter, 2)} m`;
-      return true;
+      updateRecordPanel(activeView === "record");
+      setStatus(
+        "第 " + bounceCount + " 回衝突 — v = " + fmt(lastCollision.vBefore, 2) +
+        " → v′ = " + fmt(lastCollision.vAfter, 2) + " m/s、h′ = e²h = " + fmt(lastCollision.hAfter, 2) + " m",
+        "impact"
+      );
     }
 
-    function update(dt) {
-      if (phase !== "running") return;
-      simTime += dt;
-
+    function stepPhysics(dt) {
       const e = runMeta ? runMeta.e : getE();
       const m = runMeta ? runMeta.m : getM();
-      const steps = 8;
-      const sub = dt / steps;
-      for (let i = 0; i < steps; i += 1) {
-        vy -= G * sub;
-        y += vy * sub;
-        if (y <= BALL_R && vy < 0) {
-          handleCollision(e, m);
-          if (Math.abs(vy) < REST_VEL_STOP) {
-            vy = 0;
-            y = BALL_R;
-            phase = "idle";
-            setSlidersDisabled(false);
-            statusPanel.textContent = "静止 — 跳ね返り終了（リセットでやり直し）";
-            document.getElementById("startBtn").textContent = "スタート";
-            break;
-          }
+      let remain = dt;
+      let guard = 0;
+
+      while (remain > 1e-7 && guard < 64) {
+        guard += 1;
+        const yEnd = y + vy * remain - 0.5 * G * remain * remain;
+        if (yEnd > 0) {
+          y = yEnd;
+          vy -= G * remain;
+          simTime += remain;
+          remain = 0;
+          break;
+        }
+        const disc = vy * vy + 2 * G * y;
+        let tau = (vy + Math.sqrt(Math.max(disc, 0))) / G;
+        if (!isFinite(tau) || tau <= 0) tau = 0;
+        if (tau > remain) {
+          y = yEnd;
+          vy -= G * remain;
+          simTime += remain;
+          remain = 0;
+          break;
+        }
+        vy -= G * tau;
+        simTime += tau;
+        remain -= tau;
+        y = 0;
+
+        if (vy > -0.001) { vy = 0; break; }
+        handleCollision(e, m);
+        if (Math.abs(vy) < REST_V || bounceCount >= MAX_BOUNCES) {
+          finishSimulation();
+          return;
         }
       }
-      if (flashTimer > 0) flashTimer -= dt;
+      if (y < 0) y = 0;
     }
+
+    function update(dtReal) {
+      const dt = dtReal * speedFactor;
+
+      if (flashTimer > 0) flashTimer = Math.max(0, flashTimer - dtReal);
+      if (squashTimer > 0) squashTimer = Math.max(0, squashTimer - dt);
+      for (let i = ripples.length - 1; i >= 0; i -= 1) {
+        ripples[i].t += dtReal;
+        if (ripples[i].t > ripples[i].life) ripples.splice(i, 1);
+      }
+
+      if (phase !== "running") return;
+
+      stepPhysics(dt);
+
+      if (peakTracker.rising && simTime >= peakTracker.t) {
+        if (peakTracker.h > 1e-4) peaks.push({ t: peakTracker.t, h: peakTracker.h, n: peaks.length });
+        peakTracker.rising = false;
+      }
+
+      samples.push({ t: simTime, y: y });
+      if (samples.length > 6000) samples.splice(0, 2000);
+
+      trail.push({ y: y, age: 0 });
+      if (trail.length > TRAIL_MAX) trail.shift();
+      trail.forEach((p) => { p.age += 1; });
+
+      updateLiveStrip();
+    }
+
+    /* ---------------- layout ---------------- */
 
     function updateLayout(w, h) {
       const plotH = h - MARGIN.top - MARGIN.bottom;
+      const plotW = w - MARGIN.left - MARGIN.right;
+      const viewH = Math.max(getH0() * 1.12, 0.6);
       layout = {
         ox: MARGIN.left,
         oy: h - MARGIN.bottom,
-        scale: plotH / PLOT_H,
-        w, h, plotH,
+        scale: plotH / viewH,
+        w, h, plotH, plotW, viewH,
       };
     }
 
-    function toScreenY(worldY) {
-      return layout.oy - worldY * layout.scale;
+    const toScreenY = (worldY) => layout.oy - worldY * layout.scale;
+
+    function fitCanvas(cv, wrap, minH) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      const rect = wrap.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width));
+      const h = Math.max(minH, Math.round(rect.height));
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+      cv.style.width = w + "px";
+      cv.style.height = h + "px";
+      cv.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { w, h };
     }
 
     function resizeCanvas() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-      function fit(cv, wrap, minH) {
-        const rect = wrap.getBoundingClientRect();
-        const w = Math.max(280, Math.round(rect.width));
-        const h = Math.max(minH || 220, Math.round(rect.height));
-        cv.width = Math.round(w * dpr);
-        cv.height = Math.round(h * dpr);
-        cv.style.width = w + "px";
-        cv.style.height = h + "px";
-        const c = cv.getContext("2d");
-        c.setTransform(dpr, 0, 0, dpr, 0, 0);
-        return { w, h, dpr };
-      }
-      const sized = fit(canvas, canvasWrap, 260);
+      const sized = fitCanvas(canvas, canvasWrap, 340);
       updateLayout(sized.w, sized.h);
-      if (typeof fdCanvas !== "undefined" && fdCanvas) fdLayout = fit(fdCanvas, fdWrap, 180);
+      glayout = fitCanvas(graphCanvas, graphWrap, 180);
     }
 
-    function velocityArrowPixels(v) {
-      const maxPx = Math.min(layout.plotH * 0.26, 78);
-      const minPx = 22;
-      const t = Math.min(1, Math.abs(v) / VEL_REF_SPEED);
-      const px = minPx + (maxPx - minPx) * t;
-      return Math.sign(v || 1) * px;
+    /* ---------------- drawing helpers ---------------- */
+
+    function drawDarkBg(c, w, h, glowRgb) {
+      const g = glowRgb || "251,113,133";
+      const bg = c.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#0a0e14");
+      bg.addColorStop(0.55, "#0c1218");
+      bg.addColorStop(1, "#101a2a");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+      glow.addColorStop(0, "rgba(" + g + ",0.10)");
+      glow.addColorStop(0.45, "rgba(" + g + ",0.04)");
+      glow.addColorStop(1, "rgba(20,24,36,0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
     }
 
-    function drawVelocityIndicator(sx, sy, v, color, symbol, opts) {
-      if (Math.abs(v) < 0.08) return;
-      const len = velocityArrowPixels(v);
-      const ey = sy - len;
-      const clipped = Math.abs(v * layout.scale * V_ARROW_SEC) > Math.abs(len) + 4;
+    function roundRectPath(c, x, y2, w, h, r) {
+      if (c.roundRect) { c.beginPath(); c.roundRect(x, y2, w, h, r); return; }
+      c.beginPath();
+      c.moveTo(x + r, y2);
+      c.arcTo(x + w, y2, x + w, y2 + h, r);
+      c.arcTo(x + w, y2 + h, x, y2 + h, r);
+      c.arcTo(x, y2 + h, x, y2, r);
+      c.arcTo(x, y2, x + w, y2, r);
+      c.closePath();
+    }
+
+    function drawPill(c, x, y2, text, color, align) {
+      c.font = "700 11px Inter, Noto Sans JP, sans-serif";
+      const tw = c.measureText(text).width + 14;
+      const px = align === "right" ? x - tw : x;
+      c.fillStyle = "rgba(8,12,20,0.92)";
+      c.strokeStyle = color;
+      c.lineWidth = 1;
+      roundRectPath(c, px, y2, tw, 19, 6);
+      c.fill();
+      c.stroke();
+      c.fillStyle = color;
+      c.textAlign = "left";
+      c.textBaseline = "middle";
+      c.fillText(text, px + 7, y2 + 10);
+    }
+
+    function drawVelocityArrow(sx, syBase, v, color, symbol, side) {
+      if (Math.abs(v) < 0.06) return;
+      const maxPx = Math.min(layout.plotH * 0.3, 120);
+      const t = Math.min(1, Math.abs(v) / 14);
+      const len = (26 + (maxPx - 26) * t) * (v > 0 ? 1 : -1);
+      const raw = sx + (side === "left" ? -46 : 46);
+      const x = Math.max(layout.ox + 18, Math.min(layout.w - MARGIN.right - 18, raw));
+      const ey = syBase - len;
 
       ctx.lineCap = "round";
-      ctx.strokeStyle = "rgba(255,255,255,0.95)";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx, ey);
-      ctx.stroke();
+      ctx.strokeStyle = "rgba(2,6,14,0.85)";
+      ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(x, syBase); ctx.lineTo(x, ey); ctx.stroke();
       ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx, ey);
-      ctx.stroke();
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x, syBase); ctx.lineTo(x, ey); ctx.stroke();
 
-      if (clipped) {
-        ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.55;
-        const extra = len * 0.18;
-        ctx.beginPath();
-        ctx.moveTo(sx, ey);
-        ctx.lineTo(sx, ey - extra);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1;
-      }
-
-      const head = 9;
+      const head = 11;
       const dir = len > 0 ? -1 : 1;
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.moveTo(sx, ey);
-      ctx.lineTo(sx - head * 0.55, ey + dir * head);
-      ctx.lineTo(sx + head * 0.55, ey + dir * head);
+      ctx.moveTo(x, ey);
+      ctx.lineTo(x - head * 0.6, ey + dir * head);
+      ctx.lineTo(x + head * 0.6, ey + dir * head);
       ctx.closePath();
       ctx.fill();
 
-      const pill = `${symbol} = ${fmt(v, 2)} m/s`;
-      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
-      const tw = ctx.measureText(pill).width + 12;
-      const pillLeft = opts && opts.pillLeft;
-      const pillX = sx + (pillLeft ? -tw - 8 : 10);
-      const pillY = ey + (len > 0 ? -18 : 8);
-      ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      if (ctx.roundRect) {
-        ctx.beginPath();
-        ctx.roundRect(pillX, pillY, tw, 18, 5);
-        ctx.fill();
-        ctx.stroke();
-      } else {
-        ctx.fillRect(pillX, pillY, tw, 18);
-      }
-      ctx.fillStyle = color;
-      ctx.fillText(pill, pillX + 6, pillY + 13);
+      const label = symbol + " = " + fmt(v, 2) + " m/s";
+      drawPill(ctx, x + (side === "left" ? -8 : 8), ey + (len > 0 ? -24 : 6), label, color,
+        side === "left" ? "right" : "left");
     }
 
-    function drawHeightGuide(worldH, color, label) {
-      if (worldH < 0.05) return;
-      const gy = toScreenY(0);
-      const hy = toScreenY(worldH);
-      const x = layout.ox + layout.plotH * 0.78;
-      ctx.setLineDash([5, 4]);
+    function drawHeightLine(worldH, color, label, dashed) {
+      if (worldH < 0.02 || worldH > layout.viewH) return;
+      const sy = toScreenY(worldH);
+      ctx.save();
+      if (dashed) ctx.setLineDash([6, 5]);
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.moveTo(x, gy);
-      ctx.lineTo(x, hy);
+      ctx.moveTo(layout.ox, sy);
+      ctx.lineTo(layout.w - MARGIN.right, sy);
       ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
-      ctx.fillStyle = color;
-      ctx.fillText(label, x + 6, (gy + hy) * 0.5);
+      ctx.restore();
+      if (label) drawPill(ctx, layout.w - MARGIN.right - 4, sy - 10, label, color, "right");
     }
+
+    function niceStep(range, target) {
+      const raw = range / target;
+      const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      const norm = raw / mag;
+      let step;
+      if (norm <= 1) step = 1;
+      else if (norm <= 2) step = 2;
+      else if (norm <= 5) step = 5;
+      else step = 10;
+      return step * mag;
+    }
+
+    /* ---------------- main canvas ---------------- */
 
     function draw() {
-      ctx.fillStyle = "#f8fcff";
-      ctx.fillRect(0, 0, layout.w, layout.h);
-      ctx.fillStyle = "#eef6ff";
-      ctx.fillRect(layout.ox, MARGIN.top, layout.w - layout.ox - MARGIN.right, layout.plotH);
+      if (layout.w < 1 || layout.h < 1) return;
+      const w = layout.w;
+      const h = layout.h;
+      drawDarkBg(ctx, w, h);
 
       const groundY = toScreenY(0);
-      ctx.fillStyle = "#c9a87c";
-      ctx.fillRect(layout.ox, groundY, layout.w - layout.ox - MARGIN.right, layout.h - groundY);
-      ctx.strokeStyle = "#8b6914";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(layout.ox, groundY);
-      ctx.lineTo(layout.w - MARGIN.right, groundY);
-      ctx.stroke();
-      ctx.fillStyle = "#6b5344";
-      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText("地面", layout.w - MARGIN.right - 36, groundY + 16);
+      const rightX = w - MARGIN.right;
 
-      for (let h = 0; h <= 10; h += 2) {
-        const sy = toScreenY(h);
-        ctx.strokeStyle = "rgba(0,100,180,0.12)";
+      ctx.fillStyle = "rgba(10,16,30,0.55)";
+      ctx.fillRect(layout.ox, MARGIN.top, layout.plotW, groundY - MARGIN.top);
+
+      const step = niceStep(layout.viewH, 6);
+      ctx.textBaseline = "middle";
+      for (let hv = 0; hv <= layout.viewH + 1e-9; hv += step) {
+        const sy = toScreenY(hv);
+        if (sy < MARGIN.top - 2) break;
+        ctx.strokeStyle = hv === 0 ? "rgba(148,163,184,0.3)" : "rgba(148,163,184,0.12)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(layout.ox, sy);
-        ctx.lineTo(layout.w - MARGIN.right, sy);
+        ctx.lineTo(rightX, sy);
         ctx.stroke();
-        ctx.fillStyle = "#4a7099";
+        ctx.fillStyle = "#94a3b8";
         ctx.font = "500 10px Inter, Noto Sans JP, sans-serif";
-        ctx.fillText(`${h} m`, layout.ox - 34, sy + 4);
+        ctx.textAlign = "right";
+        ctx.fillText(fmt(hv, step < 1 ? 1 : 0) + " m", layout.ox - 8, sy);
       }
+      ctx.textAlign = "left";
+
+      const groundGrad = ctx.createLinearGradient(0, groundY, 0, h);
+      groundGrad.addColorStop(0, "#4a3a26");
+      groundGrad.addColorStop(1, "#241c12");
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(layout.ox, groundY, layout.plotW, h - groundY);
+      ctx.strokeStyle = "#b08850";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(layout.ox, groundY);
+      ctx.lineTo(rightX, groundY);
+      ctx.stroke();
+      ctx.save();
+      ctx.strokeStyle = "rgba(176,136,80,0.35)";
+      ctx.lineWidth = 1;
+      for (let x = layout.ox; x < rightX; x += 12) {
+        ctx.beginPath();
+        ctx.moveTo(x, groundY + 2);
+        ctx.lineTo(x - 9, Math.min(h, groundY + 11));
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "600 11px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("地面", rightX - 34, groundY + 20);
 
       const h0 = getH0();
-      if (phase === "idle") {
-        drawHeightGuide(h0, "rgba(0,136,221,0.55)", `h₀=${fmt(h0, 1)}m`);
-        if (lastCollision) {
-          drawHeightGuide(lastCollision.hAfter, "rgba(34,136,68,0.55)", `h′=${fmt(lastCollision.hAfter, 1)}m`);
-        } else {
-          const predH = getE() * getE() * h0;
-          drawHeightGuide(predH, "rgba(34,136,68,0.45)", `e²h₀=${fmt(predH, 1)}m`);
-        }
+      const e = runMeta ? runMeta.e : getE();
+      drawHeightLine(h0, "rgba(56,189,248,0.55)", "h₀ = " + fmt(h0, 2) + " m", true);
+
+      const shownPeaks = peaks.filter((p) => p.n > 0).slice(-4);
+      shownPeaks.forEach((p) => {
+        drawHeightLine(p.h, "rgba(251,191,36,0.5)", "h" + p.n + " = " + fmt(p.h, 2) + " m", true);
+      });
+
+      if (phase === "idle" && bounceCount === 0) {
+        drawHeightLine(e * e * h0, "rgba(110,231,183,0.5)", "予測 e²h₀ = " + fmt(e * e * h0, 2) + " m", true);
+      } else if (lastCollision) {
+        drawHeightLine(lastCollision.hAfter, "rgba(110,231,183,0.45)", "予測 e²h = " + fmt(lastCollision.hAfter, 2) + " m", true);
       }
 
-      if (lastCollision && (flashTimer > 0 || phase === "paused")) {
-        drawHeightGuide(lastCollision.hBefore, "rgba(0,136,221,0.45)", `h=${fmt(lastCollision.hBefore, 1)}m`);
-        drawHeightGuide(lastCollision.hAfter, "rgba(34,136,68,0.55)", `h′=${fmt(lastCollision.hAfter, 1)}m`);
-      } else if (phase === "running" && lastCollision) {
-        drawHeightGuide(lastCollision.hAfter, "rgba(34,136,68,0.35)", `次 h′=${fmt(lastCollision.hAfter, 1)}m`);
-      }
+      const cx = layout.ox + layout.plotW * 0.42;
+      const rPx = Math.max(Math.min(layout.plotW, layout.plotH) * 0.045, 14);
 
-      const cx = layout.ox + (layout.w - layout.ox - MARGIN.right) * 0.38;
-      const cy = toScreenY(y);
-      const r = Math.max(BALL_R * layout.scale, 18);
-      const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+      ripples.forEach((rp) => {
+        const k = rp.t / rp.life;
+        const rad = rPx * (1 + k * 3.2);
+        ctx.save();
+        ctx.globalAlpha = (1 - k) * 0.6;
+        ctx.strokeStyle = COL_VP;
+        ctx.lineWidth = 2.5 * (1 - k) + 0.5;
+        ctx.beginPath();
+        ctx.ellipse(cx, groundY, rad, rad * 0.28, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      trail.forEach((p, i) => {
+        const k = i / Math.max(trail.length - 1, 1);
+        const sy = toScreenY(p.y) - rPx;
+        ctx.save();
+        ctx.globalAlpha = 0.05 + k * 0.2;
+        ctx.fillStyle = COL_V;
+        ctx.beginPath();
+        ctx.arc(cx, sy, rPx * (0.4 + k * 0.55), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      const shadowK = Math.max(0, 1 - y / Math.max(layout.viewH, 0.001));
+      ctx.save();
+      ctx.globalAlpha = 0.16 + shadowK * 0.4;
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(cx, groundY + 4, rPx * (0.6 + shadowK * 0.7), rPx * 0.22 * (0.6 + shadowK * 0.6), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const squashK = squashTimer > 0 ? squashTimer / SQUASH_TIME : 0;
+      const sqY = 1 - 0.38 * squashK;
+      const sqX = 1 + 0.3 * squashK;
+      const ballCY = toScreenY(y) - rPx * sqY;
+
+      ctx.save();
+      ctx.translate(cx, ballCY);
+      ctx.scale(sqX, sqY);
+      const grad = ctx.createRadialGradient(-rPx * 0.32, -rPx * 0.34, rPx * 0.1, 0, 0, rPx);
       grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.5, "#66bbff");
-      grad.addColorStop(1, "#0088dd");
+      grad.addColorStop(0.42, "#7dd3fc");
+      grad.addColorStop(1, "#0284c7");
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.arc(0, 0, rPx, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#006699";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = squashK > 0 ? COL_VP : "#0369a1";
+      ctx.lineWidth = squashK > 0 ? 3 : 2;
       ctx.stroke();
+      ctx.restore();
 
       if (phase === "running" || phase === "paused") {
-        const gy = toScreenY(BALL_R);
-        if (vy < -0.15) {
-          drawVelocityIndicator(cx, gy, vy, "#0088dd", "v", { pillLeft: true });
-        } else if (vy > 0.15) {
-          drawVelocityIndicator(cx, gy, vy, "#cc1133", "v′");
-        }
+        const base = toScreenY(y) - rPx;
+        if (vy < -0.06) drawVelocityArrow(cx, base, vy, COL_V, "v", "left");
+        else if (vy > 0.06) drawVelocityArrow(cx, base, vy, COL_VP, "v′", "right");
       }
 
       if (lastCollision && flashTimer > 0) {
-        const gy = toScreenY(BALL_R);
-        drawVelocityIndicator(cx - 58, gy, lastCollision.vBefore, "#0088dd", "v", { pillLeft: true });
-        drawVelocityIndicator(cx + 58, gy, lastCollision.vAfter, "#cc1133", "v′");
+        const k = flashTimer / FLASH_TIME;
+        const bw = 176;
+        const bx = Math.min(layout.w - MARGIN.right - bw - 6, cx + rPx + 22);
+        const by = groundY - 66;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, k + 0.3);
+        ctx.fillStyle = "rgba(8,12,20,0.94)";
+        ctx.strokeStyle = COL_VP;
+        ctx.lineWidth = 1.4;
+        roundRectPath(ctx, bx, by, bw, 58, 9);
+        ctx.fill();
+        ctx.stroke();
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = "#fecdd3";
+        ctx.fillText("第 " + bounceCount + " 回衝突", bx + 10, by + 13);
+        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
+        ctx.fillStyle = COL_V;
+        ctx.fillText("v  = " + fmt(lastCollision.vBefore, 2) + " m/s", bx + 10, by + 31);
+        ctx.fillStyle = COL_VP;
+        ctx.fillText("v′ = " + fmt(lastCollision.vAfter, 2) + " m/s", bx + 10, by + 47);
+        ctx.restore();
       }
 
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      ctx.fillText("e = " + fmt(e, 2) + "　m = " + fmt(runMeta ? runMeta.m : getM(), 1) + " kg", layout.ox + 4, MARGIN.top - 10);
+
       if (phase === "idle") updateCalcPanel();
-      else if (phase === "running" || phase === "paused") {
-        document.getElementById("cVnow").textContent = fmt(vy, 2);
-        document.getElementById("cYnow").textContent = fmt(y, 2);
-        if (flashTimer > 0 || activeView === "record") updateRecordPanel(activeView === "record");
+      else {
+        setText("cVnow", fmt(vy, 2));
+        setText("cYnow", fmt(y, 2));
+      }
+      if (activeView === "record" && (flashTimer > 0 || phase === "running")) updateRecordPanel(false);
+    }
+
+    /* ---------------- graph canvas ---------------- */
+
+    function drawGraph() {
+      const w = glayout.w;
+      const h = glayout.h;
+      if (!w || !h) return;
+      drawDarkBg(gctx, w, h, "56,189,248");
+
+      const ox = GMARGIN.left;
+      const oy = h - GMARGIN.bottom;
+      const pw = w - GMARGIN.left - GMARGIN.right;
+      const ph = h - GMARGIN.top - GMARGIN.bottom;
+      const h0 = runMeta ? runMeta.h0 : getH0();
+      const e = runMeta ? runMeta.e : getE();
+
+      const tFall = Math.sqrt((2 * h0) / G);
+      let tTotal = e >= 0.999 ? 12 : tFall * (1 + e) / (1 - e);
+      tTotal = Math.min(Math.max(tTotal * 1.05, 1.5), 30);
+      const tMax = Math.max(tTotal, simTime * 1.05);
+      const yMax = Math.max(h0 * 1.08, 0.5);
+
+      const gx = (t) => ox + (t / tMax) * pw;
+      const gy = (v) => oy - (v / yMax) * ph;
+
+      gctx.fillStyle = "rgba(10,16,30,0.5)";
+      gctx.fillRect(ox, GMARGIN.top, pw, ph);
+
+      gctx.textBaseline = "middle";
+      const yStep = niceStep(yMax, 4);
+      for (let v = 0; v <= yMax + 1e-9; v += yStep) {
+        const sy = gy(v);
+        gctx.strokeStyle = v === 0 ? "rgba(148,163,184,0.3)" : "rgba(148,163,184,0.1)";
+        gctx.lineWidth = 1;
+        gctx.beginPath(); gctx.moveTo(ox, sy); gctx.lineTo(ox + pw, sy); gctx.stroke();
+        gctx.fillStyle = "#64748b";
+        gctx.font = "500 9px Inter, sans-serif";
+        gctx.textAlign = "right";
+        gctx.fillText(fmt(v, yStep < 1 ? 1 : 0), ox - 6, sy);
+      }
+      const tStep = niceStep(tMax, 5);
+      gctx.textAlign = "center";
+      gctx.textBaseline = "top";
+      for (let t = 0; t <= tMax + 1e-9; t += tStep) {
+        const sx = gx(t);
+        gctx.strokeStyle = "rgba(148,163,184,0.1)";
+        gctx.beginPath(); gctx.moveTo(sx, GMARGIN.top); gctx.lineTo(sx, oy); gctx.stroke();
+        gctx.fillStyle = "#64748b";
+        gctx.font = "500 9px Inter, sans-serif";
+        gctx.fillText(fmt(t, tStep < 1 ? 1 : 0), sx, oy + 6);
+      }
+      gctx.fillStyle = "#94a3b8";
+      gctx.font = "600 10px Inter, Noto Sans JP, sans-serif";
+      gctx.textAlign = "left";
+      gctx.fillText("h (m)", 6, GMARGIN.top - 6);
+      gctx.textAlign = "right";
+      gctx.fillText("t (s)", w - 6, oy + 18);
+      gctx.textAlign = "left";
+      gctx.textBaseline = "middle";
+
+      gctx.save();
+      gctx.setLineDash([5, 4]);
+      gctx.strokeStyle = "rgba(110,231,183,0.45)";
+      gctx.lineWidth = 1.2;
+      for (let n = 0; n <= 8; n += 1) {
+        const hp = Math.pow(e, 2 * n) * h0;
+        if (hp < yMax * 0.012) break;
+        const sy = gy(hp);
+        gctx.beginPath(); gctx.moveTo(ox, sy); gctx.lineTo(ox + pw, sy); gctx.stroke();
+      }
+      gctx.restore();
+
+      if (samples.length > 1) {
+        gctx.save();
+        gctx.strokeStyle = COL_H;
+        gctx.lineWidth = 2.2;
+        gctx.lineJoin = "round";
+        gctx.shadowColor = "rgba(251,191,36,0.55)";
+        gctx.shadowBlur = 8;
+        gctx.beginPath();
+        let started = false;
+        for (let i = 0; i < samples.length; i += 1) {
+          const s = samples[i];
+          const sx = gx(s.t);
+          const sy = gy(s.y);
+          if (!started) { gctx.moveTo(sx, sy); started = true; }
+          else gctx.lineTo(sx, sy);
+        }
+        gctx.stroke();
+        gctx.restore();
+      }
+
+      peaks.forEach((p) => {
+        if (p.t > tMax) return;
+        const sx = gx(p.t);
+        const sy = gy(p.h);
+        gctx.fillStyle = COL_PRED;
+        gctx.beginPath();
+        gctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+        gctx.fill();
+        if (p.n <= 4 && p.h > yMax * 0.05) {
+          gctx.fillStyle = "#a7f3d0";
+          gctx.font = "700 9px Inter, sans-serif";
+          gctx.textAlign = "center";
+          gctx.fillText("h" + p.n + "=" + fmt(p.h, 2), sx, sy - 10);
+          gctx.textAlign = "left";
+        }
+      });
+
+      bounceHistory.forEach((b) => {
+        if (b.t > tMax) return;
+        const sx = gx(b.t);
+        gctx.strokeStyle = "rgba(251,113,133,0.5)";
+        gctx.lineWidth = 1.2;
+        gctx.beginPath();
+        gctx.moveTo(sx, oy);
+        gctx.lineTo(sx, oy - 8);
+        gctx.stroke();
+      });
+
+      if (phase !== "idle" || bounceCount > 0) {
+        const sx = gx(Math.min(simTime, tMax));
+        const sy = gy(Math.min(y, yMax));
+        gctx.fillStyle = "#fff";
+        gctx.strokeStyle = COL_VP;
+        gctx.lineWidth = 2;
+        gctx.beginPath();
+        gctx.arc(sx, sy, 4.5, 0, Math.PI * 2);
+        gctx.fill();
+        gctx.stroke();
       }
     }
 
-    document.getElementById("tabSim").addEventListener("click", () => setActiveView("sim"));
-    document.getElementById("tabRecord").addEventListener("click", () => setActiveView("record"));
+    /* ---------------- events ---------------- */
+
+    el("tabSim").addEventListener("click", () => setActiveView("sim"));
+    el("tabRecord").addEventListener("click", () => setActiveView("record"));
 
     ["h0Slider", "mSlider", "eSlider"].forEach((id) => {
-      document.getElementById(id).addEventListener("input", () => {
-        if (phase === "idle" || phase === "paused") {
-          syncSliders();
-          if (phase === "idle") {
-            y = getH0();
-            updateCalcPanel();
-          }
+      el(id).addEventListener("input", () => {
+        syncSliders();
+        if (phase === "idle") {
+          y = getH0();
+          peaks = [];
+          samples = [];
+          trail = [];
+          lastCollision = null;
+          bounceCount = 0;
+          bounceHistory = [];
+          energyLost = 0;
+          simTime = 0;
+          runMeta = null;
+          updateCalcPanel();
+          updateLiveStrip();
+          updateRecordPanel(false);
+          resizeCanvas();
         }
       });
     });
 
-    document.getElementById("startBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      startSimulation();
+    document.querySelectorAll(".preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (phase === "running") return;
+        el("eSlider").value = btn.dataset.e;
+        el("eSlider").dispatchEvent(new Event("input"));
+      });
     });
-    document.getElementById("pauseBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      pauseSimulation();
+
+    document.querySelectorAll(".speed-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        speedFactor = parseFloat(btn.dataset.speed);
+        document.querySelectorAll(".speed-btn").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+      });
     });
-    document.getElementById("resetBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      resetSimulation();
+
+    el("startBtn").addEventListener("click", (ev) => { ev.preventDefault(); startSimulation(); });
+    el("pauseBtn").addEventListener("click", (ev) => { ev.preventDefault(); pauseSimulation(); });
+    el("resetBtn").addEventListener("click", (ev) => { ev.preventDefault(); resetSimulation(); });
+
+    el("copyRecordBtn").addEventListener("click", () => {
+      const btn = el("copyRecordBtn");
+      if (bounceHistory.length === 0) { btn.textContent = "記録がありません"; }
+      else {
+        const text = recordAsTsv();
+        const done = () => { btn.textContent = "コピーしました"; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, () => { btn.textContent = "コピーできません"; });
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand("copy"); done(); } catch (err) { btn.textContent = "コピーできません"; }
+          document.body.removeChild(ta);
+        }
+      }
+      setTimeout(() => { btn.textContent = "表をコピー（TSV）"; }, 1800);
+    });
+
+    el("clearRecordBtn").addEventListener("click", () => {
+      bounceHistory = [];
+      energyLost = 0;
+      lastCollision = null;
+      bounceCount = 0;
+      updateRecordPanel(false);
+      updateCalcPanel();
+    });
+
+    document.addEventListener("keydown", (ev) => {
+      const tag = (ev.target && ev.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON") return;
+      if (ev.code === "Space") {
+        ev.preventDefault();
+        if (phase === "running") pauseSimulation(); else startSimulation();
+      } else if (ev.key === "r" || ev.key === "R") {
+        ev.preventDefault();
+        resetSimulation();
+      }
     });
 
     window.addEventListener("resize", resizeCanvas);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
     if (typeof ResizeObserver !== "undefined") {
-      new ResizeObserver(resizeCanvas).observe(canvasWrap);
+      const ro = new ResizeObserver(() => resizeCanvas());
+      ro.observe(canvasWrap);
+      ro.observe(graphWrap);
     }
 
     let lastTime = 0;
     function loop(t) {
+      if (!lastTime) lastTime = t;
       const dt = Math.min((t - lastTime) / 1000, MAX_DT);
       lastTime = t;
       if (dt > 0) update(dt);
       draw();
+      drawGraph();
       requestAnimationFrame(loop);
     }
 
     resetSimulation();
     resizeCanvas();
     requestAnimationFrame(loop);
-  
   </script>
 </body>
 </html>
