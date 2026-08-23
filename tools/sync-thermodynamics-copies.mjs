@@ -1,36 +1,11 @@
 #!/usr/bin/env node
+/**
+ * @deprecated thermo/ が正本です。このスクリプトは thermodynamics/ コピーを作らないように停止しました。
+ * 熱力学 sim の編集は thermo/ 内の HTML を直接更新してください。
+ */
 "use strict";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const DST = path.join(ROOT, "thermodynamics");
-
-const FILES = [
-  "brownian_motion_simulation.html",
-  "specific_heat_capacity_simulation.html",
-  "heat_conservation_equilibrium_simulation.html",
-  "temperature_simulation_celsius_kelvin.html",
-];
-
-function relPaths(html) {
-  return html
-    .replace(/href="assets\//g, 'href="../assets/')
-    .replace(/src="assets\//g, 'src="../assets/')
-    .replace(/href="00_folder/g, 'href="../00_folder')
-    .replace(/href="00_physLabo/g, 'href="../00_physLabo');
-}
-
-if (!fs.existsSync(DST)) fs.mkdirSync(DST, { recursive: true });
-
-for (const name of FILES) {
-  const src = path.join(ROOT, name);
-  if (!fs.existsSync(src)) {
-    console.warn("skip missing", name);
-    continue;
-  }
-  const out = relPaths(fs.readFileSync(src, "utf8"));
-  fs.writeFileSync(path.join(DST, name), out, "utf8");
-  console.log("synced thermodynamics/" + name);
-}
+console.warn("[sync-thermodynamics-copies] 廃止しました。");
+console.warn("  正本: projectile-sim/thermo/*.html");
+console.warn("  旧 thermodynamics/ フォルダは削除済みです。");
+process.exit(0);
