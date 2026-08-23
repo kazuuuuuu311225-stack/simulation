@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
   <title>23章 電流 — トランジスタ（npn・pnp）増幅</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
+<style>
     * { box-sizing: border-box; }
     :root {
-      --accent: #fbbf24; --accent-light: #fde68a;
-      --panel: rgba(10, 12, 28, 0.92); --border: rgba(251, 191, 36, 0.28);
+      --accent: #38bdf8; --accent-light: #bae6fd;
+      --base: #fbbf24; --coll: #38bdf8; --emit: #4ade80;
+      --panel: rgba(10, 14, 30, 0.92); --border: rgba(56, 189, 248, 0.26);
       --text: #e2e8f0; --muted: #94a3b8;
     }
     body {
@@ -20,141 +23,150 @@
       color: var(--text); min-height: 100dvh;
       padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
     }
-    .page-shell { width: min(980px, 96vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-shell { width: min(1200px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
     .page-header { text-align: center; }
     .hero-icon {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 48px; height: 48px; border-radius: 14px;
-      background: linear-gradient(135deg, rgba(56,189,248,0.4), rgba(248,113,113,0.35));
-      border: 1px solid rgba(56,189,248,0.45); font-size: 1.2rem;
+      width: 52px; height: 52px; border-radius: 16px; font-size: 1.3rem;
+      background: linear-gradient(135deg, rgba(56,189,248,0.4), rgba(251,191,36,0.35));
+      border: 1px solid rgba(56,189,248,0.45);
     }
-    h2 { margin: 6px 0 4px; font-weight: 600; color: var(--accent-light); }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: var(--accent-light); font-size: 1.3rem; }
     .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    .tagline { margin: 0; font-size: 0.86rem; color: #fde68a; }
     #back {
       display: inline-block; margin-top: 8px; padding: 9px 16px;
-      color: #fef3c7; background: rgba(251,191,36,0.12);
-      border: 1px solid rgba(251,191,36,0.38); border-radius: 10px;
+      color: #e0f2fe; background: rgba(56,189,248,0.14);
+      border: 1px solid rgba(56,189,248,0.38); border-radius: 10px;
       text-decoration: none; font-weight: 600; font-size: 0.88rem;
     }
-    section.panel {
-      border-radius: 14px; padding: 16px 18px;
-      background: var(--panel); border: 1px solid var(--border);
+    section.panel { border-radius: 16px; padding: 16px 18px; background: var(--panel); border: 1px solid var(--border); }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.02rem; color: var(--accent-light); }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.1), rgba(251,191,36,0.08));
+      border: 1px solid rgba(56,189,248,0.3);
     }
-    section.panel h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent-light); }
-    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
-    .formula-box {
-      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
-      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
-      font-size: 0.86rem; color: #bae6fd; text-align: center; line-height: 1.65;
+    .formula-main { font-size: 0.95rem; font-weight: 800; color: #bae6fd; line-height: 1.85; }
+    .formula-main .b { color: #fcd34d; }
+    .formula-main .c { color: #7dd3fc; }
+    .formula-main .g { color: #86efac; }
+    .formula-sub { font-size: 0.76rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+    .view-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .view-tab {
+      flex: 1; min-width: 120px; max-width: 260px; padding: 10px 12px; border-radius: 12px 12px 0 0;
+      border: 1px solid rgba(148,163,184,0.18); border-bottom: none;
+      background: rgba(15,22,40,0.5); color: var(--muted);
+      font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
     }
-    .canvas-wrap {
-      border-radius: 12px; overflow: hidden; margin-top: 10px;
-      background: #060a14; border: 1px solid rgba(56,189,248,0.2);
-      box-shadow: inset 0 0 48px rgba(0,0,0,0.45);
+    .view-tab.is-active {
+      color: #e0f2fe; background: rgba(18,30,52,0.92);
+      border-color: rgba(56,189,248,0.45); box-shadow: inset 0 2px 0 var(--accent);
     }
-    .canvas-wrap canvas {
-      display: block; width: 100%; height: min(500px, 62dvh);
-      min-height: 420px; touch-action: none;
+    .tab-view.is-hidden { display: none; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 980px) {
+      .sim-grid { grid-template-columns: 1.4fr 0.6fr; grid-template-areas: "viz hud"; align-items: start; }
     }
-    .mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .mode-btn {
-      flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 10px;
-      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
-      color: #cbd5e1; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    .area-viz { grid-area: viz; min-width: 0; }
+    .area-hud { grid-area: hud; min-width: 0; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #050810; border: 1px solid rgba(56,189,248,0.28); }
+    .stage { position: relative; background: #050810; }
+    .stage canvas { display: block; width: 100%; touch-action: none; }
+    #circuitCanvas { height: min(520px, 58dvh); min-height: 450px; }
+    #waveCanvas { height: min(520px, 58dvh); min-height: 450px; }
+    #chipCanvas { height: min(480px, 55dvh); min-height: 410px; }
+    .live-strip {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      padding: 12px 14px; border-top: 1px solid rgba(56,189,248,0.14);
+      background: linear-gradient(180deg, rgba(15,22,45,0.95), rgba(5,8,16,0.98));
     }
-    .mode-btn.is-active {
-      background: rgba(56,189,248,0.18); border-color: rgba(56,189,248,0.55); color: #bae6fd;
+    @media (max-width: 640px) { .live-strip { grid-template-columns: repeat(2, 1fr); } }
+    .live-cell {
+      padding: 9px 6px; border-radius: 10px; text-align: center;
+      background: rgba(0,0,0,0.35); border: 1px solid rgba(148,163,184,0.16);
     }
-    .mode-btn.is-pnp.is-active {
-      background: rgba(248,113,113,0.18); border-color: rgba(248,113,113,0.55); color: #fca5a5;
+    .live-cell .k { display: block; font-size: 0.58rem; color: #64748b; font-weight: 700; margin-bottom: 4px; }
+    .live-cell .v { display: block; font-size: 0.9rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #bae6fd; }
+    .live-cell.b .v { color: #fcd34d; }
+    .live-cell.c .v { color: #7dd3fc; }
+    .live-cell.g .v { color: #86efac; }
+    .explain-panel { padding: 10px 14px 12px; background: rgba(5,8,16,0.98); }
+    .status-note {
+      font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 9px 11px; border-radius: 8px;
+      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.22);
     }
-    .mode-guide {
-      margin-top: 10px; padding: 10px 14px; border-radius: 10px;
-      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.28);
-      font-size: 0.84rem; color: #bae6fd; line-height: 1.65;
+    .status-note.warn { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.35); color: #fecaca; }
+    .ctrl-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-top: 1px solid rgba(148,163,184,0.1); }
+    .ctrl-btn {
+      flex: 1; min-width: 92px; min-height: 38px; padding: 8px 10px; border-radius: 10px;
+      border: 1px solid rgba(56,189,248,0.3); background: rgba(255,255,255,0.05);
+      color: #cbd5e1; font: inherit; font-size: 0.76rem; font-weight: 600; cursor: pointer;
     }
-    .preset-row {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px;
+    .ctrl-btn.is-active { background: rgba(56,189,248,0.24); border-color: rgba(56,189,248,0.6); color: #e0f2fe; }
+    .ctrl-btn.pnp.is-active { background: rgba(248,113,113,0.2); border-color: rgba(248,113,113,0.55); color: #fecaca; }
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(56,189,248,0.2);
+      display: flex; flex-direction: column; gap: 8px; max-height: min(1000px, 92dvh); overflow-y: auto;
     }
-    .preset-label { font-size: 0.8rem; color: var(--muted); width: 100%; }
-    @media (min-width: 640px) { .preset-label { width: auto; } }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: var(--accent-light); }
+    .hint { margin: 0 0 4px; font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
+    .preset-row { display: flex; flex-wrap: wrap; gap: 5px; }
     .preset-btn {
-      flex: 1; min-width: 140px; padding: 9px 12px; border-radius: 10px;
-      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
-      color: #cbd5e1; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      padding: 6px 10px; min-height: 32px; font-family: inherit; font-size: 0.7rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; color: #cbd5e1;
+      border: 1px solid rgba(148,163,184,0.26); background: rgba(255,255,255,0.05);
     }
-    .preset-btn.is-active {
-      background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.55); color: #bae6fd;
+    .preset-btn.is-active { color: #fff; background: rgba(56,189,248,0.3); border-color: rgba(56,189,248,0.65); }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label {
+      font-size: 0.74rem; color: #cbd5e1; font-weight: 600;
+      display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
     }
-    .preset-btn.is-recommended { border-color: rgba(250,204,21,0.45); }
-    .preset-btn.is-recommended.is-active {
-      background: rgba(250,204,21,0.15); border-color: rgba(250,204,21,0.65); color: #fde68a;
+    .slider-row label .nm { flex: 1; }
+    .slider-row label .val { color: #bae6fd; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .slider-row.b label .nm { color: #fcd34d; }
+    .slider-row.c label .nm { color: #7dd3fc; }
+    .slider-row input[type=range] { width: 100%; height: 8px; accent-color: var(--accent); }
+    .slider-row.b input[type=range] { accent-color: var(--base); }
+    .calc-block { padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); }
+    .calc-block.b { border-color: rgba(251,191,36,0.28); }
+    .calc-block.c { border-color: rgba(56,189,248,0.28); }
+    .calc-block.key { border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.06); }
+    .calc-label { margin: 0 0 4px; font-size: 0.7rem; font-weight: 700; color: var(--accent-light); }
+    .calc-label.b { color: #fcd34d; }
+    .calc-label.c { color: #7dd3fc; }
+    .calc-label.key { color: #86efac; }
+    .calc-line { margin: 3px 0; font-size: 0.76rem; color: var(--text); line-height: 1.5; }
+    .calc-line.sub { font-size: 0.7rem; color: var(--muted); }
+    .calc-line.highlight { color: #fde68a; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .big-gain {
+      text-align: center; padding: 10px; border-radius: 10px; margin-top: 2px;
+      background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.4);
     }
-    .preset-row {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px;
+    .big-gain .k { font-size: 0.68rem; color: #86efac; font-weight: 700; }
+    .big-gain .v { font-size: 1.5rem; font-weight: 800; color: #bbf7d0; font-variant-numeric: tabular-nums; }
+    .big-gain .s { font-size: 0.68rem; color: var(--muted); }
+    .guide-view { padding: 16px 18px; border-radius: 0 0 14px 14px; background: rgba(16,22,45,0.55); border: 1px solid rgba(56,189,248,0.22); border-top: none; }
+    .guide-grid { display: grid; gap: 12px; }
+    @media (min-width: 720px) { .guide-grid { grid-template-columns: 1fr 1fr; } }
+    .guide-card { padding: 14px; border-radius: 12px; background: rgba(2,8,20,0.7); border: 1px solid rgba(148,163,184,0.18); }
+    .guide-card h4 { margin: 0 0 8px; font-size: 0.9rem; color: var(--accent-light); }
+    .guide-card p, .guide-card li { margin: 0 0 6px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.65; }
+    .guide-card ul { margin: 0; padding-left: 1.15rem; }
+    .guide-card .eq {
+      margin: 8px 0; padding: 8px 10px; border-radius: 8px; text-align: center;
+      font-weight: 700; font-size: 0.86rem;
+      background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: #bae6fd;
     }
-    .preset-label { font-size: 0.8rem; color: var(--muted); width: 100%; }
-    @media (min-width: 640px) { .preset-label { width: auto; } }
-    .preset-btn {
-      flex: 1; min-width: 140px; padding: 9px 12px; border-radius: 10px;
-      border: 1px solid rgba(148,163,184,0.35); background: rgba(15,30,45,0.65);
-      color: #cbd5e1; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
-    }
-    .preset-btn.is-active {
-      background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.55); color: #bae6fd;
-    }
-    .preset-btn.is-recommended { border-color: rgba(250,204,21,0.45); }
-    .preset-btn.is-recommended.is-active {
-      background: rgba(250,204,21,0.15); border-color: rgba(250,204,21,0.65); color: #fde68a;
-    }
-    .param-grid { display: grid; gap: 12px; margin-top: 12px; }
-    @media (min-width: 640px) { .param-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (min-width: 860px) { .param-grid { grid-template-columns: repeat(4, 1fr); } }
-    label { display: block; font-size: 0.84rem; color: #cbd5e1; margin-bottom: 4px; }
-    input[type="range"] { width: 100%; accent-color: #38bdf8; }
-    .slider-val { font-size: 0.82rem; font-weight: 700; color: #bae6fd; font-variant-numeric: tabular-nums; }
-    .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-    .toggle-btn {
-      padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(148,163,184,0.35);
-      background: rgba(15,30,45,0.65); color: #cbd5e1; font: inherit; font-size: 0.84rem;
-      font-weight: 600; cursor: pointer;
-    }
-    .toggle-btn.is-on {
-      background: rgba(74,222,128,0.2); border-color: rgba(74,222,128,0.55); color: #bbf7d0;
-    }
-    .readout-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;
-    }
-    @media (min-width: 640px) { .readout-grid { grid-template-columns: repeat(3, 1fr); } }
-    .readout {
-      padding: 10px; border-radius: 10px;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.16);
-    }
-    .readout.is-b { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.28); }
-    .readout.is-b dd { color: #fde68a; }
-    .readout.is-c { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.28); }
-    .readout.is-c dd { color: #bae6fd; }
-    .readout.is-v { background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.28); }
-    .readout.is-v dd { color: #bbf7d0; }
-    .readout dt { margin: 0; font-size: 0.72rem; color: var(--muted); }
-    .readout dd { margin: 4px 0 0; font-size: 0.86rem; font-weight: 700; color: #eef2ff; }
-    .legend-row {
-      display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
-      font-size: 0.76rem; color: var(--muted);
-    }
-    .formula-live {
-      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
-      background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(56,189,248,0.22);
-      font-size: 0.86rem; color: #bae6fd; line-height: 1.65; text-align: center;
-    }
-    .explain-box {
-      margin-top: 10px; padding: 12px 14px; border-radius: 10px;
-      background: rgba(250,204,21,0.06); border: 1px solid rgba(250,204,21,0.28);
-      font-size: 0.84rem; color: #fde68a; line-height: 1.75;
-    }
-    .explain-box strong { color: #fef3c7; }
-    .explain-box ul { margin: 8px 0 0; padding-left: 1.2em; }
-    .explain-box li { margin: 4px 0; }
+    .b-card { border-color: rgba(251,191,36,0.4); }
+    .b-card h4 { color: #fcd34d; }
+    .g-card { border-color: rgba(74,222,128,0.4); }
+    .g-card h4 { color: #86efac; }
+    .edu-list { font-size: 0.8rem; line-height: 1.7; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 8px 14px; font-size: 0.72rem; color: var(--muted); background: rgba(5,8,16,0.98); }
   </style>
 </head>
 <body>
@@ -163,893 +175,1407 @@
       <div class="hero-icon" aria-hidden="true">▲</div>
       <p class="chapter-label">第23章 — 電流</p>
       <h2>トランジスタ — npn・pnp 増幅作用</h2>
-      <a id="back" href="../00_folder_electromagnetism.html#chapter-23">← 電磁気フォルダへ戻る</a>
+      <p class="tagline">小さなベース電流が、β 倍のコレクタ電流を操る</p>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-23">← 電磁気 · 第23章</a>
     </header>
 
     <section class="panel">
-      <h3>ベース電流でコレクタ電流を制御する</h3>
-      <p>
-        トランジスタは「ベースの小さな電流変化で、コレクタの大きな電流を変化させる」増幅素子です。
-        npn では電子、pnp では正孔がエミッタからベースへ注入され、ベース–エミッタは順バイアス、
-        ベース–コレクタは逆バイアスで動作します。
-      </p>
-      <div class="formula-box">
-        v<sub>in</sub>(t)=V<sub>BE</sub>+A<sub>in</sub>sin(2πf<sub>in</sub>t) ·
-        i<sub>B</sub>=k<sub>B</sub>·max(0,|v<sub>in</sub>|−V<sub>th</sub>) ·
-        i<sub>C</sub>=β·i<sub>B</sub> · v<sub>out</sub>=V<sub>CC</sub>−R<sub>C</sub>·i<sub>C</sub>
+      <div class="formula-top">
+        <div class="formula-main">
+          <span class="b">i<sub>B</sub> = (v<sub>in</sub> − V<sub>BE</sub>) / R<sub>B</sub></span>　→　
+          <span class="c">i<sub>C</sub> = β · i<sub>B</sub></span>　→　
+          v<sub>out</sub> = V<sub>CC</sub> − R<sub>C</sub> · i<sub>C</sub>　→　
+          <span class="g">電圧増幅度 A<sub>v</sub> = − β R<sub>C</sub> / R<sub>B</sub></span>
+        </div>
+        <div class="formula-sub">
+          ベースに流す<strong>わずかな電流</strong>が、コレクタに<strong>その β 倍の電流</strong>を流させます。
+          その電流が R<sub>C</sub> で大きな電圧降下をつくるので、出力電圧が大きく振れます。
+          <strong>マイナス符号</strong>は「入力が上がると出力は下がる」（逆位相）という意味です。
+        </div>
+      </div>
+
+      <div class="view-tabs" role="tablist">
+        <button type="button" class="view-tab is-active" data-tab="circuit" role="tab" aria-selected="true">① 増幅回路</button>
+        <button type="button" class="view-tab" data-tab="wave" role="tab" aria-selected="false">② 入力と出力の波形</button>
+        <button type="button" class="view-tab" data-tab="chip" role="tab" aria-selected="false">③ トランジスタの中</button>
+        <button type="button" class="view-tab" data-tab="guide" role="tab" aria-selected="false">④ ポイント</button>
+      </div>
+
+      <div id="view-circuit" class="tab-view">
+        <div class="sim-grid">
+          <div class="area-viz">
+            <div class="viz-block">
+              <div class="stage"><canvas id="circuitCanvas" aria-label="エミッタ接地増幅回路"></canvas></div>
+              <div class="ctrl-row">
+                <button type="button" class="ctrl-btn is-active" id="btnNpn">npn</button>
+                <button type="button" class="ctrl-btn pnp" id="btnPnp">pnp</button>
+                <button type="button" class="ctrl-btn is-active" id="btnSignal">信号 ON</button>
+                <button type="button" class="ctrl-btn" id="btnFreeze">止めて見る</button>
+              </div>
+              <div class="live-strip">
+                <div class="live-cell b"><span class="k">ベース電流 i<sub>B</sub></span><span class="v" id="lvIB">—</span></div>
+                <div class="live-cell c"><span class="k">コレクタ電流 i<sub>C</sub></span><span class="v" id="lvIC">—</span></div>
+                <div class="live-cell"><span class="k">入力 v<sub>in</sub></span><span class="v" id="lvVin">—</span></div>
+                <div class="live-cell g"><span class="k">出力 v<sub>out</sub></span><span class="v" id="lvVout">—</span></div>
+              </div>
+              <div class="explain-panel"><div class="status-note" id="statusCircuit">—</div></div>
+            </div>
+          </div>
+          <div class="area-hud">
+            <div class="hud-panel">
+              <p class="hud-title">回路の設定</p>
+              <p class="hint">実際の回路で使う値にしてあります。電卓で確かめられます。</p>
+              <div class="preset-row" id="presetRow"></div>
+
+              <div class="slider-row b" style="margin-top:4px">
+                <label><span class="nm">ベース電圧 v<sub>in</sub> の中心</span><span class="val" id="vbVal">—</span></label>
+                <input type="range" id="vbSlider" min="30" max="220" value="120" step="1">
+              </div>
+              <div class="slider-row b">
+                <label><span class="nm">入力の振幅 A<sub>in</sub></span><span class="val" id="ainVal">—</span></label>
+                <input type="range" id="ainSlider" min="0" max="60" value="20" step="1">
+              </div>
+              <div class="slider-row b">
+                <label><span class="nm">ベース抵抗 R<sub>B</sub></span><span class="val" id="rbVal">—</span></label>
+                <input type="range" id="rbSlider" min="20" max="400" value="100" step="5">
+              </div>
+              <div class="slider-row c">
+                <label><span class="nm">コレクタ抵抗 R<sub>C</sub></span><span class="val" id="rcVal">—</span></label>
+                <input type="range" id="rcSlider" min="5" max="30" value="10" step="1">
+              </div>
+              <div class="slider-row c">
+                <label><span class="nm">電流増幅率 β</span><span class="val" id="betaVal">—</span></label>
+                <input type="range" id="betaSlider" min="40" max="300" value="100" step="10">
+              </div>
+              <div class="slider-row">
+                <label><span class="nm">電源電圧 V<sub>CC</sub></span><span class="val" id="vccVal">—</span></label>
+                <input type="range" id="vccSlider" min="40" max="150" value="120" step="5">
+              </div>
+              <div class="slider-row">
+                <label><span class="nm">信号の周波数 f</span><span class="val" id="finVal">—</span></label>
+                <input type="range" id="finSlider" min="1" max="20" value="5" step="1">
+              </div>
+
+              <div class="big-gain">
+                <div class="k">電圧増幅度 A<sub>v</sub> = − β R<sub>C</sub> / R<sub>B</sub></div>
+                <div class="v" id="gainVal">—</div>
+                <div class="s" id="gainSub">—</div>
+              </div>
+
+              <p class="hud-title" style="margin-top:6px">いまの計算</p>
+              <div class="calc-block b">
+                <p class="calc-label b">① ベース電流</p>
+                <p class="calc-line">i<sub>B</sub> = (v<sub>in</sub> − V<sub>BE</sub>) / R<sub>B</sub></p>
+                <p class="calc-line highlight" id="stepIB">—</p>
+                <p class="calc-line sub">V<sub>BE</sub> = 0.6 V より低いとトランジスタは OFF（カットオフ）。</p>
+              </div>
+              <div class="calc-block c">
+                <p class="calc-label c">② コレクタ電流</p>
+                <p class="calc-line">i<sub>C</sub> = β · i<sub>B</sub></p>
+                <p class="calc-line highlight" id="stepIC">—</p>
+                <p class="calc-line sub" id="noteIC">—</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">③ 出力電圧</p>
+                <p class="calc-line">v<sub>out</sub> = V<sub>CC</sub> − R<sub>C</sub> · i<sub>C</sub></p>
+                <p class="calc-line highlight" id="stepVout">—</p>
+              </div>
+              <div class="calc-block key">
+                <p class="calc-label key">④ エミッタ電流</p>
+                <p class="calc-line">i<sub>E</sub> = i<sub>B</sub> + i<sub>C</sub></p>
+                <p class="calc-line highlight" id="stepIE">—</p>
+                <p class="calc-line sub">3 本の足を出入りする電流の和はゼロ。i<sub>C</sub> がほぼ i<sub>E</sub> に等しいことに注目。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-wave" class="tab-view is-hidden">
+        <div class="sim-grid">
+          <div class="area-viz">
+            <div class="viz-block">
+              <div class="stage"><canvas id="waveCanvas" aria-label="入力と出力の波形"></canvas></div>
+              <div class="ctrl-row">
+                <button type="button" class="ctrl-btn is-active" id="btnSignal2">信号 ON</button>
+                <button type="button" class="ctrl-btn" id="btnFreeze2">止めて見る</button>
+                <button type="button" class="ctrl-btn" id="btnClear">波形を消す</button>
+              </div>
+              <div class="live-strip">
+                <div class="live-cell b"><span class="k">入力の振れ幅</span><span class="v" id="lvSwingIn">—</span></div>
+                <div class="live-cell g"><span class="k">出力の振れ幅</span><span class="v" id="lvSwingOut">—</span></div>
+                <div class="live-cell"><span class="k">実測の増幅度</span><span class="v" id="lvGainMeas">—</span></div>
+                <div class="live-cell"><span class="k">動作の状態</span><span class="v" id="lvRegion">—</span></div>
+              </div>
+              <div class="explain-panel"><div class="status-note" id="statusWave">—</div></div>
+            </div>
+          </div>
+          <div class="area-hud">
+            <div class="hud-panel">
+              <p class="hud-title">波形の見かた</p>
+              <div class="calc-block b">
+                <p class="calc-label b">上：入力 v<sub>in</sub></p>
+                <p class="calc-line sub">ベースの電圧。赤い破線 <strong>V<sub>BE</sub> = 0.6 V</strong> より上のときだけ、ベース電流が流れます。</p>
+              </div>
+              <div class="calc-block key">
+                <p class="calc-label key">下：出力 v<sub>out</sub></p>
+                <p class="calc-line sub"><strong>山と谷が上下ひっくり返っている</strong>ことを確かめてください。入力が上がる → i<sub>C</sub> が増える → R<sub>C</sub> での電圧降下が増える → 出力が下がる、という順番です。</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">縦の目盛りに注意</p>
+                <p class="calc-line sub">上下のグラフは<strong>目盛りの大きさが違います</strong>。入力は 0.1 V きざみ、出力は 1 V きざみ。同じ見た目の高さでも、出力のほうが何倍も大きく振れています。それが増幅です。</p>
+                <p class="calc-line highlight" id="scaleNote">—</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">つぶれる（ひずむ）とき</p>
+                <p class="calc-line sub"><strong>飽和</strong>：出力が下がりきって V<sub>CE(sat)</sub>≈0.2 V で止まる。i<sub>C</sub> はもう増えません。</p>
+                <p class="calc-line sub"><strong>カットオフ</strong>：v<sub>in</sub> が 0.6 V を下回り、電流ゼロ。出力は V<sub>CC</sub> に張りつきます。</p>
+                <p class="calc-line sub">どちらも波の形がつぶれて<strong>ひずみ</strong>になります。プリセットで試してみてください。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-chip" class="tab-view is-hidden">
+        <div class="sim-grid">
+          <div class="area-viz">
+            <div class="viz-block">
+              <div class="stage"><canvas id="chipCanvas" aria-label="トランジスタ内部のキャリアの動き"></canvas></div>
+              <div class="ctrl-row">
+                <button type="button" class="ctrl-btn is-active" id="btnNpn2">npn</button>
+                <button type="button" class="ctrl-btn pnp" id="btnPnp2">pnp</button>
+                <button type="button" class="ctrl-btn is-active" id="btnImpurity">不純物を表示</button>
+              </div>
+              <div class="legend-row">
+                <span style="color:#38bdf8">● 電子 e⁻</span>
+                <span style="color:#f87171">● 正孔 h⁺</span>
+                <span style="color:#4ade80">● ドナー（n 型）</span>
+                <span style="color:#c084fc">● アクセプタ（p 型）</span>
+                <span style="color:#facc15">✦ 再結合</span>
+              </div>
+              <div class="explain-panel"><div class="status-note" id="statusChip">—</div></div>
+            </div>
+          </div>
+          <div class="area-hud">
+            <div class="hud-panel">
+              <p class="hud-title">中で起きていること</p>
+              <div class="calc-block">
+                <p class="calc-label">① エミッタから大量に注入</p>
+                <p class="calc-line sub" id="chipStep1">—</p>
+              </div>
+              <div class="calc-block b">
+                <p class="calc-label b">② ベースはとても薄い</p>
+                <p class="calc-line sub">ベース層は非常に薄く作られているので、注入されたキャリアの<strong>ほとんどは再結合せずに通り抜けて</strong>コレクタへ到達します。</p>
+                <p class="calc-line sub">ベースで再結合したごく一部だけが <strong>i<sub>B</sub></strong> になります。だから i<sub>B</sub> は小さく、i<sub>C</sub> は大きい。</p>
+              </div>
+              <div class="calc-block key">
+                <p class="calc-label key">③ これが β の正体</p>
+                <p class="calc-line highlight" id="chipBeta">—</p>
+                <p class="calc-line sub">通り抜けた数と再結合した数の比が、そのまま電流増幅率 β です。ベースを薄くするほど β は大きくなります。</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">バイアスの向き</p>
+                <p class="calc-line sub"><strong>BE 間は順バイアス</strong>（キャリアが流れこめる向き）、<strong>BC 間は逆バイアス</strong>（空乏層が広く、来たキャリアを吸いこむ向き）。この組み合わせで初めて増幅がはたらきます。</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">npn と pnp のちがい</p>
+                <p class="calc-line sub">運ぶキャリアが<strong>電子か正孔か</strong>の違いだけ。電源の向き・電流の向きがすべて逆になりますが、はたらきは同じです。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-guide" class="tab-view guide-view is-hidden">
+        <div class="guide-grid">
+          <div class="guide-card b-card">
+            <h4>① なぜ「増幅」なのか</h4>
+            <p>トランジスタ自身がエネルギーを生み出すわけではありません。<strong>電池 V<sub>CC</sub> のエネルギーを、小さな信号で「蛇口のように」制御している</strong>だけです。</p>
+            <div class="eq">i<sub>C</sub> = β · i<sub>B</sub></div>
+            <p>β は 100 前後。ベースに 60 μA 流すと、コレクタには 6 mA、つまり <strong>100 倍</strong>の電流が流れます。水道の蛇口を指先で回すと大量の水が出るのと同じ関係です。</p>
+          </div>
+          <div class="guide-card g-card">
+            <h4>② 電流増幅から電圧増幅へ</h4>
+            <p>増えた i<sub>C</sub> は R<sub>C</sub> を通るので、そこで大きな電圧降下が生まれます。</p>
+            <div class="eq">v<sub>out</sub> = V<sub>CC</sub> − R<sub>C</sub> i<sub>C</sub></div>
+            <p>入力の変化 Δv<sub>in</sub> は Δi<sub>B</sub> = Δv<sub>in</sub>/R<sub>B</sub> を生み、Δi<sub>C</sub> = βΔv<sub>in</sub>/R<sub>B</sub>、Δv<sub>out</sub> = −R<sub>C</sub>βΔv<sub>in</sub>/R<sub>B</sub>。よって</p>
+            <div class="eq">A<sub>v</sub> = Δv<sub>out</sub>/Δv<sub>in</sub> = − β R<sub>C</sub> / R<sub>B</sub></div>
+            <p>R<sub>C</sub> を大きく、R<sub>B</sub> を小さくするほど増幅度が上がります。</p>
+          </div>
+          <div class="guide-card">
+            <h4>③ 3 つの動作領域</h4>
+            <ul>
+              <li><strong>カットオフ</strong>：v<sub>in</sub> &lt; 0.6 V。電流が流れず v<sub>out</sub> = V<sub>CC</sub>。スイッチで言えば OFF。</li>
+              <li><strong>活性（増幅）領域</strong>：i<sub>C</sub> = βi<sub>B</sub> が成り立つ範囲。ここでだけきれいに増幅できます。</li>
+              <li><strong>飽和</strong>：i<sub>C</sub> が (V<sub>CC</sub>−0.2)/R<sub>C</sub> を超えられず頭打ち。v<sub>out</sub> ≈ 0.2 V。スイッチで言えば ON。</li>
+            </ul>
+            <p>増幅回路では、出力が V<sub>CC</sub> の<strong>ちょうど半分あたり</strong>に来るようバイアスを決めます。上下に同じだけ振れる余裕をつくるためです。</p>
+          </div>
+          <div class="guide-card">
+            <h4>④ npn と pnp</h4>
+            <ul>
+              <li><strong>npn</strong>：n–p–n。多数キャリアは<strong>電子</strong>。エミッタを接地し、V<sub>CC</sub> は<strong>正</strong>。</li>
+              <li><strong>pnp</strong>：p–n–p。多数キャリアは<strong>正孔</strong>。電源の向きが逆で、V<sub>CC</sub> は<strong>負</strong>。電流も全部逆向き。</li>
+            </ul>
+            <p>回路記号では<strong>エミッタの矢印の向き</strong>で見分けます。npn は矢印が外向き（Not Pointing iN）、pnp は内向きです。増幅のしくみ自体はまったく同じです。</p>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="panel">
-      <h3>シミュレーション</h3>
-
-      <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="canvas" width="900" height="500" aria-label="トランジスタ実空間と入出力波形"></canvas>
-      </div>
-
-      <div class="legend-row">
-        <span style="color:#38bdf8">● 青 ＝ 電子</span>
-        <span style="color:#f87171">● 赤 ＝ 正孔</span>
-        <span style="color:#4ade80">● 緑 ＝ ドナー（n型）</span>
-        <span style="color:#c084fc">● 紫 ＝ アクセプタ（p型）</span>
-        <span>左＝チップ内部の様子 · 右＝入力と出力の電圧波形</span>
-      </div>
-
-      <div class="explain-box" id="explainBox">
-        <strong>見方（高校生向け）</strong>
-        <ul>
-          <li><strong>左（実空間）</strong>：トランジスタの中を横から見た図。青＝電子、赤＝正孔。<strong>npn</strong>では青い e⁻ が左→右へ、赤い h⁺ はベース内でゆっくり動いて e⁻ と再結合。<strong>pnp</strong>では赤い h⁺ が左→右へ、青い e⁻ はベース内でゆっくり動いて h⁺ と再結合。</li>
-          <li><strong>上の黄い波 v<sub>in</sub></strong>：ベースへの<strong>入力電圧</strong>（小さな信号）。スライダー V<sub>BE</sub>＋入力 ON で決まります。</li>
-          <li><strong>下の緑の波 v<sub>out</sub></strong>：コレクタの<strong>出力電圧</strong>。v<sub>in</sub>が上がると v<sub>out</sub>は下がる（<strong>逆位相＝位相が逆</strong>）のがコモンエミッタ増幅の特徴です。</li>
-        </ul>
-      </div>
-
-      <div class="mode-row">
-        <button type="button" class="mode-btn is-active" data-mode="npn">npn モード</button>
-        <button type="button" class="mode-btn is-pnp" data-mode="pnp">pnp モード</button>
-      </div>
-      <p class="mode-guide" id="modeGuide">—</p>
-
-      <div class="preset-row">
-        <span class="preset-label">増幅の典型：</span>
-        <button type="button" class="preset-btn is-recommended is-active" data-scenario="npn_amplify">✓ npn 増幅（正解）</button>
-        <button type="button" class="preset-btn" data-scenario="pnp_amplify">pnp 増幅（正解）</button>
-        <button type="button" class="preset-btn" data-scenario="cutoff">カットオフ（入力 OFF）</button>
-      </div>
-
-      <div class="param-grid">
-        <div>
-          <label for="vbeSlider">ベースバイアス V<sub>BE</sub> <span class="slider-val" id="vbeVal">0.65 V</span></label>
-          <input type="range" id="vbeSlider" min="-80" max="80" value="65" step="1">
-        </div>
-        <div>
-          <label for="vccSlider">コレクタ電源 V<sub>CC</sub> <span class="slider-val" id="vccVal">5.0 V</span></label>
-          <input type="range" id="vccSlider" min="30" max="120" value="50" step="1">
-        </div>
-        <div>
-          <label for="ainSlider">入力振幅 A<sub>in</sub> <span class="slider-val" id="ainVal">0.10 V</span></label>
-          <input type="range" id="ainSlider" min="0" max="30" value="10" step="1">
-        </div>
-        <div>
-          <label for="finSlider">入力周波数 f<sub>in</sub> <span class="slider-val" id="finVal">1.0 Hz</span></label>
-          <input type="range" id="finSlider" min="2" max="50" value="10" step="1">
-        </div>
-      </div>
-
-      <div class="btn-row">
-        <button type="button" class="toggle-btn is-on" id="inputToggle">入力 ON</button>
-      </div>
-
-      <div class="readout-grid">
-        <dl class="readout is-b"><dt>増幅率 β</dt><dd id="readBeta">—</dd></dl>
-        <dl class="readout is-b"><dt>ベース電流 i<sub>B</sub></dt><dd id="readIB">—</dd></dl>
-        <dl class="readout is-c"><dt>コレクタ電流 i<sub>C</sub></dt><dd id="readIC">—</dd></dl>
-        <dl class="readout is-v"><dt>入力 v<sub>in</sub></dt><dd id="readVin">—</dd></dl>
-        <dl class="readout is-v"><dt>出力 v<sub>out</sub></dt><dd id="readVout">—</dd></dl>
-        <dl class="readout"><dt>バイアス状態</dt><dd id="readBias">—</dd></dl>
-      </div>
-
-      <div class="formula-live" id="formulaLive">—</div>
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>トランジスタは<strong>小さな i<sub>B</sub> で大きな i<sub>C</sub> を制御</strong>する素子。<strong>i<sub>C</sub> = β i<sub>B</sub></strong>。</li>
+        <li>その電流を R<sub>C</sub> に流して電圧に変える。<strong>v<sub>out</sub> = V<sub>CC</sub> − R<sub>C</sub> i<sub>C</sub></strong>。</li>
+        <li>だから<strong>入力が上がると出力は下がる</strong>（逆位相）。増幅度は <strong>A<sub>v</sub> = −βR<sub>C</sub>/R<sub>B</sub></strong>。</li>
+        <li>ベースが<strong>非常に薄い</strong>ので大部分のキャリアが通り抜ける — これが β が大きい理由。</li>
+        <li>振りすぎると<strong>飽和・カットオフ</strong>で波形がつぶれる（ひずむ）。</li>
+      </ul>
     </section>
   </div>
 
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas && canvas.getContext ? canvas.getContext("2d") : null;
-    const canvasWrap = document.getElementById("canvasWrap");
-    const modeGuide = document.getElementById("modeGuide");
-    const formulaLive = document.getElementById("formulaLive");
-    const vbeSlider = document.getElementById("vbeSlider");
-    const vccSlider = document.getElementById("vccSlider");
-    const ainSlider = document.getElementById("ainSlider");
-    const finSlider = document.getElementById("finSlider");
-    const inputToggle = document.getElementById("inputToggle");
+    (function () {
+      "use strict";
 
-    const REF_W = 900, REF_H = 500;
-    const PHYS_W = 430;
-    const RIGHT_X = 438;
-    const WAVE_TOP = 28;
-    const WAVE_MID = 248;
-    const WAVE_BOT = 468;
+      const V_BE_ON = 0.6;
+      const V_CE_SAT = 0.2;
 
-    const COL = {
-      electron: "#38bdf8",
-      hole: "#f87171",
-      donor: "rgba(74,222,128,0.55)",
-      acceptor: "rgba(192,132,252,0.55)",
-      depletion: "rgba(251,191,36,0.14)",
-      depEdge: "rgba(251,191,36,0.55)",
-      vin: "#fde68a",
-      vout: "#4ade80",
-      grid: "rgba(148,163,184,0.12)",
-      divider: "rgba(148,163,184,0.35)",
-    };
+      const state = {
+        tab: "circuit",
+        mode: "npn",
+        vb: 1.2,        // ベース電圧の中心 [V]（大きさ）
+        ain: 0.20,      // 入力振幅 [V]
+        rb: 10000,      // ベース抵抗 [Ω]
+        rc: 1000,       // コレクタ抵抗 [Ω]
+        beta: 100,
+        vcc: 12,        // 電源電圧 [V]（大きさ）
+        fin: 0.5,       // [Hz]
+        signalOn: true,
+        frozen: false,
+        showImpurity: true,
+        note: null,
+        t: 0,
+        flow: 0,
+        last: performance.now(),
+      };
 
-    const MODE_GUIDES = {
-      npn: "<strong>npn</strong>：左 N（エミッタ）→ 中央 P（ベース・薄層）→ 右 N（コレクタ）。V<sub>BE</sub>&gt;0 で順バイアス、V<sub>CB</sub>&gt;0 で逆バイアス。電子がエミッタから大量注入され、ベースで一部再結合、残りがコレクタへ。",
-      pnp: "<strong>pnp</strong>：左 P（エミッタ）→ 中央 N（ベース・薄層）→ 右 P（コレクタ）。V<sub>BE</sub>&lt;0 で順バイアス、V<sub>CB</sub>&lt;0 で逆バイアス。正孔がエミッタから注入され、ベースで再結合、残りがコレクタへ。",
-    };
+      const PRESETS = [
+        { id: "basic", name: "基本の増幅", mode: "npn", vb: 1.2, ain: 0.20, rb: 10000, rc: 1000, beta: 100, vcc: 12, fin: 0.5,
+          note: "出力が V_CC のほぼ半分（6 V）に来るようバイアスしてあります。上にも下にも余裕があるので、波がつぶれずきれいに増幅されます。A_v = −100×1/10 = −10 倍。" },
+        { id: "gain", name: "増幅度を上げる", mode: "npn", vb: 0.8, ain: 0.05, rb: 5000, rc: 1500, beta: 100, vcc: 12, fin: 0.5,
+          note: "R_B を半分に、R_C を 1.5 倍にすると A_v = −100×1.5/5 = −30 倍。入力をさらに小さくしないと、すぐにつぶれてしまいます。" },
+        { id: "sat", name: "飽和（つぶれる）", mode: "npn", vb: 1.65, ain: 0.20, rb: 10000, rc: 1000, beta: 100, vcc: 12, fin: 0.5,
+          note: "バイアスを上げすぎた例。i_C が (V_CC−0.2)/R_C を超えられず頭打ちになり、出力の下側が 0.2 V で平らにつぶれます（飽和・ひずみ）。" },
+        { id: "cut", name: "カットオフ", mode: "npn", vb: 0.5, ain: 0.20, rb: 10000, rc: 1000, beta: 100, vcc: 12, fin: 0.5,
+          note: "v_in が 0.6 V を下回るとベース電流が流れません。出力は V_CC に張りついたまま。信号の山の部分だけが顔を出します。" },
+        { id: "beta", name: "β を 2 倍に", mode: "npn", vb: 1.2, ain: 0.20, rb: 20000, rc: 1000, beta: 200, vcc: 12, fin: 0.5,
+          note: "β を 2 倍にして R_B も 2 倍にすると、A_v = −βR_C/R_B は同じ −10 倍のまま。増幅度は β 単独ではなく、抵抗との組み合わせで決まります。" },
+        { id: "pnp", name: "pnp 増幅", mode: "pnp", vb: 1.2, ain: 0.20, rb: 10000, rc: 1000, beta: 100, vcc: 12, fin: 0.5,
+          note: "pnp では電源が −12 V、電流の向きもすべて逆。v_in も v_out も負の値になりますが、「入力が下がると出力が上がる」という逆位相の関係は同じです。" },
+      ];
 
-    const SCENARIOS = {
-      npn_amplify: {
-        mode: "npn", vbe: 65, vcc: 50, ain: 12, fin: 10, inputOn: true,
-        guide: "<strong>正解の組み合わせ</strong>：npn + V<sub>BE</sub>≈0.65V + 入力 ON。青い e⁻ がエミッタ→ベース→コレクタへ流れ、ベースで赤い h⁺ と再結合。i<sub>C</sub>≈β·i<sub>B</sub> で増幅。",
-      },
-      pnp_amplify: {
-        mode: "pnp", vbe: -65, vcc: 50, ain: 12, fin: 10, inputOn: true,
-        guide: "<strong>pnp 正解</strong>：V<sub>BE</sub>≈−0.65V + 入力 ON。赤い h⁺ がエミッタ→ベース→コレクタへ流れ、ベースで青い e⁻ と再結合。",
-      },
-      cutoff: {
-        mode: "npn", vbe: 25, vcc: 50, ain: 0, fin: 10, inputOn: false,
-        guide: "カットオフ：V<sub>BE</sub> が閾値以下 · 入力 OFF。キャリアの流れが止まり、増幅なし。",
-      },
-    };
+      const circuitCanvas = document.getElementById("circuitCanvas");
+      const waveCanvas = document.getElementById("waveCanvas");
+      const chipCanvas = document.getElementById("chipCanvas");
+      const cCtx = circuitCanvas.getContext("2d");
+      const wCtx = waveCanvas.getContext("2d");
+      const pCtx = chipCanvas.getContext("2d");
 
-    let activeScenario = "npn_amplify";
+      const history = [];
+      const HISTORY_SEC = 8;
 
-    const BETA = 95;
-    const K_B = 0.0006;
-    const R_C = 200;
-    const V_TH = 0.55;
+      // ===== 物理（大きさで計算し、pnp は表示時に符号を反転） =====
+      function sgn() { return state.mode === "npn" ? 1 : -1; }
 
-    let canvasW = 900, canvasH = 500, dpr = 1;
-    let mode = "npn";
-    let inputOn = true;
-    let animClock = 0;
-    let lastFrame = performance.now();
-    let carriers = [];
-    let impurities = [];
-    let recombFlashes = [];
-    let waveHistory = [];
-    const WAVE_LEN = 320;
-
-    function isActiveBias(iB) { return iB > 0.00002; }
-
-    function isActiveBias(iB) { return iB > 0.00002; }
-
-    function showBootError(err) {
-      if (!canvas || !ctx) {
-        if (canvasWrap) {
-          canvasWrap.innerHTML = "<p style=\"color:#fca5a5;padding:16px;font:600 14px sans-serif\">シミュレーションの初期化に失敗しました。ページを再読み込みしてください。</p>";
-        }
-        return;
+      function vinMag(t) {
+        const ac = state.signalOn ? state.ain * Math.sin(2 * Math.PI * state.fin * t) : 0;
+        return state.vb + ac;
       }
-      ctx.fillStyle = "#050810";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#fca5a5";
-      ctx.font = "600 13px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText("初期化エラー: " + (err && err.message ? err.message : err), 20, 40);
-      console.error(err);
-    }
+      function iBOf(vm) { return Math.max(0, (vm - V_BE_ON) / state.rb); }
+      function iCsat() { return (state.vcc - V_CE_SAT) / state.rc; }
+      function iCOf(iB) { return Math.min(state.beta * iB, iCsat()); }
+      function voutMagOf(iC) { return Math.max(V_CE_SAT, state.vcc - state.rc * iC); }
+      function gainIdeal() { return -state.beta * state.rc / state.rb; }
 
-    function getVBE() { return +vbeSlider.value / 100; }
-    function getVCC() { return +vccSlider.value / 10; }
-    function getAin() { return +ainSlider.value / 100; }
-    function getFin() { return +finSlider.value / 10; }
-
-    function vinAt(t) {
-      const bias = getVBE();
-      const ac = inputOn ? getAin() * Math.sin(2 * Math.PI * getFin() * t) : 0;
-      return bias + ac;
-    }
-
-    function iBAt(vin) {
-      if (mode === "npn") return K_B * Math.max(0, vin - V_TH);
-      return K_B * Math.max(0, -vin - V_TH);
-    }
-
-    function iCAt(iB) { return BETA * iB; }
-
-    function voutAt(iC) {
-      return Math.max(0.05, getVCC() - R_C * iC);
-    }
-
-    function getLayout(cw, ch) {
-      const sx = cw / REF_W, sy = ch / REF_H;
-      return {
-        sx, sy, cw, ch,
-        physW: PHYS_W * sx,
-        rightX: RIGHT_X * sx,
-        waveTop: WAVE_TOP * sy,
-        waveMid: WAVE_MID * sy,
-        waveBot: WAVE_BOT * sy,
-        top: 36 * sy,
-        bot: ch - 28 * sy,
-      };
-    }
-
-    function regionBounds(L) {
-      const x0 = 18 * L.sx;
-      const x1 = L.physW - 14 * L.sx;
-      const w = x1 - x0;
-      return {
-        x0, x1, w,
-        emL: x0,
-        emR: x0 + w * 0.28,
-        baL: x0 + w * 0.28,
-        baR: x0 + w * 0.44,
-        coL: x0 + w * 0.44,
-        coR: x1,
-        beJ: x0 + w * 0.28,
-        bcJ: x0 + w * 0.44,
-        midY: (L.top + L.bot) * 0.5,
-      };
-    }
-
-    function regionType(r) {
-      if (mode === "npn") {
-        if (r === "emitter") return "n";
-        if (r === "base") return "p";
-        return "n";
+      function regionOf(iB, iC) {
+        if (iB <= 0) return "cutoff";
+        if (state.beta * iB >= iCsat() * 0.999) return "sat";
+        return "active";
       }
-      if (r === "emitter") return "p";
-      if (r === "base") return "n";
-      return "p";
-    }
 
-    function buildImpurities(L) {
-      impurities = [];
-      const R = regionBounds(L);
-      const rows = 7;
-      const y0 = L.top + 18 * L.sy;
-      const dy = (L.bot - L.top - 36 * L.sy) / (rows - 1);
-      [["emitter", R.emL, R.emR], ["base", R.baL, R.baR], ["collector", R.coL, R.coR]].forEach(([reg, xl, xr]) => {
-        const kind = regionType(reg);
-        const cols = reg === "base" ? 5 : 9;
-        const dx = (xr - xl - 16 * L.sx) / Math.max(cols - 1, 1);
-        for (let c = 0; c < cols; c++) {
-          for (let r = 0; r < rows; r++) {
-            impurities.push({
-              x: xl + 8 * L.sx + c * dx + (Math.random() - 0.5) * 4,
-              y: y0 + r * dy + (Math.random() - 0.5) * 3,
-              kind,
-            });
-          }
-        }
-      });
-    }
-
-    function spawnCarrier(L, stage) {
-      const R = regionBounds(L);
-      const major = mode === "npn" ? "electron" : "hole";
-      const st = stage || "emitter";
-      let x, vx;
-      if (st === "emitter") {
-        x = R.emL + 12 * L.sx + Math.random() * (R.emR - R.emL - 24 * L.sx);
-        vx = 110 + Math.random() * 70;
-      } else if (st === "base") {
-        x = R.baL + 6 * L.sx + Math.random() * (R.baR - R.baL - 12 * L.sx);
-        vx = 70 + Math.random() * 50;
-      } else {
-        x = R.bcJ + 8 * L.sx + Math.random() * (R.coR - R.bcJ - 20 * L.sx);
-        vx = 150 + Math.random() * 80;
+      function snapshot(t) {
+        const vm = vinMag(t);
+        const iB = iBOf(vm);
+        const iC = iCOf(iB);
+        const vo = voutMagOf(iC);
+        return { vm, iB, iC, vo, region: regionOf(iB, iC) };
       }
-      return {
-        type: major,
-        stage: st,
-        x,
-        y: R.midY + (Math.random() - 0.5) * (L.bot - L.top) * 0.5,
-        vx,
-        vy: (Math.random() - 0.5) * 50,
-        age: 0,
-      };
-    }
 
-    function spawnBaseMinority(L) {
-      const R = regionBounds(L);
-      const minor = mode === "npn" ? "hole" : "electron";
-      return {
-        type: minor,
-        stage: "base",
-        x: R.baL + 8 * L.sx + Math.random() * (R.baR - R.baL - 16 * L.sx),
-        y: R.midY + (Math.random() - 0.5) * 36 * L.sy,
-        vx: 20 + Math.random() * 30,
-        vy: (Math.random() - 0.5) * 30,
-        age: 0,
-      };
-    }
-
-    function resetCarriers(L) {
-      carriers = [];
-      for (let i = 0; i < 14; i++) carriers.push(spawnCarrier(L, "emitter"));
-      for (let i = 0; i < 10; i++) carriers.push(spawnCarrier(L, "base"));
-      for (let i = 0; i < 8; i++) carriers.push(spawnCarrier(L, "collector"));
-      for (let i = 0; i < 12; i++) carriers.push(spawnBaseMinority(L));
-    }
-
-    function syncCarrierPopulation(L, iB, iC) {
-      const active = isActiveBias(iB);
-      const emit = carriers.filter((c) => c.stage === "emitter" && c.type === (mode === "npn" ? "electron" : "hole"));
-      const baseMaj = carriers.filter((c) => c.stage === "base" && c.type === (mode === "npn" ? "electron" : "hole"));
-      const col = carriers.filter((c) => c.stage === "collector");
-      const baseMin = carriers.filter((c) => c.stage === "base" && c.type === (mode === "npn" ? "hole" : "electron"));
-      const minEmit = active ? 18 : 4;
-      const minBase = active ? 14 : 3;
-      const minCol = active ? 22 : 2;
-      const minMin = active ? 10 : 4;
-      while (emit.length < minEmit) { const c = spawnCarrier(L, "emitter"); carriers.push(c); emit.push(c); }
-      while (baseMaj.length < minBase) { const c = spawnCarrier(L, "base"); carriers.push(c); baseMaj.push(c); }
-      while (col.length < minCol) { const c = spawnCarrier(L, "collector"); carriers.push(c); col.push(c); }
-      while (baseMin.length < minMin) { const c = spawnBaseMinority(L); carriers.push(c); baseMin.push(c); }
-    }
-
-    function handleBaseRecombination(R, L) {
-      const zoneX = (R.baR - R.baL) * 0.9;
-      const zoneY = 22 * L.sy;
-      const midBx = (R.baL + R.baR) * 0.5;
-      const majors = [];
-      const minors = [];
-      const toRemove = new Set();
-
-      carriers.forEach((c, i) => {
-        if (c.stage !== "base") return;
-        if (Math.abs(c.x - midBx) > zoneX * 0.5) return;
-        if (mode === "npn") {
-          if (c.type === "electron") majors.push({ c, i });
-          else minors.push({ c, i });
-        } else {
-          if (c.type === "hole") majors.push({ c, i });
-          else minors.push({ c, i });
+      function step(dt) {
+        const d = Math.min(dt, 0.05);
+        if (!state.frozen) state.t += d;
+        const s = snapshot(state.t);
+        state.flow += d * (0.6 + 2.4 * Math.min(1, s.iC / Math.max(iCsat(), 1e-9)));
+        if (!state.frozen) {
+          history.push({ t: state.t, vm: s.vm, vo: s.vo, iB: s.iB, iC: s.iC });
+          while (history.length > 1 && history[0].t < state.t - HISTORY_SEC) history.shift();
+          if (history.length > 1500) history.shift();
         }
-      });
+      }
 
-      majors.forEach((m) => {
-        if (toRemove.has(m.i)) return;
-        let best = null, bestD = 28;
-        minors.forEach((h) => {
-          if (toRemove.has(h.i)) return;
-          const d = Math.hypot(m.c.x - h.c.x, m.c.y - h.c.y);
-          if (d < bestD) { bestD = d; best = h; }
+      /** 直近 1 周期の振れ幅（実測） */
+      function measuredSwing() {
+        if (history.length < 5) return { din: 0, dout: 0 };
+        const period = 1 / Math.max(state.fin, 0.05);
+        const t0 = state.t - Math.min(period, HISTORY_SEC);
+        let vmin = Infinity, vmax = -Infinity, omin = Infinity, omax = -Infinity;
+        history.forEach((r) => {
+          if (r.t < t0) return;
+          vmin = Math.min(vmin, r.vm); vmax = Math.max(vmax, r.vm);
+          omin = Math.min(omin, r.vo); omax = Math.max(omax, r.vo);
         });
-        if (best) {
-          toRemove.add(m.i);
-          toRemove.add(best.i);
-          addRecombFlash((m.c.x + best.c.x) * 0.5, (m.c.y + best.c.y) * 0.5);
-        }
-      });
-
-      if (toRemove.size) carriers = carriers.filter((_, i) => !toRemove.has(i));
-    }
-
-    function addRecombFlash(x, y) {
-      recombFlashes.push({ x, y, life: 1 });
-    }
-
-    function updateCarriers(dt, L, iB, iC) {
-      const R = regionBounds(L);
-      const active = isActiveBias(iB);
-      syncCarrierPopulation(L, iB, iC);
-
-      const injectRate = active ? 22 + iB * 900000 : 2;
-      let injectAcc = injectRate * dt;
-      while (injectAcc >= 1) {
-        carriers.push(spawnCarrier(L, "emitter"));
-        injectAcc -= 1;
+        if (!Number.isFinite(vmin)) return { din: 0, dout: 0 };
+        return { din: vmax - vmin, dout: omax - omin };
       }
 
-      const speedMul = active ? 6.2 : 2.5;
-      const toRemove = new Set();
-
-      carriers.forEach((c, idx) => {
-        c.age += dt;
-        const rnd = 95 * Math.sqrt(dt);
-        c.vx += (Math.random() - 0.5) * rnd * 0.25;
-        c.vy += (Math.random() - 0.5) * rnd;
-
-        if (c.stage === "emitter") {
-          c.vx += (active ? 160 : 40) * dt;
-          if (c.x > R.beJ - 6 * L.sx) {
-            c.stage = "base";
-            c.vx = 80 + Math.random() * 40;
-          }
-        } else if (c.stage === "base") {
-          const passFrac = Math.min(0.94, 0.72 + iC * 0.015);
-          c.vx += (active ? 120 : 30) * dt;
-          if (c.type === (mode === "npn" ? "electron" : "hole")) {
-            if (c.x > R.bcJ - 4 * L.sx && (Math.random() < passFrac || c.x > R.bcJ + 4 * L.sx)) {
-              c.stage = "collector";
-              c.vx = 170 + Math.random() * 90;
-            }
-          } else {
-            c.vx += (Math.random() - 0.5) * 40 * dt;
-          }
-        } else if (c.stage === "collector") {
-          c.vx += (active ? 90 : 20) * dt;
-          if (c.x > R.coR - 8 * L.sx) toRemove.add(idx);
-        }
-
-        c.vx *= 0.982;
-        c.vy *= 0.982;
-        c.x += c.vx * dt * speedMul;
-        c.y += c.vy * dt * speedMul;
-
-        const m = 10 * L.sx;
-        if (c.y < L.top + m) { c.y = L.top + m; c.vy = Math.abs(c.vy) * 0.45; }
-        if (c.y > L.bot - m) { c.y = L.bot - m; c.vy = -Math.abs(c.vy) * 0.45; }
-        if (c.x < R.emL + 4) { c.x = R.emL + 4; c.vx = Math.abs(c.vx); }
-        if (c.stage === "base" && c.type === majorType && c.x < R.baL + 2) {
-          c.x = R.baL + 2; c.vx = Math.abs(c.vx) * 0.5;
-        }
-        if (c.stage === "base" && c.type !== majorType) {
-          if (c.x < R.baL + 2) { c.x = R.baL + 2; c.vx = Math.abs(c.vx) * 0.25; }
-          if (c.x > R.baR - 2) { c.x = R.baR - 2; c.vx = -Math.abs(c.vx) * 0.25; }
-        }
-        if (c.stage === "collector" && c.x > R.coR - 4) { c.x = R.coR - 4; }
-        if (c.age > 8) toRemove.add(idx);
-      });
-
-      if (toRemove.size) carriers = carriers.filter((_, i) => !toRemove.has(i));
-      while (carriers.length > 160) carriers.shift();
-
-      if (active) handleBaseRecombination(R, L);
-    }
-
-    function drawPhysBg(L) {
-      const R = regionBounds(L);
-      const h = L.bot - L.top;
-
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("実空間（チップの中）", R.emL, L.top - 6);
-
-      const regions = mode === "npn"
-        ? [
-            { l: R.emL, r: R.emR, col: "rgba(56,189,248,0.07)", label: "N エミッタ", sub: "e⁻ 多数" },
-            { l: R.baL, r: R.baR, col: "rgba(248,113,113,0.09)", label: "P ベース", sub: "薄い · h⁺" },
-            { l: R.coL, r: R.coR, col: "rgba(56,189,248,0.07)", label: "N コレクタ", sub: "e⁻ 多数" },
-          ]
-        : [
-            { l: R.emL, r: R.emR, col: "rgba(248,113,113,0.09)", label: "P エミッタ", sub: "h⁺ 多数" },
-            { l: R.baL, r: R.baR, col: "rgba(56,189,248,0.07)", label: "N ベース", sub: "薄い · e⁻" },
-            { l: R.coL, r: R.coR, col: "rgba(248,113,113,0.09)", label: "P コレクタ", sub: "h⁺ 多数" },
-          ];
-
-      regions.forEach((rg) => {
-        ctx.fillStyle = rg.col;
-        ctx.fillRect(rg.l, L.top, rg.r - rg.l, h);
-        ctx.fillStyle = "#cbd5e1";
-        ctx.font = "700 10px Inter, Noto Sans JP, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(rg.label, (rg.l + rg.r) * 0.5, L.top + 14);
-        ctx.fillStyle = "rgba(148,163,184,0.8)";
-        ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
-        ctx.fillText(rg.sub, (rg.l + rg.r) * 0.5, L.top + 26);
-      });
-
-      const depBE = 6 * L.sx;
-      const depBC = 14 * L.sx;
-      ctx.fillStyle = COL.depletion;
-      ctx.fillRect(R.beJ - depBE * 0.5, L.top, depBE, h);
-      ctx.fillRect(R.bcJ - depBC * 0.5, L.top, depBC, h);
-
-      ctx.strokeStyle = COL.depEdge;
-      ctx.lineWidth = 1.4;
-      ctx.setLineDash([5, 4]);
-      ctx.strokeRect(R.beJ - depBE * 0.5, L.top, depBE, h);
-      ctx.strokeRect(R.bcJ - depBC * 0.5, L.top, depBC, h);
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = "#86efac";
-      ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("BE 順", R.beJ, L.bot + 14 * L.sy);
-      ctx.fillStyle = "#fca5a5";
-      ctx.fillText("BC 逆", R.bcJ, L.bot + 14 * L.sy);
-
-      impurities.forEach((p) => {
-        ctx.fillStyle = p.kind === "n" ? COL.donor : COL.acceptor;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      ctx.strokeStyle = COL.divider;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(R.beJ, L.top);
-      ctx.lineTo(R.beJ, L.bot);
-      ctx.moveTo(R.bcJ, L.top);
-      ctx.lineTo(R.bcJ, L.bot);
-      ctx.stroke();
-    }
-
-    function drawCarrier(c) {
-      if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return;
-      const col = c.type === "electron" ? COL.electron : COL.hole;
-      const r = c.type === "electron" ? 4.2 : 4.6;
-      const spd = Math.hypot(c.vx, c.vy);
-      if (spd > 12) {
-        ctx.strokeStyle = col + "99";
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(c.x - c.vx * 0.07, c.y - c.vy * 0.07);
-        ctx.lineTo(c.x, c.y);
-        ctx.stroke();
+      // ===== 書式 =====
+      function fV(v) { return v.toFixed(2) + " V"; }
+      function fSigV(v) { return (sgn() * v).toFixed(2) + " V"; }
+      function fA(a) {
+        if (a >= 1e-3) return (a * 1e3).toFixed(2) + " mA";
+        return (a * 1e6).toFixed(1) + " μA";
       }
-      const glow = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r + 3);
-      glow.addColorStop(0, col);
-      glow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r + 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.beginPath();
-      ctx.arc(c.x - 0.9, c.y - 0.9, r * 0.35, 0, Math.PI * 2);
-      ctx.fill();
-      if (c.type === "hole") {
-        ctx.strokeStyle = "rgba(248,113,113,0.85)";
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, r + 2, 0, Math.PI * 2);
-        ctx.stroke();
+      function fR(r) {
+        if (r >= 1000) return (r / 1000).toFixed(1) + " kΩ";
+        return r.toFixed(0) + " Ω";
       }
-    }
 
-    function drawRecombFlashes() {
-      recombFlashes.forEach((f) => {
-        const r = 6 + (1 - f.life) * 14;
-        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-        g.addColorStop(0, "rgba(255,255,255," + (f.life * 0.95) + ")");
-        g.addColorStop(0.4, "rgba(250,204,21," + (f.life * 0.75) + ")");
-        g.addColorStop(1, "rgba(250,204,21,0)");
-        ctx.fillStyle = g;
+      function sizeCanvas(canvas, ctx) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10) return null;
+        const w = Math.round(rect.width), h = Math.round(rect.height);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h };
+      }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
         ctx.beginPath();
-        ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
 
-    function drawFlowArrows(L, iB, iC) {
-      const R = regionBounds(L);
-      const y = R.midY;
-      ctx.textAlign = "left";
-      ctx.font = "600 9px Inter, Noto Sans JP, sans-serif";
-      const major = mode === "npn" ? "e⁻" : "h⁺";
-      ctx.fillStyle = mode === "npn" ? "#7dd3fc" : "#fca5a5";
-      ctx.fillText(major + " 注入（多）", R.emL + 6, y - 22);
-      ctx.fillStyle = "#fde68a";
-      ctx.fillText("i_B 小 · 再結合", (R.baL + R.baR) * 0.5 - 28, y - 22);
-      ctx.fillStyle = "rgba(248,113,113,0.75)";
-      ctx.font = "600 7px Inter, Noto Sans JP, sans-serif";
-      ctx.fillText(mode === "npn" ? "h⁺ ベース内" : "e⁻ ベース内", (R.baL + R.baR) * 0.5 - 22, y + 32);
-      ctx.fillStyle = mode === "npn" ? "#7dd3fc" : "#fca5a5";
-      ctx.fillText("i_C ≈ β·i_B（大）", R.coL + 8, y - 22);
-
-      const barB = Math.min(1, iB * 8) * 40 * L.sx;
-      const barC = Math.min(1, iC * 0.08) * 40 * L.sx;
-      ctx.fillStyle = "rgba(250,204,21,0.75)";
-      ctx.fillRect((R.baL + R.baR) * 0.5 - barB * 0.5, y + 18, barB, 5);
-      ctx.fillStyle = "rgba(56,189,248,0.85)";
-      ctx.fillRect(R.coL + 20, y + 18, barC, 5);
-    }
-
-    function drawWaves(L, vin, vout, iB) {
-      const x0 = L.rightX + 10 * L.sx;
-      const w = Math.max(100, L.cw - x0 - 12 * L.sx);
-      const hTop = Math.max(50, L.waveMid - L.waveTop - 16 * L.sy);
-      const hBot = Math.max(50, L.waveBot - L.waveMid - 16 * L.sy);
-      const vcc = getVCC();
-      const bias = getVBE();
-
-      function panel(y0, h, title, sub, col, yMin, yMax, current, refLines) {
-        ctx.fillStyle = "rgba(18, 28, 52, 0.98)";
-        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+      function chip(ctx, x, y, text, color, align, size) {
+        const fs = size || 11;
+        ctx.font = "700 " + fs + "px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const tw = ctx.measureText(text).width;
+        const padX = 7, padY = 4;
+        const h = fs + padY * 2;
+        let bx = x;
+        if (align === "center") bx = x - tw / 2 - padX;
+        else if (align === "right") bx = x - tw - padX * 2;
+        ctx.fillStyle = "rgba(2,6,23,0.94)";
+        ctx.strokeStyle = "rgba(148,163,184,0.4)";
         ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.rect(x0, y0, w, h);
+        roundRect(ctx, bx, y - h / 2, tw + padX * 2, h, 6);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = col;
-        ctx.font = "700 11px Inter, Noto Sans JP, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(title, x0 + 8, y0 + 16);
-        ctx.fillStyle = "rgba(148,163,184,0.85)";
-        ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
-        ctx.fillText(sub, x0 + 8, y0 + 28);
+        ctx.fillStyle = color || "#fff";
+        ctx.fillText(text, bx + padX, y);
+        ctx.textBaseline = "alphabetic";
+      }
 
-        const gx = x0 + 36;
-        const gw = w - 48;
-        const gh = h - 36;
-        const gy = y0 + 34;
-        ctx.strokeStyle = COL.grid;
-        for (let i = 0; i <= 4; i++) {
-          const ly = gy + (i / 4) * gh;
-          ctx.beginPath();
-          ctx.moveTo(gx, ly);
-          ctx.lineTo(gx + gw, ly);
-          ctx.stroke();
+      function label(ctx, x, y, text, color, align, size, weight) {
+        ctx.fillStyle = color || "#e2e8f0";
+        ctx.font = (weight || 600) + " " + (size || 11) + "px Inter, Noto Sans JP, sans-serif";
+        ctx.textAlign = align || "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x, y);
+        ctx.textBaseline = "alphabetic";
+      }
+
+      // ===== ① 増幅回路 =====
+      function drawCircuit() {
+        const sz = sizeCanvas(circuitCanvas, cCtx);
+        if (!sz) return;
+        const { w, h } = sz;
+        cCtx.fillStyle = "#050810";
+        cCtx.fillRect(0, 0, w, h);
+
+        const s = snapshot(state.t);
+        const npn = state.mode === "npn";
+
+        const circW = Math.min(w * 0.66, w - 190);
+        const xSrc = 52;
+        const xB = circW * 0.52;
+        const xT = xB + 34;
+        const yTop = 62;
+        const yOut = 168;
+        const yB = 236;
+        const yBot = 330;
+
+        function wire(x1, y1, x2, y2, color, lw) {
+          cCtx.strokeStyle = color;
+          cCtx.lineWidth = lw || 2.6;
+          cCtx.lineCap = "round";
+          cCtx.beginPath();
+          cCtx.moveTo(x1, y1);
+          cCtx.lineTo(x2, y2);
+          cCtx.stroke();
+        }
+        function node(x, y, color) {
+          cCtx.fillStyle = color || "#e2e8f0";
+          cCtx.beginPath();
+          cCtx.arc(x, y, 3.6, 0, Math.PI * 2);
+          cCtx.fill();
+        }
+        function resistorV(x, y0, y1, color) {
+          const n = 6, dy = (y1 - y0) / n, amp = 8;
+          cCtx.strokeStyle = color;
+          cCtx.lineWidth = 2.4;
+          cCtx.lineCap = "round";
+          cCtx.beginPath();
+          cCtx.moveTo(x, y0);
+          for (let i = 0; i <= n; i += 1) {
+            cCtx.lineTo(x + (i % 2 === 0 ? -amp : amp), y0 + dy * (i + 0.5));
+          }
+          cCtx.lineTo(x, y1);
+          cCtx.stroke();
+        }
+        function resistorH(y, x0, x1, color) {
+          const n = 6, dx = (x1 - x0) / n, amp = 8;
+          cCtx.strokeStyle = color;
+          cCtx.lineWidth = 2.4;
+          cCtx.lineCap = "round";
+          cCtx.beginPath();
+          cCtx.moveTo(x0, y);
+          for (let i = 0; i <= n; i += 1) {
+            cCtx.lineTo(x0 + dx * (i + 0.5), y + (i % 2 === 0 ? -amp : amp));
+          }
+          cCtx.lineTo(x1, y);
+          cCtx.stroke();
         }
 
-        function valToY(v) {
-          return gy + gh * (1 - (v - yMin) / Math.max(yMax - yMin, 0.01));
+        const wireCol = "rgba(148,163,184,0.75)";
+        const bCol = "#fbbf24";
+        const cCol = "#38bdf8";
+        const eCol = "#4ade80";
+
+        label(cCtx, 20, 22, "エミッタ接地増幅回路", "#bae6fd", "left", 12, 800);
+        label(cCtx, 20, 38,
+          npn ? "エミッタの矢印が外向き → npn。電源は ＋ 側。"
+            : "エミッタの矢印が内向き → pnp。電源は − 側で、電流の向きもすべて逆。",
+          "#94a3b8", "left", 10, 600);
+
+        // ── 電源レール ──
+        wire(xT - 68, yTop, xT + 68, yTop, npn ? "rgba(248,113,113,0.85)" : "rgba(96,165,250,0.85)", 3);
+        chip(cCtx, xT - 72, yTop, "V CC = " + (npn ? "+" : "−") + state.vcc.toFixed(0) + " V",
+          npn ? "#fca5a5" : "#93c5fd", "right", 11);
+
+        // ── R_C ──
+        wire(xT, yTop, xT, yTop + 22, wireCol);
+        resistorV(xT, yTop + 22, yTop + 66, cCol);
+        wire(xT, yTop + 66, xT, yOut, wireCol);
+        chip(cCtx, xT + 22, yTop + 44, "R C = " + fR(state.rc), cCol, "left", 10);
+
+        // ── 出力端子 ──
+        wire(xT, yOut, xT + 118, yOut, eCol, 2.6);
+        node(xT, yOut, eCol);
+        cCtx.strokeStyle = eCol;
+        cCtx.lineWidth = 2;
+        cCtx.beginPath();
+        cCtx.arc(xT + 122, yOut, 5, 0, Math.PI * 2);
+        cCtx.stroke();
+        chip(cCtx, xT + 132, yOut - 18, "v out = " + fSigV(s.vo), "#86efac", "left", 11);
+        label(cCtx, xT + 132, yOut + 2, "出力", "#86efac", "left", 10, 700);
+
+        // ── トランジスタ本体 ──
+        wire(xT, yOut, xT, yB - 18, wireCol);        // コレクタ縦線
+        wire(xT, yB - 18, xB + 4, yB - 10, wireCol); // コレクタ斜線
+        wire(xT, yB + 18, xB + 4, yB + 10, wireCol); // エミッタ斜線
+        wire(xT, yB + 18, xT, yBot, wireCol);        // エミッタ縦線
+        cCtx.strokeStyle = "#e2e8f0";
+        cCtx.lineWidth = 4;
+        cCtx.lineCap = "butt";
+        cCtx.beginPath();
+        cCtx.moveTo(xB + 4, yB - 22);
+        cCtx.lineTo(xB + 4, yB + 22);
+        cCtx.stroke();
+        cCtx.strokeStyle = "rgba(148,163,184,0.45)";
+        cCtx.lineWidth = 1.5;
+        cCtx.beginPath();
+        cCtx.arc(xB + 14, yB, 38, 0, Math.PI * 2);
+        cCtx.stroke();
+
+        // エミッタの矢印（npn は外向き · pnp は内向き）
+        (function arrow() {
+          const ax = (xT + xB + 4) / 2, ay = (yB + 18 + yB + 10) / 2;
+          const dx = xT - (xB + 4), dy = 8;
+          const len = Math.hypot(dx, dy);
+          const ux = dx / len, uy = dy / len;
+          const dir = npn ? 1 : -1;
+          const tipX = ax + ux * 9 * dir, tipY = ay + uy * 9 * dir;
+          cCtx.fillStyle = "#e2e8f0";
+          cCtx.beginPath();
+          cCtx.moveTo(tipX, tipY);
+          cCtx.lineTo(tipX - (ux * 15 + uy * 7) * dir, tipY - (uy * 15 - ux * 7) * dir);
+          cCtx.lineTo(tipX - (ux * 15 - uy * 7) * dir, tipY - (uy * 15 + ux * 7) * dir);
+          cCtx.closePath();
+          cCtx.fill();
+        })();
+
+        label(cCtx, xB - 6, yB - 34, "B", bCol, "right", 12, 800);
+        label(cCtx, xT + 12, yB - 26, "C", cCol, "left", 12, 800);
+        label(cCtx, xT + 12, yB + 26, "E", eCol, "left", 12, 800);
+        chip(cCtx, xB - 46, yB - 52, npn ? "npn トランジスタ" : "pnp トランジスタ",
+          npn ? "#7dd3fc" : "#fca5a5", "right", 11);
+
+        // ── ベース側：信号源 + R_B ──
+        wire(xSrc, yB, xSrc + 34, yB, wireCol);
+        resistorH(yB, xSrc + 34, xSrc + 34 + 62, bCol);
+        wire(xSrc + 96, yB, xB + 4, yB, wireCol);
+        chip(cCtx, xSrc + 65, yB - 26, "R B = " + fR(state.rb), bCol, "center", 10);
+
+        cCtx.strokeStyle = bCol;
+        cCtx.lineWidth = 2;
+        cCtx.beginPath();
+        cCtx.arc(xSrc, yB, 17, 0, Math.PI * 2);
+        cCtx.stroke();
+        cCtx.beginPath();
+        for (let i = -11; i <= 11; i += 1) {
+          const yy = yB - Math.sin((i / 11) * Math.PI) * 7;
+          if (i === -11) cCtx.moveTo(xSrc + i, yy); else cCtx.lineTo(xSrc + i, yy);
+        }
+        cCtx.stroke();
+        chip(cCtx, xSrc, yB + 34, "v in = " + fSigV(s.vm), "#fcd34d", "center", 11);
+        label(cCtx, xSrc, yB - 30, "入力信号", "#fcd34d", "center", 10, 700);
+
+        // ── グランド ──
+        const gndX = xT + 52;
+        wire(xSrc, yB + 17, xSrc, yBot, wireCol);
+        wire(xSrc, yBot, gndX, yBot, wireCol, 3);
+        node(xT, yBot, wireCol);
+        for (let i = 0; i < 3; i += 1) {
+          const gw = 22 - i * 7;
+          cCtx.strokeStyle = "rgba(148,163,184,0.8)";
+          cCtx.lineWidth = 2;
+          cCtx.beginPath();
+          cCtx.moveTo(gndX - gw / 2, yBot + 6 + i * 5);
+          cCtx.lineTo(gndX + gw / 2, yBot + 6 + i * 5);
+          cCtx.stroke();
+        }
+        label(cCtx, gndX + 22, yBot + 12, "共通のエミッタ（接地）", "rgba(148,163,184,0.9)", "left", 10, 600);
+
+        // ── 電流のアニメーション ──
+        const iRef = Math.max(iCsat(), 1e-9);
+        const cN = Math.min(1, s.iC / iRef);
+        const bN = Math.min(1, (s.iB * state.beta) / iRef);
+        // pnp では電源の向きが逆なので、電流の向き（粒の進む向き）もすべて反転する
+        function flowDir(x1, y1, x2, y2, iN, r, col) {
+          if (npn) flow(cCtx, x1, y1, x2, y2, iN, r, col);
+          else flow(cCtx, x2, y2, x1, y1, iN, r, col);
+        }
+        if (s.iB > 0) {
+          flowDir(xT, yTop + 4, xT, yB - 20, cN, 3.4, "rgba(56,189,248,0.95)");
+          flowDir(xSrc + 20, yB, xB, yB, bN * 0.55, 2.2, "rgba(251,191,36,0.95)");
+          flowDir(xT, yB + 22, xT, yBot - 4, cN, 3.6, "rgba(74,222,128,0.95)");
+          flowDir(xT + 36, yBot, xSrc + 4, yBot, cN, 3.2, "rgba(148,163,184,0.85)");
         }
 
-        (refLines || []).forEach((rf) => {
-          const ry = valToY(rf.val);
-          ctx.strokeStyle = rf.col;
-          ctx.lineWidth = 1;
-          ctx.setLineDash(rf.dash || [4, 4]);
-          ctx.beginPath();
-          ctx.moveTo(gx, ry);
-          ctx.lineTo(gx + gw, ry);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.fillStyle = rf.col;
-          ctx.font = "600 7px Inter, sans-serif";
-          ctx.fillText(rf.label, gx + 4, ry - 3);
-        });
-
-        if (waveHistory.length > 1) {
-          ctx.strokeStyle = col;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          waveHistory.forEach((pt, i) => {
-            const t = i / Math.max(waveHistory.length - 1, 1);
-            const px = gx + t * gw;
-            const py = valToY(pt[title.indexOf("v_in") >= 0 ? "vin" : "vout"]);
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
+        // ── 右側：電流の大きさ比べ ──
+        const px = circW + 22;
+        const pw = w - px - 20;
+        if (pw > 110) {
+          label(cCtx, px, 26, "電流の大きさ比べ", "#bae6fd", "left", 12, 800);
+          const rows = [
+            { k: "i B", v: s.iB, col: "rgba(251,191,36,0.9)" },
+            { k: "i C", v: s.iC, col: "rgba(56,189,248,0.9)" },
+            { k: "i E", v: s.iB + s.iC, col: "rgba(74,222,128,0.9)" },
+          ];
+          const maxI = Math.max(s.iB + s.iC, 1e-9);
+          rows.forEach((r, i) => {
+            const ry = 56 + i * 52;
+            label(cCtx, px, ry, r.k, r.col.replace("0.9", "1"), "left", 12, 800);
+            label(cCtx, px + pw, ry, fA(r.v), "#e2e8f0", "right", 11, 700);
+            const bw = Math.max(2, (r.v / maxI) * pw);
+            cCtx.fillStyle = "rgba(255,255,255,0.06)";
+            cCtx.fillRect(px, ry + 10, pw, 12);
+            cCtx.fillStyle = r.col;
+            cCtx.fillRect(px, ry + 10, bw, 12);
           });
-          ctx.stroke();
+          label(cCtx, px, 220, "i B はバーが見えないほど小さい。", "#94a3b8", "left", 10, 600);
+          label(cCtx, px, 236, "その β = " + state.beta + " 倍が i C。", "#94a3b8", "left", 10, 600);
+
+          // V_CC が R_C と トランジスタ にどう分かれているか
+          const gx = px, gy = 292, gw2 = pw, gh2 = h - gy - 42;
+          if (gh2 > 60) {
+            label(cCtx, gx, gy - 26, "電源 " + fSigV(state.vcc) + " の分かれ方", "#bae6fd", "left", 11, 800);
+            label(cCtx, gx, gy - 12, "V CC = R C の電圧降下 ＋ v out", "#94a3b8", "left", 9, 600);
+            const frac = Math.max(0, Math.min(1, s.vo / state.vcc));
+            const yLine = gy + gh2 * (1 - frac);
+            cCtx.fillStyle = "rgba(56,189,248,0.22)";
+            cCtx.fillRect(gx, gy, gw2, yLine - gy);
+            cCtx.fillStyle = "rgba(74,222,128,0.22)";
+            cCtx.fillRect(gx, yLine, gw2, gy + gh2 - yLine);
+            cCtx.strokeStyle = "rgba(148,163,184,0.3)";
+            cCtx.lineWidth = 1;
+            cCtx.strokeRect(gx + 0.5, gy + 0.5, gw2 - 1, gh2 - 1);
+            cCtx.strokeStyle = "#4ade80";
+            cCtx.lineWidth = 2.5;
+            cCtx.beginPath();
+            cCtx.moveTo(gx, yLine);
+            cCtx.lineTo(gx + gw2, yLine);
+            cCtx.stroke();
+            if (yLine - gy > 20) {
+              label(cCtx, gx + gw2 / 2, (gy + yLine) / 2, "R C で " + fV(state.rc * s.iC),
+                "#7dd3fc", "center", 10, 700);
+            }
+            if (gy + gh2 - yLine > 20) {
+              label(cCtx, gx + gw2 / 2, (yLine + gy + gh2) / 2, "v out = " + fSigV(s.vo),
+                "#86efac", "center", 10, 700);
+            }
+            const half = gy + gh2 * 0.5;
+            cCtx.strokeStyle = "rgba(226,232,240,0.5)";
+            cCtx.setLineDash([4, 4]);
+            cCtx.lineWidth = 1;
+            cCtx.beginPath();
+            cCtx.moveTo(gx, half);
+            cCtx.lineTo(gx + gw2, half);
+            cCtx.stroke();
+            cCtx.setLineDash([]);
+            label(cCtx, gx + 3, gy + gh2 + 14, "破線の位置にすると振れる余裕が最大",
+              "#64748b", "left", 9, 600);
+          }
         }
 
-        const py = valToY(current);
+        // ── 凡例（動く粒の意味） ──
+        const legend = [
+          ["rgba(251,191,36,0.95)", "黄の粒 ＝ ベース電流 i B（とても少ない）"],
+          ["rgba(56,189,248,0.95)", "青の粒 ＝ コレクタ電流 i C（i B の β 倍）"],
+          ["rgba(74,222,128,0.95)", "緑の粒 ＝ エミッタ電流 i E ＝ i B + i C"],
+        ];
+        legend.forEach((lg, i) => {
+          const ly = h - 82 + i * 17;
+          cCtx.fillStyle = lg[0];
+          cCtx.beginPath();
+          cCtx.arc(24, ly, 4, 0, Math.PI * 2);
+          cCtx.fill();
+          label(cCtx, 34, ly, lg[1], "#94a3b8", "left", 10, 600);
+        });
+        label(cCtx, 20, h - 30, "粒の向きは「＋の電荷が流れる向き」＝電流の向き。", "#64748b", "left", 9, 600);
+
+        // ── 状態表示 ──
+        const rg = s.region;
+        label(cCtx, 20, h - 12,
+          rg === "cutoff" ? "カットオフ — v in が 0.6 V に届かず、電流が流れていません"
+            : rg === "sat" ? "飽和 — i C が頭打ち。出力はこれ以上下がりません"
+              : "活性領域 — i C = β i B が成り立ち、きれいに増幅できます",
+          rg === "active" ? "#86efac" : "#fca5a5", "left", 11, 700);
+      }
+
+      function flow(ctx, x1, y1, x2, y2, iN, r, col) {
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 8 || iN < 0.01) return;
+        const n = Math.max(2, Math.round(len / 40));
+        ctx.save();
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 5;
         ctx.fillStyle = col;
-        ctx.beginPath();
-        ctx.arc(gx + gw, py, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(203,213,225,0.9)";
-        ctx.font = "600 8px Inter, sans-serif";
-        ctx.textAlign = "right";
-        ctx.fillText(current.toFixed(2) + " V", gx + gw, py - 8);
-      }
-
-      const vinMin = bias - 0.28;
-      const vinMax = bias + 0.28;
-      const voutMin = 0;
-      const voutMax = vcc * 1.05;
-      const thLine = mode === "npn" ? V_TH : -V_TH;
-
-      panel(
-        L.waveTop, hTop,
-        "v_in(t) 入力",
-        "ベース電圧（小さい信号）",
-        COL.vin, vinMin, vinMax, vin,
-        [{ val: thLine, col: "rgba(248,113,113,0.65)", label: "V_th", dash: [3, 3] }]
-      );
-      panel(
-        L.waveMid, hBot,
-        "v_out(t) 出力",
-        "コレクタ電圧（大きい · v_in と逆位相）",
-        COL.vout, voutMin, voutMax, vout,
-        [{ val: vcc, col: "rgba(148,163,184,0.55)", label: "V_CC", dash: [5, 4] }]
-      );
-
-      if (iB > 0.00001 && inputOn) {
-        ctx.fillStyle = "rgba(74,222,128,0.85)";
-        ctx.font = "600 8px Inter, Noto Sans JP, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText("↑ v_in ↑ → i_B ↑ → i_C ↑ → v_out ↓", x0 + 8, L.waveMid - 4);
-      }
-
-      ctx.strokeStyle = COL.divider;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(L.rightX, 0);
-      ctx.lineTo(L.rightX, L.ch);
-      ctx.stroke();
-    }
-
-    function updateReadouts(vin, iB, iC, vout) {
-      document.getElementById("vbeVal").textContent = getVBE().toFixed(2) + " V";
-      document.getElementById("vccVal").textContent = getVCC().toFixed(1) + " V";
-      document.getElementById("ainVal").textContent = getAin().toFixed(2) + " V";
-      document.getElementById("finVal").textContent = getFin().toFixed(1) + " Hz";
-      document.getElementById("readBeta").textContent = BETA.toString();
-      document.getElementById("readIB").textContent = (iB * 1000).toFixed(2) + " mA";
-      document.getElementById("readIC").textContent = (iC * 1000).toFixed(1) + " mA";
-      document.getElementById("readVin").textContent = vin.toFixed(3) + " V";
-      document.getElementById("readVout").textContent = vout.toFixed(3) + " V";
-      const be = mode === "npn" ? "BE 順 · CB 逆" : "BE 順 · CB 逆";
-      document.getElementById("readBias").textContent = isActiveBias(iB) ? be + " · 動作中" : "カットオフ（電流ほぼゼロ）";
-      const voutSwing = getVCC() - vout;
-      const clipped = vout <= 0.06;
-      formulaLive.innerHTML =
-        "v<sub>in</sub>↑ → i<sub>B</sub>=" + (iB * 1000).toFixed(2) + " mA → i<sub>C</sub>=β·i<sub>B</sub>=" + (iC * 1000).toFixed(1) +
-        " mA → v<sub>out</sub>=" + vout.toFixed(2) + " V" +
-        (clipped ? "（下限付近）" : "") +
-        " · <strong>入力の小さな振れが、出力の大きな振れに（逆位相で）変わる</strong>";
-    }
-
-    function drawFrame() {
-      if (!ctx || canvasW < 10 || canvasH < 10) return;
-      const L = getLayout(canvasW, canvasH);
-      const vin = vinAt(animClock);
-      const iB = iBAt(vin);
-      const iC = iCAt(iB);
-      const vout = voutAt(iC);
-
-      ctx.fillStyle = "#050810";
-      ctx.fillRect(0, 0, L.cw, L.ch);
-
-      drawPhysBg(L);
-      ctx.save();
-      try {
-        ctx.beginPath();
-        ctx.rect(0, L.top - 4, L.physW + 4, L.bot - L.top + 8);
-        ctx.clip();
-        carriers.forEach(drawCarrier);
-        drawRecombFlashes();
-      } finally {
+        for (let k = 0; k < n; k += 1) {
+          const t = (state.flow * 0.3 + k / n) % 1;
+          ctx.beginPath();
+          ctx.arc(x1 + dx * t, y1 + dy * t, r * (0.5 + iN * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
-      drawFlowArrows(L, iB, iC);
-      drawWaves(L, vin, vout, iB);
-      updateReadouts(vin, iB, iC, vout);
-    }
 
-    function setMode(m, keepSliders) {
-      mode = m;
-      document.querySelectorAll(".mode-btn").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.mode === m);
-      });
-      if (!keepSliders) {
-        if (m === "pnp" && +vbeSlider.value > 0) vbeSlider.value = -65;
-        if (m === "npn" && +vbeSlider.value < 0) vbeSlider.value = 65;
+      // ===== ② 波形 =====
+      function drawWaves() {
+        const sz = sizeCanvas(waveCanvas, wCtx);
+        if (!sz) return;
+        const { w, h } = sz;
+        wCtx.fillStyle = "#050810";
+        wCtx.fillRect(0, 0, w, h);
+
+        const padL = 58, padR = 24;
+        const plotW = w - padL - padR;
+        const gap = 52;
+        const gh = (h - 62 - gap - 26) / 2;
+        const tMin = Math.max(0, state.t - HISTORY_SEC);
+        const tMax = Math.max(tMin + 0.5, state.t);
+        const xOf = (t) => padL + ((t - tMin) / (tMax - tMin)) * plotW;
+        const sg = sgn();
+
+        // 表示は符号つき（pnp では負の電圧になる）
+        function bounds(a, b) {
+          const p = sg * a, q = sg * b;
+          return { lo: Math.min(p, q), hi: Math.max(p, q) };
+        }
+
+        function frame(y, title, unit, vLo, vHi, ticks) {
+          wCtx.fillStyle = "rgba(15,22,45,0.5)";
+          wCtx.fillRect(padL, y, plotW, gh);
+          wCtx.strokeStyle = "rgba(148,163,184,0.28)";
+          wCtx.lineWidth = 1;
+          wCtx.strokeRect(padL + 0.5, y + 0.5, plotW - 1, gh - 1);
+          label(wCtx, padL, y - 14, title, "#bae6fd", "left", 12, 800);
+          for (let k = 0; k <= ticks; k += 1) {
+            const v = vLo + (vHi - vLo) * (k / ticks);
+            const yy = y + gh - (k / ticks) * gh;
+            wCtx.strokeStyle = "rgba(148,163,184,0.12)";
+            wCtx.beginPath();
+            wCtx.moveTo(padL, yy);
+            wCtx.lineTo(padL + plotW, yy);
+            wCtx.stroke();
+            label(wCtx, padL - 6, yy, v.toFixed(2), "#64748b", "right", 9);
+          }
+          label(wCtx, 14, y + gh / 2, unit, "#94a3b8", "left", 10, 700);
+        }
+
+        function yAt(y, vLo, vHi, v) {
+          return y + gh - ((v - vLo) / Math.max(vHi - vLo, 1e-9)) * gh;
+        }
+
+        function curve(y, vLo, vHi, pick, color, lw) {
+          if (history.length < 2) return;
+          wCtx.strokeStyle = color;
+          wCtx.lineWidth = lw || 2.4;
+          wCtx.lineJoin = "round";
+          wCtx.beginPath();
+          let started = false;
+          history.forEach((r) => {
+            if (r.t < tMin) return;
+            const px = xOf(r.t);
+            const py = yAt(y, vLo, vHi, sg * pick(r));
+            const pyc = Math.max(y, Math.min(y + gh, py));
+            if (!started) { wCtx.moveTo(px, pyc); started = true; } else { wCtx.lineTo(px, pyc); }
+          });
+          wCtx.stroke();
+        }
+
+        function refLine(y, vLo, vHi, mag, color, text, dash) {
+          const yy = yAt(y, vLo, vHi, sg * mag);
+          if (yy < y - 2 || yy > y + gh + 2) return;
+          wCtx.strokeStyle = color;
+          wCtx.lineWidth = 1.4;
+          wCtx.setLineDash(dash || [5, 4]);
+          wCtx.beginPath();
+          wCtx.moveTo(padL, yy);
+          wCtx.lineTo(padL + plotW, yy);
+          wCtx.stroke();
+          wCtx.setLineDash([]);
+          chip(wCtx, padL + plotW - 3, yy, text, color, "right", 10);
+        }
+
+        // ── 上：入力 ──
+        const y1 = 40;
+        const inMagLo = Math.min(V_BE_ON - 0.15, state.vb - state.ain - 0.1);
+        const inMagHi = Math.max(state.vb + state.ain + 0.1, V_BE_ON + 0.15);
+        const bIn = bounds(inMagLo, inMagHi);
+        frame(y1, "入力 v in（ベース電圧）", "V", bIn.lo, bIn.hi, 4);
+        refLine(y1, bIn.lo, bIn.hi, V_BE_ON, "rgba(248,113,113,0.8)", "V BE = " + fSigV(V_BE_ON), [4, 4]);
+        refLine(y1, bIn.lo, bIn.hi, state.vb, "rgba(148,163,184,0.5)", "中心 " + fSigV(state.vb), [2, 3]);
+        curve(y1, bIn.lo, bIn.hi, (r) => r.vm, "#fcd34d", 2.4);
+
+        // ── 下：出力 ──
+        const y2 = y1 + gh + gap;
+        const bOut = bounds(0, state.vcc * 1.06);
+        frame(y2, "出力 v out（コレクタ電圧）", "V", bOut.lo, bOut.hi, 4);
+        refLine(y2, bOut.lo, bOut.hi, state.vcc, "rgba(148,163,184,0.55)", "V CC = " + fSigV(state.vcc), [5, 4]);
+        refLine(y2, bOut.lo, bOut.hi, V_CE_SAT, "rgba(248,113,113,0.7)", "飽和 " + fSigV(V_CE_SAT), [4, 4]);
+        curve(y2, bOut.lo, bOut.hi, (r) => r.vo, "#4ade80", 2.6);
+
+        // ── 現在値のマーカー ──
+        const sNow = snapshot(state.t);
+        const xNow = padL + plotW;
+        const yIn = yAt(y1, bIn.lo, bIn.hi, sg * sNow.vm);
+        const yOut2 = yAt(y2, bOut.lo, bOut.hi, sg * sNow.vo);
+        wCtx.fillStyle = "#fcd34d";
+        wCtx.beginPath();
+        wCtx.arc(xNow - 2, Math.max(y1, Math.min(y1 + gh, yIn)), 4.5, 0, Math.PI * 2);
+        wCtx.fill();
+        wCtx.fillStyle = "#4ade80";
+        wCtx.beginPath();
+        wCtx.arc(xNow - 2, Math.max(y2, Math.min(y2 + gh, yOut2)), 4.5, 0, Math.PI * 2);
+        wCtx.fill();
+
+        const midY = y1 + gh + 18;
+        const rising = sg * Math.cos(2 * Math.PI * state.fin * state.t) > 0;
+        label(wCtx, padL, midY,
+          state.signalOn
+            ? (rising ? "入力が ↑ 上がる → i C が増える → 出力は ↓ 下がる"
+              : "入力が ↓ 下がる → i C が減る → 出力は ↑ 上がる")
+            : "信号 OFF — 直流のバイアスだけ",
+          "#86efac", "left", 12, 800);
+
+        const swing = measuredSwing();
+        const ratio = swing.din > 1e-6 ? swing.dout / swing.din : 0;
+        label(wCtx, padL + plotW, midY,
+          "振れ幅 " + swing.din.toFixed(3) + " V → " + swing.dout.toFixed(2) + " V（" + ratio.toFixed(1) + " 倍）",
+          "#bae6fd", "right", 11, 700);
+
+        label(wCtx, padL, h - 14,
+          "縦軸の目盛りが上下で違うことに注意（上は 0.1 V きざみ、下は 1 V きざみ）",
+          "#64748b", "left", 10, 600);
       }
-      modeGuide.innerHTML = MODE_GUIDES[m];
-      const L = getLayout(canvasW, canvasH);
-      buildImpurities(L);
-      resetCarriers(L);
-      if (!keepSliders) waveHistory = [];
-      drawFrame();
-    }
 
-    function highlightScenario(key) {
-      activeScenario = key;
-      document.querySelectorAll(".preset-btn").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.scenario === key);
-      });
-    }
+      // ===== ③ トランジスタの中（キャリア） =====
+      const chipState = { carriers: [], impurities: [], flashes: [], built: 0 };
 
-    function clearScenarioHighlight() {
-      activeScenario = null;
-      document.querySelectorAll(".preset-btn").forEach((btn) => btn.classList.remove("is-active"));
-    }
-
-    function applyScenario(key) {
-      const s = SCENARIOS[key];
-      if (!s) return;
-      vbeSlider.value = s.vbe;
-      vccSlider.value = s.vcc;
-      ainSlider.value = s.ain;
-      finSlider.value = s.fin;
-      inputOn = s.inputOn;
-      inputToggle.textContent = inputOn ? "入力 ON" : "入力 OFF";
-      inputToggle.classList.toggle("is-on", inputOn);
-      highlightScenario(key);
-      if (mode !== s.mode) {
-        setMode(s.mode, true);
-      } else {
-        const L = getLayout(canvasW, canvasH);
-        resetCarriers(L);
-        waveHistory = [];
+      function chipRegions(w, h) {
+        const x0 = 26, x1 = w - 26;
+        const wid = x1 - x0;
+        const top = 78, bot = h - 92;
+        return {
+          x0, x1, top, bot,
+          emL: x0, emR: x0 + wid * 0.34,
+          baL: x0 + wid * 0.34, baR: x0 + wid * 0.46,
+          coL: x0 + wid * 0.46, coR: x1,
+          midY: (top + bot) / 2,
+        };
       }
-      modeGuide.innerHTML = s.guide;
-      drawFrame();
-    }
 
-    function resizeCanvas() {
-      const rect = canvasWrap.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-      const rw = Math.max(320, Math.round(rect.width || 900));
-      const rh = Math.max(420, Math.round(rect.height || rw * (REF_H / REF_W)));
-      canvasW = rw;
-      canvasH = Math.min(500, Math.max(420, rh));
-      canvas.width = Math.round(canvasW * dpr);
-      canvas.height = Math.round(canvasH * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const L = getLayout(canvasW, canvasH);
-      buildImpurities(L);
-      if (carriers.length === 0) resetCarriers(L);
-    }
+      function majorType() { return state.mode === "npn" ? "electron" : "hole"; }
+      function minorType() { return state.mode === "npn" ? "hole" : "electron"; }
 
-    let loopRunning = false;
-
-    function loop(now) {
-      loopRunning = true;
-      try {
-        const dt = Math.min(0.05, (now - lastFrame) / 1000);
-        lastFrame = now;
-        animClock += dt;
-        const L = getLayout(canvasW, canvasH);
-        const vin = vinAt(animClock);
-        const iB = iBAt(vin);
-        const iC = iCAt(iB);
-        const vout = voutAt(iC);
-
-        updateCarriers(dt, L, iB, iC);
-        waveHistory.push({ vin, vout, t: animClock });
-        if (waveHistory.length > WAVE_LEN) waveHistory.shift();
-
-        recombFlashes.forEach((f) => { f.life -= dt * 3.5; });
-        recombFlashes = recombFlashes.filter((f) => f.life > 0);
-
-        drawFrame();
-      } catch (err) {
-        console.error("loop error:", err);
-        showBootError(err);
-        return;
+      function buildChip(w, h) {
+        const R = chipRegions(w, h);
+        chipState.impurities = [];
+        const rows = 6;
+        const dy = (R.bot - R.top - 30) / (rows - 1);
+        const kinds = state.mode === "npn" ? ["n", "p", "n"] : ["p", "n", "p"];
+        [[R.emL, R.emR], [R.baL, R.baR], [R.coL, R.coR]].forEach((rg, ri) => {
+          const cols = ri === 1 ? 3 : 8;
+          const dx = (rg[1] - rg[0] - 24) / Math.max(cols - 1, 1);
+          for (let c = 0; c < cols; c += 1) {
+            for (let r = 0; r < rows; r += 1) {
+              chipState.impurities.push({
+                x: rg[0] + 12 + c * dx + (Math.random() - 0.5) * 5,
+                y: R.top + 15 + r * dy + (Math.random() - 0.5) * 4,
+                kind: kinds[ri],
+              });
+            }
+          }
+        });
+        chipState.carriers = [];
+        for (let i = 0; i < 16; i += 1) chipState.carriers.push(newCarrier(R, "emitter"));
+        for (let i = 0; i < 6; i += 1) chipState.carriers.push(newCarrier(R, "collector"));
+        for (let i = 0; i < 10; i += 1) chipState.carriers.push(newMinority(R));
+        chipState.flashes = [];
       }
-      requestAnimationFrame(loop);
-    }
 
-    inputToggle.addEventListener("click", () => {
-      inputOn = !inputOn;
-      inputToggle.textContent = inputOn ? "入力 ON" : "入力 OFF";
-      inputToggle.classList.toggle("is-on", inputOn);
-      if (!inputOn) waveHistory = [];
-    });
-
-    document.querySelectorAll(".mode-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        clearScenarioHighlight();
-        setMode(btn.dataset.mode);
-      });
-    });
-    document.querySelectorAll(".preset-btn").forEach((btn) => {
-      btn.addEventListener("click", () => applyScenario(btn.dataset.scenario));
-    });
-    [vbeSlider, vccSlider, ainSlider, finSlider].forEach((sl) => {
-      sl.addEventListener("input", () => {
-        clearScenarioHighlight();
-        drawFrame();
-      });
-    });
-
-    function boot() {
-      if (!ctx) {
-        showBootError(new Error("Canvas 2D が利用できません"));
-        return;
+      function newCarrier(R, stage) {
+        const xs = stage === "emitter"
+          ? R.emL + 14 + Math.random() * (R.emR - R.emL - 28)
+          : R.coL + 10 + Math.random() * (R.coR - R.coL - 24);
+        return {
+          type: majorType(), stage,
+          x: xs,
+          y: R.top + 14 + Math.random() * (R.bot - R.top - 28),
+          vx: stage === "emitter" ? 60 + Math.random() * 50 : 120 + Math.random() * 70,
+          vy: (Math.random() - 0.5) * 40,
+          age: 0,
+        };
       }
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
-      resizeCanvas();
-      applyScenario("npn_amplify");
-      if (!loopRunning) requestAnimationFrame(loop);
-    }
 
-    try {
-      boot();
-    } catch (err) {
-      showBootError(err);
-    }
+      function newMinority(R) {
+        return {
+          type: minorType(), stage: "base",
+          x: R.baL + 4 + Math.random() * (R.baR - R.baL - 8),
+          y: R.midY + (Math.random() - 0.5) * (R.bot - R.top) * 0.6,
+          vx: (Math.random() - 0.5) * 26,
+          vy: (Math.random() - 0.5) * 26,
+          age: 0,
+        };
+      }
+
+      function updateChip(dt, w, h) {
+        const R = chipRegions(w, h);
+        const s = snapshot(state.t);
+        const on = s.iB > 0;
+        const drive = on ? 0.25 + 0.75 * Math.min(1, s.iC / Math.max(iCsat(), 1e-9)) : 0;
+        const major = majorType();
+        // 実際の通り抜け率は β/(β+1)（99 % 前後）。そのままだと再結合がほとんど見えないので、
+        // 「β が大きいほど通り抜けが増える」順序を保ったまま再結合を強調して描く。
+        const passFrac = 1 - Math.min(0.16, 8 / (state.beta + 1));
+
+        // 注入（端数を持ち越して、フレームレートによらず一定の割合で注入する）
+        chipState.acc = (chipState.acc || 0) + (on ? 6 + drive * 34 : 1.5) * dt;
+        while (chipState.acc >= 1) {
+          chipState.carriers.push(newCarrier(R, "emitter"));
+          chipState.acc -= 1;
+        }
+        // 少数キャリア（ベース内）を一定数保つ
+        let minors = chipState.carriers.filter((c) => c.type !== major).length;
+        while (minors < (on ? 10 : 6)) { chipState.carriers.push(newMinority(R)); minors += 1; }
+
+        const kill = new Set();
+        chipState.carriers.forEach((c, i) => {
+          c.age += dt;
+          c.vx += (Math.random() - 0.5) * 60 * Math.sqrt(dt);
+          c.vy += (Math.random() - 0.5) * 90 * Math.sqrt(dt);
+          if (c.type === major) {
+            if (c.stage === "emitter") {
+              c.vx += (on ? 260 : 40) * dt;
+              if (c.x > R.baL) {
+                c.stage = "base";
+                c.passes = Math.random() < passFrac;
+              }
+            } else if (c.stage === "base") {
+              c.vx += (on ? 200 : 30) * dt;
+              if (c.x > R.baR) {
+                if (c.passes) { c.stage = "collector"; c.vx = 150 + Math.random() * 80; }
+                else { c.x = R.baR - 2; c.vx = -Math.abs(c.vx) * 0.4; }
+              }
+              if (c.x < R.baL - 2) { c.x = R.baL - 2; c.vx = Math.abs(c.vx) * 0.4; }
+            } else {
+              c.vx += (on ? 180 : 30) * dt;
+              if (c.x > R.coR - 6) kill.add(i);
+            }
+          } else {
+            // 少数キャリアはベース層に閉じこめる
+            if (c.x < R.baL + 1) { c.x = R.baL + 1; c.vx = Math.abs(c.vx) * 0.5; }
+            if (c.x > R.baR - 1) { c.x = R.baR - 1; c.vx = -Math.abs(c.vx) * 0.5; }
+          }
+          c.vx *= 0.98;
+          c.vy *= 0.98;
+          c.x += c.vx * dt * 2.6;
+          c.y += c.vy * dt * 2.6;
+          if (c.y < R.top + 8) { c.y = R.top + 8; c.vy = Math.abs(c.vy) * 0.5; }
+          if (c.y > R.bot - 8) { c.y = R.bot - 8; c.vy = -Math.abs(c.vy) * 0.5; }
+          if (c.x < R.emL + 4) { c.x = R.emL + 4; c.vx = Math.abs(c.vx); }
+          if (c.age > 14) kill.add(i);
+        });
+
+        // 再結合（ベース内で多数キャリアと少数キャリアが出会う）
+        if (on) {
+          const inBase = [];
+          chipState.carriers.forEach((c, i) => {
+            if (kill.has(i)) return;
+            if (c.x >= R.baL - 2 && c.x <= R.baR + 2) inBase.push({ c, i });
+          });
+          inBase.forEach((a) => {
+            if (a.c.type !== major || kill.has(a.i)) return;
+            if (a.c.passes) return;
+            inBase.forEach((b) => {
+              if (kill.has(a.i) || kill.has(b.i)) return;
+              if (b.c.type === major) return;
+              if (Math.hypot(a.c.x - b.c.x, a.c.y - b.c.y) < 13) {
+                kill.add(a.i);
+                kill.add(b.i);
+                chipState.flashes.push({ x: (a.c.x + b.c.x) / 2, y: (a.c.y + b.c.y) / 2, life: 1 });
+              }
+            });
+          });
+        }
+
+        if (kill.size) chipState.carriers = chipState.carriers.filter((_, i) => !kill.has(i));
+        while (chipState.carriers.length > 170) chipState.carriers.shift();
+        chipState.flashes.forEach((f) => { f.life -= dt * 3; });
+        chipState.flashes = chipState.flashes.filter((f) => f.life > 0);
+      }
+
+      function drawChip() {
+        const sz = sizeCanvas(chipCanvas, pCtx);
+        if (!sz) return;
+        const { w, h } = sz;
+        if (chipState.built !== w + h * 7777 || chipState.carriers.length === 0) {
+          buildChip(w, h);
+          chipState.built = w + h * 7777;
+        }
+        pCtx.fillStyle = "#050810";
+        pCtx.fillRect(0, 0, w, h);
+
+        const R = chipRegions(w, h);
+        const npn = state.mode === "npn";
+        const s = snapshot(state.t);
+        const on = s.iB > 0;
+
+        const regs = npn
+          ? [{ l: R.emL, r: R.emR, c: "rgba(56,189,248,0.08)", t: "N エミッタ", u: "電子が多い（濃い）" },
+             { l: R.baL, r: R.baR, c: "rgba(248,113,113,0.11)", t: "P ベース", u: "とても薄い" },
+             { l: R.coL, r: R.coR, c: "rgba(56,189,248,0.08)", t: "N コレクタ", u: "電子を受けとる" }]
+          : [{ l: R.emL, r: R.emR, c: "rgba(248,113,113,0.11)", t: "P エミッタ", u: "正孔が多い（濃い）" },
+             { l: R.baL, r: R.baR, c: "rgba(56,189,248,0.08)", t: "N ベース", u: "とても薄い" },
+             { l: R.coL, r: R.coR, c: "rgba(248,113,113,0.11)", t: "P コレクタ", u: "正孔を受けとる" }];
+
+        regs.forEach((rg) => {
+          pCtx.fillStyle = rg.c;
+          pCtx.fillRect(rg.l, R.top, rg.r - rg.l, R.bot - R.top);
+          label(pCtx, (rg.l + rg.r) / 2, R.top - 26, rg.t, "#cbd5e1", "center", 12, 800);
+          label(pCtx, (rg.l + rg.r) / 2, R.top - 11, rg.u, "rgba(148,163,184,0.9)", "center", 9, 600);
+        });
+
+        // 空乏層
+        pCtx.fillStyle = "rgba(251,191,36,0.12)";
+        pCtx.fillRect(R.baL - 4, R.top, 8, R.bot - R.top);
+        pCtx.fillRect(R.baR - 5, R.top, 16, R.bot - R.top);
+        pCtx.strokeStyle = "rgba(251,191,36,0.5)";
+        pCtx.lineWidth = 1.2;
+        pCtx.setLineDash([4, 4]);
+        pCtx.strokeRect(R.baL - 4, R.top, 8, R.bot - R.top);
+        pCtx.strokeRect(R.baR - 5, R.top, 16, R.bot - R.top);
+        pCtx.setLineDash([]);
+
+        if (state.showImpurity) {
+          chipState.impurities.forEach((p) => {
+            pCtx.fillStyle = p.kind === "n" ? "rgba(74,222,128,0.5)" : "rgba(192,132,252,0.5)";
+            pCtx.beginPath();
+            pCtx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+            pCtx.fill();
+          });
+        }
+
+        pCtx.save();
+        pCtx.beginPath();
+        pCtx.rect(R.x0 - 2, R.top - 2, R.x1 - R.x0 + 4, R.bot - R.top + 4);
+        pCtx.clip();
+        chipState.carriers.forEach((c) => {
+          const col = c.type === "electron" ? "#38bdf8" : "#f87171";
+          const r = 4.2;
+          const g = pCtx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r + 3);
+          g.addColorStop(0, col);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          pCtx.fillStyle = g;
+          pCtx.beginPath();
+          pCtx.arc(c.x, c.y, r + 2.5, 0, Math.PI * 2);
+          pCtx.fill();
+          pCtx.fillStyle = col;
+          pCtx.beginPath();
+          pCtx.arc(c.x, c.y, r, 0, Math.PI * 2);
+          pCtx.fill();
+          if (c.type === "hole") {
+            pCtx.strokeStyle = "rgba(254,202,202,0.9)";
+            pCtx.lineWidth = 1.2;
+            pCtx.beginPath();
+            pCtx.arc(c.x, c.y, r + 2, 0, Math.PI * 2);
+            pCtx.stroke();
+          }
+        });
+        chipState.flashes.forEach((f) => {
+          const rr = 6 + (1 - f.life) * 15;
+          const g = pCtx.createRadialGradient(f.x, f.y, 0, f.x, f.y, rr);
+          g.addColorStop(0, "rgba(255,255,255," + (f.life * 0.95) + ")");
+          g.addColorStop(0.4, "rgba(250,204,21," + (f.life * 0.7) + ")");
+          g.addColorStop(1, "rgba(250,204,21,0)");
+          pCtx.fillStyle = g;
+          pCtx.beginPath();
+          pCtx.arc(f.x, f.y, rr, 0, Math.PI * 2);
+          pCtx.fill();
+        });
+        pCtx.restore();
+
+        pCtx.strokeStyle = "rgba(148,163,184,0.45)";
+        pCtx.lineWidth = 1.4;
+        pCtx.strokeRect(R.x0, R.top, R.x1 - R.x0, R.bot - R.top);
+
+        // 電流の対応（どの流れが i_E · i_B · i_C になるか）
+        const s2 = snapshot(state.t);
+        const midY = R.midY;
+        function harrow(x1, x2, y, color, text, align) {
+          pCtx.strokeStyle = color;
+          pCtx.lineWidth = 2.2;
+          pCtx.lineCap = "round";
+          pCtx.beginPath();
+          pCtx.moveTo(x1, y);
+          pCtx.lineTo(x2, y);
+          pCtx.stroke();
+          const d = Math.sign(x2 - x1);
+          pCtx.fillStyle = color;
+          pCtx.beginPath();
+          pCtx.moveTo(x2, y);
+          pCtx.lineTo(x2 - 9 * d, y - 5);
+          pCtx.lineTo(x2 - 9 * d, y + 5);
+          pCtx.closePath();
+          pCtx.fill();
+          label(pCtx, align === "right" ? x2 : x1, y - 13, text, color, align || "left", 10, 700);
+        }
+        const carrierName = npn ? "電子" : "正孔";
+        if (on) {
+          harrow(R.emL + 14, R.emL + 88, R.top + 46, "rgba(74,222,128,0.9)",
+            carrierName + "の注入 ｜ i E = " + fA(s2.iB + s2.iC), "left");
+          harrow(R.coR - 88, R.coR - 14, R.top + 46, "rgba(56,189,248,0.9)",
+            carrierName + "の通り抜け ｜ i C = " + fA(s2.iC), "right");
+          // ベース端子の電流：npn は流れこむ（上向き）、pnp は流れ出す（下向き）
+          const bx = (R.baL + R.baR) / 2;
+          const yA = R.bot + 30, yB2 = R.bot - 4;
+          const tipY = npn ? yB2 : yA;
+          const tailY = npn ? yA : yB2;
+          pCtx.strokeStyle = "rgba(251,191,36,0.9)";
+          pCtx.lineWidth = 2.2;
+          pCtx.beginPath();
+          pCtx.moveTo(bx, tailY);
+          pCtx.lineTo(bx, tipY + (npn ? 9 : -9));
+          pCtx.stroke();
+          pCtx.fillStyle = "rgba(251,191,36,0.9)";
+          pCtx.beginPath();
+          pCtx.moveTo(bx, tipY);
+          pCtx.lineTo(bx - 5, tipY + (npn ? 9 : -9));
+          pCtx.lineTo(bx + 5, tipY + (npn ? 9 : -9));
+          pCtx.closePath();
+          pCtx.fill();
+          chip(pCtx, bx, R.bot + 46, "i B（再結合したぶん）" + fA(s2.iB), "#fcd34d", "center", 10);
+        }
+
+        // 端子ラベル
+        label(pCtx, R.emL + 4, R.bot + 18, "エミッタ E", "#4ade80", "left", 11, 800);
+        label(pCtx, R.coR - 4, R.bot + 18, "コレクタ C", "#38bdf8", "right", 11, 800);
+        label(pCtx, R.baL - 10, R.bot + 18, "BE 間：順バイアス", "#86efac", "right", 10, 600);
+        label(pCtx, R.baR + 16, R.bot + 18, "BC 間：逆バイアス", "#fca5a5", "left", 10, 600);
+
+        chip(pCtx, w - 20, 24,
+          on ? "β = " + state.beta + " → 通り抜け " + ((state.beta / (state.beta + 1)) * 100).toFixed(1) + " %"
+            : "電流なし（カットオフ）",
+          on ? "#7dd3fc" : "#fca5a5", "right", 11);
+        label(pCtx, 20, 24, on ? "エミッタ → ベース → コレクタ" : "キャリアが動いていません",
+          "#bae6fd", "left", 12, 800);
+        label(pCtx, 20, h - 26,
+          "ベースで再結合（黄色い光）したぶんだけが i B。通り抜けたぶんが i C。"
+          + (npn ? "　※ 電子の流れと電流の向きは逆です。" : "　※ 正孔の流れ＝電流の向きです。"),
+          "#94a3b8", "left", 10, 600);
+        label(pCtx, 20, h - 11,
+          "※ 見やすくするため、ベースの厚さと再結合の回数は実際よりかなり大きく描いています。",
+          "#64748b", "left", 9, 600);
+      }
+
+      // ===== UI =====
+      function updateUI() {
+        const s = snapshot(state.t);
+        const sg = sgn();
+        document.getElementById("vbVal").textContent = (sg * state.vb).toFixed(2) + " V";
+        document.getElementById("ainVal").textContent = "±" + state.ain.toFixed(2) + " V";
+        document.getElementById("rbVal").textContent = fR(state.rb);
+        document.getElementById("rcVal").textContent = fR(state.rc);
+        document.getElementById("betaVal").textContent = state.beta.toFixed(0);
+        document.getElementById("vccVal").textContent = (sg * state.vcc).toFixed(0) + " V";
+        document.getElementById("finVal").textContent = state.fin.toFixed(1) + " Hz";
+
+        document.getElementById("lvIB").textContent = fA(s.iB);
+        document.getElementById("lvIC").textContent = fA(s.iC);
+        document.getElementById("lvVin").textContent = fSigV(s.vm);
+        document.getElementById("lvVout").textContent = fSigV(s.vo);
+
+        const av = gainIdeal();
+        document.getElementById("gainVal").textContent = av.toFixed(1) + " 倍";
+        document.getElementById("gainSub").textContent =
+          "= −" + state.beta + " × " + fR(state.rc) + " / " + fR(state.rb)
+          + "　マイナスは逆位相の意味";
+
+        document.getElementById("stepIB").textContent =
+          "= (" + fV(s.vm) + " − 0.60 V) / " + fR(state.rb) + " = " + fA(s.iB);
+        document.getElementById("stepIC").textContent =
+          "= " + state.beta + " × " + fA(s.iB) + " = " + fA(state.beta * s.iB)
+          + (s.region === "sat" ? " → 飽和で " + fA(s.iC) + " どまり" : "");
+        document.getElementById("noteIC").textContent =
+          "流せる上限は (V CC − 0.2 V)/R C = " + fA(iCsat()) + "。これを超えると飽和します。";
+        document.getElementById("stepVout").textContent =
+          "= " + fV(state.vcc) + " − " + fR(state.rc) + " × " + fA(s.iC) + " = " + fV(s.vo);
+        document.getElementById("stepIE").textContent =
+          "= " + fA(s.iB) + " + " + fA(s.iC) + " = " + fA(s.iB + s.iC);
+
+        const regionName = s.region === "cutoff" ? "カットオフ" : s.region === "sat" ? "飽和" : "活性（増幅）";
+        document.getElementById("lvRegion").textContent = regionName;
+
+        const swing = measuredSwing();
+        document.getElementById("lvSwingIn").textContent = swing.din.toFixed(3) + " V";
+        document.getElementById("lvSwingOut").textContent = swing.dout.toFixed(2) + " V";
+        document.getElementById("lvGainMeas").textContent =
+          swing.din > 1e-6 ? (swing.dout / swing.din).toFixed(1) + " 倍" : "—";
+        document.getElementById("scaleNote").textContent =
+          "入力 " + swing.din.toFixed(3) + " V の振れが、出力 " + swing.dout.toFixed(2) + " V の振れに。";
+
+        const noteEl = document.getElementById("statusCircuit");
+        noteEl.classList.toggle("warn", s.region !== "active");
+        noteEl.innerHTML = state.note ? state.note
+          : "i<sub>B</sub> = <strong>" + fA(s.iB) + "</strong> が i<sub>C</sub> = <strong>" + fA(s.iC)
+          + "</strong> を生み、R<sub>C</sub> での電圧降下 " + fV(state.rc * s.iC)
+          + " のぶんだけ出力が下がって <strong>" + fV(s.vo) + "</strong> になっています。";
+
+        const wEl = document.getElementById("statusWave");
+        wEl.classList.toggle("warn", s.region !== "active");
+        wEl.innerHTML =
+          s.region === "cutoff"
+            ? "<strong>カットオフ</strong>：v<sub>in</sub> が 0.6 V を下回っている間はベース電流が流れず、出力は V<sub>CC</sub> に張りついたままです。波の下半分が切り落とされます。"
+            : s.region === "sat"
+              ? "<strong>飽和</strong>：i<sub>C</sub> が上限 " + fA(iCsat()) + " に達して頭打ち。出力の下側が 0.2 V で平らにつぶれます（ひずみ）。"
+              : "<strong>活性領域</strong>：入力 " + swing.din.toFixed(3) + " V の振れが出力 "
+                + swing.dout.toFixed(2) + " V の振れになっています（約 "
+                + (swing.din > 1e-6 ? (swing.dout / swing.din).toFixed(0) : "—") + " 倍）。山と谷が上下逆になっていることを確かめてください。";
+
+        document.getElementById("statusChip").innerHTML =
+          state.mode === "npn"
+            ? "N エミッタから<strong>電子</strong>が P ベースへ注入されます。ベースが薄いので大半はそのまま N コレクタへ抜け、ごく一部だけが正孔と<strong>再結合</strong>（黄色い光）してベース電流になります。"
+            : "P エミッタから<strong>正孔</strong>が N ベースへ注入されます。ベースが薄いので大半はそのまま P コレクタへ抜け、ごく一部だけが電子と<strong>再結合</strong>（黄色い光）してベース電流になります。";
+        document.getElementById("chipStep1").textContent =
+          state.mode === "npn"
+            ? "N 型のエミッタは電子が非常に多くドープされています。BE 間が順バイアスになると、この電子が一気にベースへ流れこみます。"
+            : "P 型のエミッタは正孔が非常に多くドープされています。EB 間が順バイアスになると、この正孔が一気にベースへ流れこみます。";
+        document.getElementById("chipBeta").textContent =
+          "β = " + state.beta + " → 通り抜け " + ((state.beta / (state.beta + 1)) * 100).toFixed(1)
+          + " % ／ 再結合 " + (100 / (state.beta + 1)).toFixed(1) + " %";
+
+        document.getElementById("btnNpn").classList.toggle("is-active", state.mode === "npn");
+        document.getElementById("btnNpn2").classList.toggle("is-active", state.mode === "npn");
+        document.getElementById("btnPnp").classList.toggle("is-active", state.mode === "pnp");
+        document.getElementById("btnPnp2").classList.toggle("is-active", state.mode === "pnp");
+        document.getElementById("btnSignal").classList.toggle("is-active", state.signalOn);
+        document.getElementById("btnSignal2").classList.toggle("is-active", state.signalOn);
+        document.getElementById("btnSignal").textContent = state.signalOn ? "信号 ON" : "信号 OFF";
+        document.getElementById("btnSignal2").textContent = state.signalOn ? "信号 ON" : "信号 OFF";
+        document.getElementById("btnFreeze").classList.toggle("is-active", state.frozen);
+        document.getElementById("btnFreeze2").classList.toggle("is-active", state.frozen);
+        document.getElementById("btnImpurity").classList.toggle("is-active", state.showImpurity);
+      }
+
+      function draw(dt) {
+        if (state.tab === "circuit") drawCircuit();
+        else if (state.tab === "wave") drawWaves();
+        else if (state.tab === "chip") {
+          const rect = chipCanvas.getBoundingClientRect();
+          if (rect.width > 10) updateChip(dt, Math.round(rect.width), Math.round(rect.height));
+          drawChip();
+        }
+      }
+
+      function loop() {
+        const now = performance.now();
+        const dt = (now - state.last) / 1000;
+        state.last = now;
+        step(dt);
+        draw(Math.min(dt, 0.05));
+        updateUI();
+        requestAnimationFrame(loop);
+      }
+
+      function setTab(name) {
+        state.tab = name;
+        document.querySelectorAll(".view-tab").forEach((b) => {
+          const on = b.dataset.tab === name;
+          b.classList.toggle("is-active", on);
+          b.setAttribute("aria-selected", String(on));
+        });
+        ["circuit", "wave", "chip", "guide"].forEach((n) => {
+          document.getElementById("view-" + n).classList.toggle("is-hidden", n !== name);
+        });
+      }
+
+      function markPreset(id) {
+        document.querySelectorAll(".preset-btn").forEach((b) => {
+          b.classList.toggle("is-active", b.dataset.id === id);
+        });
+      }
+
+      function syncSliders() {
+        document.getElementById("vbSlider").value = String(Math.round(state.vb * 100));
+        document.getElementById("ainSlider").value = String(Math.round(state.ain * 100));
+        document.getElementById("rbSlider").value = String(Math.round(state.rb / 100));
+        document.getElementById("rcSlider").value = String(Math.round(state.rc / 100));
+        document.getElementById("betaSlider").value = String(state.beta);
+        document.getElementById("vccSlider").value = String(Math.round(state.vcc * 10));
+        document.getElementById("finSlider").value = String(Math.round(state.fin * 10));
+      }
+
+      function applyPreset(p) {
+        const modeChanged = state.mode !== p.mode;
+        state.mode = p.mode;
+        state.vb = p.vb; state.ain = p.ain; state.rb = p.rb;
+        state.rc = p.rc; state.beta = p.beta; state.vcc = p.vcc; state.fin = p.fin;
+        state.signalOn = true;
+        state.frozen = false;
+        state.note = p.note;
+        syncSliders();
+        markPreset(p.id);
+        history.length = 0;
+        if (modeChanged) chipState.carriers = [];
+      }
+
+      const presetRow = document.getElementById("presetRow");
+      PRESETS.forEach((p) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "preset-btn";
+        b.dataset.id = p.id;
+        b.textContent = p.name;
+        b.addEventListener("click", () => applyPreset(p));
+        presetRow.appendChild(b);
+      });
+
+      document.querySelectorAll(".view-tab").forEach((b) => {
+        b.addEventListener("click", () => setTab(b.dataset.tab));
+      });
+
+      function bindSlider(id, apply) {
+        document.getElementById(id).addEventListener("input", (e) => {
+          apply(+e.target.value);
+          markPreset(null);
+          state.note = null;
+        });
+      }
+      bindSlider("vbSlider", (v) => { state.vb = v / 100; });
+      bindSlider("ainSlider", (v) => { state.ain = v / 100; });
+      bindSlider("rbSlider", (v) => { state.rb = v * 100; });
+      bindSlider("rcSlider", (v) => { state.rc = v * 100; });
+      bindSlider("betaSlider", (v) => { state.beta = v; });
+      bindSlider("vccSlider", (v) => { state.vcc = v / 10; });
+      bindSlider("finSlider", (v) => { state.fin = v / 10; });
+
+      function setMode(m) {
+        if (state.mode === m) return;
+        state.mode = m;
+        state.note = null;
+        markPreset(null);
+        chipState.carriers = [];
+        history.length = 0;
+      }
+      ["btnNpn", "btnNpn2"].forEach((id) => {
+        document.getElementById(id).addEventListener("click", () => setMode("npn"));
+      });
+      ["btnPnp", "btnPnp2"].forEach((id) => {
+        document.getElementById(id).addEventListener("click", () => setMode("pnp"));
+      });
+      ["btnSignal", "btnSignal2"].forEach((id) => {
+        document.getElementById(id).addEventListener("click", () => { state.signalOn = !state.signalOn; });
+      });
+      ["btnFreeze", "btnFreeze2"].forEach((id) => {
+        document.getElementById(id).addEventListener("click", () => { state.frozen = !state.frozen; });
+      });
+      document.getElementById("btnClear").addEventListener("click", () => {
+        history.length = 0;
+        state.t = 0;
+      });
+      document.getElementById("btnImpurity").addEventListener("click", () => {
+        state.showImpurity = !state.showImpurity;
+      });
+
+      window.addEventListener("resize", () => {
+        chipState.carriers = [];
+        draw(0);
+      });
+
+      function boot() {
+        applyPreset(PRESETS[0]);
+        setTab("circuit");
+        state.last = performance.now();
+        requestAnimationFrame(loop);
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+      else boot();
+    })();
   </script>
 </body>
 </html>

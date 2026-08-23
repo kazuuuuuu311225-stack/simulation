@@ -3,98 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="../assets/js/physlabo-viewport-inline.js?v=20260810"></script>
   <title>24章 電流と磁場 — 電流が作る磁場ラボ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/physlabo-mobile.css?v=20260821">
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --accent: #38bdf8; --accent-light: #c7d2fe;
+      --panel: rgba(8, 12, 28, 0.92); --border: rgba(129, 140, 248, 0.28);
+      --text: #e2e8f0; --muted: #94a3b8;
+    }
     body {
       margin: 0; font-family: "Inter", "Noto Sans JP", sans-serif;
       background: linear-gradient(165deg, #030712 0%, #0f172a 45%, #1e1b4b 100%);
-      color: #e2e8f0; min-height: 100dvh;
+      color: var(--text); min-height: 100dvh;
       padding: max(10px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
     }
-    .page-shell { width: min(1100px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .page-shell { width: min(1200px, 98vw); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
     .page-header { text-align: center; }
     .hero-icon {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 56px; height: 56px; border-radius: 18px;
+      width: 52px; height: 52px; border-radius: 16px; font-size: 1.5rem;
       background: linear-gradient(135deg, rgba(0,255,255,0.35), rgba(255,136,0,0.35));
-      border: 1px solid rgba(129,140,248,0.4); font-size: 1.6rem;
-      box-shadow: 0 0 28px rgba(0,255,255,0.25);
+      border: 1px solid rgba(129,140,248,0.4); box-shadow: 0 0 28px rgba(0,255,255,0.22);
     }
-    h2 { margin: 6px 0 4px; font-weight: 800; color: #c7d2fe; font-size: 1.35rem; }
-    .tagline { margin: 0; font-size: 0.88rem; color: #a5b4fc; }
-    .chapter-label { margin: 0; font-size: 0.82rem; color: #94a3b8; }
+    h2 { margin: 6px 0 4px; font-weight: 800; color: var(--accent-light); font-size: 1.3rem; }
+    .chapter-label { margin: 0; font-size: 0.82rem; color: var(--muted); }
+    .tagline { margin: 0; font-size: 0.86rem; color: #fde68a; }
     #back {
       display: inline-block; margin-top: 8px; padding: 9px 16px;
       color: #e0e7ff; background: rgba(129,140,248,0.14);
       border: 1px solid rgba(129,140,248,0.38); border-radius: 10px;
       text-decoration: none; font-weight: 600; font-size: 0.88rem;
     }
-    section.panel {
-      border-radius: 16px; padding: 16px 18px;
-      background: rgba(8, 12, 28, 0.92); border: 1px solid rgba(129, 140, 248, 0.28);
+    section.panel { border-radius: 16px; padding: 16px 18px; background: var(--panel); border: 1px solid var(--border); }
+    section.panel h3 { margin: 0 0 8px; font-size: 1.02rem; color: var(--accent-light); }
+    .formula-top {
+      text-align: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(250,204,21,0.08));
+      border: 1px solid rgba(56,189,248,0.32);
     }
-    section.panel h3 { margin: 0 0 8px; font-size: 1.05rem; color: #a5b4fc; }
-    section.panel p { font-size: 0.88rem; line-height: 1.75; color: #cbd5e1; margin: 0; }
-    .sim-grid {
-      display: grid; gap: 12px; grid-template-columns: 1fr;
-      grid-template-areas: "viz" "hud" "ctrl";
+    .formula-main { font-size: 1.02rem; font-weight: 800; color: #7dd3fc; line-height: 1.85; }
+    .formula-main .hl { color: #fde68a; }
+    .formula-sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; line-height: 1.65; }
+    .view-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .view-tab {
+      flex: 1; min-width: 120px; max-width: 280px; padding: 10px 12px; border-radius: 12px 12px 0 0;
+      border: 1px solid rgba(148,163,184,0.18); border-bottom: none;
+      background: rgba(15,22,40,0.5); color: var(--muted);
+      font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
     }
-    @media (min-width: 900px) {
-      .sim-grid { grid-template-columns: 1.15fr 0.85fr; grid-template-areas: "viz hud" "ctrl ctrl"; }
+    .view-tab.is-active {
+      color: #e0e7ff; background: rgba(20,24,58,0.92);
+      border-color: rgba(56,189,248,0.45); box-shadow: inset 0 2px 0 var(--accent);
     }
-    .area-viz { grid-area: viz; }
-    .area-hud { grid-area: hud; }
-    .area-ctrl { grid-area: ctrl; }
-    .viz-block {
-      border-radius: 14px; overflow: hidden;
-      background: linear-gradient(180deg, rgba(8,14,24,0.98), rgba(4,8,16,0.99));
-      border: 1px solid rgba(6,182,212,0.35);
-      box-shadow: inset 0 0 40px rgba(6,182,212,0.06);
+    .tab-view.is-hidden { display: none; }
+    .sim-grid { display: grid; gap: 14px; grid-template-columns: 1fr; grid-template-areas: "viz" "hud"; }
+    @media (min-width: 980px) {
+      .sim-grid { grid-template-columns: 1.35fr 0.65fr; grid-template-areas: "viz hud"; align-items: start; }
     }
-    .viz-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 14px 0; }
-    .viz-label { margin: 0; font-size: 0.82rem; font-weight: 700; color: #e0f2fe; }
-    .viz-legend { margin: 0; padding: 4px 14px 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.45; }
-    #field3dWrap {
-      width: 100%; height: min(480px, 52dvh); min-height: 320px;
-      cursor: grab; touch-action: none;
-    }
+    .area-viz { grid-area: viz; min-width: 0; }
+    .area-hud { grid-area: hud; min-width: 0; }
+    .viz-block { border-radius: 14px; overflow: hidden; background: #060a12; border: 1px solid rgba(56,189,248,0.28); }
+    #field3dWrap { width: 100%; height: min(480px, 54dvh); min-height: 340px; cursor: grab; touch-action: none; }
     #field3dWrap:active { cursor: grabbing; }
-    .viz-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid rgba(148,163,184,0.12); }
-    .viz-foot button, .mode-btn, .dir-btn {
-      flex: 1; min-width: 88px; min-height: 36px; padding: 6px 8px;
-      font-family: inherit; font-size: 0.72rem; font-weight: 600; border-radius: 9px; cursor: pointer;
-      border: 1px solid rgba(56,189,248,0.35); background: rgba(255,255,255,0.06); color: #cbd5e1;
+    .live-strip {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      padding: 12px 14px; border-top: 1px solid rgba(129,140,248,0.14);
+      background: linear-gradient(180deg, rgba(20,24,58,0.95), rgba(8,12,24,0.98));
     }
-    .viz-foot button.active, .mode-btn.active, .dir-btn.is-active {
-      background: rgba(6,182,212,0.22); color: #e0f2fe; border-color: rgba(6,182,212,0.6);
+    @media (max-width: 640px) { .live-strip { grid-template-columns: repeat(2, 1fr); } }
+    .live-cell {
+      padding: 9px 6px; border-radius: 10px; text-align: center;
+      background: rgba(0,0,0,0.35); border: 1px solid rgba(148,163,184,0.16);
     }
-    .mode-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-    .hud-card {
-      padding: 12px; border-radius: 12px; margin-bottom: 8px;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.15);
+    .live-cell .k { display: block; font-size: 0.58rem; color: #64748b; font-weight: 700; margin-bottom: 4px; }
+    .live-cell .v { display: block; font-size: 0.86rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #7dd3fc; }
+    .ctrl-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-top: 1px solid rgba(148,163,184,0.1); }
+    .ctrl-btn {
+      flex: 1; min-width: 88px; min-height: 36px; padding: 8px 10px; border-radius: 10px;
+      border: 1px solid rgba(56,189,248,0.3); background: rgba(255,255,255,0.05);
+      color: #cbd5e1; font: inherit; font-size: 0.74rem; font-weight: 600; cursor: pointer;
     }
-    .hud-card .lbl { font-size: 0.65rem; color: #94a3b8; }
-    .hud-card .num { font-size: 1rem; font-weight: 700; color: #fde68a; margin-top: 2px; }
-    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .formula-box {
-      padding: 10px; border-radius: 10px; text-align: center; margin: 8px 0;
-      background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
-      font-size: 0.82rem; font-weight: 700; color: #7dd3fc;
+    .ctrl-btn.is-active { background: rgba(6,182,212,0.24); border-color: rgba(6,182,212,0.65); color: #e0f2fe; }
+    .explain-panel { padding: 10px 14px 12px; background: rgba(8,12,24,0.98); }
+    .status-note {
+      font-size: 0.78rem; line-height: 1.6; color: #cbd5e1; padding: 9px 11px; border-radius: 8px;
+      background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.26);
     }
-    .ctrl-row { margin-bottom: 10px; }
-    .ctrl-row label { display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
-    .slider-val { color: #7dd3fc; font-weight: 700; }
-    input[type="range"] { width: 100%; accent-color: #38bdf8; }
-    .hint-box {
-      padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; color: #ede9fe;
-      background: linear-gradient(135deg, rgba(49,46,129,0.45), rgba(30,27,75,0.35));
-      border: 1px solid rgba(167,139,250,0.35);
+    .hud-panel {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(129,140,248,0.2);
+      display: flex; flex-direction: column; gap: 8px; max-height: min(1000px, 92dvh); overflow-y: auto;
     }
+    .hud-title { margin: 0; font-size: 0.9rem; font-weight: 800; color: var(--accent-light); }
+    .hint { margin: 0 0 4px; font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
+    .preset-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .preset-btn {
+      padding: 6px 10px; min-height: 32px; font-family: inherit; font-size: 0.7rem; font-weight: 600;
+      border-radius: 999px; cursor: pointer; color: #cbd5e1;
+      border: 1px solid rgba(148,163,184,0.26); background: rgba(255,255,255,0.05);
+    }
+    .preset-btn.is-active { color: #fff; background: rgba(56,189,248,0.28); border-color: rgba(56,189,248,0.65); }
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label {
+      font-size: 0.74rem; color: #cbd5e1; font-weight: 600;
+      display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    }
+    .slider-row label .val { color: #7dd3fc; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .slider-row input[type=range] { width: 100%; height: 8px; accent-color: var(--accent); }
+    .calc-block { padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.12); }
+    .calc-block.key { border-color: rgba(250,204,21,0.4); background: rgba(250,204,21,0.06); }
+    .calc-label { margin: 0 0 4px; font-size: 0.7rem; font-weight: 700; color: #7dd3fc; }
+    .calc-label.key { color: #fde68a; }
+    .calc-line { margin: 3px 0; font-size: 0.76rem; color: var(--text); line-height: 1.55; }
+    .calc-line.sub { font-size: 0.7rem; color: var(--muted); }
+    .calc-line.highlight { color: #fde68a; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .big-force {
+      text-align: center; padding: 10px; border-radius: 10px;
+      background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.4);
+    }
+    .big-force .k { font-size: 0.68rem; color: #7dd3fc; font-weight: 700; }
+    .big-force .v { font-size: 1.35rem; font-weight: 800; color: #fde68a; font-variant-numeric: tabular-nums; }
+    .big-force .s { font-size: 0.68rem; color: var(--muted); }
+    #diagCanvas { display: block; width: 100%; height: 168px; background: #060a12; border-radius: 10px; border: 1px solid rgba(148,163,184,0.16); }
+    .guide-view { padding: 16px 18px; border-radius: 0 0 14px 14px; background: rgba(20,24,58,0.55); border: 1px solid rgba(129,140,248,0.22); border-top: none; }
+    .guide-grid { display: grid; gap: 12px; }
+    @media (min-width: 720px) { .guide-grid { grid-template-columns: 1fr 1fr; } }
+    .guide-card { padding: 14px; border-radius: 12px; background: rgba(2,8,20,0.7); border: 1px solid rgba(148,163,184,0.18); }
+    .guide-card h4 { margin: 0 0 8px; font-size: 0.9rem; color: var(--accent-light); }
+    .guide-card p, .guide-card li { margin: 0 0 6px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.65; }
+    .guide-card ul { margin: 0; padding-left: 1.15rem; }
+    .guide-card .eq {
+      margin: 8px 0; padding: 8px 10px; border-radius: 8px; text-align: center;
+      font-weight: 700; font-size: 0.86rem;
+      background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.32); color: #7dd3fc;
+    }
+    .edu-list { font-size: 0.8rem; line-height: 1.7; color: #cbd5e1; margin: 0; padding-left: 1.2rem; }
+    .edu-list li { margin-bottom: 6px; }
+    .warn { color: #fca5a5; }
   </style>
 </head>
 <body>
@@ -103,59 +154,138 @@
       <div class="hero-icon" aria-hidden="true">⚡</div>
       <p class="chapter-label">第24章 — 電流と磁場</p>
       <h2>電流が作る磁場ラボ</h2>
-      <p class="tagline">3D空間で磁場を見える！ ドラッグで回転 · 光が磁力線を流れる</p>
-      <a id="back" href="../00_folder_electromagnetism.html#chapter-24">← 電磁気フォルダへ戻る</a>
+      <p class="tagline">右ねじの法則で向きを決め、B = μ₀I / （距離の式）で大きさを求める。</p>
+      <a id="back" href="../00_folder_electromagnetism.html#chapter-24">← 電磁気 · 第24章</a>
     </header>
 
     <section class="panel">
-      <h3>やってみよう</h3>
-      <p>気体分子運動論と同じ<strong>3D空間</strong>で、電流と磁場を観察します。
-        立方体内の<strong>淡い光の粒</strong>＝磁場の強い場所、水色の矢印＝磁場ベクトル、黄色い光＝磁力線上を流れる粒子。立方体を<strong>ドラッグで回転</strong>させて奥行きを確認しましょう。</p>
-    </section>
-
-    <section class="panel">
-      <h3>シミュレーション</h3>
-      <div class="sim-grid">
-        <div class="area-viz">
-          <div class="viz-block">
-            <div class="viz-head">
-              <p class="viz-label" id="vizTitle">直線電流の磁場（3D）</p>
-            </div>
-            <p class="viz-legend">立方体ワイヤー枠 · ドラッグで回転 · スクロールでズーム · 淡い光＝磁場の強さ · 水色矢印＝B · 黄色光＝磁力線の流れ</p>
-            <div id="field3dWrap"></div>
-            <div class="viz-foot">
-              <button type="button" id="btnCloud" class="active">磁場の強さ ON</button>
-              <button type="button" id="btnLines" class="active">磁力線 ON</button>
-              <button type="button" id="btnVectors" class="active">磁場矢印 ON</button>
-              <button type="button" id="btnSpin" class="active">自動回転</button>
-            </div>
-          </div>
+      <div class="formula-top">
+        <div class="formula-main" id="formulaBanner">
+          直線：B = <span class="hl">μ₀ I / 2πr</span>
+          　　円形（中心）：B = <span class="hl">μ₀ I / 2R</span>
+          　　ソレノイド：B = <span class="hl">μ₀ n I</span>
         </div>
-
-        <div class="area-hud">
-          <div class="mode-row">
-            <button type="button" class="mode-btn active" data-mode="straight">直線電流</button>
-            <button type="button" class="mode-btn" data-mode="loop">円形電流</button>
-            <button type="button" class="mode-btn" data-mode="solenoid">ソレノイド</button>
-          </div>
-          <div class="formula-box" id="formulaBox">H ∝ I/r　|　B = μ₀I / 2πr</div>
-          <div class="hud-grid">
-            <div class="hud-card"><div class="lbl">電流 I</div><div class="num" id="hudI">10.0 A</div></div>
-            <div class="hud-card"><div class="lbl">磁場 B（代表）</div><div class="num" id="hudB">—</div></div>
-            <div class="hud-card"><div class="lbl">モード</div><div class="num" id="hudMode" style="font-size:0.85rem;color:#a5b4fc">直線電流</div></div>
-            <div class="hud-card"><div class="lbl">電流方向</div><div class="num" id="hudDir" style="font-size:0.85rem;color:#67e8f9">↑ 上向き</div></div>
-          </div>
-          <div class="hint-box" id="hintText">右ねじの法則：親指＝電流、曲がった指＝磁場の向き</div>
+        <div class="formula-sub">
+          μ₀ = 4π × 10⁻⁷ T·m/A。向きは<strong>右ねじの法則</strong>（親指＝電流、曲がった指＝磁場）。
+          3Dの黄色い粒は<strong>磁力線に沿った B の向き</strong>に流れます。地磁気はおよそ 30〜50 μT です。
         </div>
+      </div>
 
-        <div class="area-ctrl">
-          <div class="ctrl-row" id="sliderRow"></div>
-          <div class="mode-row">
-            <button type="button" class="dir-btn is-active" id="btnDirA">電流方向 A</button>
-            <button type="button" class="dir-btn" id="btnDirB">電流方向 B</button>
+      <div class="view-tabs" role="tablist">
+        <button type="button" class="view-tab is-active" data-tab="straight" role="tab" aria-selected="true">① 直線電流</button>
+        <button type="button" class="view-tab" data-tab="loop" role="tab" aria-selected="false">② 円形電流</button>
+        <button type="button" class="view-tab" data-tab="solenoid" role="tab" aria-selected="false">③ ソレノイド</button>
+        <button type="button" class="view-tab" data-tab="guide" role="tab" aria-selected="false">④ ポイント</button>
+      </div>
+
+      <div id="view-lab" class="tab-view">
+        <div class="sim-grid">
+          <div class="area-viz">
+            <div class="viz-block">
+              <div id="field3dWrap" aria-label="電流が作る磁場の3D表示"></div>
+              <div class="ctrl-row">
+                <button type="button" class="ctrl-btn is-active" id="btnDirA">電流＋</button>
+                <button type="button" class="ctrl-btn" id="btnDirB">電流−</button>
+                <button type="button" class="ctrl-btn is-active" id="btnLines">磁力線</button>
+                <button type="button" class="ctrl-btn is-active" id="btnVectors">B 矢印</button>
+                <button type="button" class="ctrl-btn" id="btnCloud">強さの粒</button>
+                <button type="button" class="ctrl-btn is-active" id="btnSpin">自動回転</button>
+              </div>
+              <div class="live-strip">
+                <div class="live-cell"><span class="k">電流 I</span><span class="v" id="lvI">—</span></div>
+                <div class="live-cell"><span class="k" id="lvProbeK">距離</span><span class="v" id="lvProbe">—</span></div>
+                <div class="live-cell"><span class="k" id="lvBK">磁場 B</span><span class="v" id="lvB">—</span></div>
+                <div class="live-cell"><span class="k">向き</span><span class="v" id="lvDir">—</span></div>
+              </div>
+              <div class="explain-panel"><div class="status-note" id="statusNote">—</div></div>
+            </div>
+          </div>
+          <div class="area-hud">
+            <div class="hud-panel">
+              <p class="hud-title" id="hudTitle">直線電流</p>
+              <p class="hint">ドラッグで回転 · スクロールでズーム。水色の矢印は本当の B の向きです。</p>
+              <div class="preset-row" id="presetRow"></div>
+              <div id="sliderBox"></div>
+              <div class="big-force">
+                <div class="k" id="bigK">代表点の磁束密度</div>
+                <div class="v" id="bigB">—</div>
+                <div class="s" id="bigSub">—</div>
+              </div>
+              <canvas id="diagCanvas" width="520" height="168" aria-label="右ねじの法則の見取り図"></canvas>
+              <p class="hud-title">いまの計算</p>
+              <div class="calc-block">
+                <p class="calc-label">① 教科書の式</p>
+                <p class="calc-line highlight" id="stepEq">—</p>
+                <p class="calc-line sub" id="stepSub">—</p>
+              </div>
+              <div class="calc-block key">
+                <p class="calc-label key">② 代入</p>
+                <p class="calc-line highlight" id="stepAns">—</p>
+                <p class="calc-line sub" id="stepEarth">—</p>
+              </div>
+              <div class="calc-block">
+                <p class="calc-label">③ 向き（右ねじ）</p>
+                <p class="calc-line sub" id="stepRH">—</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <div id="view-guide" class="tab-view guide-view is-hidden">
+        <div class="guide-grid">
+          <div class="guide-card">
+            <h4>① 右ねじの法則</h4>
+            <p>電流が磁場を作るとき、向きは次のルールで決まります。</p>
+            <div class="eq">親指＝電流　曲がった4本の指＝B</div>
+            <ul>
+              <li>直線：導線の周りに<strong>同心円</strong></li>
+              <li>円形：ループを貫く<strong>中心軸</strong></li>
+              <li>ソレノイド：コイルの<strong>内部を軸方向</strong>に</li>
+            </ul>
+            <p>電流を逆向きにすると、磁場もすべて逆向きになります。</p>
+          </div>
+          <div class="guide-card">
+            <h4>② 直線電流</h4>
+            <div class="eq">B = μ₀ I / 2πr</div>
+            <ul>
+              <li>距離 r に<strong>反比例</strong>（2 倍で 1/2）</li>
+              <li>I に比例</li>
+              <li>磁力線は閉じた円。N 極も S 極もない</li>
+            </ul>
+            <p>r = 5 cm、I = 10 A なら B ≈ 40 μT。地磁気と同じくらいです。</p>
+          </div>
+          <div class="guide-card">
+            <h4>③ 円形電流</h4>
+            <div class="eq">中心：B = μ₀ I / 2R</div>
+            <ul>
+              <li>半径 R が小さいほど中心の B は強い</li>
+              <li>磁力線はループを貫いて外側で折り返す（棒磁石に似る）</li>
+              <li>中心以外は Biot–Savart の法則で積分して求める</li>
+            </ul>
+          </div>
+          <div class="guide-card">
+            <h4>④ ソレノイド</h4>
+            <div class="eq">長いとき内部：B = μ₀ n I　　n = N / L</div>
+            <ul>
+              <li>内部はほぼ<strong>一様</strong>で軸に平行</li>
+              <li>外部は弱く、端で磁力線が折り返す</li>
+              <li>有限の長さでは B は μ₀nI より少し小さい</li>
+            </ul>
+            <p class="warn">※ 旧版は外部の磁場が「湧き出し」のように見えていました。本当は磁力線は必ず閉じます。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>ここがポイント</h3>
+      <ul class="edu-list">
+        <li>電流が作る磁場の<strong>向きは右ねじ</strong>、<strong>大きさは μ₀ を含む式</strong>で決まる。</li>
+        <li>直線は <strong>B ∝ 1/r</strong> の同心円。円形は中心軸。ソレノイド内部はほぼ一様。</li>
+        <li>磁力線に始点・終点はない。ソレノイドの外では内部と逆向きに戻る。</li>
+        <li>地磁気は 30〜50 μT。10 A・5 cm の直線電流が作る磁場も同じ桁。</li>
+      </ul>
     </section>
   </div>
 
@@ -163,118 +293,70 @@
     (function () {
       "use strict";
 
-      const K = 0.55;
-      const MODES = {
-        straight: {
-          name: "直線電流の磁場", formula: "H ∝ I / r", formulaB: "B = μ₀I / 2πr",
-          hint: "直線電流の周りに同心円状の磁場（y軸方向の導線）",
-          dirA: "↑ +y 向き", dirB: "↓ −y 向き",
-          sliders: [
-            { id: "I", label: "電流 I", min: 0, max: 200, val: 100, scale: 0.1 },
-            { id: "rView", label: "磁力線の範囲", min: 4, max: 10, val: 7, scale: 1 },
-          ],
-        },
-        loop: {
-          name: "円形電流の磁場", formula: "B_center ∝ I / R", formulaB: "B = μ₀I / 2R",
-          hint: "ループの中心軸（y）方向に強い磁場。磁力線はドーナツ状",
-          dirA: "↻ 反時計（+yから見て）", dirB: "↺ 時計回り",
-          sliders: [
-            { id: "I", label: "電流 I", min: 0, max: 200, val: 100, scale: 0.1 },
-            { id: "R", label: "ループ半径 R", min: 30, max: 90, val: 55, scale: 0.01 },
-          ],
-        },
-        solenoid: {
-          name: "ソレノイドの磁場", formula: "B_inside ∝ n·I", formulaB: "B = μ₀nI",
-          hint: "内部はx方向に強い平行磁場、外部は弱い返り磁場",
-          dirA: "→ +x 向き", dirB: "← −x 向き",
-          sliders: [
-            { id: "I", label: "電流 I", min: 0, max: 200, val: 100, scale: 0.1 },
-            { id: "n", label: "巻き数密度 n", min: 2, max: 20, val: 10, scale: 1 },
-            { id: "len", label: "コイル長さ", min: 80, max: 200, val: 140, scale: 0.01 },
-          ],
-        },
+      const MU0 = 4 * Math.PI * 1e-7;
+      const W2M = 0.10;
+      const WIRE_R = 0.035;
+      const SOL_R = 0.35;
+
+      const state = {
+        tab: "straight",
+        I: 10,
+        r: 0.05,
+        R: 0.05,
+        N: 12,
+        L: 0.12,
+        sign: 1,
+        showLines: true,
+        showVectors: true,
+        showCloud: false,
+        autoSpin: true,
+        note: null,
+        rotX: 0.38,
+        rotY: 0.72,
+        zoom: 3.35,
+      };
+
+      const PRESETS = {
+        straight: [
+          { id: "s10", name: "10 A · 5 cm", I: 10, r: 0.05, sign: 1, note: "地磁気（約 40 μT）と同じくらいの磁場です。円の向きを右ねじで確かめてください。" },
+          { id: "s20", name: "電流を 2 倍", I: 20, r: 0.05, sign: 1, note: "I を 2 倍にすると B も 2 倍。距離はそのままです。" },
+          { id: "sFar", name: "距離を 2 倍", I: 10, r: 0.10, sign: 1, note: "r を 2 倍にすると B は 1/2。直線電流は 1/r です（クーロン力の 1/r² とはちがいます）。" },
+          { id: "sRev", name: "電流を逆向き", I: 10, r: 0.05, sign: -1, note: "電流を逆にすると、円の向きもすべて逆になります。" },
+        ],
+        loop: [
+          { id: "l10", name: "10 A · R=5 cm", I: 10, R: 0.05, sign: 1, note: "中心の B = μ₀I / 2R。直線の μ₀I / 2πr より π 倍強い（同じ I と距離なら）。" },
+          { id: "lSmall", name: "半径を半分", I: 10, R: 0.025, sign: 1, note: "R を半分にすると中心の B は 2 倍。円を小さくすると軸方向の磁場が強くなります。" },
+          { id: "lRev", name: "電流を逆向き", I: 10, R: 0.05, sign: -1, note: "右ねじを逆に回せば、中心軸の B も逆向きです。" },
+        ],
+        solenoid: [
+          { id: "sol", name: "12 巻き · 12 cm", I: 10, N: 12, L: 0.12, sign: 1, note: "内部はほぼ一様。n = N/L = 100 /m。長いコイルなら B ≈ μ₀nI。" },
+          { id: "solN", name: "巻き数を増やす", I: 10, N: 24, L: 0.12, sign: 1, note: "同じ長さで巻き数を 2 倍にすると n も B も 2 倍。内部の矢印が長くなります。" },
+          { id: "solRev", name: "電流を逆向き", I: 10, N: 12, L: 0.12, sign: -1, note: "巻き方向に対して電流を逆にすると、内部の B も逆向き（棒磁石の N・S が入れ替わるイメージ）。" },
+        ],
       };
 
       const wrap = document.getElementById("field3dWrap");
-      let mode = "straight", curDir = 1, t = 0;
-      let params = { I: 10, rView: 7, R: 0.55, n: 10, len: 1.4 };
-      let smooth = { I: 10, rView: 7, R: 0.55, n: 10, len: 1.4 };
-      let showLines = true, showVectors = true, showCloud = true, autoSpin = true;
+      const diag = document.getElementById("diagCanvas");
+      const dctx = diag.getContext("2d");
 
-      let scene, camera, renderer, worldGroup, wireGroup, cloudGroup, currentGroup, lineGroup, vectorGroup, flowGroup;
-      let rotX = 0.42, rotY = 0.65, zoom = 3.4, dragging = false, lx = 0, ly = 0;
-      let flowParticles = [], vectorArrows = [];
+      let scene, camera, renderer, world;
+      let gCurrent, gLines, gVectors, gCloud, gFlow, gProbe;
+      let dragging = false, lx = 0, ly = 0;
+      let flow = [];
+      let wireSegs = [];
+      let lastRebuild = "";
 
-      function lerp(a, b, r) { return a + (b - a) * r; }
+      function nTurns() { return state.N / state.L; }
+      function Ieff() { return state.sign * state.I; }
 
-      function buildSliders() {
-        const row = document.getElementById("sliderRow");
-        row.innerHTML = "";
-        MODES[mode].sliders.forEach((s) => {
-          const div = document.createElement("div");
-          div.className = "ctrl-row";
-          const val = params[s.id] !== undefined ? params[s.id] : s.val * s.scale;
-          div.innerHTML = `<label>${s.label} <span class="slider-val" id="val_${s.id}">${fmtVal(s.id, val)}</span>
-            <input type="range" id="sl_${s.id}" min="${s.min}" max="${s.max}" value="${Math.round(val / s.scale)}" step="1"></label>`;
-          row.appendChild(div);
-          div.querySelector("input").addEventListener("input", (e) => {
-            params[s.id] = +e.target.value * s.scale;
-            rebuildScene();
-          });
-        });
+      function fmtB(T) {
+        const a = Math.abs(T);
+        if (a >= 1) return T.toFixed(3) + " T";
+        if (a >= 1e-3) return (T * 1e3).toFixed(2) + " mT";
+        if (a >= 1e-6) return (T * 1e6).toFixed(1) + " μT";
+        return (T * 1e9).toFixed(1) + " nT";
       }
-
-      function fmtVal(id, v) {
-        if (id === "I") return v.toFixed(1) + " A";
-        if (id === "n") return v.toFixed(0);
-        if (id === "R") return v.toFixed(2);
-        if (id === "len") return v.toFixed(2);
-        return String(Math.round(v));
-      }
-
-      /* ---- 3D field models ---- */
-      function fieldAt(x, y, z) {
-        const I = smooth.I;
-        const sign = curDir;
-        if (mode === "straight") {
-          const r2 = x * x + z * z + 0.04;
-          const r = Math.sqrt(r2);
-          const mag = K * I / r;
-          return new THREE.Vector3(sign * mag * z / r2, 0, -sign * mag * x / r2);
-        }
-        if (mode === "loop") {
-          const R = smooth.R;
-          const dx = x, dz = z;
-          const r = Math.sqrt(dx * dx + dz * dz + y * y) + 0.05;
-          const dip = sign * K * I * R * R / (r * r * r);
-          const bx = dip * (3 * dx * y / (r * r * r * R));
-          const by = sign * K * I / R * Math.exp(-(dx * dx + dz * dz) / (R * R * 2)) + dip * ((2 * y * y - dx * dx - dz * dz) / (r * r * r * R));
-          const bz = dip * (3 * dz * y / (r * r * r * R));
-          return new THREE.Vector3(bx, by, bz);
-        }
-        const half = smooth.len / 2;
-        const inside = Math.abs(x) < half - 0.05 && Math.sqrt(y * y + z * z) < 0.42;
-        const bIn = sign * K * smooth.n * I * 0.14;
-        if (inside) return new THREE.Vector3(bIn, 0, 0);
-        const dist = Math.abs(x) < half ? 0.42 : Math.min(Math.abs(x - half), Math.abs(x + half));
-        const mag = bIn * 0.18 / (1 + dist * 3);
-        return new THREE.Vector3(sign * mag * 0.5, sign * mag * y * 0.8, sign * mag * z * 0.5);
-      }
-
-      function traceFieldLine(sx, sy, sz, steps, stepLen) {
-        const pts = [];
-        let x = sx, y = sy, z = sz;
-        for (let i = 0; i < steps; i++) {
-          pts.push(new THREE.Vector3(x, y, z));
-          const b = fieldAt(x, y, z);
-          const m = b.length();
-          if (m < 0.02) break;
-          const step = stepLen / m;
-          x += b.x * step; y += b.y * step; z += b.z * step;
-          if (Math.abs(x) > 1.1 || Math.abs(y) > 1.1 || Math.abs(z) > 1.1) break;
-        }
-        return pts;
-      }
+      function fmtCm(m) { return (m * 100).toFixed(1) + " cm"; }
 
       function clearGroup(g) {
         if (!g) return;
@@ -289,323 +371,391 @@
         }
       }
 
-      function buildWireBox(group) {
-        const boxGeo = new THREE.BoxGeometry(1.75, 1.75, 1.75);
-        const edges = new THREE.EdgesGeometry(boxGeo);
-        const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
-          color: 0xc47a4a, transparent: true, opacity: 0.72,
-        }));
-        group.add(wire);
-        boxGeo.dispose(); edges.dispose();
-
-        const faceHalf = 0.876;
-        const faceDefs = [
-          { pos: [-faceHalf, 0, 0], look: [-1, 0, 0] },
-          { pos: [faceHalf, 0, 0], look: [1, 0, 0] },
-          { pos: [0, -faceHalf, 0], look: [0, -1, 0] },
-          { pos: [0, faceHalf, 0], look: [0, 1, 0] },
-          { pos: [0, 0, -faceHalf], look: [0, 0, -1] },
-          { pos: [0, 0, faceHalf], look: [0, 0, 1] },
-        ];
-        faceDefs.forEach(({ pos, look }) => {
-          const mesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(1.7, 1.7),
-            new THREE.MeshBasicMaterial({
-              color: 0x38bdf8, transparent: true, opacity: 0.03,
-              side: THREE.DoubleSide, depthWrite: false,
-            })
-          );
-          mesh.position.set(pos[0], pos[1], pos[2]);
-          mesh.lookAt(look[0], look[1], look[2]);
-          group.add(mesh);
-        });
-
-        const grid = new THREE.GridHelper(1.6, 8, 0x1e3a5f, 0x111827);
-        grid.position.y = -0.87;
-        group.add(grid);
+      function buildWireSegments() {
+        wireSegs = [];
+        const s = state.sign;
+        if (state.tab === "straight") {
+          const half = 1.2;
+          const n = 24;
+          for (let i = 0; i < n; i += 1) {
+            const y0 = -half + (i / n) * (2 * half);
+            const y1 = -half + ((i + 1) / n) * (2 * half);
+            if (s > 0) wireSegs.push({ x: 0, y: y0 * W2M, z: 0 }, { x: 0, y: y1 * W2M, z: 0 });
+            else wireSegs.push({ x: 0, y: y1 * W2M, z: 0 }, { x: 0, y: y0 * W2M, z: 0 });
+          }
+        } else if (state.tab === "loop") {
+          const Rw = state.R / W2M;
+          const n = 64;
+          for (let i = 0; i < n; i += 1) {
+            const t0 = (i / n) * Math.PI * 2;
+            const t1 = ((i + 1) / n) * Math.PI * 2;
+            const a0 = -s * t0, a1 = -s * t1;
+            wireSegs.push(
+              { x: Rw * Math.cos(a0) * W2M, y: 0, z: Rw * Math.sin(a0) * W2M },
+              { x: Rw * Math.cos(a1) * W2M, y: 0, z: Rw * Math.sin(a1) * W2M }
+            );
+          }
+        } else {
+          const half = (state.L / W2M) / 2;
+          const turns = state.N;
+          const segs = Math.max(48, Math.round(turns * 16));
+          for (let i = 0; i < segs; i += 1) {
+            const u0 = i / segs, u1 = (i + 1) / segs;
+            const p = function (u) {
+              return {
+                x: (-half + u * (state.L / W2M)) * W2M,
+                y: SOL_R * Math.cos(2 * Math.PI * turns * u) * W2M,
+                z: SOL_R * Math.sin(2 * Math.PI * turns * u) * W2M,
+              };
+            };
+            const a = p(u0), b = p(u1);
+            if (s > 0) wireSegs.push(a, b);
+            else wireSegs.push(b, a);
+          }
+        }
       }
 
-      function fieldStrengthNorm(x, y, z) {
-        const b = fieldAt(x, y, z);
-        const m = b.length();
-        let ref = 1.2;
-        if (mode === "straight") ref = K * smooth.I / 0.25;
-        else if (mode === "loop") ref = K * smooth.I / smooth.R;
-        else ref = K * smooth.n * smooth.I * 0.14;
-        return Math.min(1, m / Math.max(0.15, ref));
+      function biotSavart(px, py, pz) {
+        let bx = 0, by = 0, bz = 0;
+        for (let i = 0; i < wireSegs.length; i += 2) {
+          const a = wireSegs[i], b = wireSegs[i + 1];
+          const mx = (a.x + b.x) * 0.5, my = (a.y + b.y) * 0.5, mz = (a.z + b.z) * 0.5;
+          const dlx = b.x - a.x, dly = b.y - a.y, dlz = b.z - a.z;
+          const rx = px - mx, ry = py - my, rz = pz - mz;
+          const r2 = rx * rx + ry * ry + rz * rz;
+          if (r2 < 4e-6) continue;
+          const r = Math.sqrt(r2);
+          const inv = 1 / (r2 * r);
+          bx += (dly * rz - dlz * ry) * inv;
+          by += (dlz * rx - dlx * rz) * inv;
+          bz += (dlx * ry - dly * rx) * inv;
+        }
+        const k = 1e-7 * state.I;
+        return { x: k * bx, y: k * by, z: k * bz };
       }
 
-      function buildFieldCloud() {
-        const grid = 9;
-        const positions = [];
-        const colors = [];
-        const cWeak = new THREE.Color(0x0c4a6e);
-        const cMid = new THREE.Color(0x38bdf8);
-        const cStrong = new THREE.Color(0xfde047);
-        for (let ix = 0; ix < grid; ix++) {
-          for (let iy = 0; iy < grid; iy++) {
-            for (let iz = 0; iz < grid; iz++) {
+      function fieldAt(wx, wy, wz) {
+        if (state.tab === "straight") {
+          const rho = Math.hypot(wx, wz);
+          if (rho < WIRE_R) return { x: 0, y: 0, z: 0 };
+          const B = MU0 * Ieff() / (2 * Math.PI * rho * W2M);
+          return { x: B * wz / rho, y: 0, z: -B * wx / rho };
+        }
+        return biotSavart(wx * W2M, wy * W2M, wz * W2M);
+      }
+
+      function nearWire(wx, wy, wz) {
+        if (state.tab === "straight") return Math.hypot(wx, wz) < WIRE_R * 1.3;
+        if (state.tab === "loop") {
+          const Rw = state.R / W2M;
+          const rho = Math.hypot(wx, wz);
+          return Math.hypot(rho - Rw, wy) < 0.06;
+        }
+        const half = (state.L / W2M) / 2;
+        const rho = Math.hypot(wy, wz);
+        return Math.abs(wx) < half + 0.05 && Math.abs(rho - SOL_R) < 0.055;
+      }
+
+      function textbookB() {
+        if (state.tab === "straight") return Math.abs(MU0 * state.I / (2 * Math.PI * state.r));
+        if (state.tab === "loop") return Math.abs(MU0 * state.I / (2 * state.R));
+        const n = nTurns();
+        const half = state.L / 2;
+        const factor = half / Math.sqrt(SOL_R * W2M * SOL_R * W2M + half * half);
+        return { inf: Math.abs(MU0 * n * state.I), finite: Math.abs(MU0 * n * state.I * factor) };
+      }
+
+      function probeWorld() {
+        if (state.tab === "straight") return { x: state.r / W2M, y: 0, z: 0 };
+        if (state.tab === "loop") return { x: 0, y: 0, z: 0 };
+        return { x: 0, y: 0, z: 0 };
+      }
+
+      function traceLine(sx, sy, sz, dir, steps, ds) {
+        const pts = [];
+        let x = sx, y = sy, z = sz;
+        for (let i = 0; i < steps; i += 1) {
+          if (Math.abs(x) > 0.88 || Math.abs(y) > 0.88 || Math.abs(z) > 0.88) break;
+          if (nearWire(x, y, z) && i > 2) break;
+          const b = fieldAt(x, y, z);
+          const m = Math.hypot(b.x, b.y, b.z);
+          if (m < 2e-9) break;
+          pts.push(new THREE.Vector3(x, y, z));
+          x += dir * ds * b.x / m;
+          y += dir * ds * b.y / m;
+          z += dir * ds * b.z / m;
+        }
+        return pts;
+      }
+
+      function mergeBoth(sx, sy, sz, steps, ds) {
+        const back = traceLine(sx, sy, sz, -1, steps, ds);
+        const fwd = traceLine(sx, sy, sz, 1, steps, ds);
+        back.reverse();
+        if (fwd.length) fwd.shift();
+        return back.concat(fwd);
+      }
+
+      function addLine(pts, color, opacity) {
+        if (pts.length < 4) return;
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        gLines.add(new THREE.Line(geo, new THREE.LineBasicMaterial({
+          color: color, transparent: true, opacity: opacity,
+        })));
+        flow.push({ pts: pts, u: Math.random(), speed: 0.10 + state.I * 0.004 });
+      }
+
+      function buildCurrent() {
+        if (state.tab === "straight") {
+          const mat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+          gCurrent.add(new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 2.2, 16), mat));
+          const dir = new THREE.Vector3(0, state.sign, 0);
+          gCurrent.add(new THREE.ArrowHelper(dir, new THREE.Vector3(0.14, 0, 0), 0.72, 0xfde047, 0.14, 0.09));
+          for (let i = 0; i < 10; i += 1) {
+            const ph = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            ph.userData.kind = "wire";
+            ph.userData.phase = i / 10;
+            gCurrent.add(ph);
+          }
+        } else if (state.tab === "loop") {
+          const Rw = state.R / W2M;
+          const curve = new THREE.EllipseCurve(0, 0, Rw, Rw, 0, Math.PI * 2, false, 0);
+          const pts = curve.getPoints(80).map((p) => new THREE.Vector3(p.x, 0, p.y));
+          gCurrent.add(new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(pts),
+            new THREE.LineBasicMaterial({ color: 0xfb923c })
+          ));
+          const tube = new THREE.TorusGeometry(Rw, 0.018, 8, 64);
+          const torus = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: 0xfb923c }));
+          torus.rotation.x = Math.PI / 2;
+          gCurrent.add(torus);
+          gCurrent.add(new THREE.ArrowHelper(
+            new THREE.Vector3(0, state.sign, 0), new THREE.Vector3(0, 0, 0), 0.62, 0xfde047, 0.12, 0.08
+          ));
+          for (let i = 0; i < 14; i += 1) {
+            const ph = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd7a1 }));
+            ph.userData.kind = "loop";
+            ph.userData.phase = i / 14;
+            gCurrent.add(ph);
+          }
+        } else {
+          const half = (state.L / W2M) / 2;
+          const turns = state.N;
+          const tubePts = [];
+          const segs = Math.max(80, Math.round(turns * 20));
+          for (let i = 0; i <= segs; i += 1) {
+            const u = i / segs;
+            tubePts.push(new THREE.Vector3(
+              -half + u * (state.L / W2M),
+              SOL_R * Math.cos(2 * Math.PI * turns * u),
+              SOL_R * Math.sin(2 * Math.PI * turns * u)
+            ));
+          }
+          const path = new THREE.CatmullRomCurve3(tubePts);
+          gCurrent.add(new THREE.Mesh(
+            new THREE.TubeGeometry(path, segs, 0.016, 8, false),
+            new THREE.MeshBasicMaterial({ color: 0xc084fc })
+          ));
+          gCurrent.add(new THREE.ArrowHelper(
+            new THREE.Vector3(state.sign, 0, 0), new THREE.Vector3(-0.15 * state.sign, 0, 0), 0.7, 0xfde047, 0.12, 0.08
+          ));
+          for (let i = 0; i < 16; i += 1) {
+            const ph = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), new THREE.MeshBasicMaterial({ color: 0xf5d0fe }));
+            ph.userData.kind = "sol";
+            ph.userData.phase = i / 16;
+            gCurrent.add(ph);
+          }
+        }
+      }
+
+      function buildLines() {
+        flow = [];
+        if (state.tab === "straight") {
+          const layers = [-0.42, 0, 0.42];
+          const nR = 6;
+          layers.forEach((yOff) => {
+            for (let i = 1; i <= nR; i += 1) {
+              const r = 0.14 + i * 0.12;
+              const pts = [];
+              const segs = 64;
+              for (let k = 0; k <= segs; k += 1) {
+                const t = (k / segs) * Math.PI * 2;
+                const a = -state.sign * t;
+                pts.push(new THREE.Vector3(Math.cos(a) * r, yOff, Math.sin(a) * r));
+              }
+              addLine(pts, 0x38bdf8, 0.38);
+            }
+          });
+          return;
+        }
+        if (state.tab === "loop") {
+          const Rw = state.R / W2M;
+          for (let s = 0; s < 12; s += 1) {
+            const a = (s / 12) * Math.PI * 2;
+            const rin = Rw * 0.42;
+            const pts = mergeBoth(Math.cos(a) * rin, 0.02, Math.sin(a) * rin, 90, 0.028);
+            addLine(pts, 0xfbbf24, 0.48);
+          }
+          for (let s = 0; s < 10; s += 1) {
+            const a = (s / 10) * Math.PI * 2;
+            const rout = Rw + 0.18;
+            const pts = mergeBoth(Math.cos(a) * rout, 0.04, Math.sin(a) * rout, 80, 0.03);
+            addLine(pts, 0x7dd3fc, 0.32);
+          }
+          return;
+        }
+        const half = (state.L / W2M) / 2;
+        const seeds = [];
+        for (let iy = -2; iy <= 2; iy += 1) {
+          for (let iz = -2; iz <= 2; iz += 1) {
+            const y = iy * 0.10, z = iz * 0.10;
+            if (Math.hypot(y, z) > SOL_R * 0.78) continue;
+            seeds.push({ x: 0, y: y, z: z });
+          }
+        }
+        seeds.forEach((s) => addLine(mergeBoth(s.x, s.y, s.z, 70, 0.03), 0x38bdf8, 0.42));
+        for (let k = 0; k < 8; k += 1) {
+          const a = (k / 8) * Math.PI * 2;
+          const y = (SOL_R + 0.16) * Math.cos(a);
+          const z = (SOL_R + 0.16) * Math.sin(a);
+          addLine(mergeBoth(half * 0.15, y, z, 90, 0.03), 0x60a5fa, 0.28);
+        }
+      }
+
+      function buildVectors() {
+        const grid = 5;
+        for (let ix = 0; ix < grid; ix += 1) {
+          for (let iy = 0; iy < grid; iy += 1) {
+            for (let iz = 0; iz < grid; iz += 1) {
+              const x = -0.72 + (ix / (grid - 1)) * 1.44;
+              const y = -0.72 + (iy / (grid - 1)) * 1.44;
+              const z = -0.72 + (iz / (grid - 1)) * 1.44;
+              if (nearWire(x, y, z)) continue;
+              const b = fieldAt(x, y, z);
+              const m = Math.hypot(b.x, b.y, b.z);
+              if (m < 4e-7) continue;
+              const dir = new THREE.Vector3(b.x, b.y, b.z).normalize();
+              const len = 0.07 + Math.min(0.18, Math.sqrt(m) * 18);
+              gVectors.add(new THREE.ArrowHelper(dir, new THREE.Vector3(x, y, z), len, 0x67e8f9, len * 0.38, len * 0.22));
+            }
+          }
+        }
+      }
+
+      function buildCloud() {
+        const grid = 8;
+        const pos = [], col = [];
+        const cW = new THREE.Color(0x0c4a6e);
+        const cM = new THREE.Color(0x38bdf8);
+        const cS = new THREE.Color(0xfde047);
+        let ref = MU0 * state.I / (2 * Math.PI * 0.04);
+        if (state.tab === "loop") ref = MU0 * state.I / (2 * state.R);
+        if (state.tab === "solenoid") ref = MU0 * nTurns() * state.I;
+        for (let ix = 0; ix < grid; ix += 1) {
+          for (let iy = 0; iy < grid; iy += 1) {
+            for (let iz = 0; iz < grid; iz += 1) {
               const x = -0.7 + (ix / (grid - 1)) * 1.4;
               const y = -0.7 + (iy / (grid - 1)) * 1.4;
               const z = -0.7 + (iz / (grid - 1)) * 1.4;
-              if (mode === "straight" && Math.abs(x) < 0.05 && Math.abs(z) < 0.05) continue;
-              const t = fieldStrengthNorm(x, y, z);
-              if (t < 0.04) continue;
-              positions.push(x, y, z);
-              const col = cWeak.clone().lerp(cMid, Math.min(1, t * 1.4)).lerp(cStrong, Math.max(0, t - 0.55) * 2.2);
-              colors.push(col.r, col.g, col.b);
+              if (nearWire(x, y, z)) continue;
+              const b = fieldAt(x, y, z);
+              const t = Math.min(1, Math.hypot(b.x, b.y, b.z) / Math.max(ref, 1e-9));
+              if (t < 0.05) continue;
+              pos.push(x, y, z);
+              const c = cW.clone().lerp(cM, Math.min(1, t * 1.3)).lerp(cS, Math.max(0, t - 0.55) * 2);
+              col.push(c.r, c.g, c.b);
             }
           }
         }
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-        geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-        const mat = new THREE.PointsMaterial({
-          size: 0.06, vertexColors: true, transparent: true, opacity: 0.82,
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+        gCloud.add(new THREE.Points(geo, new THREE.PointsMaterial({
+          size: 0.055, vertexColors: true, transparent: true, opacity: 0.8,
           blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-        });
-        cloudGroup.add(new THREE.Points(geo, mat));
+        })));
       }
 
-      function buildStraightCurrent() {
-        const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 16), mat);
-        currentGroup.add(cyl);
-        const glow = new THREE.PointLight(0x00ffff, 1.2 * smooth.I / 10, 3);
-        currentGroup.add(glow);
-        for (let i = 0; i < 10; i++) {
-          const ph = new THREE.Mesh(
-            new THREE.SphereGeometry(0.025, 8, 8),
-            new THREE.MeshBasicMaterial({ color: 0xffffff })
-          );
-          ph.userData.phase = i / 10;
-          ph.userData.type = "wire";
-          currentGroup.add(ph);
-        }
-      }
-
-      function buildLoopCurrent() {
-        const R = smooth.R;
-        const curve = new THREE.EllipseCurve(0, 0, R, R, 0, Math.PI * 2, false, 0);
-        const pts = curve.getPoints(64).map((p) => new THREE.Vector3(p.x, 0, p.y));
-        const geo = new THREE.BufferGeometry().setFromPoints(pts);
-        const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xff8800 }));
-        currentGroup.add(line);
-        for (let i = 0; i < 12; i++) {
-          const ph = new THREE.Mesh(
-            new THREE.SphereGeometry(0.028, 8, 8),
-            new THREE.MeshBasicMaterial({ color: 0xffcc66 })
-          );
-          ph.userData.phase = i / 12;
-          ph.userData.type = "loop";
-          currentGroup.add(ph);
-        }
-        const axis = new THREE.ArrowHelper(
-          new THREE.Vector3(0, curDir, 0), new THREE.Vector3(0, 0, 0),
-          0.5 + smooth.I * 0.03, 0xfde047, 0.12, 0.08
+      function buildProbe() {
+        const p = probeWorld();
+        const ball = new THREE.Mesh(
+          new THREE.SphereGeometry(0.045, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xfacc15 })
         );
-        currentGroup.add(axis);
-      }
-
-      function buildSolenoidCurrent() {
-        const half = smooth.len / 2;
-        const turns = Math.max(6, Math.round(smooth.n * 0.7));
-        const pitch = smooth.len / turns;
-        const tubePts = [];
-        for (let i = 0; i <= turns * 32; i++) {
-          const u = i / 32;
-          const ang = u * Math.PI * 2;
-          tubePts.push(new THREE.Vector3(
-            -half + (u / turns) * smooth.len,
-            Math.cos(ang) * 0.38,
-            Math.sin(ang) * 0.38
-          ));
-        }
-        const path = new THREE.CatmullRomCurve3(tubePts);
-        const tube = new THREE.TubeGeometry(path, 120, 0.018, 8, false);
-        currentGroup.add(new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: 0xc084fc })));
-        for (let i = 0; i < 14; i++) {
-          const ph = new THREE.Mesh(
-            new THREE.SphereGeometry(0.022, 8, 8),
-            new THREE.MeshBasicMaterial({ color: 0xe9d5ff })
-          );
-          ph.userData.phase = i / 14;
-          ph.userData.type = "solenoid";
-          currentGroup.add(ph);
+        ball.position.set(p.x, p.y, p.z);
+        gProbe.add(ball);
+        const b = fieldAt(p.x, p.y, p.z);
+        const m = Math.hypot(b.x, b.y, b.z);
+        if (m > 1e-12) {
+          const dir = new THREE.Vector3(b.x, b.y, b.z).normalize();
+          gProbe.add(new THREE.ArrowHelper(dir, new THREE.Vector3(p.x, p.y, p.z), 0.32, 0xfde047, 0.1, 0.07));
         }
       }
 
-      function buildFieldLines() {
-        flowParticles = [];
-        if (mode === "straight") {
-          const layers = [-0.35, 0, 0.35];
-          const maxR = 0.25 + smooth.rView * 0.08;
-          for (let ri = 1; ri <= smooth.rView; ri++) {
-            const r = 0.12 + ri * 0.09;
-            if (r > maxR) continue;
-            layers.forEach((yOff) => {
-              const segs = 48;
-              const pts = [];
-              for (let i = 0; i <= segs; i++) {
-                const a = (i / segs) * Math.PI * 2 * curDir;
-                pts.push(new THREE.Vector3(Math.cos(a) * r, yOff, Math.sin(a) * r));
-              }
-              const geo = new THREE.BufferGeometry().setFromPoints(pts);
-              const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
-                color: 0x38bdf8, transparent: true, opacity: 0.25 + smooth.I * 0.015,
-              }));
-              lineGroup.add(line);
-              flowParticles.push({ pts, u: Math.random(), speed: 0.12 + smooth.I * 0.01 });
-            });
-          }
-        } else if (mode === "loop") {
-          const R = smooth.R;
-          for (let s = 0; s < 14; s++) {
-            const ang0 = (s / 14) * Math.PI * 2;
-            const seedR = R + 0.22 + (s % 3) * 0.12;
-            const pts = traceFieldLine(
-              Math.cos(ang0) * seedR, 0.08 * (s % 5 - 2), Math.sin(ang0) * seedR, 90, 0.032
-            );
-            if (pts.length < 4) continue;
-            const geo = new THREE.BufferGeometry().setFromPoints(pts);
-            lineGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({
-              color: 0xfbbf24, transparent: true, opacity: 0.42,
-            })));
-            flowParticles.push({ pts, u: Math.random(), speed: 0.08 });
-          }
-          for (let ring = 0; ring < 5; ring++) {
-            const r = R * (0.25 + ring * 0.14);
-            const yAmp = 0.35 + ring * 0.08;
-            const pts = [];
-            for (let j = 0; j <= 48; j++) {
-              const a = (j / 48) * Math.PI * 2;
-              pts.push(new THREE.Vector3(
-                Math.cos(a) * r,
-                Math.sin(a * 2) * yAmp * curDir,
-                Math.sin(a) * r * 0.85
-              ));
-            }
-            const geo = new THREE.BufferGeometry().setFromPoints(pts);
-            lineGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({
-              color: 0x7dd3fc, transparent: true, opacity: 0.32,
-            })));
-            flowParticles.push({ pts, u: Math.random(), speed: 0.1 });
-          }
-        } else {
-          const half = smooth.len / 2;
-          for (let row = -2; row <= 2; row++) {
-            for (let col = 0; col < 5; col++) {
-              for (let depth = -1; depth <= 1; depth++) {
-                const y = row * 0.18, z = (col - 2) * 0.15 + depth * 0.08;
-                const pts = [];
-                for (let i = 0; i <= 30; i++) {
-                  pts.push(new THREE.Vector3(-half + (i / 30) * smooth.len, y, z));
-                }
-                const geo = new THREE.BufferGeometry().setFromPoints(pts);
-                lineGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({
-                  color: 0x38bdf8, transparent: true, opacity: 0.35 + (depth === 0 ? 0.2 : 0.05),
-                })));
-                flowParticles.push({ pts, u: Math.random(), speed: 0.14 * curDir });
-              }
-            }
-          }
-          for (let k = 0; k < 6; k++) {
-            const pts = traceFieldLine(half + 0.2, 0.5 * Math.sin(k), 0.5 * Math.cos(k), 50, 0.04);
-            if (pts.length < 4) continue;
-            const geo = new THREE.BufferGeometry().setFromPoints(pts);
-            lineGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.25 })));
-            flowParticles.push({ pts, u: Math.random(), speed: 0.06 });
-          }
-        }
-        flowParticles.forEach((fp, i) => {
+      function buildFlowDots() {
+        flow.forEach((fp, i) => {
           const dot = new THREE.Mesh(
-            new THREE.SphereGeometry(0.022, 8, 8),
+            new THREE.SphereGeometry(0.02, 8, 8),
             new THREE.MeshBasicMaterial({ color: 0xfde047 })
           );
-          dot.userData.fpIdx = i;
-          flowGroup.add(dot);
+          dot.userData.i = i;
+          gFlow.add(dot);
         });
       }
 
-      function buildFieldVectors() {
-        vectorArrows = [];
-        const grid = 5;
-        for (let ix = 0; ix < grid; ix++) {
-          for (let iy = 0; iy < grid; iy++) {
-            for (let iz = 0; iz < grid; iz++) {
-              const x = -0.65 + (ix / (grid - 1)) * 1.3;
-              const y = -0.65 + (iy / (grid - 1)) * 1.3;
-              const z = -0.65 + (iz / (grid - 1)) * 1.3;
-              if (mode === "straight" && Math.abs(x) < 0.06 && Math.abs(z) < 0.06) continue;
-              const b = fieldAt(x, y, z);
-              const m = b.length();
-              if (m < 0.03) continue;
-              const dir = b.clone().normalize();
-              const len = 0.06 + Math.min(0.22, m * 0.08);
-              const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(x, y, z), len, 0x67e8f9, len * 0.35, len * 0.2);
-              vectorGroup.add(arrow);
-              vectorArrows.push(arrow);
-            }
-          }
-        }
-      }
-
-      function rebuildScene() {
-        clearGroup(currentGroup);
-        clearGroup(lineGroup);
-        clearGroup(vectorGroup);
-        clearGroup(flowGroup);
-        clearGroup(cloudGroup);
-        if (mode === "straight") buildStraightCurrent();
-        else if (mode === "loop") buildLoopCurrent();
-        else buildSolenoidCurrent();
-        if (showCloud) buildFieldCloud();
-        if (showLines) buildFieldLines();
-        if (showVectors) buildFieldVectors();
-        cloudGroup.visible = showCloud;
-        lineGroup.visible = showLines;
-        vectorGroup.visible = showVectors;
+      function rebuild() {
+        const key = [state.tab, state.sign, state.R, state.N, state.L, state.r, state.showLines, state.showVectors, state.showCloud].join("|");
+        if (key === lastRebuild) return;
+        lastRebuild = key;
+        buildWireSegments();
+        clearGroup(gCurrent); clearGroup(gLines); clearGroup(gVectors);
+        clearGroup(gCloud); clearGroup(gFlow); clearGroup(gProbe);
+        buildCurrent();
+        if (state.showLines) { buildLines(); buildFlowDots(); }
+        if (state.showVectors) buildVectors();
+        if (state.showCloud) buildCloud();
+        buildProbe();
+        gLines.visible = state.showLines;
+        gVectors.visible = state.showVectors;
+        gCloud.visible = state.showCloud;
       }
 
       function initThree() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x060a12);
-        scene.fog = new THREE.FogExp2(0x060a12, 0.08);
-
-        const w = wrap.clientWidth, h = wrap.clientHeight;
-        camera = new THREE.PerspectiveCamera(42, w / h, 0.05, 50);
-        camera.position.set(0, 0, zoom);
-
+        scene.fog = new THREE.FogExp2(0x060a12, 0.07);
+        camera = new THREE.PerspectiveCamera(42, wrap.clientWidth / wrap.clientHeight, 0.05, 40);
+        camera.position.set(0, 0, state.zoom);
         renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(wrap.clientWidth, wrap.clientHeight);
         wrap.appendChild(renderer.domElement);
-
-        scene.add(new THREE.AmbientLight(0x404060, 0.65));
-        const key = new THREE.DirectionalLight(0xffffff, 1.0);
+        scene.add(new THREE.AmbientLight(0x404060, 0.7));
+        const key = new THREE.DirectionalLight(0xffffff, 0.9);
         key.position.set(3, 4, 5);
         scene.add(key);
-        const rim = new THREE.PointLight(0x22d3ee, 0.7, 12);
-        rim.position.set(-3, -2, 4);
-        scene.add(rim);
 
-        worldGroup = new THREE.Group();
-        scene.add(worldGroup);
+        world = new THREE.Group();
+        scene.add(world);
+        const box = new THREE.BoxGeometry(1.75, 1.75, 1.75);
+        world.add(new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({
+          color: 0xc47a4a, transparent: true, opacity: 0.55,
+        })));
+        box.dispose();
+        const grid = new THREE.GridHelper(1.6, 8, 0x1e3a5f, 0x111827);
+        grid.position.y = -0.87;
+        world.add(grid);
+        const axes = new THREE.AxesHelper(0.28);
+        axes.position.set(-0.78, -0.78, -0.78);
+        world.add(axes);
 
-        wireGroup = new THREE.Group();
-        buildWireBox(wireGroup);
-        worldGroup.add(wireGroup);
-
-        cloudGroup = new THREE.Group();
-        currentGroup = new THREE.Group();
-        lineGroup = new THREE.Group();
-        vectorGroup = new THREE.Group();
-        flowGroup = new THREE.Group();
-        worldGroup.add(cloudGroup);
-        worldGroup.add(lineGroup);
-        worldGroup.add(vectorGroup);
-        worldGroup.add(flowGroup);
-        worldGroup.add(currentGroup);
+        gCurrent = new THREE.Group();
+        gLines = new THREE.Group();
+        gVectors = new THREE.Group();
+        gCloud = new THREE.Group();
+        gFlow = new THREE.Group();
+        gProbe = new THREE.Group();
+        world.add(gLines, gVectors, gCloud, gFlow, gCurrent, gProbe);
 
         wrap.addEventListener("pointerdown", (e) => {
           dragging = true; lx = e.clientX; ly = e.clientY;
@@ -613,134 +763,335 @@
         });
         wrap.addEventListener("pointermove", (e) => {
           if (!dragging) return;
-          rotY += (e.clientX - lx) * 0.008;
-          rotX += (e.clientY - ly) * 0.008;
-          rotX = Math.max(-1.1, Math.min(1.1, rotX));
+          state.rotY += (e.clientX - lx) * 0.008;
+          state.rotX += (e.clientY - ly) * 0.008;
+          state.rotX = Math.max(-1.15, Math.min(1.15, state.rotX));
           lx = e.clientX; ly = e.clientY;
         });
         wrap.addEventListener("pointerup", () => { dragging = false; });
         wrap.addEventListener("wheel", (e) => {
           e.preventDefault();
-          zoom = Math.max(2.2, Math.min(5.5, zoom + e.deltaY * 0.004));
+          state.zoom = Math.max(2.2, Math.min(5.6, state.zoom + e.deltaY * 0.004));
         }, { passive: false });
-
         window.addEventListener("resize", () => {
-          const rw = wrap.clientWidth, rh = wrap.clientHeight;
-          camera.aspect = rw / rh;
+          if (!renderer) return;
+          camera.aspect = wrap.clientWidth / wrap.clientHeight;
           camera.updateProjectionMatrix();
-          renderer.setSize(rw, rh);
+          renderer.setSize(wrap.clientWidth, wrap.clientHeight);
         });
       }
 
-      function updateCurrentParticles(dt) {
-        const spd = 0.15 + smooth.I * 0.02;
-        currentGroup.children.forEach((c) => {
-          if (!c.userData.type) return;
-          c.userData.phase = (c.userData.phase + spd * dt * curDir) % 1;
-          const ph = ((c.userData.phase % 1) + 1) % 1;
-          if (c.userData.type === "wire") {
-            c.position.set(0, (ph - 0.5) * 1.4, 0);
-          } else if (c.userData.type === "loop") {
-            const a = ph * Math.PI * 2 * curDir;
-            const R = smooth.R;
-            c.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
-          } else if (c.userData.type === "solenoid") {
-            const half = smooth.len / 2;
-            c.position.set(-half + ph * smooth.len, 0.38 * Math.sin(ph * 12), 0.38 * Math.cos(ph * 12));
+      function updateParticles(dt) {
+        const spd = 0.18 + state.I * 0.012;
+        gCurrent.children.forEach((c) => {
+          if (!c.userData.kind) return;
+          c.userData.phase = ((c.userData.phase + spd * dt * state.sign) % 1 + 1) % 1;
+          const ph = c.userData.phase;
+          if (c.userData.kind === "wire") {
+            c.position.set(0, (ph - 0.5) * 2.0, 0);
+          } else if (c.userData.kind === "loop") {
+            const a = -state.sign * ph * Math.PI * 2;
+            const Rw = state.R / W2M;
+            c.position.set(Math.cos(a) * Rw, 0, Math.sin(a) * Rw);
+          } else {
+            const half = (state.L / W2M) / 2;
+            const u = state.sign > 0 ? ph : (1 - ph);
+            c.position.set(
+              -half + u * (state.L / W2M),
+              SOL_R * Math.cos(2 * Math.PI * state.N * u),
+              SOL_R * Math.sin(2 * Math.PI * state.N * u)
+            );
           }
         });
-      }
-
-      function updateFlowParticles(dt) {
-        flowGroup.children.forEach((dot) => {
-          const i = dot.userData.fpIdx;
-          const fp = flowParticles[i];
+        gFlow.children.forEach((dot) => {
+          const fp = flow[dot.userData.i];
           if (!fp) return;
           fp.u = (fp.u + fp.speed * dt) % 1;
           const idx = fp.u * (fp.pts.length - 1);
-          const i0 = Math.floor(idx);
-          const i1 = Math.min(i0 + 1, fp.pts.length - 1);
+          const i0 = Math.floor(idx), i1 = Math.min(i0 + 1, fp.pts.length - 1);
           const f = idx - i0;
           const p0 = fp.pts[i0], p1 = fp.pts[i1];
-          dot.position.set(
-            p0.x + (p1.x - p0.x) * f,
-            p0.y + (p1.y - p0.y) * f,
-            p0.z + (p1.z - p0.z) * f
-          );
+          dot.position.set(p0.x + (p1.x - p0.x) * f, p0.y + (p1.y - p0.y) * f, p0.z + (p1.z - p0.z) * f);
         });
+      }
+
+      function drawDiag() {
+        const w = diag.width, h = diag.height;
+        dctx.fillStyle = "#060a12";
+        dctx.fillRect(0, 0, w, h);
+        dctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+        dctx.fillStyle = "#94a3b8";
+        dctx.textAlign = "left";
+        const cx = w * 0.34, cy = h * 0.55;
+        if (state.tab === "straight") {
+          dctx.fillText("上から見た断面（電流は紙に垂直）", 12, 18);
+          dctx.beginPath();
+          dctx.arc(cx, cy, 16, 0, Math.PI * 2);
+          dctx.fillStyle = "#22d3ee";
+          dctx.fill();
+          dctx.fillStyle = "#0b1020";
+          dctx.textAlign = "center";
+          dctx.font = "800 16px Inter, sans-serif";
+          dctx.fillText(state.sign > 0 ? "⊙" : "⊗", cx, cy + 6);
+          dctx.strokeStyle = "#38bdf8";
+          dctx.lineWidth = 1.6;
+          for (let i = 1; i <= 3; i += 1) {
+            dctx.beginPath();
+            dctx.arc(cx, cy, 28 + i * 18, 0, Math.PI * 2);
+            dctx.stroke();
+          }
+          const r = 64, a0 = state.sign > 0 ? -0.9 : 0.9 + Math.PI;
+          const x1 = cx + Math.cos(a0) * r, y1 = cy + Math.sin(a0) * r;
+          const x2 = cx + Math.cos(a0 + 0.55 * state.sign) * r;
+          const y2 = cy + Math.sin(a0 + 0.55 * state.sign) * r;
+          arrow2(x1, y1, x2, y2, "#fde047");
+          dctx.fillStyle = "#fde68a";
+          dctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+          dctx.textAlign = "left";
+          dctx.fillText(state.sign > 0 ? "⊙ 電流が手前" : "⊗ 電流が奥", w * 0.62, 48);
+          dctx.fillStyle = "#cbd5e1";
+          dctx.fillText(state.sign > 0 ? "B は反時計回り" : "B は時計回り", w * 0.62, 70);
+          dctx.fillText("親指＝電流、指＝円", w * 0.62, 92);
+        } else if (state.tab === "loop") {
+          dctx.fillText("横から見たループ（xz 面の輪）", 12, 18);
+          dctx.strokeStyle = "#fb923c";
+          dctx.lineWidth = 6;
+          dctx.beginPath();
+          dctx.ellipse(cx, cy, 10, 46, 0, 0, Math.PI * 2);
+          dctx.stroke();
+          arrow2(cx, cy + (state.sign > 0 ? 36 : -36), cx, cy + (state.sign > 0 ? -36 : 36), "#fde047");
+          dctx.fillStyle = "#fde68a";
+          dctx.textAlign = "left";
+          dctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+          dctx.fillText("黄色い矢印＝中心の B", w * 0.58, 48);
+          dctx.fillStyle = "#cbd5e1";
+          dctx.fillText("指を電流の円に沿わせる", w * 0.58, 70);
+          dctx.fillText("親指が軸方向の B", w * 0.58, 92);
+        } else {
+          dctx.fillText("ソレノイドの断面", 12, 18);
+          dctx.strokeStyle = "#c084fc";
+          dctx.lineWidth = 2;
+          dctx.strokeRect(cx - 70, cy - 28, 140, 56);
+          for (let i = 0; i < 7; i += 1) {
+            dctx.beginPath();
+            dctx.arc(cx - 60 + i * 20, cy - 28, 5, 0, Math.PI * 2);
+            dctx.stroke();
+            dctx.beginPath();
+            dctx.arc(cx - 60 + i * 20, cy + 28, 5, 0, Math.PI * 2);
+            dctx.stroke();
+          }
+          if (state.sign > 0) arrow2(cx - 40, cy, cx + 40, cy, "#fde047");
+          else arrow2(cx + 40, cy, cx - 40, cy, "#fde047");
+          dctx.fillStyle = "#fde68a";
+          dctx.font = "700 12px Inter, Noto Sans JP, sans-serif";
+          dctx.textAlign = "left";
+          dctx.fillText("内部：ほぼ一様で軸に平行", w * 0.62, 48);
+          dctx.fillStyle = "#cbd5e1";
+          dctx.fillText("外部：弱く折り返す", w * 0.62, 70);
+          dctx.fillText("棒磁石と同じ模様", w * 0.62, 92);
+        }
+      }
+
+      function arrow2(x1, y1, x2, y2, col) {
+        const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+        const ux = dx / L, uy = dy / L;
+        dctx.strokeStyle = col;
+        dctx.fillStyle = col;
+        dctx.lineWidth = 3;
+        dctx.beginPath();
+        dctx.moveTo(x1, y1);
+        dctx.lineTo(x2, y2);
+        dctx.stroke();
+        dctx.beginPath();
+        dctx.moveTo(x2, y2);
+        dctx.lineTo(x2 - ux * 10 - uy * 5, y2 - uy * 10 + ux * 5);
+        dctx.lineTo(x2 - ux * 10 + uy * 5, y2 - uy * 10 - ux * 5);
+        dctx.closePath();
+        dctx.fill();
       }
 
       function updateHUD() {
-        const m = MODES[mode];
-        document.getElementById("vizTitle").textContent = m.name + "（3D）";
-        document.getElementById("formulaBox").textContent = m.formula + "　|　" + m.formulaB;
-        document.getElementById("hudI").textContent = smooth.I.toFixed(1) + " A";
-        document.getElementById("hudMode").textContent = m.name;
-        document.getElementById("hudDir").textContent = curDir > 0 ? m.dirA : m.dirB;
-        document.getElementById("hintText").textContent = m.hint;
-        const sample = fieldAt(0.35, 0, 0.35);
-        document.getElementById("hudB").textContent = sample.length().toFixed(2);
-        MODES[mode].sliders.forEach((s) => {
-          const el = document.getElementById("val_" + s.id);
-          if (el) el.textContent = fmtVal(s.id, smooth[s.id] !== undefined ? smooth[s.id] : params[s.id]);
+        const names = { straight: "直線電流", loop: "円形電流", solenoid: "ソレノイド" };
+        document.getElementById("hudTitle").textContent = names[state.tab];
+        document.getElementById("lvI").textContent = state.I.toFixed(1) + " A";
+        let Bshow, probeLabel, bLabel, eq, sub, ans, earth, rh, status, bigK, bigSub, dirTxt;
+        if (state.tab === "straight") {
+          Bshow = textbookB();
+          probeLabel = "距離 r";
+          bLabel = "B（距離 r）";
+          eq = "B = μ₀ I / 2πr";
+          sub = "r は導線からの距離。向きは導線の周りの円。";
+          ans = "B = 4π×10⁻⁷ × " + state.I.toFixed(1) + " / (2π × " + state.r.toFixed(3) + ") = " + fmtB(Bshow);
+          earth = "地磁気（約 40 μT）の " + (Bshow / 40e-6).toFixed(1) + " 倍";
+          rh = state.sign > 0
+            ? "電流は +y（上）。上から見て B は反時計回り。親指を上に向けると指が回る向きです。"
+            : "電流は −y（下）。上から見て B は時計回り。";
+          status = state.note || "黄色い点が探針です。スライダーで r を変えると、円の外ほど矢印が短くなります（B ∝ 1/r）。";
+          bigK = "導線から r の位置の B";
+          bigSub = state.sign > 0 ? "向き：同心円・反時計（上から）" : "向き：同心円・時計（上から）";
+          dirTxt = state.sign > 0 ? "+y 上向き" : "−y 下向き";
+          document.getElementById("lvProbe").textContent = fmtCm(state.r);
+        } else if (state.tab === "loop") {
+          Bshow = textbookB();
+          const num = biotSavart(0, 0, 0);
+          const Bnum = Math.hypot(num.x, num.y, num.z);
+          probeLabel = "半径 R";
+          bLabel = "B（中心）";
+          eq = "B = μ₀ I / 2R";
+          sub = "中心だけの式。外側はループを回り込む磁力線になります。";
+          ans = "B = 4π×10⁻⁷ × " + state.I.toFixed(1) + " / (2 × " + state.R.toFixed(3) + ") = " + fmtB(Bshow);
+          earth = "Biot–Savart の数値積分でも中心は " + fmtB(Bnum) + "（式と一致）";
+          rh = state.sign > 0
+            ? "電流は、+y から見て反時計。親指を +y に向けると指が電流に沿います。中心の B は +y。"
+            : "電流は時計回り。中心の B は −y。";
+          status = state.note || "磁力線はループの穴を貫き、外側で折り返します。棒磁石の磁力線と同じ形です。";
+          bigK = "ループ中心の B";
+          bigSub = state.sign > 0 ? "向き：+y（軸の上）" : "向き：−y（軸の下）";
+          dirTxt = state.sign > 0 ? "反時計（+y から）" : "時計回り";
+          document.getElementById("lvProbe").textContent = fmtCm(state.R);
+        } else {
+          const tb = textbookB();
+          Bshow = tb.finite;
+          const num = biotSavart(0, 0, 0);
+          const Bnum = Math.hypot(num.x, num.y, num.z);
+          probeLabel = "n = N/L";
+          bLabel = "B（中心）";
+          eq = "B ≈ μ₀ n I　　n = N / L";
+          sub = "無限に長いときの式。有限では端の補正で少し小さくなります。";
+          ans = "n = " + state.N + " / " + state.L.toFixed(2) + " = " + nTurns().toFixed(0)
+            + " /m　→　μ₀nI = " + fmtB(tb.inf);
+          earth = "有限長の補正後 " + fmtB(tb.finite) + "　/　巻き線積分 " + fmtB(Bnum);
+          rh = state.sign > 0
+            ? "指を巻き線の電流に沿わせると、親指は +x。内部の B は軸に平行です。"
+            : "電流を逆にしたので、内部の B は −x。";
+          status = state.note || "内部の矢印はそろっています。外側では磁力線が折り返し、湧き出しにはなりません。";
+          bigK = "コイル中心の B（有限長）";
+          bigSub = "無限長なら " + fmtB(tb.inf) + "　·　" + (state.sign > 0 ? "向き +x" : "向き −x");
+          dirTxt = state.sign > 0 ? "内部 +x" : "内部 −x";
+          document.getElementById("lvProbe").textContent = nTurns().toFixed(0) + " /m";
+        }
+        document.getElementById("lvProbeK").textContent = probeLabel;
+        document.getElementById("lvBK").textContent = bLabel;
+        document.getElementById("lvB").textContent = fmtB(Bshow);
+        document.getElementById("lvDir").textContent = dirTxt;
+        document.getElementById("bigK").textContent = bigK;
+        document.getElementById("bigB").textContent = fmtB(Bshow);
+        document.getElementById("bigSub").textContent = bigSub;
+        document.getElementById("stepEq").textContent = eq;
+        document.getElementById("stepSub").textContent = sub;
+        document.getElementById("stepAns").textContent = ans;
+        document.getElementById("stepEarth").textContent = earth;
+        document.getElementById("stepRH").textContent = rh;
+        document.getElementById("statusNote").innerHTML = status;
+        document.getElementById("btnDirA").classList.toggle("is-active", state.sign > 0);
+        document.getElementById("btnDirB").classList.toggle("is-active", state.sign < 0);
+        document.getElementById("btnDirA").textContent = state.tab === "straight" ? "電流 +y" : state.tab === "loop" ? "反時計（+y）" : "内部 +x";
+        document.getElementById("btnDirB").textContent = state.tab === "straight" ? "電流 −y" : state.tab === "loop" ? "時計回り" : "内部 −x";
+        drawDiag();
+      }
+
+      function buildSliders() {
+        const box = document.getElementById("sliderBox");
+        box.innerHTML = "";
+        const rows = [
+          { id: "I", label: "電流 I", min: 1, max: 40, step: 0.5, get: () => state.I, set: (v) => { state.I = v; }, fmt: (v) => v.toFixed(1) + " A" },
+        ];
+        if (state.tab === "straight") {
+          rows.push({ id: "r", label: "探針までの距離 r", min: 2, max: 12, step: 0.1, get: () => state.r * 100, set: (v) => { state.r = v / 100; }, fmt: (v) => v.toFixed(1) + " cm" });
+        } else if (state.tab === "loop") {
+          rows.push({ id: "R", label: "ループ半径 R", min: 2.5, max: 8, step: 0.1, get: () => state.R * 100, set: (v) => { state.R = v / 100; }, fmt: (v) => v.toFixed(1) + " cm" });
+        } else {
+          rows.push({ id: "N", label: "巻き数 N", min: 6, max: 28, step: 1, get: () => state.N, set: (v) => { state.N = v; }, fmt: (v) => String(Math.round(v)) });
+          rows.push({ id: "L", label: "コイルの長さ L", min: 8, max: 16, step: 0.5, get: () => state.L * 100, set: (v) => { state.L = v / 100; }, fmt: (v) => v.toFixed(1) + " cm" });
+        }
+        rows.forEach((s) => {
+          const wrapEl = document.createElement("div");
+          wrapEl.className = "slider-row";
+          wrapEl.innerHTML = "<label><span>" + s.label + "</span><span class=\"val\" id=\"val_" + s.id + "\">" + s.fmt(s.get()) + "</span></label>"
+            + "<input type=\"range\" id=\"sl_" + s.id + "\" min=\"" + s.min + "\" max=\"" + s.max + "\" step=\"" + s.step + "\" value=\"" + s.get() + "\">";
+          box.appendChild(wrapEl);
+          wrapEl.querySelector("input").addEventListener("input", (e) => {
+            s.set(+e.target.value);
+            document.getElementById("val_" + s.id).textContent = s.fmt(s.get());
+            state.note = null;
+            markPreset(null);
+            lastRebuild = "";
+            rebuild();
+            updateHUD();
+          });
         });
       }
 
-      function render(dt) {
-        if (!renderer) return;
-        if (autoSpin && !dragging) rotY += dt * 0.2;
-        worldGroup.rotation.x = rotX;
-        worldGroup.rotation.y = rotY;
-        camera.position.z = zoom;
-        camera.lookAt(0, 0, 0);
-        updateCurrentParticles(dt);
-        if (showLines) updateFlowParticles(dt);
-        renderer.render(scene, camera);
+      function markPreset(id) {
+        document.querySelectorAll(".preset-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.id === id));
       }
 
-      function setMode(m) {
-        mode = m;
-        document.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
-        document.getElementById("btnDirA").textContent = MODES[m].dirA;
-        document.getElementById("btnDirB").textContent = MODES[m].dirB;
+      function buildPresets() {
+        const row = document.getElementById("presetRow");
+        row.innerHTML = "";
+        (PRESETS[state.tab] || []).forEach((p) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "preset-btn";
+          b.dataset.id = p.id;
+          b.textContent = p.name;
+          b.addEventListener("click", () => {
+            state.I = p.I;
+            if (p.r != null) state.r = p.r;
+            if (p.R != null) state.R = p.R;
+            if (p.N != null) state.N = p.N;
+            if (p.L != null) state.L = p.L;
+            state.sign = p.sign;
+            state.note = p.note;
+            markPreset(p.id);
+            buildSliders();
+            lastRebuild = "";
+            rebuild();
+            updateHUD();
+          });
+          row.appendChild(b);
+        });
+      }
+
+      function setTab(name) {
+        state.tab = name;
+        const lab = name !== "guide";
+        document.querySelectorAll(".view-tab").forEach((b) => {
+          const on = b.dataset.tab === name;
+          b.classList.toggle("is-active", on);
+          b.setAttribute("aria-selected", String(on));
+        });
+        document.getElementById("view-lab").classList.toggle("is-hidden", !lab);
+        document.getElementById("view-guide").classList.toggle("is-hidden", lab);
+        if (!lab) return;
+        state.note = null;
+        buildPresets();
         buildSliders();
-        rebuildScene();
+        lastRebuild = "";
+        rebuild();
         updateHUD();
       }
 
-      document.querySelectorAll(".mode-btn").forEach((btn) => {
-        btn.addEventListener("click", () => setMode(btn.dataset.mode));
+      document.querySelectorAll(".view-tab").forEach((b) => {
+        b.addEventListener("click", () => setTab(b.dataset.tab));
       });
       document.getElementById("btnDirA").addEventListener("click", () => {
-        curDir = 1;
-        document.getElementById("btnDirA").classList.add("is-active");
-        document.getElementById("btnDirB").classList.remove("is-active");
-        rebuildScene(); updateHUD();
+        state.sign = 1; state.note = null; markPreset(null); lastRebuild = ""; rebuild(); updateHUD();
       });
       document.getElementById("btnDirB").addEventListener("click", () => {
-        curDir = -1;
-        document.getElementById("btnDirB").classList.add("is-active");
-        document.getElementById("btnDirA").classList.remove("is-active");
-        rebuildScene(); updateHUD();
-      });
-      document.getElementById("btnCloud").addEventListener("click", function () {
-        showCloud = !showCloud;
-        this.classList.toggle("active", showCloud);
-        rebuildScene();
+        state.sign = -1; state.note = null; markPreset(null); lastRebuild = ""; rebuild(); updateHUD();
       });
       document.getElementById("btnLines").addEventListener("click", function () {
-        showLines = !showLines;
-        this.classList.toggle("active", showLines);
-        rebuildScene();
+        state.showLines = !state.showLines; this.classList.toggle("is-active", state.showLines); lastRebuild = ""; rebuild();
       });
       document.getElementById("btnVectors").addEventListener("click", function () {
-        showVectors = !showVectors;
-        this.classList.toggle("active", showVectors);
-        rebuildScene();
+        state.showVectors = !state.showVectors; this.classList.toggle("is-active", state.showVectors); lastRebuild = ""; rebuild();
+      });
+      document.getElementById("btnCloud").addEventListener("click", function () {
+        state.showCloud = !state.showCloud; this.classList.toggle("is-active", state.showCloud); lastRebuild = ""; rebuild();
       });
       document.getElementById("btnSpin").addEventListener("click", function () {
-        autoSpin = !autoSpin;
-        this.classList.toggle("active", autoSpin);
+        state.autoSpin = !state.autoSpin; this.classList.toggle("is-active", state.autoSpin);
       });
 
       let last = null;
@@ -748,26 +1099,27 @@
         if (last == null) last = now;
         const dt = Math.min(0.04, (now - last) / 1000);
         last = now;
-        smooth.I = lerp(smooth.I, params.I, 0.1);
-        smooth.rView = lerp(smooth.rView, params.rView || 7, 0.1);
-        smooth.R = lerp(smooth.R, params.R || 0.55, 0.1);
-        smooth.n = lerp(smooth.n, params.n || 10, 0.1);
-        smooth.len = lerp(smooth.len, params.len || 1.4, 0.1);
-        updateHUD();
-        render(dt);
+        if (renderer && state.tab !== "guide") {
+          if (state.autoSpin && !dragging) state.rotY += dt * 0.18;
+          world.rotation.x = state.rotX;
+          world.rotation.y = state.rotY;
+          camera.position.z = state.zoom;
+          camera.lookAt(0, 0, 0);
+          updateParticles(dt);
+          renderer.render(scene, camera);
+        }
         requestAnimationFrame(loop);
       }
 
       function boot() {
         if (typeof THREE === "undefined") {
-          document.getElementById("hintText").textContent = "Three.js を読み込めません。";
+          document.getElementById("statusNote").textContent = "Three.js を読み込めません。ネット接続を確認してください。";
           return;
         }
         initThree();
-        setMode("straight");
+        setTab("straight");
         requestAnimationFrame(loop);
       }
-
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
       else boot();
     })();
