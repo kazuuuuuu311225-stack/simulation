@@ -27,7 +27,7 @@ GitHub Pages 等に `projectile-sim/` ごとデプロイする運用を想定し
 |--------|------------|
 | トップ `00_physLabo_top.html` | **あり** |
 | 分野フォルダ `00_folder_*.html`（6本） | **あり** |
-| 個別 sim HTML | **なし** |
+| 個別 sim HTML | **なし**（例外: `classical/shm_velocity_acceleration.html` は専用パスワード） |
 
 ### 理由
 
