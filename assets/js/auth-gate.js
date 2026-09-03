@@ -4,8 +4,10 @@
 (function (global) {
   "use strict";
 
-  var AUTH_KEY = "physlabo_sim_unlocked";
-  var PASSWORD = "1225";
+  var DEFAULT_AUTH_KEY = "physlabo_sim_unlocked";
+  var DEFAULT_PASSWORD = "1225";
+  var AUTH_KEY = DEFAULT_AUTH_KEY;
+  var PASSWORD = DEFAULT_PASSWORD;
 
   var gate = null;
   var input = null;
@@ -27,10 +29,41 @@
     }
   }
 
+  function markUnlocked() {
+    document.documentElement.classList.add("auth-unlocked");
+    if (document.body) document.body.classList.add("auth-unlocked");
+  }
+
   function setAuthed() {
     try {
       sessionStorage.setItem(AUTH_KEY, "1");
     } catch (e) { /* ignore */ }
+    markUnlocked();
+  }
+
+  function pageAuthOptions() {
+    var body = document.body;
+    var options = {
+      mandatory: true,
+      title: "パスワード入力",
+      message: "physLabo を見るにはパスワードが必要です。"
+    };
+    AUTH_KEY = DEFAULT_AUTH_KEY;
+    PASSWORD = DEFAULT_PASSWORD;
+    if (!body) return options;
+    var key = body.getAttribute("data-auth-key");
+    var pw = body.getAttribute("data-auth-password");
+    var title = body.getAttribute("data-auth-title");
+    var message = body.getAttribute("data-auth-message");
+    if (key) AUTH_KEY = key;
+    if (pw) PASSWORD = pw;
+    if (title) options.title = title;
+    if (message) {
+      options.message = message;
+    } else if (pw) {
+      options.message = "このシミュレーションを見るにはパスワードが必要です。";
+    }
+    return options;
   }
 
   function isHeroPhase() {
@@ -216,13 +249,13 @@
   }
 
   function initEntryGate(options) {
+    var pageOpts = pageAuthOptions();
     bindOnce();
-    if (isAuthed()) return;
-    requestAuth(null, options || {
-      mandatory: true,
-      title: "パスワード入力",
-      message: "physLabo を見るにはパスワードが必要です。"
-    });
+    if (isAuthed()) {
+      markUnlocked();
+      return;
+    }
+    requestAuth(null, options || pageOpts);
   }
 
   global.PhysLaboAuth = {
@@ -232,13 +265,14 @@
     hideGate: hideGate
   };
 
-  if (document.body && document.body.hasAttribute("data-auth-entry")) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", function () {
-        initEntryGate();
-      });
-    } else {
+  function bootEntryGate() {
+    if (document.body && document.body.hasAttribute("data-auth-entry")) {
       initEntryGate();
     }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootEntryGate);
+  } else {
+    bootEntryGate();
   }
 })(window);
